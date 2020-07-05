@@ -13464,6 +13464,223 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 }
 
 /***********************************************************************\
+* Name   : serverCommand_indexInfo
+* Purpose: get index info
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            totalEntityCount=<n> \
+*            totalDeletedEntityCount=<n> \
+*            \
+*            totalEntryCount=<n> \
+*            totalEntrySize=<n> \
+*            totalEntryContentSize=<n> \
+*            totalFileCount=<n> \
+*            totalFileSize=<n> \
+*            totalImageCount=<n> \
+*            totalImageSize=<n> \
+*            totalDirectoryCount=<n> \
+*            totalLinkCount=<n> \
+*            totalHardlinkCount=<n> \
+*            totalHardlinkSize=<n> \
+*            totalSpecialCount=<n> \
+*            \
+*            totalEntryCountNewest=<n> \
+*            totalEntrySizeNewest=<n> \
+*            totalEntryContentSizeNewest=<n> \
+*            totalFileCountNewest=<n> \
+*            totalFileSizeNewest=<n> \
+*            totalImageCountNewest=<n> \
+*            totalImageSizeNewest=<n> \
+*            totalDirectoryCountNewest=<n> \
+*            totalLinkCountNewest=<n> \
+*            totalHardlinkCountNewest=<n> \
+*            totalHardlinkSizeNewest=<n> \
+*            totalSpecialCountNewest=<n> \
+*            \
+*            totalSkippedEntryCount=<n> \
+*            \
+*            totalStorageCount=<n> \
+*            totalStorageSize=<n> \
+*            totalDeletedStorageCount=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  Errors error;
+  ulong  totalEntityCount;
+  ulong  totalDeletedEntityCount;
+
+  ulong  totalEntryCount;
+  uint64 totalEntrySize;
+  uint64 totalEntryContentSize;
+  ulong  totalFileCount;
+  uint64 totalFileSize;
+  ulong  totalImageCount;
+  uint64 totalImageSize;
+  ulong  totalDirectoryCount;
+  ulong  totalLinkCount;
+  ulong  totalHardlinkCount;
+  uint64 totalHardlinkSize;
+  ulong  totalSpecialCount;
+
+  ulong  totalEntryCountNewest;
+  uint64 totalEntrySizeNewest;
+  uint64 totalEntryContentSizeNewest;
+  ulong  totalFileCountNewest;
+  uint64 totalFileSizeNewest;
+  ulong  totalImageCountNewest;
+  uint64 totalImageSizeNewest;
+  ulong  totalDirectoryCountNewest;
+  ulong  totalLinkCountNewest;
+  ulong  totalHardlinkCountNewest;
+  uint64 totalHardlinkSizeNewest;
+  ulong  totalSpecialCountNewest;
+
+  ulong  totalSkippedEntryCount;
+
+  ulong  totalStorageCount;
+  uint64 totalStorageSize;
+  ulong  totalDeletedStorageCount;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // init variables
+
+  // get infos
+  error = Index_getInfos(indexHandle,
+                         &totalEntityCount,
+                         &totalDeletedEntityCount,
+
+                         &totalEntryCount,
+                         &totalEntrySize,
+                         &totalEntryContentSize,
+                         &totalFileCount,
+                         &totalFileSize,
+                         &totalImageCount,
+                         &totalImageSize,
+                         &totalDirectoryCount,
+                         &totalLinkCount,
+                         &totalHardlinkCount,
+                         &totalHardlinkSize,
+                         &totalSpecialCount,
+
+                         &totalEntryCountNewest,
+                         &totalEntrySizeNewest,
+                         &totalEntryContentSizeNewest,
+                         &totalFileCountNewest,
+                         &totalFileSizeNewest,
+                         &totalImageCountNewest,
+                         &totalImageSizeNewest,
+                         &totalDirectoryCountNewest,
+                         &totalLinkCountNewest,
+                         &totalHardlinkCountNewest,
+                         &totalHardlinkSizeNewest,
+                         &totalSpecialCountNewest,
+
+                         &totalSkippedEntryCount,
+
+                         &totalStorageCount,
+                         &totalStorageSize,
+                         &totalDeletedStorageCount
+                        );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init uuid list fail");
+    return;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                      "totalEntityCount=%lu \
+                       totalDeletedEntityCount=%lu \
+                       \
+                       totalEntryCount=%lu \
+                       totalEntrySize=%llu \
+                       totalEntryContentSize=%llu \
+                       totalFileCount=%lu \
+                       totalFileSize=%llu \
+                       totalImageCount=%lu \
+                       totalImageSize=%llu \
+                       totalDirectoryCount=%lu \
+                       totalLinkCount=%lu \
+                       totalHardlinkCount=%lu \
+                       totalHardlinkSize=%llu \
+                       totalSpecialCount=%lu \
+                       \
+                       totalEntryCountNewest=%lu \
+                       totalEntrySizeNewest=%llu \
+                       totalEntryContentSizeNewest=%llu \
+                       totalFileCountNewest=%lu \
+                       totalFileSizeNewest=%llu \
+                       totalImageCountNewest=%lu \
+                       totalImageSizeNewest=%llu \
+                       totalDirectoryCountNewest=%lu \
+                       totalLinkCountNewest=%lu \
+                       totalHardlinkCountNewest=%lu \
+                       totalHardlinkSizeNewest=%llu \
+                       totalSpecialCountNewest=%lu \
+                       \
+                       totalSkippedEntryCount=%lu \
+                       \
+                       totalStorageCount=%lu \
+                       totalStorageSize=%llu \
+                       totalDeletedStorageCount=%lu \
+                      ",
+                      totalEntityCount,
+                      totalDeletedEntityCount,
+
+                      totalEntryCount,
+                      totalEntrySize,
+                      totalEntryContentSize,
+                      totalFileCount,
+                      totalFileSize,
+                      totalImageCount,
+                      totalImageSize,
+                      totalDirectoryCount,
+                      totalLinkCount,
+                      totalHardlinkCount,
+                      totalHardlinkSize,
+                      totalSpecialCount,
+
+                      totalEntryCountNewest,
+                      totalEntrySizeNewest,
+                      totalEntryContentSizeNewest,
+                      totalFileCountNewest,
+                      totalFileSizeNewest,
+                      totalImageCountNewest,
+                      totalImageSizeNewest,
+                      totalDirectoryCountNewest,
+                      totalLinkCountNewest,
+                      totalHardlinkCountNewest,
+                      totalHardlinkSizeNewest,
+                      totalSpecialCountNewest,
+
+                      totalSkippedEntryCount,
+
+                      totalStorageCount,
+                      totalStorageSize,
+                      totalDeletedStorageCount
+                     );
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : serverCommand_indexUUIDList
 * Purpose: get index database UUID list
 * Input  : clientInfo  - client info
@@ -17887,6 +18104,7 @@ SERVER_COMMANDS[] =
 
   { "ARCHIVE_LIST",                serverCommand_archiveList,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
+  { "INDEX_INFO",                  serverCommand_indexInfo,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },

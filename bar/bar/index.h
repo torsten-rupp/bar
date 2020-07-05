@@ -1014,6 +1014,85 @@ long Index_countStorageState(IndexHandle *indexHandle,
 // ---------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Index_getInfos
+* Purpose: get infos
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+* Output : totalEntityCount          - total number of entities (can be NULL)
+*
+*          totalEntryCount           - total entry count (can be NULL)
+*          totalEntrySize            - total entry size [bytes] (can be NULL)
+*          totalEntryContentSize     - total entry content size [bytes] (can be NULL)
+*          totalFileCount            - total file entry count (can be NULL)
+*          totalFileSize             - total file entry size [bytes] (can be NULL)
+*          totalImageCount           - total image entry count (can be NULL)
+*          totalImageSize            - total image entry size [bytes] (can be NULL)
+*          totalDirectoryCount       - total directory entry count (can be NULL)
+*          totalLinkCount            - total link entry count (can be NULL)
+*          totalHardlinkCount        - total hardlink entry count (can be NULL)
+*          totalHardlinkSize         - total hardlink entry size [bytes] (can be NULL)
+*          totalSpecialCount         - total special entry count (can be NULL)
+*
+*          totalEntryCountNewest     - total newest entry count (can be NULL)
+*          totalEntrySizeNewest      - total newest entry size [bytes] (can be NULL)
+*          totalEntryContentSize     - total newest entry content size [bytes] (can be NULL)
+*          totalFileCountNewest      - total newest file entry size [bytes] (can be NULL)
+*          totalFileSizeNewest       - total newest file entry size [bytes] (can be NULL)
+*          totalImageCountNewest     - total newest image entry count (can be NULL)
+*          totalImageSizeNewest      - total newest image entry size [bytes] (can be NULL)
+*          totalDirectoryCountNewest - total newest directory entry count (can be NULL)
+*          totalLinkCountNewest      - total newest link entry count (can be NULL)
+*          totalHardlinkCountNewest  - total newest hardlink entry count (can be NULL)
+*          totalHardlinkSizeNewest   - total newest hardlink entry content size [bytes] (can be NULL)
+*          totalSpecialCountNewest   - total newest specialentry count (can be NULL)
+*
+*          totalSkippedEntryCount    - total skipped number of entries (can be NULL)
+*          totalStorageCount         - total number of storages (can be NULL)
+*          totalStorageSize          - total storages size [bytes] (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_getInfos(IndexHandle   *indexHandle,
+                      ulong         *totalEntityCount,
+                      ulong         *totalDeletedEntityCount,
+
+                      ulong         *totalEntryCount,
+                      uint64        *totalEntrySize,
+                      uint64        *totalEntryContentSize,
+                      ulong         *totalFileCount,
+                      uint64        *totalFileSize,
+                      ulong         *totalImageCount,
+                      uint64        *totalImageSize,
+                      ulong         *totalDirectoryCount,
+                      ulong         *totalLinkCount,
+                      ulong         *totalHardlinkCount,
+                      uint64        *totalHardlinkSize,
+                      ulong         *totalSpecialCount,
+
+                      ulong         *totalEntryCountNewest,
+                      uint64        *totalEntrySizeNewest,
+                      uint64        *totalEntryContentSizeNewest,
+                      ulong         *totalFileCountNewest,
+                      uint64        *totalFileSizeNewest,
+                      ulong         *totalImageCountNewest,
+                      uint64        *totalImageSizeNewest,
+                      ulong         *totalDirectoryCountNewest,
+                      ulong         *totalLinkCountNewest,
+                      ulong         *totalHardlinkCountNewest,
+                      uint64        *totalHardlinkSizeNewest,
+                      ulong         *totalSpecialCountNewest,
+
+                      ulong         *totalSkippedEntryCount,
+
+                      ulong         *totalStorageCount,
+                      uint64        *totalStorageSize,
+                      ulong         *totalDeletedStorageCount
+                     );
+
+// ---------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : Index_initListHistory
 * Purpose: list history
 * Input  : IndexQueryHandle - index query handle variable
