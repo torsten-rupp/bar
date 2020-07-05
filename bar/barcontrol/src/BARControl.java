@@ -2286,22 +2286,25 @@ if (false) {
   {
     BusyDialog busyDialog = null;
     {
-      // process SWT events
-      while (display.readAndDispatch())
+      if (display != null)
       {
-        // nothing to do
-      }
+        // process SWT events
+        while (display.readAndDispatch())
+        {
+          // nothing to do
+        }
 
-      // connect dialog
-      if (shell != null)
-      {
-        busyDialog = new BusyDialog(shell,
-                                    BARControl.tr("Connect"),
-                                    400,
-                                    60,
-                                    BARControl.tr("Try to connect to ''"+serverName+"''\u2026"),
-                                    BusyDialog.AUTO_ANIMATE
-                                   );
+        // connect dialog
+        if (shell != null)
+        {
+          busyDialog = new BusyDialog(shell,
+                                      BARControl.tr("Connect"),
+                                      400,
+                                      60,
+                                      BARControl.tr("Try to connect to ''"+serverName+"''\u2026"),
+                                      BusyDialog.AUTO_ANIMATE
+                                     );
+        }
       }
     }
     try
@@ -4881,7 +4884,7 @@ if (false) {
           // remote index for storage
           try
           {
-            BARServer.executeCommand(StringParser.format("INDEX_REMOVE pattern=%'S patternType=GLOB",
+            BARServer.executeCommand(StringParser.format("INDEX_REMOVE name=%'S",
                                                          Settings.indexDatabaseRemoveStorageName
                                                         ),
                                      1  // debug level
@@ -5024,15 +5027,34 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-40s %-8s %-14s %-19s %s",
+            System.out.println(String.format("%-8s %-8s %-14s %-19s %s",
                                              "Id",
-                                             "Storage",
                                              "Type",
                                              "Size",
                                              "Date/Time",
                                              "Name"
                                             )
                               );
+//TODO: add storage names
+
+            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=* name=%'S newestOnly=%y  selectedOnly=no fragmentsCount=no",
+                                                         Settings.indexDatabaseEntriesListName,
+                                                         Settings.indexDatabaseEntriesNewestOnly
+                                                        ),
+                                     1,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+Dprintf.dprintf("%d %d",valueMap.getLong("totalEntryCount"),valueMap.getLong("totalEntrySize"));
+
+                                       }
+                                     }
+                                    );
+
+
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=* name=%'S newestOnly=%y limit=1024",
                                                          Settings.indexDatabaseEntriesListName,
@@ -5045,24 +5067,20 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long       entryId         = valueMap.getLong  ("entryId"                   );
-                                         EntryTypes entryType       = valueMap.getEnum  ("entryType",EntryTypes.class);
-                                         String     storageName     = valueMap.getString("storageName"               );
-                                         long       storageDateTime = valueMap.getLong  ("storageDateTime"           );
+                                         long       entryId   = valueMap.getLong("entryId"                   );
+                                         EntryTypes entryType = valueMap.getEnum("entryType",EntryTypes.class);
 
                                          switch (entryType)
                                          {
                                            case FILE:
                                              {
-                                               String fileName        = valueMap.getString("name"           );
-                                               long   size            = valueMap.getLong  ("size"           );
-                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
-                                               long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                                               long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+                                               String fileName        = valueMap.getString("name"         );
+                                               long   size            = valueMap.getLong  ("size"         );
+                                               long   dateTime        = valueMap.getLong  ("dateTime"     );
+                                               long   fragmentCount   = valueMap.getLong  ("fragmentCount");
 
-                                               System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
-                                                                                entryId,
-                                                                                storageName,
+                                               System.out.println(String.format("%8d %-8s %14d %-19s %s",
+                                                                                getDatabaseId(entryId),
                                                                                 "FILE",
                                                                                 size,
                                                                                 DATE_FORMAT.format(new Date(dateTime*1000)),
@@ -5074,14 +5092,13 @@ if (false) {
                                              break;
                                            case IMAGE:
                                              {
-                                               String imageName       = valueMap.getString("name"           );
-                                               long   size            = valueMap.getLong  ("size"           );
-                                               long   blockOffset     = valueMap.getLong  ("blockOffset"    );
-                                               long   blockCount      = valueMap.getLong  ("blockCount"     );
+                                               String imageName       = valueMap.getString("name"       );
+                                               long   size            = valueMap.getLong  ("size"       );
+                                               long   blockOffset     = valueMap.getLong  ("blockOffset");
+                                               long   blockCount      = valueMap.getLong  ("blockCount" );
 
-                                               System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
-                                                                                entryId,
-                                                                                storageName,
+                                               System.out.println(String.format("%8d %-8s %14d %-19s %s",
+                                                                                getDatabaseId(entryId),
                                                                                 "IMAGE",
                                                                                 size,
                                                                                 "",
@@ -5093,12 +5110,11 @@ if (false) {
                                              break;
                                            case DIRECTORY:
                                              {
-                                               String directoryName   = valueMap.getString("name"           );
-                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+                                               String directoryName   = valueMap.getString("name"    );
+                                               long   dateTime        = valueMap.getLong  ("dateTime");
 
-                                               System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s",
-                                                                                entryId,
-                                                                                storageName,
+                                               System.out.println(String.format("%8d %-8s %14s %-19s %s",
+                                                                                getDatabaseId(entryId),
                                                                                 "DIR",
                                                                                 "",
                                                                                 DATE_FORMAT.format(new Date(dateTime*1000)),
@@ -5114,9 +5130,8 @@ if (false) {
                                                String destinationName = valueMap.getString("destinationName");
                                                long   dateTime        = valueMap.getLong  ("dateTime"       );
 
-                                               System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s -> %s",
-                                                                                entryId,
-                                                                                storageName,
+                                               System.out.println(String.format("%8d %-8s %14s %-19s %s -> %s",
+                                                                                getDatabaseId(entryId),
                                                                                 "LINK",
                                                                                 "",
                                                                                 DATE_FORMAT.format(new Date(dateTime*1000)),
@@ -5129,15 +5144,14 @@ if (false) {
                                              break;
                                            case HARDLINK:
                                              {
-                                               String fileName        = valueMap.getString("name"           );
-                                               long   size            = valueMap.getLong  ("size"           );
-                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
-                                               long   fragmentOffset  = valueMap.getLong  ("fragmentOffset" );
-                                               long   fragmentSize    = valueMap.getLong  ("fragmentSize"   );
+                                               String fileName        = valueMap.getString("name"          );
+                                               long   size            = valueMap.getLong  ("size"          );
+                                               long   dateTime        = valueMap.getLong  ("dateTime"      );
+                                               long   fragmentOffset  = valueMap.getLong  ("fragmentOffset");
+                                               long   fragmentSize    = valueMap.getLong  ("fragmentSize"  );
 
-                                               System.out.println(String.format("%8d %-40s %-8s %14d %-19s %s",
-                                                                                entryId,
-                                                                                storageName,
+                                               System.out.println(String.format("%8d %-8s %14d %-19s %s",
+                                                                                getDatabaseId(entryId),
                                                                                 "HARDLINK",
                                                                                 size,
                                                                                 DATE_FORMAT.format(new Date(dateTime*1000)),
@@ -5149,12 +5163,11 @@ if (false) {
                                              break;
                                            case SPECIAL:
                                              {
-                                               String name            = valueMap.getString("name"           );
-                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+                                               String name            = valueMap.getString("name"    );
+                                               long   dateTime        = valueMap.getLong  ("dateTime");
 
-                                               System.out.println(String.format("%8d %-40s %-8s %14s %-19s %s",
-                                                                                entryId,
-                                                                                storageName,
+                                               System.out.println(String.format("%8d %-8s %14s %-19s %s",
+                                                                                getDatabaseId(entryId),
                                                                                 "SPECIAL",
                                                                                 "",
                                                                                 DATE_FORMAT.format(new Date(dateTime*1000)),
