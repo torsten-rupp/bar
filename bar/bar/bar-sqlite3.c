@@ -3728,7 +3728,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   total += n;
 #endif
 
-  fprintf(stdout,"Total %lu orphaned entries cleaned\n",total);
+  fprintf(stdout,"Total %lu orphaned entries removed\n",total);
 
   // free resources
   Array_done(&entryIds);
@@ -3811,7 +3811,7 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
   }
   totalCount += n;
 
-  fprintf(stdout,"Total %lu duplicate entries\n",n);
+  fprintf(stdout,"Total %lu duplicate entries removed\n",n);
 
   // free resources
   String_delete(name);
