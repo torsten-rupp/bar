@@ -1680,8 +1680,8 @@ public class BARServer
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-              // accept session
-              acceptSession(input,output);
+              // init session
+              initSession(display,input,output);
 
               // send startTLS, wait for response
               String[] errorMessage = new String[1];
@@ -1693,9 +1693,9 @@ public class BARServer
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
-              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
-              sslSocket.setTcpNoDelay(true);
-              sslSocket.startHandshake();
+//              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
+//              sslSocket.setTcpNoDelay(true);
+              sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
@@ -1806,14 +1806,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS (SSL) socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
-              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
-              sslSocket.startHandshake();
+              sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
-              // accept session
-              acceptSession(input,output);
+              // init session
+              initSession(display,input,output);
 
 /*
 String[] ss;
@@ -1912,8 +1911,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-              // accept session
-              acceptSession(input,output);
+              // init session
+              initSession(display,input,output);
 
               // send start TLS on plain socket, wait for response
               String[] errorMessage = new String[1];
@@ -1925,8 +1924,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
-              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
-              sslSocket.startHandshake();
+              sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
@@ -2033,14 +2031,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS (SSL) socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
-              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
-              sslSocket.startHandshake();
+              sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
               output = new BufferedWriter(new OutputStreamWriter(sslSocket.getOutputStream(),"UTF-8"));
 
-              // accept session
-              acceptSession(input,output);
+              // init session
+              initSession(display,input,output);
 
 /*
 String[] ss;
@@ -2121,8 +2118,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
         output = new BufferedWriter(new OutputStreamWriter(plainSocket.getOutputStream(),"UTF-8"));
 
-        // accept session
-        acceptSession(input,output);
+        // init session
+        initSession(display,input,output);
 
         socket = plainSocket;
         if (Settings.debugLevel > 0) System.err.println("Network: plain socket");
@@ -4582,10 +4579,56 @@ throw new Error("NYI");
     return stringBuffer.toString();
   }
 
-  /** accept session: read session id, password encryption type and key
+  /** SSL handshake
+   * @param display display
+   * @param sslSocket socket
+   * @param timeout timeout [ms[
+   */
+  private static void sslHandshake(Display display, final SSLSocket sslSocket, int timeout)
+    throws IOException
+  {
+    final IOException handshakeException[] = {null};
+
+    sslSocket.setSoTimeout(timeout);
+    sslSocket.setTcpNoDelay(true);
+    Thread handshakeThread = new Thread(new Runnable()
+    {
+      public void run()
+      {
+        try
+        {
+          sslSocket.startHandshake();
+        }
+        catch (IOException exception)
+        {
+          handshakeException[0] = exception;
+        }
+      }
+    });
+
+    // asynchronous SSL handshake
+    handshakeThread.start();
+    while (handshakeThread.getState() != Thread.State.TERMINATED)
+    {
+      if (display != null)
+      {
+        while (!display.isDisposed() && display.readAndDispatch())
+        {
+          // nothing to do
+        }
+      }
+      try {  Thread.sleep(250); } catch (InterruptedException exception) { /* nothting to do */ }
+    }
+    try { handshakeThread.join(); } catch (InterruptedException exception) { /* nothting to do */ }
+
+    if (handshakeException[0] != null) throw handshakeException[0];
+  }
+
+  /** init session: read session id, password encryption type and key
+   * @param display display
    * @param input,output input/output streams
    */
-  private static void acceptSession(BufferedReader input, BufferedWriter output)
+  private static void initSession(Display display, final BufferedReader input, final BufferedWriter output)
     throws IOException
   {
     sessionId           = null;
@@ -4593,73 +4636,106 @@ throw new Error("NYI");
     passwordCipher      = null;
     mode                = Modes.MASTER;
 
-    String   line;
-    String[] errorMessage = new String[1];
-    ValueMap valueMap     = new ValueMap();
-    String[] data;
+    final IOException initException[] = {null};
 
-    // read session data
-    line = input.readLine();
-    if (line == null)
+    Thread initSessionThread = new Thread(new Runnable()
     {
-      throw new CommunicationError(BARControl.tr("No result from server"));
-    }
-    logReceived(1,"%s",line);
-    data = line.split(" ",2);
-    if ((data.length < 2) || !data[0].equals("SESSION"))
-    {
-      throw new CommunicationError(BARControl.tr("Invalid response from server: expected SESSION"));
-    }
-    if (!StringParser.parse(data[1],valueMap))
-    {
-      throw new CommunicationError(BARControl.tr("Invalid response from server: expected parameters"));
-    }
-    sessionId = hexDecode(valueMap.getString("id"));
-    if (sessionId == null)
-    {
-      throw new CommunicationError(BARControl.tr("No session id"));
-    }
-
-    // get password chipher
-    String[] encryptTypes = valueMap.getString("encryptTypes").split(",");
-    int      i            = 0;
-    while ((i < encryptTypes.length) && (passwordCipher == null))
-    {
-      if      (encryptTypes[i].equalsIgnoreCase("RSA"))
+      public void run()
       {
-        // encrypted passwords with RSA
         try
         {
-          BigInteger n = valueMap.containsKey("n") ? new BigInteger(valueMap.getString("n"),16) : null;
-          BigInteger e = valueMap.containsKey("e") ? new BigInteger(valueMap.getString("e"),16) : null;
+          String   line;
+          String[] errorMessage = new String[1];
+          ValueMap valueMap     = new ValueMap();
+          String[] data;
+
+          // read session data
+          line = input.readLine();
+          if (line == null)
+          {
+            throw new CommunicationError(BARControl.tr("No result from server"));
+          }
+          logReceived(1,"%s",line);
+          data = line.split(" ",2);
+          if ((data.length < 2) || !data[0].equals("SESSION"))
+          {
+            throw new CommunicationError(BARControl.tr("Invalid response from server: expected SESSION"));
+          }
+          if (!StringParser.parse(data[1],valueMap))
+          {
+            throw new CommunicationError(BARControl.tr("Invalid response from server: expected parameters"));
+          }
+          sessionId = hexDecode(valueMap.getString("id"));
+          if (sessionId == null)
+          {
+            throw new CommunicationError(BARControl.tr("No session id"));
+          }
+
+          // get password chipher
+          String[] encryptTypes = valueMap.getString("encryptTypes").split(",");
+          int      i            = 0;
+          while ((i < encryptTypes.length) && (passwordCipher == null))
+          {
+            if      (encryptTypes[i].equalsIgnoreCase("RSA"))
+            {
+              // encrypted passwords with RSA
+              try
+              {
+                BigInteger n = valueMap.containsKey("n") ? new BigInteger(valueMap.getString("n"),16) : null;
+                BigInteger e = valueMap.containsKey("e") ? new BigInteger(valueMap.getString("e"),16) : null;
 //Dprintf.dprintf("n=%s -> %s e=%s -> %s",valueMap.getString("n"),n,valueMap.getString("e"),e);
 
-          RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(n,e);
-          PublicKey        publicKey        = KeyFactory.getInstance("RSA").generatePublic(rsaPublicKeySpec);
+                RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(n,e);
+                PublicKey        publicKey        = KeyFactory.getInstance("RSA").generatePublic(rsaPublicKeySpec);
 
-          passwordEncryptType = "RSA";
-          passwordCipher      = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding");
-//            passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-          passwordKey         = publicKey;
-        }
-        catch (Exception exception)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            BARControl.printStackTrace(exception);
+                passwordEncryptType = "RSA";
+                passwordCipher      = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+//                passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-1AndMGF1Padding");
+//                passwordCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+                passwordKey         = publicKey;
+              }
+              catch (Exception exception)
+              {
+                if (Settings.debugLevel > 0)
+                {
+                  BARControl.printStackTrace(exception);
+                }
+              }
+            }
+            else if (encryptTypes[i].equalsIgnoreCase("NONE"))
+            {
+              passwordEncryptType = "NONE";
+              passwordCipher      = new NullCipher();
+              passwordKey         = null;
+            }
+
+            i++;
           }
         }
+        catch (IOException exception)
+        {
+          initException[0]= exception;
+        }
       }
-      else if (encryptTypes[i].equalsIgnoreCase("NONE"))
-      {
-        passwordEncryptType = "NONE";
-        passwordCipher      = new NullCipher();
-        passwordKey         = null;
-      }
+    });
 
-      i++;
+    // asynchronous init session
+    initSessionThread.start();
+Dprintf.dprintf("display=%s",display);
+    while (initSessionThread.getState() != Thread.State.TERMINATED)
+    {
+      if (display != null)
+      {
+        while (!display.isDisposed() && display.readAndDispatch())
+        {
+          // nothing to do
+        }
+      }
+      try {  Thread.sleep(250); } catch (InterruptedException exception) { /* nothting to do */ }
     }
+    try { initSessionThread.join(); } catch (InterruptedException exception) { /* nothting to do */ }
+
+    if (initException[0] != null) throw initException[0];
     if (passwordCipher == null)
     {
       throw new CommunicationError(BARControl.tr("Init password cipher fail"));
