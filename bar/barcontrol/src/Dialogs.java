@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.Collection;
 
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
 import org.eclipse.swt.dnd.DragSourceEvent;
@@ -583,7 +584,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public T newFileInstance(T file, String name)
   {
-    return newFileInstance(new File(file,name).getPath());
+    return newFileInstance(new File(file,name).getAbsolutePath());
   }
 
   /** get new file instance
@@ -595,10 +596,10 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
     return newFileInstance(file.getAbsolutePath());
   }
 
-  /** get current directory instance
-   * @return current directory instance
+  /** get root file instance
+   * @return root file instance
    */
-  public T getCurrentDirectory()
+  public T getRoot()
   {
     return newFileInstance("/");
   }
@@ -633,6 +634,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   public void getShortcuts(java.util.List<T> shortcutList)
   {
     shortcutList.clear();
+    shortcutMap.put("/",getRoot());
     for (T shortcut : shortcutMap.values())
     {
       shortcutList.add(shortcut);
@@ -1159,7 +1161,10 @@ class Dialogs
       dialog.close();
 
       // Note: sometimes it seems the close() does not generate a wake-up of the main event loop?
-      display.wake();
+      if (!display.isDisposed())
+      {
+        display.wake();
+      }
     }
   }
 
@@ -1363,9 +1368,11 @@ class Dialogs
           {
             dialogRunnable.done(result[0]);
           }
+
+          // close the dialog
+          dialog.dispose();
         }
       });
-
 
       // show
       show(dialog);
@@ -2900,6 +2907,9 @@ class Dialogs
     Label     label;
     Button    button;
 
+    assert((helpTexts == null) || (helpTexts.length == texts.length));
+    assert((enabled == null) || (enabled.length == texts.length));
+
     if ((showAgainFieldFlag == null) || showAgainFieldFlag.get())
     {
       if (!parentShell.isDisposed())
@@ -3121,7 +3131,7 @@ class Dialogs
                            String    cancelText,
                            int       defaultValue)
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,null,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,enabled,null,null,defaultValue);
   }
 
   /** select dialog
@@ -5121,7 +5131,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getCurrentDirectory();
+                  : listDirectory.getRoot();
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,flags,listDirectory);
   }
 
@@ -5168,7 +5178,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getCurrentDirectory();
+                  : listDirectory.getRoot();
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,listDirectory);
   }
 
@@ -5211,7 +5221,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getCurrentDirectory();
+                  : listDirectory.getRoot();
     return file(parentShell,type,title,oldFile,flags,listDirectory);
   }
 
@@ -5250,7 +5260,7 @@ class Dialogs
   {
     T oldFile = !oldFileName.isEmpty()
                   ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getCurrentDirectory();
+                  : listDirectory.getRoot();
     return file(parentShell,type,title,oldFile,listDirectory);
   }
 
@@ -5757,6 +5767,7 @@ class Dialogs
       {
         widgetOkButton = new Button(composite,SWT.CENTER);
         widgetOkButton.setText(okText);
+        widgetOkButton.setEnabled(false);
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
@@ -5785,13 +5796,35 @@ class Dialogs
       }
 
       // install handlers
+      widgetString.addKeyListener(new KeyListener()
+      {
+        @Override
+        public void keyPressed(KeyEvent keyEvent)
+        {
+        }
+        @Override
+        public void keyReleased(KeyEvent keyEvent)
+        {
+          Text widget = (Text)keyEvent.widget;
+
+          widgetOkButton.setEnabled(!widget.getText().isEmpty());
+        }
+      });
       widgetString.addSelectionListener(new SelectionListener()
       {
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           Text widget = (Text)selectionEvent.widget;
 
-          widgetOkButton.setFocus();
+          if (!widget.getText().isEmpty())
+          {
+            widgetOkButton.setEnabled(true);
+            widgetOkButton.setFocus();
+          }
+          else
+          {
+            widgetOkButton.setEnabled(false);
+          }
         }
         public void widgetSelected(SelectionEvent selectionEvent)
         {
@@ -5804,7 +5837,7 @@ class Dialogs
       // fill-in values
       Collection<String> values;
       {
-//        dialog.setCursor(CURSOR_WAIT);
+        dialog.setCursor(new Cursor(dialog.getDisplay(),SWT.CURSOR_WAIT));
       }
       try
       {
@@ -5820,12 +5853,11 @@ class Dialogs
         if (selectedValue != null)
         {
           widgetString.setText(selectedValue);
-//          widgetString.setSelection(selectedValue.length(),selectedValue.length());
         }
       }
       finally
       {
-//        dialog.setCursor((Cursor)null);
+        dialog.setCursor((Cursor)null);
       }
 
       // run
@@ -6077,6 +6109,186 @@ class Dialogs
                              )
   {
     return string(parentShell,title,text,"");
+  }
+
+  /** simple text dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @param toolTipText tooltip text (can be null)
+   * @return string or null on cancel
+   */
+  public static String[] text(Shell    parentShell,
+                              String   title,
+                              String   text,
+                              String[] value,
+                              String   okText,
+                              String   cancelText,
+                              String   toolTipText
+                             )
+  {
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    if (!parentShell.isDisposed())
+    {
+      final Shell dialog = openModal(parentShell,title);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      // text
+      final StyledText widgetText;
+      final Button     widgetOkButton;
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(new double[]{(text != null)?0.0:1.0,1.0},1.0,4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      {
+        int row = 0;
+        if (text != null)
+        {
+          label = new Label(composite,SWT.LEFT);
+          label.setText(text);
+          label.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W));
+          row++;
+        }
+        widgetText = new StyledText(composite,SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
+        if (value != null)
+        {
+          widgetText.setText(StringUtils.join(value,"\n"));
+        }
+        widgetText.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,300,200));
+        if (toolTipText != null) widgetText.setToolTipText(toolTipText);
+        row++;
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        widgetOkButton = new Button(composite,SWT.CENTER);
+        widgetOkButton.setText(okText);
+        widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+        widgetOkButton.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,widgetText.getText());
+          }
+        });
+
+        button = new Button(composite,SWT.CENTER);
+        button.setText(cancelText);
+        button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            close(dialog,null);
+          }
+        });
+      }
+
+      // install handlers
+      widgetText.addSelectionListener(new SelectionListener()
+      {
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+          Text widget = (Text)selectionEvent.widget;
+
+          widgetOkButton.setFocus();
+        }
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+        }
+      });
+
+      widgetText.setFocus();
+      String result = (String)run(dialog,null);
+      return (result != null) ? StringUtils.splitArray((String)run(dialog,null),'\n') : null;
+    }
+    else
+    {
+      return null;
+    }
+  }
+
+  /** simple text dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
+   * @param okText OK button text
+   * @param cancelText cancel button text
+   * @return string or null on cancel
+   */
+  public static String[] text(Shell    parentShell,
+                              String   title,
+                              String   text,
+                              String[] value,
+                              String   okText,
+                              String   cancelText
+                             )
+  {
+    return text(parentShell,title,text,value,okText,cancelText,(String)null);
+  }
+
+  /** simple text dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
+   * @param okText OK button text
+   * @return string or null on cancel
+   */
+  public static String[] text(Shell    parentShell,
+                              String   title,
+                              String   text,
+                              String[] value,
+                              String   okText
+                             )
+  {
+    return text(parentShell,title,text,value,okText,Dialogs.tr("Cancel"));
+  }
+
+
+  /** simple text dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @param value value to edit (can be null)
+   * @return string or null on cancel
+   */
+  public static String[] text(Shell    parentShell,
+                              String   title,
+                              String   text,
+                              String[] value
+                             )
+  {
+    return text(parentShell,title,text,value,Dialogs.tr("Save"));
+  }
+
+  /** simple text dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param text text before input element
+   * @return string or null on cancel
+   */
+  public static String[] text(Shell  parentShell,
+                              String title,
+                              String text
+                             )
+  {
+    return text(parentShell,title,text,new String[]{});
   }
 
   /** simple integer dialog
