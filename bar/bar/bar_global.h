@@ -347,6 +347,7 @@ typedef struct ScheduleNode
   // settings
   String             uuid;                                    // unique id
   String             parentUUID;                              // unique parent id or NULL
+//TODO: begin/end date/time
   ScheduleDate       date;
   ScheduleWeekDaySet weekDaySet;
   ScheduleTime       time;
