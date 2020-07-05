@@ -34,6 +34,7 @@ import java.util.LinkedList;
 // Name clash: import java.util.List
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 // graphics
 import org.eclipse.swt.custom.CTabFolder;
@@ -907,6 +908,10 @@ class WidgetModifyListener
         {
           MenuItem widgetMenuItem = (MenuItem)widget;
         }
+        else if (widget instanceof Table)
+        {
+          Table widgetTable = (Table)widget;
+        }
         else
         {
           throw new InternalError("Unhandled widget '"+widget+"' in widget listener!");
@@ -958,12 +963,42 @@ class WidgetModifyListener
 
   /** modified handler
    * Note: required because it can be overwritten by specific handler
+   * @param styledtext styled text to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(StyledText styledtext, WidgetVariable variable)
+  {
+    modified((Widget)styledtext,variable);
+  }
+
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
    * @param menuItem menu item to notify about modified variable
    * @param variable variable
    */
   public void modified(MenuItem menuItem, WidgetVariable variable)
   {
     modified((Widget)menuItem,variable);
+  }
+
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param table table to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Table table, WidgetVariable variable)
+  {
+    modified((Widget)table,variable);
+  }
+
+  /** modified handler
+   * Note: required because it can be overwritten by specific handler
+   * @param tree tree to notify about modified variable
+   * @param variable variable
+   */
+  public void modified(Tree tree, WidgetVariable variable)
+  {
+    modified((Widget)tree,variable);
   }
 
   /** set text or selection for widget according to value of variable
@@ -1024,12 +1059,39 @@ class WidgetModifyListener
   }
 
   /** set text or selection for widget according to value of variable
+   * @param styledText styled text to notify about modified variable
+   * @param variables variables
+   */
+  public void modified(StyledText styledText, WidgetVariable[] variables)
+  {
+    modified((Control)styledText,variables);
+  }
+
+  /** set text or selection for widget according to value of variable
    * @param menuItem menu item to notify about modified variable
    * @param variables variables
    */
   public void modified(MenuItem menuItem, WidgetVariable[] variables)
   {
     modified((Widget)menuItem,variables);
+  }
+
+  /** set text or selection for widget according to value of variable
+   * @param table table to notify about modified variable
+   * @param variables variables
+   */
+  public void modified(Table table, WidgetVariable[] variables)
+  {
+    modified((Widget)table,variables);
+  }
+
+  /** set text or selection for widget according to value of variable
+   * @param tree tree to notify about modified variable
+   * @param variables variables
+   */
+  public void modified(Tree tree, WidgetVariable[] variables)
+  {
+    modified((Widget)tree,variables);
   }
 
   /** notify modify variable
@@ -1117,11 +1179,38 @@ class WidgetModifyListener
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
+   * @param styledText styled text modified
+   */
+  public void modified(StyledText styledText)
+  {
+    modified(styledText,variables);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
    * @param menuItem menu item modified
    */
   public void modified(MenuItem menuItem)
   {
     modified(menuItem,variables);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
+   * @param table table modified
+   */
+  public void modified(Table table)
+  {
+    modified(table,variables);
+  }
+
+  /** notify modify variable
+   * Note: required because it can be overwritten by specific handler
+   * @param tree tree modified
+   */
+  public void modified(Tree tree)
+  {
+    modified(tree,variables);
   }
 
   /** notify modify variable
@@ -1160,9 +1249,21 @@ class WidgetModifyListener
                 {
                   modified((Text)widget);
                 }
+                else if (widget instanceof StyledText)
+                {
+                  modified((StyledText)widget);
+                }
                 else if (widget instanceof MenuItem)
                 {
                   modified((MenuItem)widget);
+                }
+                else if (widget instanceof Table)
+                {
+                  modified((Table)widget);
+                }
+                else if (widget instanceof Tree)
+                {
+                  modified((Tree)widget);
                 }
                 else if (widget instanceof Control)
                 {
@@ -4926,7 +5027,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param isVisible true for visible, false otherwise
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, final Object data, final String field, String value, int style, boolean isVisible)
+  public static <T> Combo newCombo(Composite composite, final T data, final String field, String value, int style, boolean isVisible)
   {
     Combo combo;
 
@@ -4941,6 +5042,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     {
       combo.setText((String)getField(data,field));
     }
+    combo.setData(new ArrayList<T>());
 
     combo.addSelectionListener(new SelectionListener()
     {
@@ -4967,7 +5069,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param style SWT style flags
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, final Object data, final String field, String value, int style)
+  public static <T> Combo newCombo(Composite composite, final T data, final String field, String value, int style)
   {
     return newCombo(composite,data,field,value,style,true);
   }
@@ -4980,7 +5082,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param isVisible true for visible, false otherwise
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, Object data, String field, String value, boolean isVisible)
+  public static <T> Combo newCombo(Composite composite, T data, String field, String value, boolean isVisible)
   {
     return newCombo(composite,data,field,value,SWT.BORDER,isVisible);
   }
@@ -4992,7 +5094,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param value value for combo
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, Object data, String field, String value)
+  public static <T> Combo newCombo(Composite composite, T data, String field, String value)
   {
     return newCombo(composite,data,field,value,true);
   }
@@ -5005,7 +5107,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param isVisible true for visible, false otherwise
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, Object data, String field, int style, boolean isVisible)
+  public static <T> Combo newCombo(Composite composite, T data, String field, int style, boolean isVisible)
   {
     return newCombo(composite,data,field,(String)null,style,isVisible);
   }
@@ -5017,7 +5119,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param style SWT style flags
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, Object data, String field, int style)
+  public static <T> Combo newCombo(Composite composite, T data, String field, int style)
   {
     return newCombo(composite,data,field,style,true);
   }
@@ -5029,7 +5131,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param isVisible true for visible, false otherwise
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, Object data, String field, boolean isVisible)
+  public static <T> Combo newCombo(Composite composite, T data, String field, boolean isVisible)
   {
     return newCombo(composite,data,field,SWT.BORDER,isVisible);
   }
@@ -5040,7 +5142,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param field field name in data structure to set on selection
    * @return new combo widget
    */
-  public static Combo newCombo(Composite composite, Object data, String field)
+  public static <T> Combo newCombo(Composite composite, T data, String field)
   {
     return newCombo(composite,data,field,true);
   }
@@ -5089,7 +5191,37 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param combo combo
    * @param items items (array of [text,data])
    */
-  public static void setComboItems(final Combo combo, final Object items[])
+  public static <T> void setComboItems(final Combo combo, final java.util.List<T[]> itemList)
+  {
+    if (!combo.isDisposed())
+    {
+      combo.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          ArrayList<T> dataArray = new ArrayList<T>();
+
+          combo.removeAll();
+          for (T[] item : itemList)
+          {
+            String text = (String)(item)[0];
+            T      data = item[1];
+
+            combo.add(text);
+            dataArray.add(data);
+          }
+
+          combo.setData(dataArray);
+        }
+      });
+    }
+  }
+
+  /** set combo items text+data
+   * @param combo combo
+   * @param items items (array of [text,data])
+   */
+  public static <T> void setComboItems(final Combo combo, final T items[])
   {
     assert (items.length % 2) == 0;
 
@@ -5099,17 +5231,18 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       {
         public void run()
         {
-          ArrayList<Object> dataArray = new ArrayList<Object>();
+          ArrayList<T> dataArray = new ArrayList<T>();
 
           combo.removeAll();
           for (int i = 0; i < items.length/2; i++)
           {
             String text = (String)items[i*2+0];
-            Object data = items[i*2+1];
+            T      data = items[i*2+1];
 
             combo.add(text);
             dataArray.add(data);
           }
+
           combo.setData(dataArray);
         }
       });
@@ -5129,6 +5262,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     if (!combo.isDisposed())
     {
       ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+      assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
       index = dataArray.size();
       for (int i = 0; i < dataArray.size(); i++)
@@ -5159,6 +5293,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     if (!combo.isDisposed())
     {
       ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+      assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
       index = dataArray.size();
       for (int i = 0; i < dataArray.size(); i++)
@@ -5217,7 +5352,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
           combo.add(text);
-          dataArray.add(data);
+          if (dataArray != null) dataArray.add(data);
         }
       });
     }
@@ -5247,7 +5382,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
                 combo.setItem(index,text);
-                dataArray.set(index,data);
+                if (dataArray != null) dataArray.set(index,data);
               }
             });
           }
@@ -5443,8 +5578,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
         {
           if (!combo.isDisposed())
           {
+            ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+            assert((dataArray == null) || dataArray.size() == combo.getItemCount());
+
             combo.removeAll();
-            ((ArrayList<Object>)combo.getData()).clear();
+            if (dataArray != null) dataArray.clear();
           }
         }
       });
@@ -5459,6 +5597,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   public static Object getComboItem(Combo combo, int index)
   {
     ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+    assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
     return dataArray.get(index);
   }
@@ -5547,7 +5686,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
             int index = combo.getSelectionIndex();
-            if ((index >= 0) && (index < dataArray.size()))
+            if ((dataArray != null) && (index >= 0) && (index < dataArray.size()))
             {
               data[0] = dataArray.get(index);
             }
@@ -5694,7 +5833,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param isVisible true for visible, false otherwise
    * @return new option menu combo widget
    */
-  public static Combo newOptionMenu(Composite composite, Object data, String field, String value, boolean isVisible)
+  public static <T> Combo newOptionMenu(Composite composite, T data, String field, String value, boolean isVisible)
   {
     return newCombo(composite,data,field,value,SWT.RIGHT|SWT.READ_ONLY,isVisible);
   }
@@ -5706,7 +5845,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param value value for combo
    * @return new option menu combo widget
    */
-  public static Combo newOptionMenu(Composite composite, Object data, String field, String value)
+  public static <T> Combo newOptionMenu(Composite composite, T data, String field, String value)
   {
     return newOptionMenu(composite,data,field,value,true);
   }
@@ -5719,7 +5858,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param isVisible true for visible, false otherwise
    * @return new option menu combo widget
    */
-  public static Combo newOptionMenu(Composite composite, Object data, String field, boolean isVisible)
+  public static <T> Combo newOptionMenu(Composite composite, T data, String field, boolean isVisible)
   {
     return newOptionMenu(composite,data,field,(String)null,isVisible);
   }
@@ -5731,7 +5870,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param value value for combo
    * @return new option menu combo widget
    */
-  public static Combo newOptionMenu(Composite composite, Object data, String field)
+  public static <T> Combo newOptionMenu(Composite composite, T data, String field)
   {
     return newOptionMenu(composite,data,field,true);
   }
@@ -5810,7 +5949,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param data item data
    * @param text item text
    */
-  public static void insertOptionMenuItem(Combo combo, int index, Object data, String text)
+  public static <T> void insertOptionMenuItem(Combo combo, int index, T data, String text)
   {
     insertComboItem(combo,index,data,text);
   }
@@ -6290,14 +6429,34 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param table table
    * @param width column width array
    */
+  public static void setTableColumnWidth(Table table, int index, int width)
+  {
+    TableColumn[] tableColumns = table.getColumns();
+    tableColumns[index].setWidth(width);
+  }
+
+  /** set width of table columns
+   * @param table table
+   */
   public static void adjustTableColumnWidth(Table table)
   {
     TableColumn[] tableColumns = table.getColumns();
     int[]         width        = new int[tableColumns.length];
 
-    for (int i = 0; i < tableColumns.length; i++)
+    if (table.getHeaderVisible())
     {
-      width[i] = 0;
+      for (int i = 0; i < tableColumns.length; i++)
+      {
+        tableColumns[i].pack();
+        width[i] = tableColumns[i].getWidth();
+      }
+    }
+    else
+    {
+      for (int i = 0; i < tableColumns.length; i++)
+      {
+        width[i] = 0;
+      }
     }
 
     GC gc = new GC(table);
@@ -7100,73 +7259,140 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   }
 
   /** update table item
-   * @param tableItem table item to update
+   * @param table table
+   * @param comparator data comparator
    * @param data item data
    * @param image image (can be null)
    * @param values values list
+   * @return updated or added table item
    */
-  public static void updateTableItem(final TableItem tableItem,
-                                     final Object    data,
-                                     final Image     image,
-                                     final Object... values
-                                    )
+  public static <T> TableItem updateTableItem(final Table         table,
+                                              final Comparator<T> comparator,
+                                              final T             data,
+                                              final Image         image,
+                                              final Object...     values
+                                             )
   {
-    if (!tableItem.isDisposed())
+    /** table update runnable
+     */
+    class UpdateRunnable implements Runnable
     {
-      tableItem.getDisplay().syncExec(new Runnable()
+      TableItem tableItem = null;
+
+      /** run
+       */
+      public void run()
       {
-        public void run()
+        int i;
+
+        if (!table.isDisposed())
         {
-          if (!tableItem.isDisposed())
+          for (TableItem tableItem : table.getItems())
           {
-            tableItem.setData(data);
-            if (image != null)
+            try
             {
-              tableItem.setImage(0,image);
-            }
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
+              if (   ((comparator == null) && (data == (T)tableItem.getData()))
+                  || ((comparator != null) && (comparator.compare(data,(T)tableItem.getData()) == 0))
+                 )
               {
-                if      (values[i] instanceof String)
+                if (image != null)
                 {
-                  tableItem.setText(i,(String)values[i]);
+                  tableItem.setImage(0,image);
                 }
-                else if (values[i] instanceof Integer)
+                for (i = 0; i < values.length; i++)
                 {
-                  tableItem.setText(i,Integer.toString((Integer)values[i]));
+                  if (values[i] != null)
+                  {
+                    if      (values[i] instanceof String)
+                    {
+                      tableItem.setText(i,(String)values[i]);
+                    }
+                    else if (values[i] instanceof Integer)
+                    {
+                      tableItem.setText(i,Integer.toString((Integer)values[i]));
+                    }
+                    else if (values[i] instanceof Long)
+                    {
+                      tableItem.setText(i,Long.toString((Long)values[i]));
+                    }
+                    else if (values[i] instanceof Double)
+                    {
+                      this.tableItem.setText(i,Double.toString((Double)values[i]));
+                    }
+                    else
+                    {
+                      tableItem.setText(i,values[i].toString());
+                    }
+                  }
                 }
-                else if (values[i] instanceof Long)
-                {
-                  tableItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  tableItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else
-                {
-                  tableItem.setText(i,values[i].toString());
-                }
+                this.tableItem = tableItem;
+                break;
               }
+            }
+            catch (ClassCastException exception)
+            {
+              // ignored
             }
           }
         }
-      });
+      }
     }
+
+    TableItem tableItem = null;
+    if (!table.isDisposed())
+    {
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      table.getDisplay().syncExec(updateRunnable);
+      tableItem = updateRunnable.tableItem;
+    }
+
+    return tableItem;
   }
 
   /** update table item
-   * @param tableItem table item to update
+   * @param table table
+   * @param data item data
+   * @param image image (can be null)
+   * @param values values list
+   * @return updated or added table item
+   */
+  public static <T> TableItem updateTableItem(final Table     table,
+                                              final T         data,
+                                              final Image     image,
+                                              final Object... values
+                                             )
+  {
+    return updateTableItem(table,(Comparator<T>)null,data,image,values);
+  }
+
+  /** update table item
+   * @param table table
+   * @param comparator data comparator
    * @param data item data
    * @param values values list
+   * @return updated or added table item
    */
-  public static void updateTableItem(final TableItem tableItem,
-                                     final Object    data,
-                                     final Object... values
-                                    )
+  public static <T> TableItem updateTableItem(final Table         table,
+                                              final Comparator<T> comparator,
+                                              final T             data,
+                                              final Object...     values
+                                             )
   {
-    updateTableItem(tableItem,data,(Image)null,values);
+    return updateTableItem(table,comparator,data,(Image)null,values);
+  }
+
+  /** update table item
+   * @param table table
+   * @param data item data
+   * @param values values list
+   * @return updated or added table item
+   */
+  public static <T> TableItem updateTableItem(final Table     table,
+                                              final T         data,
+                                              final Object... values
+                                             )
+  {
+    return updateTableItem(table,data,(Image)null,values);
   }
 
   /** update/insert table item
@@ -7324,6 +7550,76 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                                                    )
   {
     return updateInsertTableItem(table,comparator,data,(Image)null,values);
+  }
+
+  /** update table item
+   * @param tableItem table item to update
+   * @param data item data
+   * @param image image (can be null)
+   * @param values values list
+   */
+  public static <T> void updateTableItem(final TableItem tableItem,
+                                         final T         data,
+                                         final Image     image,
+                                         final Object... values
+                                        )
+  {
+    if (!tableItem.isDisposed())
+    {
+      tableItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tableItem.isDisposed())
+          {
+            tableItem.setData(data);
+            if (image != null)
+            {
+              tableItem.setImage(0,image);
+            }
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  tableItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  tableItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  tableItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  tableItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else
+                {
+                  tableItem.setText(i,values[i].toString());
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** update table item
+   * @param tableItem table item to update
+   * @param data item data
+   * @param values values list
+   */
+  public static <T>  void updateTableItem(final TableItem tableItem,
+                                          final T    data,
+                                          final Object... values
+                                         )
+  {
+    updateTableItem(tableItem,data,(Image)null,values);
   }
 
   /** set table item color
@@ -8616,20 +8912,22 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update tree item
    * @param tree tree
+   * @param comparator data comparator
    * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
-   * @return updated or inserted tree item
+   * @return updated tree item or null
    */
-  public static TreeItem updateTreeItem(final Tree      tree,
-                                        final Object    data,
-                                        final int       flags,
-                                        final Object... values
-                                       )
+  public static <T> TreeItem updateTreeItem(final Tree          tree,
+                                            final Comparator<T> comparator,
+                                            final T             data,
+                                            final int           flags,
+                                            final Object...     values
+                                           )
   {
     /** tree set runnable
      */
-    class SetRunnable implements Runnable
+    class UpdateRunnable implements Runnable
     {
       TreeItem treeItem = null;
 
@@ -8667,7 +8965,10 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
       {
         try
         {
-          if (data.equals(existingTreeItem.getData()))
+          if (   ((comparator == null) && (data == (T)existingTreeItem.getData()))
+              || ((comparator != null) && (comparator.compare(data,(T)existingTreeItem.getData()) == 0))
+             )
+//          if (data.equals(existingTreeItem.getData()))
           {
             // update
             existingTreeItem.setData(data);
@@ -8714,67 +9015,42 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     TreeItem treeItem = null;
     if (!tree.isDisposed())
     {
-      SetRunnable setRunnable = new SetRunnable();
-      tree.getDisplay().syncExec(setRunnable);
-      treeItem = setRunnable.treeItem;
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      tree.getDisplay().syncExec(updateRunnable);
+      treeItem = updateRunnable.treeItem;
     }
 
     return treeItem;
   }
 
   /** update tree item
-   * @param treeItem tree item to update
+   * @param tree tree
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated tree item or null
+   */
+  public static <T> TreeItem updateTreeItem(final Tree      tree,
+                                            final T         data,
+                                            final int       flags,
+                                            final Object... values
+                                           )
+  {
+    return updateTreeItem(tree,(Comparator<T>)null,data,flags,values);
+  }
+
+  /** update tree item
+   * @param tree tree
    * @param data item data
    * @param values values list
+   * @return updated tree item or null
    */
-  public static void updateTreeItem(final TreeItem  treeItem,
-                                    final Object    data,
-                                    final Object... values
-                                   )
+  public static <T> TreeItem updateTreeItem(final Tree      tree,
+                                            final T         data,
+                                            final Object... values
+                                           )
   {
-    if (!treeItem.isDisposed())
-    {
-      treeItem.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!treeItem.isDisposed())
-          {
-            treeItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  treeItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  treeItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  treeItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  treeItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  treeItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  treeItem.setText(i,values[i].toString());
-                }
-              }
-            }
-          }
-        }
-      });
-    }
+    return updateTreeItem(tree,data,TREE_ITEM_FLAG_NONE,values);
   }
 
   /** update or insert tree item
@@ -8784,11 +9060,11 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param values values list
    * @return updated or inserted tree item
    */
-  public static TreeItem updateInsertTreeItem(final Tree      tree,
-                                              final Object    data,
-                                              final int       flags,
-                                              final Object... values
-                                             )
+  public static <T> TreeItem updateInsertTreeItem(final Tree      tree,
+                                                  final T         data,
+                                                  final int       flags,
+                                                  final Object... values
+                                                 )
   {
     /** tree update runnable
      */
@@ -8988,6 +9264,20 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   }
 
   /** update or insert tree item
+   * @param tree tree
+   * @param data item data
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static <T> TreeItem updateInsertTreeItem(final Tree      tree,
+                                                  final T         data,
+                                                  final Object... values
+                                                 )
+  {
+    return updateInsertTreeItem(tree,data,TREE_ITEM_FLAG_NONE,values);
+  }
+
+  /** update or insert tree item
    * @param tree tree widget
    * @param comparator tree item comperator
    * @param data item data
@@ -9171,6 +9461,61 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     return treeItem;
   }
 
+  /** update tree item
+   * @param treeItem tree item to update
+   * @param data item data
+   * @param values values list
+   */
+  public static <T> void updateTreeItem(final TreeItem  treeItem,
+                                        final T         data,
+                                        final Object... values
+                                       )
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            treeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  treeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  treeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  treeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  treeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  treeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  treeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
   /** update or insert tree item
    * @param parentTreeItem parent tree item
    * @param data item data
@@ -9178,11 +9523,11 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param values values list
    * @return updated or added tree item
    */
-  public static TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
-                                              final Object    data,
-                                              final int       flags,
-                                              final Object... values
-                                             )
+  public static <T> TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
+                                                  final T         data,
+                                                  final int       flags,
+                                                  final Object... values
+                                                 )
   {
     /** tree update runnable
      */
@@ -10461,20 +10806,43 @@ private static void printTree(Tree tree)
   }
 
   /** get expanded (open) tree items in tree
-   * @param treeItemSet hash-set for expanded tree items
+   * @param treeItemSet set for expanded tree items
    * @param treeItem tree item to start
-   * @param rootItemsOnly true to collect expanded sub-tree root items only
+   * @param openFlag true for open items only
    */
-  private static void getSubTreeItems(HashSet<TreeItem> treeItemSet, TreeItem treeItem)
+  private static void getSubTreeItems(Set<TreeItem> treeItemSet, TreeItem treeItem, boolean openFlag)
   {
     for (TreeItem subTreeItem : treeItem.getItems())
     {
       treeItemSet.add(subTreeItem);
-      if (subTreeItem.getExpanded())
+      if (!openFlag || subTreeItem.getExpanded())
       {
-        getSubTreeItems(treeItemSet,subTreeItem);
+        getSubTreeItems(treeItemSet,subTreeItem,openFlag);
       }
     }
+  }
+
+  /** get all tree items in tree
+   * @param tree tree
+   * @return tree items set
+   * @param openFlag true for open items only
+   */
+  public static HashSet<TreeItem> getAllTreeItems(Tree tree, boolean openFlag)
+  {
+    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
+    if (!tree.isDisposed())
+    {
+      for (TreeItem treeItem : tree.getItems())
+      {
+        if (!openFlag || treeItem.getExpanded())
+        {
+          treeItemSet.add(treeItem);
+          getSubTreeItems(treeItemSet,treeItem,openFlag);
+        }
+      }
+    }
+
+    return treeItemSet;
   }
 
   /** get all tree items in tree
@@ -10483,13 +10851,22 @@ private static void printTree(Tree tree)
    */
   public static HashSet<TreeItem> getAllTreeItems(Tree tree)
   {
+    return getAllTreeItems(tree,false);
+  }
+
+  /** get all sub tree items of tree item
+   * @param treeItem tree item
+   * @param openFlag true for open items only
+   * @return tree items set
+   */
+  public static HashSet<TreeItem> getAllTreeItems(TreeItem treeItem, boolean openFlag)
+  {
     HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
-    if (!tree.isDisposed())
+    if (!treeItem.isDisposed())
     {
-      for (TreeItem treeItem : tree.getItems())
+      if (!openFlag || treeItem.getExpanded())
       {
-        treeItemSet.add(treeItem);
-        getSubTreeItems(treeItemSet,treeItem);
+        getSubTreeItems(treeItemSet,treeItem,openFlag);
       }
     }
 
@@ -10502,13 +10879,7 @@ private static void printTree(Tree tree)
    */
   public static HashSet<TreeItem> getAllTreeItems(TreeItem treeItem)
   {
-    HashSet<TreeItem> treeItemSet = new HashSet<TreeItem>();
-    if (!treeItem.isDisposed())
-    {
-      getSubTreeItems(treeItemSet,treeItem);
-    }
-
-    return treeItemSet;
+    return getAllTreeItems(treeItem,false);
   }
 
   /** re-expand entries
@@ -10747,6 +11118,47 @@ Dprintf.dprintf("");
   {
     TreeColumn[] treeColumns = tree.getColumns();
     treeColumns[index].setWidth(width);
+  }
+
+  /** set width of tree columns
+   * @param tree tree
+   */
+  public static void adjustTreeColumnWidth(Tree tree)
+  {
+    TreeColumn[] treeColumns = tree.getColumns();
+    int[]        width       = new int[treeColumns.length];
+
+    if (tree.getHeaderVisible())
+    {
+      for (int i = 0; i < treeColumns.length; i++)
+      {
+        treeColumns[i].pack();
+        width[i] = treeColumns[i].getWidth();
+      }
+    }
+    else
+    {
+      for (int i = 0; i < treeColumns.length; i++)
+      {
+        width[i] = 0;
+      }
+    }
+
+    GC       gc          = new GC(tree);
+    int      margin      = gc.textExtent("H").x;
+    TreeItem treeItems[] = tree.getItems();
+    for (int i = 0; i < treeColumns.length; i++)
+    {
+      for (TreeItem treeItem : treeItems)
+      {
+        gc.setFont(treeItem.getFont(i));
+        width[i] = Math.max(width[i],margin+gc.textExtent(treeItem.getText(i)).x+margin);
+      }
+    }
+
+    gc.dispose();
+
+    setTreeColumnWidth(tree,width);
   }
 
   /** get selected tree item
