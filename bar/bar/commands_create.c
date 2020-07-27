@@ -1229,11 +1229,10 @@ LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
 /***********************************************************************\
 * Name   : appendSpecialToEntryList
 * Purpose: append special to entry list
-* Input  : entryMsgQueue    - entry message queue
-*          entryType        - entry type
-*          name             - name (will be copied!)
-*          fileInfo         - file info
-*          maxFragmentSize  - max. fragment size or 0
+* Input  : entryMsgQueue - entry message queue
+*          entryType     - entry type
+*          name          - name (will be copied!)
+*          fileInfo      - file info
 * Output : -
 * Return : -
 * Notes  : -
@@ -1242,53 +1241,31 @@ LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
 LOCAL void appendSpecialToEntryList(MsgQueue       *entryMsgQueue,
                                     EntryTypes     entryType,
                                     ConstString    name,
-                                    const FileInfo *fileInfo,
-                                    uint64         maxFragmentSize
+                                    const FileInfo *fileInfo
                                    )
 {
-  uint     fragmentCount;
-  uint     fragmentNumber;
-  uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
   assert(fileInfo != NULL);
 
-  fragmentCount  = (maxFragmentSize > 0LL)
-                     ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
-                     : 1;
-  fragmentNumber = 0;
-  fragmentOffset = 0LL;
-  do
+  // init
+  entryMsg.entryType      = entryType;
+  entryMsg.fileType       = FILE_TYPE_SPECIAL;
+  entryMsg.name           = String_duplicate(name);
+  StringList_init(&entryMsg.nameList);
+  memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
+  entryMsg.fragmentNumber = 0;
+  entryMsg.fragmentCount  = 0;
+  entryMsg.fragmentOffset = 0LL;
+  entryMsg.fragmentSize   = 0LL;
+
+  // put into message queue
+  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
-    // calculate fragment size
-    fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
-                     ? maxFragmentSize
-                     : fileInfo->size-fragmentOffset;
-
-    // init
-    entryMsg.entryType      = entryType;
-    entryMsg.fileType       = FILE_TYPE_SPECIAL;
-    entryMsg.name           = String_duplicate(name);
-    StringList_init(&entryMsg.nameList);
-    memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
-    entryMsg.fragmentNumber = fragmentNumber;
-    entryMsg.fragmentCount  = fragmentCount;
-    entryMsg.fragmentOffset = fragmentOffset;
-    entryMsg.fragmentSize   = fragmentSize;
-
-    // put into message queue
-    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
-    {
-      freeEntryMsg(&entryMsg,NULL);
-    }
-
-    // next fragment offset
-    fragmentNumber++;
-    fragmentOffset += fragmentSize;
+    freeEntryMsg(&entryMsg,NULL);
   }
-  while (fragmentOffset < fileInfo->size);
 }
 
 /***********************************************************************\
@@ -2857,8 +2834,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                            ENTRY_TYPE_FILE,
                                            name,
-                                           &fileInfo,
-                                           !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                           &fileInfo
                                           );
                 }
               }
@@ -3253,8 +3229,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                         appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                  ENTRY_TYPE_IMAGE,
                                                                  name,
-                                                                 &fileInfo,
-                                                                 !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                                 &fileInfo
                                                                 );
                                       }
                                     }
@@ -3374,8 +3349,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_FILE,
                                                                fileName,
-                                                               &fileInfo,
-                                                               !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                               &fileInfo
                                                               );
                                     }
                                     break;
@@ -3386,8 +3360,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_IMAGE,
                                                                fileName,
-                                                               &fileInfo,
-                                                               !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                               &fileInfo
                                                               );
                                     }
                                     break;
@@ -3518,8 +3491,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                      ENTRY_TYPE_IMAGE,
                                                      name,
-                                                     &fileInfo,
-                                                     !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                     &fileInfo
                                                     );
                           }
                         }
@@ -3669,8 +3641,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                    ENTRY_TYPE_FILE,
                                                    name,
-                                                   &fileInfo,
-                                                   !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                   &fileInfo
                                                   );
                         }
                         break;
@@ -3704,8 +3675,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                      ENTRY_TYPE_IMAGE,
                                                      name,
-                                                     &fileInfo,
-                                                     !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                     &fileInfo
                                                     );
                           }
                         }
@@ -4764,7 +4734,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  {
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
-                   if (!INDEX_ID_IS_NONE(storageMsg.storageId)) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -4904,6 +4873,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
         }
         DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+        AUTOFREE_ADD(&autoFreeList,&storageMsg,
+                     {
+                       if (!appendFlag && !INDEX_ID_IS_NONE(storageMsg.storageId))
+                       {
+                         Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+                       }
+                     }
+                    );
 
         // update status info
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
@@ -5212,7 +5189,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                       printableStorageName,
                                       0,  // createDateTime
                                       storageSize,
-                                      NULL  // comment
+                                      NULL,  // comment
+                                      TRUE  // update newest entries
                                      );
         }
 
