@@ -18,7 +18,7 @@
 #ifndef NDEBUG
   #include <pthread.h>
 #endif /* not NDEBUG */
-#ifdef HAVE_BACKTRACE
+#ifdef HAVE_EXECINFO_H
   #include <execinfo.h>
 #endif
 #include <assert.h>

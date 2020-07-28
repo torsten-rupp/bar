@@ -28,7 +28,7 @@
   #warning No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <errno.h>
-#ifdef HAVE_BACKTRACE
+#ifdef HAVE_EXECINFO_H
   #include <execinfo.h>
 #endif
 #include <assert.h>
@@ -43,7 +43,7 @@
 
 /****************** Conditional compilation switches *******************/
 #define HALT_ON_INSUFFICIENT_MEMORY   // halt on insufficient memory
-#define TRACE_STRING_ALLOCATIONS      // trace all allocated strings
+#define _TRACE_STRING_ALLOCATIONS      // trace all allocated strings
 #define _FILL_MEMORY                   // fill memory
 
 #ifndef NDEBUG

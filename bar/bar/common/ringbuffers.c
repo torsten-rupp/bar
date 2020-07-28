@@ -19,7 +19,7 @@
 #ifndef NDEBUG
   #include <pthread.h>
 #endif
-#ifdef HAVE_BACKTRACE
+#ifdef HAVE_EXECINFO_H
   #include <execinfo.h>
 #endif
 

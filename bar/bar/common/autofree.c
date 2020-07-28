@@ -13,7 +13,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
-#ifdef HAVE_BACKTRACE
+#ifdef HAVE_EXECINFO_H
   #include <execinfo.h>
 #endif
 #include <assert.h>
