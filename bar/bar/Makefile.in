@@ -198,6 +198,7 @@ CALLGRIND_FLAGS = -v
 VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 ifneq ($(SVNVERSION),)
   VERSION_REPOSITORY := $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
 else
@@ -344,7 +345,7 @@ common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_
 
 release/%.o: %.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
 
 debug/%.o: %.c
 	$(INSTALL) -d $(@D)
@@ -607,10 +608,9 @@ INTERMEDIATE_HEADERS        = errors.h \
                               archive_format_const.h \
                               index_definition.h \
 
-TARGETS_INSTALL             = bar@EXEEXT@ \
-                              bar-debug@EXEEXT@ \
+TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
+                              bar-debug@EXEEXT@ bar-debug.sym \
                               $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
-                              $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
                               bar-keygen@SHELLEXT@ \
                               bar-sqlite3@EXEEXT@ \
                               $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
@@ -804,6 +804,9 @@ ifeq (@HAVE_BREAKPAD@,1)
           $(foreach z,$(LD_LIBRARIES), -l$z)
 endif
 
+bar.sym: bar@EXEEXT@
+	$(OBJCOPY) --only-keep-debug bar@EXEEXT@ $@
+
 bar-debug@EXEEXT@: \
   $(BAR_OBJECTS_DEBUG) \
   $(EXTERN_OBJECTS_DEBUG)
@@ -812,7 +815,6 @@ bar-debug@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
-	$(OBJCOPY) --only-keep-debug bar-debug@EXEEXT@ $@.sym
 ifeq (@HAVE_BREAKPAD@,1)
 	$(MAKE) debug/bar.sym.bz2.o
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ debug/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
@@ -822,7 +824,7 @@ ifeq (@HAVE_BREAKPAD@,1)
           $(foreach z,$(LD_LIBRARIES), -l$z)
 endif
 
-bar-debug@EXEEXT@.sym: bar-debug@EXEEXT@
+bar-debug.sym: bar-debug@EXEEXT@
 	$(OBJCOPY) --only-keep-debug bar-debug@EXEEXT@ $@
 
 bar-gcov@EXEEXT@: \
@@ -883,17 +885,10 @@ po/jp/LC_MESSAGES/bar.mo: po/japanese.po
 	$(INSTALL) -d $(@D)
 	$(MSGFMT) -o $@ po/japanese.po
 
-# create BAR symbol files
+# create breakpad symbol files
 ifeq (@HAVE_BREAKPAD@,1)
-release/bar.sym: bar@EXEEXT@
-	$(DUMP_SYMS) ./bar@EXEEXT@ >$@
-else
-	@$(ECHO) "Warning: breakpad not configured - cannot build symbol file."
-endif
-
-ifeq (@HAVE_BREAKPAD@,1)
-release/bar.sym.bz2.o: release/bar.sym
-	$(BZIP2) -c < release/bar.sym >release/bar.sym.bz2
+release/bar.sym.bz2.o:
+	$(DUMP_SYMS) ./bar@EXEEXT@ | $(BZIP2) -c >release/bar.sym.bz2
 	(format=$(shell $(OBJDUMP) -a release/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
          name=$(subst .,_,$(subst /,_,release/bar.sym.bz2)); \
          $(OBJCOPY) \
@@ -911,15 +906,8 @@ else
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
-debug/bar.sym: bar-debug@EXEEXT@
-	$(DUMP_SYMS) ./bar-debug@EXEEXT@ >$@
-else
-	@$(ECHO) "Warning: breakpad not configured - cannot build symbol file."
-endif
-
-ifeq (@HAVE_BREAKPAD@,1)
-debug/bar.sym.bz2.o: debug/bar.sym
-	$(BZIP2) -c < debug/bar.sym >debug/bar.sym.bz2
+debug/bar.sym.bz2.o:
+	$(DUMP_SYMS) ./bar-debug@EXEEXT@ | $(BZIP2) -c >debug/bar.sym.bz2
 	(format=$(shell $(OBJDUMP) -a debug/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
          name=$(subst .,_,$(subst /,_,debug/bar.sym.bz2)); \
          $(OBJCOPY) \
@@ -2305,7 +2293,7 @@ install: \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) -m 644 bar-debug@EXEEXT@.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) -m 644 bar.sym bar-debug.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-sqlite3@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(PLATFORM),WINDOWS)
