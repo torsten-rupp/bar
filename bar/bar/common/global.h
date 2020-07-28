@@ -40,7 +40,7 @@
 #else
   #warning No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
-#ifdef HAVE_BACKTRACE
+#ifdef HAVE_EXECINFO_H
   #include <execinfo.h>
 #endif
 #include <errno.h>
@@ -788,7 +788,7 @@ typedef byte* BitSet;
 #endif
 
 /***********************************************************************\
-* Name   : MIN, MAX, IN_RANGE
+* Name   : MIN, MAX
 * Purpose: get min./max.
 * Input  : x,y - numbers
 * Output : -
@@ -1649,6 +1649,8 @@ static inline uint64 getCycleCounter(void)
     #endif
   #elif PLATFORM_WINDOWS
     return __rdtsc();
+  #else
+    return 0LL;
   #endif /* PLATFORM_... */
 }
 
@@ -3299,7 +3301,7 @@ static inline bool stringToInt64(const char *string, int64 *l)
 }
 
 /***********************************************************************\
-* Name   : stringToInt
+* Name   : stringToUInt64
 * Purpose: convert string to uint64-value
 * Input  : string - string
 *          l      - value variable
