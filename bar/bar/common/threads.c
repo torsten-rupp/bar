@@ -711,28 +711,28 @@ LOCAL void threadTerminated(void *userData)
 
 LOCAL void *threadStartCode(void *userData)
 {
-  ThreadStartInfo *startInfo = (ThreadStartInfo*)userData;
+  ThreadStartInfo *threadStartInfo = (ThreadStartInfo*)userData;
   void            (*entryFunction)(void*);
   void            *argument;
 
-  assert(startInfo != NULL);
+  assert(threadStartInfo != NULL);
 
-  pthread_cleanup_push(threadTerminated,startInfo->thread);
+  pthread_cleanup_push(threadTerminated,threadStartInfo->thread);
   {
     // try to set thread name
     #ifdef HAVE_PTHREAD_SETNAME_NP
-      if (startInfo->name != NULL)
+      if (threadStartInfo->name != NULL)
       {
-        (void)pthread_setname_np(pthread_self(),startInfo->name);
+        (void)pthread_setname_np(pthread_self(),threadStartInfo->name);
       }
     #endif /* HAVE_PTHREAD_SETNAME_NP */
 
     #ifndef NDEBUG
-      debugThreadStackTraceSetThreadName(pthread_self(),startInfo->name);
+      debugThreadStackTraceSetThreadName(pthread_self(),threadStartInfo->name);
     #endif /* NDEBUG */
 
     #if   defined(PLATFORM_LINUX)
-      if (nice(startInfo->niceLevel) == -1)
+      if (nice(threadStartInfo->niceLevel) == -1)
       {
         // ignore error
       }
@@ -740,11 +740,11 @@ LOCAL void *threadStartCode(void *userData)
     #endif /* PLATFORM_... */
 
     // get local copy of start data
-    entryFunction = startInfo->entryFunction;
-    argument      = startInfo->argument;
+    entryFunction = threadStartInfo->entryFunction;
+    argument      = threadStartInfo->argument;
 
     // signal thread started
-    sem_post(&startInfo->lock);
+    sem_post(&threadStartInfo->lock);
 
     // run thread code
     assert(entryFunction != NULL);
@@ -992,7 +992,6 @@ const char *Thread_getIdString(const ThreadId threadId)
   uint  i;
   int   j;
   uint8 *p;
-  char  *s;
 
   assert((2+sizeof(ThreadId)*2) < (sizeof(idStrings[0])-1));
 
@@ -1000,14 +999,11 @@ const char *Thread_getIdString(const ThreadId threadId)
 
   // Note: reverse to be compatible with gdb output
   p = (uint8*)(void*)(&threadId);
-  s = idStrings[i%16];
-  strcpy(s,"0x"); s += 2;
+  stringSet(idStrings[i%16],sizeof(idStrings[i%16]),"0x");
   for (j = (int)sizeof(ThreadId)-1; j >= 0; j--)
   {
-    sprintf(s,"%02x",p[j]);
-    s += 2;
+    stringFormatAppend(idStrings[i%16],sizeof(idStrings[i%16]),"%02x",p[j]);
   }
-  (*s) = '\0';
 
   return idStrings[i%16];
 }
