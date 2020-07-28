@@ -136,8 +136,7 @@
         bool __locked; \
         \
         assert(semaphore != NULL); \
-        \
-        pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
+        assert(debugSemaphoreInitFlag); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         pthread_mutex_lock(&debugSemaphoreLock); \
@@ -158,8 +157,7 @@
         \
         assert(semaphore != NULL); \
         assert(timeout != WAIT_FOREVER); \
-        \
-        pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
+        assert(debugSemaphoreInitFlag); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,timeout); \
         pthread_mutex_lock(&debugSemaphoreLock); \
@@ -597,6 +595,43 @@ LOCAL void debugSemaphoreSignalHandler(int signalNumber)
 #endif /* HAVE_SIGQUIT */
 
 /***********************************************************************\
+* Name   : debugSemaphoreIsOwned
+* Purpose: check if semaphore is owned by current thread
+* Input  : semaphore - semaphore
+* Return : TRUE iff semaphore is owned by current thread
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool debugSemaphoreIsOwned(const Semaphore *semaphore)
+{
+  bool     isOwned;
+  ThreadId currentThreadId;
+  uint     i;
+
+  assert(semaphore != NULL);
+  assert(debugSemaphoreInitFlag);
+
+  isOwned = FALSE;
+
+  currentThreadId = Thread_getCurrentId();
+
+  pthread_mutex_lock(&debugSemaphoreLock);
+  {
+    for (i = 0; i < semaphore->debug.lockedByCount; i++)
+    {
+      if (Thread_equalThreads(semaphore->debug.lockedBy[i].threadId,currentThreadId))
+      {
+        isOwned = TRUE;
+        break;
+      }
+    }
+  }
+  pthread_mutex_unlock(&debugSemaphoreLock);
+
+  return isOwned;
+}
+
+/***********************************************************************\
 * Name   : debugAddThreadInfo
 * Purpose: add thread to thread info array
 * Input  : threadInfos     - thread info array
@@ -664,9 +699,7 @@ LOCAL_INLINE void debugAddLockedThreadInfo(Semaphore          *semaphore,
                                           )
 {
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
-
-  pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
+  assert(debugSemaphoreInitFlag);
 
   pthread_mutex_lock(&debugSemaphoreLock);
   {
@@ -695,9 +728,7 @@ LOCAL_INLINE void debugAddPendingThreadInfo(Semaphore          *semaphore,
                                            )
 {
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
-
-  pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
+  assert(debugSemaphoreInitFlag);
 
   pthread_mutex_lock(&debugSemaphoreLock);
   {
@@ -788,9 +819,7 @@ LOCAL_INLINE void debugRemoveLockedThreadInfo(Semaphore  *semaphore,
                                              )
 {
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
-
-  pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
+  assert(debugSemaphoreInitFlag);
 
   pthread_mutex_lock(&debugSemaphoreLock);
   {
@@ -817,9 +846,7 @@ LOCAL_INLINE void debugRemovePendingThreadInfo(Semaphore  *semaphore,
                                               )
 {
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
-
-  pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
+  assert(debugSemaphoreInitFlag);
 
   pthread_mutex_lock(&debugSemaphoreLock);
   {
@@ -1048,7 +1075,6 @@ LOCAL const __SemaphoreThreadInfo *getLockedByThreadInfo(const Semaphore *semaph
   uint i;
 
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
 
   for (i = 0; i < semaphore->lockedByCount; i++)
   {
@@ -1073,7 +1099,6 @@ LOCAL const __SemaphoreThreadInfo *getPendingByThreadInfo(const Semaphore *semap
   uint i;
 
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
 
   for (i = 0; i < semaphore->pendingByCount; i++)
   {
@@ -1181,11 +1206,9 @@ LOCAL void debugCheckForDeadLock(Semaphore          *semaphore,
   const Semaphore             *checkSemaphore;
 
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
+  assert(debugSemaphoreInitFlag);
 
   UNUSED_VARIABLE(lockType);
-
-  pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
 
   pthread_mutex_lock(&debugSemaphoreLock);
   {
@@ -1284,8 +1307,8 @@ LOCAL bool lock(const char         *__fileName__,
   bool lockedFlag;
 
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
   assert((semaphoreLockType == SEMAPHORE_LOCK_TYPE_READ) || (semaphoreLockType == SEMAPHORE_LOCK_TYPE_READ_WRITE));
+  assert(debugSemaphoreInitFlag); \
 
   lockedFlag = TRUE;
 
@@ -1356,8 +1379,6 @@ LOCAL bool lock(const char         *__fileName__,
           if (semaphore->readWriteLockCount > 0)
           {
             #ifndef NDEBUG
-              pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
-
               pthread_mutex_lock(&debugSemaphoreLock);
               {
                 assert(semaphore->lockedByCount > 0);
@@ -1539,7 +1560,7 @@ LOCAL bool lock(const char         *__fileName__,
         #endif /* not NDEBUG */
 //fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->debug.lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
 
-        assert(Semaphore_isOwned(semaphore));
+        assert(debugSemaphoreIsOwned(semaphore));
         assert(Thread_isCurrentThread(semaphore->readWriteLockOwnedBy));
 
         VERIFY_COUNTERS(semaphore);
@@ -1576,7 +1597,6 @@ LOCAL void unlock(const char *__fileName__,
 #endif /* NDEBUG */
 {
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
 
   switch (semaphore->lockType)
   {
@@ -1692,7 +1712,6 @@ LOCAL bool waitModified(const char *__fileName__,
   bool lockedFlag;
 
   assert(semaphore != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(semaphore);
   assert(semaphore->lockType != SEMAPHORE_LOCK_TYPE_NONE);
 
   lockedFlag = TRUE;
