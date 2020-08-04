@@ -49,6 +49,7 @@ typedef enum
 // additional database open mode flags
 #define DATABASE_OPENMODE_MEMORY (1 << 16)
 #define DATABASE_OPENMODE_SHARED (1 << 17)
+#define DATABASE_OPENMODE_AUX    (1 << 18)
 
 // database lock types
 typedef enum
@@ -76,8 +77,8 @@ typedef enum
 } DatabaseTypes;
 
 // special database ids
-#define DATABASE_ID_NONE  0x0000000000000000ULL
-#define DATABASE_ID_ANY   0xFFFFFFFFFFFFFFFFULL
+#define DATABASE_ID_NONE  0x0000000000000000LL
+#define DATABASE_ID_ANY   0xFFFFFFFFFFFFFFFFLL
 
 // ordering mode
 typedef enum
@@ -103,6 +104,22 @@ typedef enum
   DATABASE_HISTORY_TYPE_UNLOCK
 } DatabaseHistoryThreadInfoTypes;
 #endif /* NDEBUG */
+
+#define DATABASE_AUX "aux"
+
+// ids of tempory table in "aux"
+typedef enum
+{
+  DATABASE_TEMPORARY_TABLE1,
+  DATABASE_TEMPORARY_TABLE2,
+  DATABASE_TEMPORARY_TABLE3,
+  DATABASE_TEMPORARY_TABLE4,
+  DATABASE_TEMPORARY_TABLE5,
+  DATABASE_TEMPORARY_TABLE6,
+  DATABASE_TEMPORARY_TABLE7,
+  DATABASE_TEMPORARY_TABLE8,
+  DATABASE_TEMPORARY_TABLE9
+} DatabaseTemporaryTableIds;
 
 /***************************** Datatypes *******************************/
 
@@ -205,15 +222,17 @@ typedef struct DatabaseNode
   uint                        pendingReadCount;
   uint                        readCount;
   pthread_cond_t              readTrigger;
+ThreadLWPId readLPWIds[32];
 
   uint                        pendingReadWriteCount;
   uint                        readWriteCount;
   pthread_cond_t              readWriteTrigger;
-  ThreadId                    readWriteLockedBy;
+ThreadLWPId readWriteLPWIds[32];
 
   uint                        pendingTransactionCount;
   uint                        transactionCount;
   pthread_cond_t              transactionTrigger;
+ThreadLWPId transactionLPWId;
 
   DatabaseBusyHandlerList     busyHandlerList;
   DatabaseProgressHandlerList progressHandlerList;
@@ -228,6 +247,7 @@ typedef struct DatabaseNode
       // pending read/writes
       DatabaseThreadInfo pendingReadWrites[32];
       // read/write
+      ThreadId           readWriteLockedBy;
       DatabaseThreadInfo readWrites[32];
       struct
       {
@@ -820,12 +840,41 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
                                );
 
 /***********************************************************************\
+* Name   : Database_createTemporaryTable
+* Purpose: create temporary database table
+* Input  : databaseHandle - database handle
+*          id             - table id
+*          definition     - table definition
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_createTemporaryTable(DatabaseHandle            *databaseHandle,
+                                     DatabaseTemporaryTableIds id,
+                                     const char                *definition
+                                    );
+
+/***********************************************************************\
+* Name   : Database_dropTemporaryTable
+* Purpose: drop temporary database table
+* Input  : databaseHandle - database handle
+*          id             - table id
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
+                                   DatabaseTemporaryTableIds id
+                                  );
+
+/***********************************************************************\
 * Name   : Database_compare
 * Purpose: compare database structure
 * Input  : databaseHandleReference - reference database handle
-*          databaseHandle          - database handle 1
+*          databaseHandle          - database handle
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : ERROR_NONE if databases equals or mismatch code
 * Notes  : -
 \***********************************************************************/
 
@@ -1481,15 +1530,17 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Database_debugDump
-* Purpose: dump database schema
+* Name   : Database_debugDumpTable
+* Purpose: dump database table
 * Input  : databaseHandle - database handle
+*          tableName      - table name
+*          showHeaderFlag - TRUE to dump header
 * Output : -
 * Return : -
 * Notes  : For debugging only!
 \***********************************************************************/
 
-void Database_debugDump(DatabaseHandle *databaseHandle, const char *tableName);
+void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableName, bool showHeaderFlag);
 
 #endif /* not NDEBUG */
 
