@@ -2205,14 +2205,14 @@ public class TabJobs
   private WidgetVariable  comment                   = new WidgetVariable<String> ("comment","");
 
   // variables
-  private DirectoryInfoThread           directoryInfoThread;
-  private boolean                       directorySizesFlag     = false;
-  private JobData                       selectedJobData        = null;
-  private WidgetEvent                   selectJobEvent         = new WidgetEvent();
-  private HashMap<String,EntryData>     includeHashMap         = new HashMap<String,EntryData>();
-  private HashSet<String>               excludeHashSet         = new HashSet<String>();
-  private HashSet<String>               sourceHashSet          = new HashSet<String>();
-  private HashSet<String>               compressExcludeHashSet = new HashSet<String>();
+  private DirectoryInfoThread          directoryInfoThread;
+  private boolean                      directorySizesFlag     = false;
+  private JobData                      selectedJobData        = null;
+  private WidgetEvent                  selectJobEvent         = new WidgetEvent();
+  private HashMap<String,EntryData>    includeHashMap         = new HashMap<String,EntryData>();
+  private HashSet<String>              excludeHashSet         = new HashSet<String>();
+  private HashSet<String>              sourceHashSet          = new HashSet<String>();
+  private HashSet<String>              compressExcludeHashSet = new HashSet<String>();
   private HashMap<String,ScheduleData> scheduleDataMap        = new HashMap<String,ScheduleData>();
 
   /** create jobs tab
@@ -14385,52 +14385,53 @@ throw new Error("NYI");
             }
           });
         }
-        addDragAndDrop(composite,"Text",subComposite,widgetText,                                                        4,0);
+        addDragAndDrop(composite,"Text",subComposite,widgetText,                                                             4,0);
 
-        addDragAndDrop(composite,"#",       BARControl.tr("part number 1 digit"),                                       6,0);
-        addDragAndDrop(composite,"##",      BARControl.tr("part number 2 digits"),                                      7,0);
-        addDragAndDrop(composite,"###",     BARControl.tr("part number 3 digits"),                                      8,0);
-        addDragAndDrop(composite,"####",    BARControl.tr("part number 4 digits"),                                      9,0);
+        addDragAndDrop(composite,"#",         BARControl.tr("part number 1 digit"),                                          6,0);
+        addDragAndDrop(composite,"##",        BARControl.tr("part number 2 digits"),                                         7,0);
+        addDragAndDrop(composite,"###",       BARControl.tr("part number 3 digits"),                                         8,0);
+        addDragAndDrop(composite,"####",      BARControl.tr("part number 4 digits"),                                         9,0);
 
-        addDragAndDrop(composite,"%type",   BARControl.tr("archive type: full\n,incremental\n,differential\n,continuous"),   11,0);
-        addDragAndDrop(composite,"%T",      BARControl.tr("archive type short: F, I, D, C"),                           12,0);
-        addDragAndDrop(composite,"%uuid",   BARControl.tr("universally unique identifier"),                            13,0);
-        addDragAndDrop(composite,"%text",   BARControl.tr("schedule custom text"),                                     14,0);
+        addDragAndDrop(composite,"%type",     BARControl.tr("archive type: full\n,incremental\n,differential\n,continuous"),11,0);
+        addDragAndDrop(composite,"%T",        BARControl.tr("archive type short: F, I, D, C"),                              12,0);
+        addDragAndDrop(composite,"%uuid",     BARControl.tr("universally unique identifier"),                               13,0);
+        addDragAndDrop(composite,"%text",     BARControl.tr("schedule custom text"),                                        14,0);
 
         // column 2
-        addDragAndDrop(composite,"%d",      BARControl.tr("day 01..31"),                                                0,1);
-        addDragAndDrop(composite,"%j",      BARControl.tr("day of year 001..366"),                                      1,1);
-        addDragAndDrop(composite,"%m",      BARControl.tr("month 01..12"),                                              2,1);
-        addDragAndDrop(composite,"%b",      BARControl.tr("month name"),                                                3,1);
-        addDragAndDrop(composite,"%B",      BARControl.tr("full month name"),                                           4,1);
-        addDragAndDrop(composite,"%H",      BARControl.tr("hour 00..23"),                                               5,1);
-        addDragAndDrop(composite,"%I",      BARControl.tr("hour 00..12"),                                               6,1);
-        addDragAndDrop(composite,"%M",      BARControl.tr("minute 00..59"),                                             7,1);
-        addDragAndDrop(composite,"%S",      BARControl.tr("seconds 00..59"),                                            8,1);
-        addDragAndDrop(composite,"%p",      BARControl.tr("'AM' or 'PM'"),                                              9,1);
-        addDragAndDrop(composite,"%P",      BARControl.tr("'am' or 'pm'"),                                             10,1);
-        addDragAndDrop(composite,"%a",      BARControl.tr("week day name"),                                            11,1);
-        addDragAndDrop(composite,"%A",      BARControl.tr("full week day name"),                                       12,1);
-        addDragAndDrop(composite,"%u",      BARControl.tr("day of week 1..7"),                                         13,1);
-        addDragAndDrop(composite,"%w",      BARControl.tr("day of week 0..6"),                                         14,1);
-        addDragAndDrop(composite,"%U",      BARControl.tr("week number 00..53"),                                       15,1);
-        addDragAndDrop(composite,"%U2",     BARControl.tr("week number 1 or 2"),                                       16,1);
-        addDragAndDrop(composite,"%U4",     BARControl.tr("week number 1, 2, 3, 4"),                                   17,1);
-        addDragAndDrop(composite,"%W",      BARControl.tr("week number 00..53"),                                       18,1);
-        addDragAndDrop(composite,"%W2",     BARControl.tr("week number 1 or 2"),                                       19,1);
-        addDragAndDrop(composite,"%W4",     BARControl.tr("week number 1, 2, 3, 4"),                                   20,1);
-        addDragAndDrop(composite,"%C",      BARControl.tr("century two digits"),                                       21,1);
-        addDragAndDrop(composite,"%y",      BARControl.tr("year two digits"),                                          22,1);
-        addDragAndDrop(composite,"%Y",      BARControl.tr("year four digits"),                                         23,1);
-        addDragAndDrop(composite,"%s",      BARControl.tr("seconds since 1.1.1970 00:00"),                             24,1);
-        addDragAndDrop(composite,"%Z",      BARControl.tr("time-zone abbreviation"),                                   25,1);
+        addDragAndDrop(composite,"%d",        BARControl.tr("day 01..31"),                                                   0,1);
+        addDragAndDrop(composite,"%j",        BARControl.tr("day of year 001..366"),                                         1,1);
+        addDragAndDrop(composite,"%m",        BARControl.tr("month 01..12"),                                                 2,1);
+        addDragAndDrop(composite,"%b",        BARControl.tr("month name"),                                                   3,1);
+        addDragAndDrop(composite,"%B",        BARControl.tr("full month name"),                                              4,1);
+        addDragAndDrop(composite,"%H",        BARControl.tr("hour 00..23"),                                                  5,1);
+        addDragAndDrop(composite,"%I",        BARControl.tr("hour 00..12"),                                                  6,1);
+        addDragAndDrop(composite,"%M",        BARControl.tr("minute 00..59"),                                                7,1);
+        addDragAndDrop(composite,"%S",        BARControl.tr("seconds 00..59"),                                               8,1);
+        addDragAndDrop(composite,"%p",        BARControl.tr("'AM' or 'PM'"),                                                 9,1);
+        addDragAndDrop(composite,"%P",        BARControl.tr("'am' or 'pm'"),                                                10,1);
+        addDragAndDrop(composite,"%a",        BARControl.tr("week day name"),                                               11,1);
+        addDragAndDrop(composite,"%A",        BARControl.tr("full week day name"),                                          12,1);
+        addDragAndDrop(composite,"%u",        BARControl.tr("day of week 1..7"),                                            13,1);
+        addDragAndDrop(composite,"%w",        BARControl.tr("day of week 0..6"),                                            14,1);
+        addDragAndDrop(composite,"%U",        BARControl.tr("week number 00..53"),                                          15,1);
+        addDragAndDrop(composite,"%U2",       BARControl.tr("week number 1 or 2"),                                          16,1);
+        addDragAndDrop(composite,"%U4",       BARControl.tr("week number 1, 2, 3, 4"),                                      17,1);
+        addDragAndDrop(composite,"%W",        BARControl.tr("week number 00..53"),                                          18,1);
+        addDragAndDrop(composite,"%W2",       BARControl.tr("week number 1 or 2"),                                          19,1);
+        addDragAndDrop(composite,"%W4",       BARControl.tr("week number 1, 2, 3, 4"),                                      20,1);
+        addDragAndDrop(composite,"%C",        BARControl.tr("century two digits"),                                          21,1);
+        addDragAndDrop(composite,"%y",        BARControl.tr("year two digits"),                                             22,1);
+        addDragAndDrop(composite,"%Y",        BARControl.tr("year four digits"),                                            23,1);
+        addDragAndDrop(composite,"%s",        BARControl.tr("seconds since 1.1.1970 00:00"),                                24,1);
+        addDragAndDrop(composite,"%Z",        BARControl.tr("time-zone abbreviation"),                                      25,1);
 
         // column 3
-        addDragAndDrop(composite,"%%",      "%",                                                                        0,2);
-        addDragAndDrop(composite,"%#",      "#",                                                                        1,2);
+        addDragAndDrop(composite,"%%",        "%",                                                                           0,2);
+        addDragAndDrop(composite,"%#",        "#",                                                                           1,2);
+        addDragAndDrop(composite,"%:",        ":",                                                                           2,2);
 
-        addDragAndDrop(composite,"%Y-%m-%d",BARControl.tr("Date YYYY-MM-DD"),                                           3,2);
-        addDragAndDrop(composite,"%H:%M:%S",BARControl.tr("Time hh:mm:ss"),                                             4,2);
+        addDragAndDrop(composite,"%Y-%m-%d",  BARControl.tr("Date YYYY-MM-DD"),                                              4,2);
+        addDragAndDrop(composite,"%H%:%M%:%S",BARControl.tr("Time hh:mm:ss"),                                                5,2);
       }
 
       // set name
@@ -14459,15 +14460,24 @@ throw new Error("NYI");
               // add variable part
               buffer = new StringBuilder();
               buffer.append('%'); i++;
-              if ((i < fileName.length()) && (fileName.charAt(i) == '%'))
+              if (i < fileName.length())
               {
-                buffer.append('%'); i++;
-              }
-              else
-              {
-                while ((i < fileName.length()) && (Character.isLetterOrDigit(fileName.charAt(i))))
+                if      (fileName.charAt(i) == '%')
                 {
-                  buffer.append(fileName.charAt(i)); i++;
+                  buffer.append('%'); i++;
+                }
+                else if (fileName.charAt(i) == ':')
+                {
+                  buffer.append(':'); i++;
+                }
+                else
+                {
+                  while (   (i < fileName.length())
+                         && Character.isLetterOrDigit(fileName.charAt(i))
+                        )
+                  {
+                    buffer.append(fileName.charAt(i)); i++;
+                  }
                 }
               }
               storageNamePartList.add(new StorageNamePart(buffer.toString()));
@@ -14642,24 +14652,33 @@ throw new Error("NYI");
       // split into parts
       ArrayList<String> parts = new ArrayList<String>();
       StringBuilder buffer;
-      int z = 0;
-      while (z < string.length())
+      int i = 0;
+      while (i < string.length())
       {
-        switch (string.charAt(z))
+        switch (string.charAt(i))
         {
           case '%':
             // add variable part
             buffer = new StringBuilder();
-            buffer.append('%'); z++;
-            if ((z < string.length()) && (string.charAt(z) == '%'))
+            buffer.append('%'); i++;
+            if (i < string.length())
             {
-              buffer.append('%'); z++;
-            }
-            else
-            {
-              while ((z < string.length()) && (Character.isLetterOrDigit(string.charAt(z))))
+              if      (string.charAt(i) == '%')
               {
-                buffer.append(string.charAt(z)); z++;
+                buffer.append('%'); i++;
+              }
+              else if (string.charAt(i) == ':')
+              {
+                buffer.append(':'); i++;
+              }
+              else
+              {
+                while (   (i < string.length())
+                       && Character.isLetterOrDigit(string.charAt(i))
+                      )
+                {
+                  buffer.append(string.charAt(i)); i++;
+                }
               }
             }
             parts.add(buffer.toString());
@@ -14667,21 +14686,21 @@ throw new Error("NYI");
           case '#':
             // add number part
             buffer = new StringBuilder();
-            while ((z < string.length()) && (string.charAt(z) == '#'))
+            while ((i < string.length()) && (string.charAt(i) == '#'))
             {
-              buffer.append(string.charAt(z)); z++;
+              buffer.append(string.charAt(i)); i++;
             }
             parts.add(buffer.toString());
             break;
           default:
             // add text
             buffer = new StringBuilder();
-            while (   (z < string.length())
-               && (string.charAt(z) != '%')
-               && (string.charAt(z) != '#')
+            while (   (i < string.length())
+               && (string.charAt(i) != '%')
+               && (string.charAt(i) != '#')
               )
             {
-              buffer.append(string.charAt(z)); z++;
+              buffer.append(string.charAt(i)); i++;
             }
             parts.add(buffer.toString());
         }
@@ -14699,10 +14718,10 @@ throw new Error("NYI");
             {
               storageNamePartList.get(index).string = parts.get(0);
             }
-            for (int i = 1; i < parts.size(); i++)
+            for (int j = 1; j < parts.size(); j++)
             {
               storageNamePartList.add(index+1,new StorageNamePart(null));
-              storageNamePartList.add(index+2,new StorageNamePart(parts.get(i)));
+              storageNamePartList.add(index+2,new StorageNamePart(parts.get(j)));
               index += 2;
             }
           }
@@ -14898,6 +14917,8 @@ throw new Error("NYI");
               buffer.append("%");
             else if (storageNamePart.string.equals("%#"))
               buffer.append("#");
+            else if (storageNamePart.string.equals("%:"))
+              buffer.append(":");
             else
               buffer.append(storageNamePart.string);
           }
@@ -15263,10 +15284,9 @@ throw new Error("NYI");
    */
   private boolean scheduleEdit(final ScheduleData scheduleData, String title, String buttonText)
   {
-    Composite composite;
+    Composite composite,subComposite;
     Label     label;
     Button    button;
-    Composite subComposite;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,title,300,70,new double[]{1.0,0.0},1.0);
@@ -15293,7 +15313,7 @@ throw new Error("NYI");
       {
         widgetYear = Widgets.newOptionMenu(subComposite);
         widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
-        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022"});
+        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"});
         widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
