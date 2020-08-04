@@ -10,21 +10,21 @@ automated backups in the background.
 --- Features
 
 * create, list, test, compare, convert and extract archives of
-  files and disk images
+  files and disk images,
 * fast access to entries in archives: can find and extract single
-  files without decompressing/decryption of the whole archive
-* full and incremental/differential backup files archives
+  files without decompressing/decryption of the whole archive,
+* full and incremental/differential backup files archives,
 * support for raw and several file systems for disk images (ext,
-  fat, reiserfs)
+  fat, reiserfs),
 * can split archives into parts of selectable size; each part can
-  be read independent
+  be read independent,
 * compress of data with zlib, bzip2, lzma, lzo, lz4, or zstd
-  algorithms
+  algorithms,
 * encrypt archive content with gcrypt algorithms (BLOWFISH,
   TWOFISH, AES, a. o.),
-* asymmetric encryption with RSA
+* asymmetric encryption with RSA,
 * store archives directly on external server via ftp or scp,
-  sftp, webdav, webdavs
+  sftp, webdav, webdavs,
 * with external tools: store archives on CD/DVD/BD including
   error correction codes,
 * support storage on a generic device,
