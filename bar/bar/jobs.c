@@ -1378,7 +1378,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
   {
     if (scheduleDate->year != DATE_ANY)
     {
-      String_appendFormat(line,"%d",scheduleDate->year);
+      String_appendFormat(line,"%4d",scheduleDate->year);
     }
     else
     {
@@ -1387,7 +1387,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
     String_appendChar(line,'-');
     if (scheduleDate->month != DATE_ANY)
     {
-      String_appendFormat(line,"%d",scheduleDate->month);
+      String_appendFormat(line,"%2d",scheduleDate->month);
     }
     else
     {
@@ -1396,7 +1396,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
     String_appendChar(line,'-');
     if (scheduleDate->day != DATE_ANY)
     {
-      String_appendFormat(line,"%d",scheduleDate->day);
+      String_appendFormat(line,"%2d",scheduleDate->day);
     }
     else
     {
@@ -1661,7 +1661,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
   {
     if (scheduleTime->hour != TIME_ANY)
     {
-      String_appendFormat(line,"%d",scheduleTime->hour);
+      String_appendFormat(line,"%2d",scheduleTime->hour);
     }
     else
     {
@@ -1670,7 +1670,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
     String_appendChar(line,':');
     if (scheduleTime->minute != TIME_ANY)
     {
-      String_appendFormat(line,"%d",scheduleTime->minute);
+      String_appendFormat(line,"%2d",scheduleTime->minute);
     }
     else
     {
