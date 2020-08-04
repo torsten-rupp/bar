@@ -739,6 +739,13 @@ ERROR PARSE_WEEKDAYS
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR PARSE_MAINTENANCE
+  stringSet(errorText,sizeof(errorText),TR("parsing maintenance fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR PARSE_SCHEDULE
   stringSet(errorText,sizeof(errorText),TR("parsing schedule fail"));
   if (!stringIsEmpty(ERROR_DATA))
@@ -807,6 +814,16 @@ ERROR PERSISTENCE_ID_NOT_FOUND
   else
   {
     stringSet(errorText,sizeof(errorText),TR("persistence not found"));
+  }
+
+ERROR MAINTENANCE_ID_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"maintenance with id #%s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("maintenance not found"));
   }
 
 ERROR SERVER_ID_NOT_FOUND
