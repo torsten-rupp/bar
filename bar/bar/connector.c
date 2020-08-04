@@ -2696,6 +2696,7 @@ LOCAL void connectorCommand_indexEntityDelete(ConnectorInfo *connectorInfo, Inde
 *            storageName=<text>
 *            storageSize=<n>
 *            comment=<text>
+*            updateNewest=yes|no
 *          Result:
 \***********************************************************************/
 
@@ -2707,6 +2708,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   uint64  dateTime;
   uint64  storageSize;
   String  comment;
+  bool    updateNewest;
   Errors  error;
 
   assert(connectorInfo != NULL);
@@ -2740,6 +2742,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   }
   comment = String_new();
   StringMap_getString(argumentMap,"comment",comment,NULL);
+  StringMap_getBool(argumentMap,"updateNewest",&updateNewest,FALSE);
 
   if (indexHandle != NULL)
   {
@@ -2751,7 +2754,8 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
                                 storageName,
                                 dateTime,
                                 storageSize,
-                                comment
+                                comment,
+                                updateNewest
                                );
     if (error != ERROR_NONE)
     {
