@@ -20,17 +20,24 @@
 #include <sys/types.h>
 #include <assert.h>
 
+#if   defined(PLATFORM_LINUX)
+  #include <unistd.h>
+  #include <sys/syscall.h>
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
+
 #include "common/global.h"
 #include "lists.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define THREAD_NUMBER_NONE 0
+#define THREAD_LPW_ID_NONE 0
 
 /***************************** Datatypes *******************************/
 
 typedef pthread_t ThreadId;
+typedef pid_t ThreadLWPId;
 
 typedef struct
 {
@@ -304,7 +311,7 @@ INLINE ThreadId Thread_getId(const Thread *thread)
 {
   assert(thread != NULL);
 
-  return (ThreadId)thread->handle;
+  return thread->handle;
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
@@ -321,7 +328,32 @@ INLINE ThreadId Thread_getCurrentId(void);
 #if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
 INLINE ThreadId Thread_getCurrentId(void)
 {
-  return (ThreadId)pthread_self();
+  return pthread_self();
+}
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Thread_getCurrentLWPId
+* Purpose: get current thread LWP id
+* Input  : -
+* Output : -
+* Return : current thread LWP id or THREAD_LPW_ID_NONE
+* Notes  : -
+\***********************************************************************/
+
+INLINE ThreadLWPId Thread_getCurrentLWPId(void);
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
+INLINE ThreadLWPId Thread_getCurrentLWPId(void)
+{
+  #if   defined(PLATFORM_LINUX)
+    #ifdef SYS_gettid
+      return (ThreadLWPId)syscall(SYS_gettid);
+    #else
+      return THREAD_LPW_ID_NONE;
+    #endif
+  #elif defined(PLATFORM_WINDOWS)
+    return THREAD_LPW_ID_NONE;
+  #endif /* PLATFORM_... */
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
