@@ -73,6 +73,9 @@
 /* Define to 1 if you have the <demangle.h> header file. */
 #undef HAVE_DEMANGLE_H
 
+/* Define to 1 if you have the <execinfo.h> header file. */
+#undef HAVE_EXECINFO_H
+
 /* fdatasync() available */
 #undef HAVE_FDATASYNC
 
