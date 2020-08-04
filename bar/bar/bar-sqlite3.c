@@ -67,8 +67,35 @@ const char *ARCHIVE_TYPES[] =
 };
 
 /***************************** Datatypes *******************************/
+// index types
+typedef enum
+{
+  INDEX_TYPE_NONE      = 0,
+
+  INDEX_TYPE_UUID      = INDEX_CONST_TYPE_UUID,
+  INDEX_TYPE_ENTITY    = INDEX_CONST_TYPE_ENTITY,
+  INDEX_TYPE_STORAGE   = INDEX_CONST_TYPE_STORAGE,
+  INDEX_TYPE_ENTRY     = INDEX_CONST_TYPE_ENTRY,
+  INDEX_TYPE_FILE      = INDEX_CONST_TYPE_FILE,
+  INDEX_TYPE_IMAGE     = INDEX_CONST_TYPE_IMAGE,
+  INDEX_TYPE_DIRECTORY = INDEX_CONST_TYPE_DIRECTORY,
+  INDEX_TYPE_LINK      = INDEX_CONST_TYPE_LINK,
+  INDEX_TYPE_HARDLINK  = INDEX_CONST_TYPE_HARDLINK,
+  INDEX_TYPE_SPECIAL   = INDEX_CONST_TYPE_SPECIAL,
+  INDEX_TYPE_HISTORY   = INDEX_CONST_TYPE_HISTORY,
+
+  INDEX_TYPE_ANY       = 0xF
+} IndexTypes;
+
+typedef struct
+{
+  bool   showHeaderFlag;
+  bool   headerPrintedFlag;
+  size_t *widths;
+} PrintTableData;
 
 /***************************** Variables *******************************/
+LOCAL const char *changeToDirectory                   = NULL;
 LOCAL bool       infoFlag                             = FALSE;  // output index database info
 LOCAL bool       infoUUIDsFlag                        = FALSE;  // output index database UUIDs info
 LOCAL bool       infoEntitiesFlag                     = FALSE;  // output index database entities info
@@ -84,6 +111,8 @@ LOCAL bool       createFlag                           = FALSE;  // create new in
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
 LOCAL bool       dropTriggersFlag                     = FALSE;  // drop triggers
 LOCAL bool       createIndizesFlag                    = FALSE;  // re-create indizes
+LOCAL bool       showTableNames                       = FALSE;  // output index database table names
+LOCAL bool       showIndexNames                       = FALSE;  // output index database index names
 LOCAL bool       dropIndizesFlag                      = FALSE;  // drop indizes
 LOCAL bool       createNewestFlag                     = FALSE;  // re-create newest data
 LOCAL bool       createAggregatesDirectoryContentFlag = FALSE;  // re-create aggregates entities data
@@ -93,12 +122,11 @@ LOCAL bool       cleanOrphanedFlag                    = FALSE;  // execute clean
 LOCAL bool       cleanDuplicatesFlag                  = FALSE;  // execute clean duplicate entries
 LOCAL bool       purgeDeletedFlag                     = FALSE;  // execute purge deleted storages
 LOCAL bool       vacuumFlag                           = FALSE;  // execute vacuum
-LOCAL bool       showStoragesFlag                     = FALSE;  // show storage of job
+LOCAL bool       showStoragesFlag                     = FALSE;  // show storages of job
 LOCAL bool       showEntriesFlag                      = FALSE;  // show entries of job
 LOCAL bool       showEntriesNewestFlag                = FALSE;  // show newest entries of job
 LOCAL bool       showNamesFlag                        = FALSE;
 LOCAL bool       showHeaderFlag                       = FALSE;
-LOCAL bool       headerPrintedFlag                    = FALSE;
 LOCAL bool       transactionFlag                      = FALSE;
 LOCAL bool       foreignKeysFlag                      = TRUE;
 LOCAL bool       forceFlag                            = FALSE;
@@ -133,7 +161,8 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
 {
   printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
   printf("\n");
-  printf("Options:  --info                                - output index database infos\n");
+  printf("Options:  -C|--directory=<name>                 - change to directory\n");
+  printf("          --info                                - output index database infos\n");
   printf("          --info-jobs[=id|UUID,...]             - output index database job infos\n");
   printf("          --info-entities[=id,...]              - output index database entities infos\n");
   printf("          --info-storages[=id,...]              - output index database storages infos\n");
@@ -143,7 +172,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --create                              - create new index database\n");
   printf("          --create-triggers                     - re-create triggers\n");
   printf("          --create-indizes                      - re-create indizes\n");
-  printf("          --create-newest                       - re-create newest data\n");
+  printf("          --create-newest[=id,...]              - re-create newest data\n");
   printf("          --create-aggregates                   - re-create aggregated data\n");
   printf("          --create-aggregates-directory-content - re-create aggregated data directory content\n");
   printf("          --create-aggregates-entities          - re-create aggregated data entities\n");
@@ -172,6 +201,8 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          -x|--explain-query                    - explain SQL queries\n");
   if (extendedFlag)
   {
+    printf("          --table-names                         - show table names\n");
+    printf("          --index-names                         - show index names\n");
     printf("          --drop-triggers                       - drop all triggers\n");
     printf("          --drop-indizes                        - drop all indixes\n");
   }
@@ -179,6 +210,8 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --xhelp                               - print extended help\n");
 }
 
+//TODO: remove, not used
+#if 0
 /***********************************************************************\
 * Name   : sqlProgressHandler
 * Purpose: SQLite progress handler
@@ -216,6 +249,7 @@ LOCAL int sqlProgressHandler(void *userData)
 
   return 0;
 }
+#endif
 
 /***********************************************************************\
 * Name   : getByteSize
@@ -345,14 +379,14 @@ LOCAL void printWarning(const char *format, ...)
 
 LOCAL void printPercentage(ulong n, ulong count)
 {
-  uint percentage;
+  double percentage;
 
   if (verboseFlag)
   {
-    percentage = (count > 0) ? (uint)(((double)n*100.0)/(double)count) : 0;
-    if (percentage > 100) percentage = 100;
+    percentage = (count > 0) ? ((double)n*1000.0)/((double)count*10.0) : 0.0;
+    if (percentage > 100.0) percentage = 100.0;
 
-    fprintf(stdout,"%3u%%\b\b\b\b",percentage); fflush(stdout);
+    fprintf(stdout,"%5.1lf%%\b\b\b\b\b\b",percentage); fflush(stdout);
   }
 }
 
@@ -369,7 +403,7 @@ LOCAL void clearPercentage(void)
 {
   if (verboseFlag)
   {
-    fprintf(stdout,"    \b\b\b\b"); fflush(stdout);
+    fprintf(stdout,"      \b\b\b\b\b\b"); fflush(stdout);
   }
 }
 
@@ -426,19 +460,28 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
 /***********************************************************************\
 * Name   : openDatabase
 * Purpose: open database
-* Input  : -
-* Output : databaseHandle - database handle
+* Input  : databaseFileName - database file name
+*          createFlag       - TRUE to create database if it does not
+*                             exists
+* Output : databaseHandle   - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFileName)
+LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFileName, bool createFlag)
 {
   Errors error;
 
   printInfo("Open database '%s'...",databaseFileName);
 
-  error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,WAIT_FOREVER);
+  error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE|DATABASE_OPENMODE_AUX,WAIT_FOREVER);
+  if (error != ERROR_NONE)
+  {
+    if (createFlag)
+    {
+      error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE|DATABASE_OPENMODE_AUX,WAIT_FOREVER);
+    }
+  }
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -791,7 +834,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 
   if (totalCount > 0LL)
   {
-    printWarning("Found orphaned entries. Clean is recommented");
+    printWarning("Found %lu orphaned entries. Clean is recommented",totalCount);
   }
 
   // free resources
@@ -859,7 +902,7 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
 
   if (totalCount > 0LL)
   {
-    printWarning("Found duplicate entries. Clean is recommented");
+    printWarning("Found %lu duplicate entries. Clean is recommented",totalCount);
   }
 
   // free resources
@@ -906,7 +949,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "SELECT name FROM sqlite_master WHERE type='table';"
+                           "SELECT name FROM sqlite_master WHERE type='table'"
                           );
   if (error != ERROR_NONE)
   {
@@ -925,14 +968,19 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                             );
     if (error != ERROR_NONE)
     {
-      printInfo("FAIL!\n");
-      printError("optimize table '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
-      StringList_done(&nameList);
-      return;
+      break;
     }
 
     n++;
     printPercentage(n,StringList_count(&nameList));
+  }
+  clearPercentage();
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL!\n");
+    printError("optimize table '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
+    StringList_done(&nameList);
+    return;
   }
   printInfo("OK  \n");
 
@@ -973,14 +1021,19 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                             );
     if (error != ERROR_NONE)
     {
-      printInfo("FAIL!\n");
-      printError("optimize index '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
-      StringList_done(&nameList);
-      return;
+      break;
     }
 
     n++;
     printPercentage(n,StringList_count(&nameList));
+  }
+  clearPercentage();
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL!\n");
+    printError("optimize index '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
+    StringList_done(&nameList);
+    return;
   }
   printInfo("OK  \n");
 
@@ -1128,6 +1181,68 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
+* Name   : printTableNames
+* Purpose: print table names
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printTableNames(DatabaseHandle *databaseHandle)
+{
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         {
+                           assert(count == 1);
+                           assert(values != NULL);
+                           assert(values[0] != NULL);
+
+                           UNUSED_VARIABLE(columns);
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(userData);
+
+                           printf("%s\n",values[0]);
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT name FROM sqlite_master WHERE type='table'"
+                        );
+}
+
+/***********************************************************************\
+* Name   : printIndexNames
+* Purpose: print index names
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
+{
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         {
+                           assert(count == 1);
+                           assert(values != NULL);
+                           assert(values[0] != NULL);
+
+                           UNUSED_VARIABLE(columns);
+                           UNUSED_VARIABLE(count);
+                           UNUSED_VARIABLE(userData);
+
+                           printf("%s\n",values[0]);
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "SELECT name FROM sqlite_master WHERE type='index'"
+                        );
+}
+
+/***********************************************************************\
 * Name   : dropTriggers
 * Purpose: drop triggers
 * Input  : databaseHandle - database handle
@@ -1248,43 +1363,6 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
     while ((error == ERROR_NONE) && !stringIsEmpty(name));
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
-    do
-    {
-      stringClear(name);
-      error = Database_execute(databaseHandle,
-                               CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                               {
-                                 assert(count == 1);
-                                 assert(values != NULL);
-                                 assert(values[0] != NULL);
-
-                                 UNUSED_VARIABLE(columns);
-                                 UNUSED_VARIABLE(count);
-                                 UNUSED_VARIABLE(userData);
-
-                                 stringSet(name,sizeof(name),values[0]);
-
-                                 return ERROR_NONE;
-                               },NULL),
-                               NULL,  // changedRowCount
-                               "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'FTS_%%' LIMIT 0,1"
-                              );
-      if ((error == ERROR_NONE) && !stringIsEmpty(name))
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "DROP TABLE %s",
-                                 name
-                                );
-      }
-
-      Database_flush(databaseHandle);
-      sqlProgressHandler(NULL);
-    }
-    while ((error == ERROR_NONE) && !stringIsEmpty(name));
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-
     printInfo("OK\n");
 
     // create new indizes
@@ -1296,15 +1374,6 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
     printInfo("OK  \n");
-
-    printInfo("  Create new FTS...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             INDEX_FTS_DEFINITION
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK\n");
 
     // clear FTS names
     printInfo("  Discard FTS indizes...");
@@ -1346,6 +1415,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
     printError("recreate indizes fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 }
 
 /***********************************************************************\
@@ -1362,13 +1432,12 @@ LOCAL void dropIndizes(DatabaseHandle *databaseHandle)
   Errors error;
   char   name[1024];
 
-  printInfo("Create indizes:\n");
+  printInfo("Drop indizes:\n");
 
   // delete all existing indizes
+  error = ERROR_NONE;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    printInfo("  Discard indizes...");
-
     do
     {
       stringClear(name);
@@ -1392,18 +1461,20 @@ LOCAL void dropIndizes(DatabaseHandle *databaseHandle)
                               );
       if ((error == ERROR_NONE) && !stringIsEmpty(name))
       {
+        printInfo("  '%s'",name);
         error = Database_execute(databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DROP INDEX %s",
                                  name
                                 );
+        printInfo("dropped\n");
       }
     }
     while ((error == ERROR_NONE) && !stringIsEmpty(name));
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-  }
 
+#if 0
     do
     {
       stringClear(name);
@@ -1430,139 +1501,105 @@ LOCAL void dropIndizes(DatabaseHandle *databaseHandle)
         error = Database_execute(databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
-                                 "DROP TABLE %s",
+                                 "DELETE FROM %s",
                                  name
                                 );
       }
 
       Database_flush(databaseHandle);
-      sqlProgressHandler(NULL);
     }
     while ((error == ERROR_NONE) && !stringIsEmpty(name));
-//    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-
-    printInfo("OK\n");
+    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+#endif
+  }
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("recreate indizes fail (error: %s)!",Error_getText(error));
+    printError("drop indizes fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
+
+  printInfo("OK\n");
 }
 
 /***********************************************************************\
-* Name   : createNewest
-* Purpose: create newest data
+* Name   : addStorageToNewest
+* Purpose: add storage entries to newest entries (if newest)
 * Input  : databaseHandle - database handle
+*          storageId      - storage database id
+*          progressInfo   - progress info (or NULL)
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createNewest(DatabaseHandle *databaseHandle)
+LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId storageId)
 {
-  Errors error;
-  ulong  totalEntriesCount,totalEntriesNewestCount;
-  ulong  n,m;
-
-  // get total counts
-  totalEntriesCount       = 0L;
-  totalEntriesNewestCount = 0L;
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                           {
-                             assert(count == 1);
-                             assert(values != NULL);
-                             assert(values[0] != NULL);
-
-                             UNUSED_VARIABLE(columns);
-                             UNUSED_VARIABLE(count);
-                             UNUSED_VARIABLE(userData);
-
-                             totalEntriesCount = (ulong)atol(values[0]);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           "SELECT COUNT(id) FROM entries \
-                           "
-                          );
-  if (error != ERROR_NONE)
+  typedef struct EntryNode
   {
-    printError("create newest fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                           {
-                             assert(count == 1);
-                             assert(values != NULL);
-                             assert(values[0] != NULL);
+    LIST_NODE_HEADER(struct EntryNode);
 
-                             UNUSED_VARIABLE(columns);
-                             UNUSED_VARIABLE(count);
-                             UNUSED_VARIABLE(userData);
+    DatabaseId entryId;
+    DatabaseId uuidId;
+    DatabaseId entityId;
+    IndexTypes indexType;
+    String     name;
+    uint64     timeLastChanged;
+    uint32     userId;
+    uint32     groupId;
+    uint32     permission;
+    uint64     size;
 
-                             totalEntriesNewestCount = (ulong)atol(values[0]);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           "SELECT COUNT(id) FROM entriesNewest \
-                           "
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("create newest fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-
-  n = 0L;
-
-  printInfo("Create newest entries...");
-
-  // delete all newest entries
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-  {
-    do
+    struct
     {
-      m = 0L;
-      error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               &m,
-                               "DELETE FROM entriesNewest LIMIT 0,1000"
-                              );
-      n += m;
-  //fprintf(stdout,"%s, %d: m=%llu\n",__FILE__,__LINE__,m);
-      printPercentage(n,totalEntriesCount+totalEntriesNewestCount);
-    }
-    while ((error == ERROR_NONE) && (m > 0));
-  }
-  if (error != ERROR_NONE)
+      DatabaseId entryId;
+      uint64     timeLastChanged;
+    } newest;
+  } EntryNode;
+
+  typedef struct
   {
-    printInfo("FAIL\n");
-    printError("create newest fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    LIST_HEADER(EntryNode);
+  } EntryList;
+
+  /***********************************************************************\
+  * Name   : freeEntryNode
+  * Purpose: free entry node
+  * Input  : entryNode - entry node
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeEntryNode(EntryNode *entryNode);
+  void freeEntryNode(EntryNode *entryNode)
+  {
+    assert(entryNode != NULL);
+
+    String_delete(entryNode->name);
   }
 
-  // insert newest
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  EntryList entryList;
+  Errors    error;
+  EntryNode *entryNode;
+
+  assert(databaseHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  List_init(&entryList);
+  error = ERROR_NONE;
+
+  // get entries info to add
+  if (error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
                              CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                              {
-                               bool       existsFlag;
-                               DatabaseId entryId;
-                               DatabaseId entityId;
-                               const char *name;
-                               uint       type;
-                               uint64     timeLastChanged;
-                               uint       userId;
-                               uint       groupId;
-                               uint       permission;
-                               uint64     size;
+                               EntryNode *entryNode;
 
-                               assert(count == 9);
+                               assert(count == 10);
                                assert(values != NULL);
                                assert(values[0] != NULL);
                                assert(values[1] != NULL);
@@ -1573,153 +1610,703 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                                assert(values[6] != NULL);
                                assert(values[7] != NULL);
                                assert(values[8] != NULL);
+                               assert(values[9] != NULL);
 
                                UNUSED_VARIABLE(columns);
                                UNUSED_VARIABLE(count);
                                UNUSED_VARIABLE(userData);
 
-                               entryId         = (DatabaseId)atoll(values[0]);
-                               entityId        = (DatabaseId)atoll(values[1]);
-                               name            = values[2];
-                               type            = (uint)atol(values[3]);
-                               timeLastChanged = (uint64)atoll(values[4]);
-                               userId          = (uint)atol(values[5]);
-                               groupId         = (uint)atol(values[6]);
-                               permission      = (uint)atol(values[7]);
-                               size            = (uint64)atoll(values[8]);
-  //fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
-
-                               // check if exists
-                               existsFlag = FALSE;
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                                                        {
-                                                          assert(count == 1);
-                                                          assert(values != NULL);
-                                                          assert(values[0] != NULL);
-
-                                                          UNUSED_VARIABLE(columns);
-                                                          UNUSED_VARIABLE(count);
-                                                          UNUSED_VARIABLE(userData);
-
-                                                          existsFlag = (values[0] != NULL);
-
-                                                          return ERROR_NONE;
-                                                        },NULL),
-                                                        NULL,  // changedRowCount
-                                                        "SELECT id \
-                                                         FROM entriesNewest \
-                                                         WHERE name=%'s \
-                                                        ",
-                                                        name
-                                                       );
-                               if (error != ERROR_NONE)
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
                                {
-                                 printInfo("FAIL!\n");
-                                 printError("create newest fail for entries (error: %s)!",Error_getText(error));
-                                 return error;
-                               }
-#if 0
-String s = String_new();
-error = Database_getString(databaseHandle,s,"entries","entities.jobUUID","left join storages on storages.id=entries.storageId left join entities on entities.id=storages.entityId where entries.id=%d",entryId);
-fprintf(stderr,"%s, %d: %lu name=%s size=%lu timeLastChanged=%lu job=%s existsFlag=%d error=%s\n",__FILE__,__LINE__,entryId,name,size,timeLastChanged,String_cString(s),existsFlag,Error_getText(error));
-//exit(EXITCODE_FAIL);
-String_delete(s);
-#endif
-
-                               if (!existsFlag)
-                               {
-                                 // insert
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          "INSERT INTO entriesNewest \
-                                                             (entryId,\
-                                                              entityId, \
-                                                              name, \
-                                                              type, \
-                                                              timeLastChanged, \
-                                                              userId, \
-                                                              groupId, \
-                                                              permission, \
-                                                              size \
-                                                             ) \
-                                                           VALUES \
-                                                             (%llu, \
-                                                              %llu, \
-                                                              %'s, \
-                                                              %u, \
-                                                              %llu, \
-                                                              %u, \
-                                                              %u, \
-                                                              %u, \
-                                                              %llu \
-                                                             ) \
-                                                          ",
-                                                          entryId,
-                                                          entityId,
-                                                          name,
-                                                          type,
-                                                          timeLastChanged,
-                                                          userId,
-                                                          groupId,
-                                                          permission,
-                                                          size
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create newest fail for entries (error: %s)!",Error_getText(error));
-                                   return error;
-                                 }
+                                 HALT_INSUFFICIENT_MEMORY();
                                }
 
-                               n++;
-                               printPercentage(n,totalEntriesCount+totalEntriesNewestCount);
+                               entryNode->entryId                = (DatabaseId)strtoll(values[0],NULL,10);
+                               entryNode->uuidId                 = (DatabaseId)strtoll(values[1],NULL,10);
+                               entryNode->entityId               = (DatabaseId)strtoll(values[2],NULL,10);
+                               entryNode->indexType              = (IndexTypes)(uint)strtoul(values[3],NULL,10);
+                               entryNode->name                   = String_newCString(values[4]);
+                               entryNode->timeLastChanged        = (uint64)strtoull(values[5],NULL,10);
+                               entryNode->userId                 = (uint32)strtoul(values[6],NULL,10);
+                               entryNode->groupId                = (uint32)strtoul(values[7],NULL,10);
+                               entryNode->permission             = (uint32)strtoul(values[8],NULL,10);
+                               entryNode->size                   = (uint64)strtoull(values[9],NULL,10);
+                               entryNode->newest.entryId         = DATABASE_ID_NONE;
+                               entryNode->newest.timeLastChanged = 0LL;
+
+                               List_append(&entryList,entryNode);
 
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             "SELECT id, \
+                             "      SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           entries.name, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM entryFragments \
+                                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                    WHERE entryFragments.storageId=%lld \
+                              UNION SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           entries.name, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM directoryEntries \
+                                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                    WHERE directoryEntries.storageId=%lld \
+                              UNION SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           entries.name, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM linkEntries \
+                                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                    WHERE linkEntries.storageId=%lld \
+                              UNION SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           entries.name, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM specialEntries \
+                                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                    WHERE specialEntries.storageId=%lld \
+                              GROUP BY name \
+                             ",
+                             storageId,
+                             storageId,
+                             storageId,
+                             storageId
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+//fprintf(stderr,"%s, %d: add %d\n",__FILE__,__LINE__,List_count(&entryList));
+
+  // find newest entries for entries to add
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               assert(count == 2);
+                               assert(values != NULL);
+
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+                               entryNode->newest.entryId         = (values[0] != NULL) ? (DatabaseId)strtoll(values[0],NULL,10) : DATABASE_ID_NONE;
+                               entryNode->newest.timeLastChanged = (values[1] != NULL) ? (uint64)strtoull(values[1],NULL,10) : 0LL;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "      SELECT entriesNewest.id, \
+                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                    FROM entryFragments \
+                                      LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                      LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entriesNewest.name=%'S \
+                              UNION SELECT entriesNewest.id, \
+                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                    FROM directoryEntries \
+                                      LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                      LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entriesNewest.name=%'S \
+                              UNION SELECT entriesNewest.id, \
+                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                    FROM linkEntries \
+                                      LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                      LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entriesNewest.name=%'S \
+                              UNION SELECT entriesNewest.id, \
+                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                    FROM specialEntries \
+                                      LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                      LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entriesNewest.name=%'S \
+                              ORDER BY timeLastChanged DESC \
+                              LIMIT 0,1 \
+                             ",
+                             entryNode->name,
+                             entryNode->name,
+                             entryNode->name,
+                             entryNode->name
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // add entries to newest entries
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+    {
+//fprintf(stderr,"%s, %d: %s %llu %llu %d\n",__FILE__,__LINE__,String_cString(entryNode->name),entryNode->timeLastChanged,entryNode->newest.timeLastChanged,entryNode->timeLastChanged > entryNode->newest.timeLastChanged);
+      if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
+      {
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "INSERT OR REPLACE INTO entriesNewest \
+                                    ( \
+                                     entryId, \
+                                     uuidId, \
                                      entityId, \
-                                     name, \
                                      type, \
+                                     name, \
                                      timeLastChanged, \
                                      userId, \
                                      groupId, \
                                      permission, \
                                      size \
-                               FROM entries \
-                               ORDER BY name,timeLastChanged DESC \
-                             "
+                                    ) \
+                                  VALUES \
+                                    ( \
+                                      %lld, \
+                                      %lld, \
+                                      %lld, \
+                                      %u, \
+                                      %'S, \
+                                      %llu, \
+                                      %lu, \
+                                      %lu, \
+                                      %lu, \
+                                      %llu \
+                                    ) \
+                                 ",
+                                 entryNode->entryId,
+                                 entryNode->uuidId,
+                                 entryNode->entityId,
+                                 entryNode->indexType,
+                                 entryNode->name,
+                                 entryNode->timeLastChanged,
+                                 entryNode->userId,
+                                 entryNode->groupId,
+                                 entryNode->permission,
+                                 entryNode->size
+                                );
+      }
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // free resources
+  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : removeStorageFromNewest
+* Purpose: remove storage entries from newest entries
+* Input  : databaseHandle - database handle
+*          storageId      - storage database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId storageId)
+{
+  typedef struct EntryNode
+  {
+    LIST_NODE_HEADER(struct EntryNode);
+
+    DatabaseId entryId;
+    String     name;
+
+    struct
+    {
+      DatabaseId entryId;
+      DatabaseId uuidId;
+      DatabaseId entityId;
+      IndexTypes indexType;
+      uint64     timeLastChanged;
+      uint32     userId;
+      uint32     groupId;
+      uint32     permission;
+      uint64     size;
+    } newest;
+  } EntryNode;
+
+  typedef struct
+  {
+    LIST_HEADER(EntryNode);
+  } EntryList;
+
+  /***********************************************************************\
+  * Name   : freeEntryNode
+  * Purpose: free entry node
+  * Input  : entryNode - entry node
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeEntryNode(EntryNode *entryNode);
+  void freeEntryNode(EntryNode *entryNode)
+  {
+    assert(entryNode != NULL);
+
+    String_delete(entryNode->name);
+  }
+
+  EntryList entryList;
+  Errors    error;
+  EntryNode *entryNode;
+
+  assert(databaseHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  List_init(&entryList);
+  error = ERROR_NONE;
+
+  // get entries info to remove
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+//fprintf(stderr,"%s, %d: name=%s t=%s newid=%s newt=%s\n",__FILE__,__LINE__,values[2],values[3],values[4],values[5]);
+                               EntryNode *entryNode;
+
+                               assert(count == 2);
+                               assert(values != NULL);
+                               assert(values[0] != NULL);
+                               assert(values[1] != NULL);
+
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = (DatabaseId)strtoll(values[0],NULL,10);
+                               entryNode->name           = String_newCString(values[1]);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "      SELECT entries.id, \
+                                           entries.name \
+                                    FROM entryFragments \
+                                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                    WHERE entryFragments.storageId=%lld \
+                              UNION SELECT entries.id, \
+                                           entries.name \
+                                    FROM directoryEntries \
+                                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                    WHERE directoryEntries.storageId=%lld \
+                              UNION SELECT entries.id, \
+                                           entries.name \
+                                    FROM linkEntries \
+                                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                    WHERE linkEntries.storageId=%lld \
+                              UNION SELECT entries.id, \
+                                           entries.name \
+                                    FROM specialEntries \
+                                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                    WHERE specialEntries.storageId=%lld \
+                             ",
+                             storageId,
+                             storageId,
+                             storageId,
+                             storageId
                             );
   }
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
-    printError("create newest fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+//fprintf(stderr,"%s, %d: remove %d\n",__FILE__,__LINE__,List_count(&entryList));
+
+  // find new newest entries for entries to remove
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               assert(count == 9);
+                               assert(values != NULL);
+
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+                               entryNode->newest.entryId         = (values[0] != NULL) ? (DatabaseId)strtoll(values[0],NULL,10) : DATABASE_ID_NONE;
+                               entryNode->newest.uuidId          = (values[1] != NULL) ? (DatabaseId)strtoll(values[1],NULL,10) : DATABASE_ID_NONE;
+                               entryNode->newest.entityId        = (values[2] != NULL) ? (DatabaseId)strtoll(values[2],NULL,10) : DATABASE_ID_NONE;
+                               entryNode->newest.indexType       = (values[3] != NULL) ? (IndexTypes)(uint)strtoul(values[3],NULL,10) : INDEX_TYPE_NONE;
+                               entryNode->newest.timeLastChanged = (values[4] != NULL) ? (uint64)strtoull(values[4],NULL,10) : 0LL;
+                               entryNode->newest.userId          = (values[5] != NULL) ? (uint32)strtoul(values[5],NULL,10) : 0;
+                               entryNode->newest.groupId         = (values[6] != NULL) ? (uint32)strtoul(values[6],NULL,10) : 0;
+                               entryNode->newest.permission      = (values[7] != NULL) ? (uint32)strtoul(values[7],NULL,10) : 0;
+                               entryNode->newest.size            = (values[8] != NULL) ? (uint64)strtoull(values[8],NULL,10) : 0LL;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "      SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM entryFragments \
+                                      LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entries.name=%'S \
+                              UNION SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM directoryEntries \
+                                      LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entries.name=%'S \
+                              UNION SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM linkEntries \
+                                      LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entries.name=%'S \
+                              UNION SELECT entries.id, \
+                                           entries.uuidId, \
+                                           entries.entityId, \
+                                           entries.type, \
+                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           entries.userId, \
+                                           entries.groupId, \
+                                           entries.permission, \
+                                           entries.size \
+                                    FROM specialEntries \
+                                      LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND entries.name=%'S \
+                              ORDER BY timeLastChanged DESC \
+                              LIMIT 0,1 \
+                             ",
+                             entryNode->name,
+                             entryNode->name,
+                             entryNode->name,
+                             entryNode->name
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
   }
 
-  printInfo("OK  \n");
+  // remove/update entries from newest entries
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+    {
+      if (error == ERROR_NONE)
+      {
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "DELETE FROM entriesNewest \
+                                  WHERE entryId=%lld \
+                                 ",
+                                 entryNode->entryId
+                                );
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (entryNode->newest.entryId != DATABASE_ID_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   "INSERT OR REPLACE INTO entriesNewest \
+                                      ( \
+                                       entryId, \
+                                       uuidId, \
+                                       entityId, \
+                                       type, \
+                                       name, \
+                                       timeLastChanged, \
+                                       userId, \
+                                       groupId, \
+                                       permission, \
+                                       size \
+                                      ) \
+                                    VALUES \
+                                      ( \
+                                        %lld, \
+                                        %lld, \
+                                        %lld, \
+                                        %u, \
+                                        %'S, \
+                                        %llu, \
+                                        %lu, \
+                                        %lu, \
+                                        %lu, \
+                                        %llu \
+                                      ) \
+                                   ",
+                                   entryNode->newest.entryId,
+                                   entryNode->newest.uuidId,
+                                   entryNode->newest.entityId,
+                                   entryNode->newest.indexType,
+                                   entryNode->name,
+                                   entryNode->newest.timeLastChanged,
+                                   entryNode->newest.userId,
+                                   entryNode->newest.groupId,
+                                   entryNode->newest.permission,
+                                   entryNode->newest.size
+                                  );
+        }
+      }
+    }
+  }
+
+  // free resources
+  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : createNewest
+* Purpose: create newest data
+* Input  : databaseHandle - database handle
+*          storageIds     - database storage id array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
+{
+  Errors        error;
+  ulong         totalEntriesNewestCount;
+  ulong         n,m;
+  ArrayIterator arrayIterator;
+  DatabaseId    storageId;
+
+  // initialize variables
+  error = ERROR_NONE;
+
+  if (Array_isEmpty(&storageIds))
+  {
+    printInfo("Collect data for newest entries...");
+
+    // get storage ids
+    error = Database_getIds(databaseHandle,
+                            &storageIds,
+                            "storages",
+                            "id",
+                            "WHERE deletedFlag!=1 \
+                             ORDER BY created DESC \
+                            "
+                           );
+    if (error != ERROR_NONE)
+    {
+      printInfo("FAIL\n");
+      printError("create newest fail (error: %s)!",Error_getText(error));
+      exit(EXITCODE_FAIL);
+    }
+    printPercentage(1,2);
+
+    // get total counts
+    totalEntriesNewestCount = 0L;
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               assert(count == 1);
+                               assert(values != NULL);
+                               assert(values[0] != NULL);
+
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+                               totalEntriesNewestCount = (ulong)atol(values[0]);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "SELECT COUNT(id) FROM entriesNewest \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+      printInfo("FAIL\n");
+      printError("create newest fail (error: %s)!",Error_getText(error));
+      exit(EXITCODE_FAIL);
+    }
+    printPercentage(2,2);
+    clearPercentage();
+    printInfo("OK  \n");
+
+    // delete all newest entries
+    printInfo("Purge newest entries...");
+    n = 0L;
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      do
+      {
+        m = 0L;
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 &m,
+                                 "DELETE FROM entriesNewest LIMIT 0,1000"
+                                );
+        n += m;
+        printPercentage(n,totalEntriesNewestCount);
+      }
+      while ((error == ERROR_NONE) && (m > 0));
+    }
+    clearPercentage();
+    if (error != ERROR_NONE)
+    {
+      printInfo("FAIL\n");
+      printError("create newest fail (error: %s)!",Error_getText(error));
+      exit(EXITCODE_FAIL);
+    }
+    (void)Database_flush(databaseHandle);
+    printInfo("OK  \n");
+
+    // insert newest entries
+    printInfo("Create newest entries...");
+    n = 0L;
+    ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+    {
+      error = addStorageToNewest(databaseHandle,storageId);
+      n++;
+      printPercentage(n,Array_length(&storageIds));
+    }
+    clearPercentage();
+    if (error != ERROR_NONE)
+    {
+      printInfo("FAIL\n");
+      printError("create newest fail (error: %s)!",Error_getText(error));
+      exit(EXITCODE_FAIL);
+    }
+    (void)Database_flush(databaseHandle);
+    printInfo("OK  \n");
+  }
+  else
+  {
+    // Refresh newest entries
+    printInfo("Create newest entries:\n");
+    ARRAY_ITERATE(&storageIds,arrayIterator,storageId)
+    {
+      printInfo("  %lld...",storageId);
+      if (error == ERROR_NONE)
+      {
+        error = removeStorageFromNewest(databaseHandle,storageId);
+      }
+      if (error == ERROR_NONE)
+      {
+        error = addStorageToNewest(databaseHandle,storageId);
+      }
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+      printInfo("OK\n");
+    }
+    clearPercentage();
+    if (error != ERROR_NONE)
+    {
+      printInfo("FAIL\n");
+      printError("create newest fail (error: %s)!",Error_getText(error));
+      exit(EXITCODE_FAIL);
+    }
+    (void)Database_flush(databaseHandle);
+  }
+
+  // free resources
 }
 
 /***********************************************************************\
 * Name   : createAggregatesDirectoryContent
 * Purpose: create aggregates diretory content data
 * Input  : databaseHandle - database handle
+*          entityIds      - database entity id array (still not used!)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, const Array databaseIdArray)
+LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, const Array entityIds)
 {
   Errors error;
   ulong  totalCount;
   ulong  n;
 
-  UNUSED_VARIABLE(databaseIdArray);
+  UNUSED_VARIABLE(entityIds);
 
   // calculate directory content size/count aggregated data
   printInfo("Create aggregates for directory content...");
@@ -1777,6 +2364,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   // update directory content size/count aggegrated data: files
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -1801,15 +2389,15 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                storageId = (DatabaseId)atoll(values[0]);
                                name      = String_newCString(values[1]);
                                totalSize = (uint64)atoll(values[2]);
-  //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
-  //if (String_equalsCString(name,"/home/torsten/tmp/blender/yofrankie/trunk/textures/level_nut/X.png"))
-  //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+//if (String_equalsCString(name,"/home/torsten/tmp/blender/yofrankie/trunk/textures/level_nut/X.png"))
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
 
                                // update directory content count/size aggregates in all directories
                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                {
-  //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
@@ -1872,12 +2460,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                storageId = (DatabaseId)atoll(values[0]);
                                name      = String_newCString(values[1]);
                                totalSize = (uint64)atoll(values[2]);
-  //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                                // update directory content count/size aggregates in all newest directories
                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                {
-  //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
@@ -1920,12 +2508,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
+  clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   // update directory content size/count aggregated data: directories
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -1947,7 +2537,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                                storageId = (DatabaseId)atoll(values[0]);
                                name      = String_newCString(values[1]);
-        //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                                // update directory content count/size aggregates in all directories
                                while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -2006,7 +2596,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                                storageId = (DatabaseId)atoll(values[0]);
                                name      = String_newCString(values[1]);
-  //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                                // update directory content count/size aggregates in all directories
                                while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -2048,12 +2638,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
+  clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   // update directory content size/count aggregated data: links
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -2075,12 +2667,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                                storageId = (DatabaseId)atoll(values[0]);
                                name      = String_newCString(values[1]);
-  //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                                // update directory content count/size aggregates in all directories
                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                {
-  //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
@@ -2135,12 +2727,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                                storageId = (DatabaseId)atoll(values[0]);
                                name      = String_newCString(values[1]);
-  //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                                // update directory content count/size aggregates in all directories
                                while (!String_isEmpty(File_getDirectoryName(name,name)))
                                {
-  //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
@@ -2178,12 +2770,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
+  clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   // update directory content size/count aggregated data: hardlinks
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -2324,12 +2918,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
+  clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   // update directory content size/count aggregated data: special
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -2452,12 +3048,14 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
+  clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   printInfo("OK  \n");
 }
@@ -2466,13 +3064,13 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 * Name   : createAggregatesEntities
 * Purpose: create aggregates entities data
 * Input  : databaseHandle - database handle
-*          entityIdArray  - database entity id array
+*          entityIds      - database entity id array
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array entityIdArray)
+LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array entityIds)
 {
   String     entityIdsString;
   ulong      i;
@@ -2483,7 +3081,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
 
   // init variables
   entityIdsString = String_new();
-  ARRAY_ITERATE(&entityIdArray,i,entityId)
+  ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_formatAppend(entityIdsString,"%lld",entityId);
@@ -2763,6 +3361,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
+  clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
@@ -2770,6 +3369,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
     String_delete(entityIdsString);
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   printInfo("OK  \n");
 
@@ -2781,13 +3381,13 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
 * Name   : createAggregatesStorages
 * Purpose: create aggregates storages data
 * Input  : databaseHandle - database handle
-*          storageIdArray - database storage id array
+*          storageIds     - database storage id array
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array storageIdArray)
+LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array storageIds)
 {
   String     storageIdsString;
   ulong      i;
@@ -2797,7 +3397,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   ulong      n;
 
   storageIdsString = String_new();
-  ARRAY_ITERATE(&storageIdArray,i,storageId)
+  ARRAY_ITERATE(&storageIds,i,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
     String_formatAppend(storageIdsString,"%lld",storageId);
@@ -3086,6 +3686,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
+  clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
@@ -3093,6 +3694,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
     String_delete(storageIdsString);
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   printInfo("OK  \n");
 
@@ -3140,6 +3742,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     (void)Database_execute(databaseHandle,
@@ -3151,6 +3754,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     (void)Database_execute(databaseHandle,
@@ -3162,6 +3766,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     (void)Database_execute(databaseHandle,
@@ -3173,6 +3778,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
 
@@ -3189,6 +3795,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
   printInfo("  image entries without fragments...");
@@ -3203,6 +3810,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
   printInfo("  hardlink entries without fragments...");
@@ -3218,24 +3826,25 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
 
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
 
   // clean entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  Array_clear(&entryIds);
+  error = Database_getIds(databaseHandle,
+                          &entryIds,
+                          "entries",
+                          "id",
+                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                          ",
+                          INDEX_CONST_TYPE_FILE
+                         );
+  if (error == ERROR_NONE)
   {
-    Array_clear(&entryIds);
-    error = Database_getIds(databaseHandle,
-                            &entryIds,
-                            "entries",
-                            "id",
-                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
-                            ",
-                            INDEX_CONST_TYPE_FILE
-                           );
-    if (error == ERROR_NONE)
+    n = 0L;
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&entryIds));
       ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
@@ -3250,26 +3859,27 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
         printPercentage(n,Array_length(&entryIds));
       }
-      clearPercentage();
     }
+    (void)Database_flush(databaseHandle);
   }
+  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
   printInfo("  entries without image entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  Array_clear(&entryIds);
+  error = Database_getIds(databaseHandle,
+                          &entryIds,
+                          "entries",
+                          "id",
+                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                          ",
+                          INDEX_CONST_TYPE_IMAGE
+                         );
+  if (error == ERROR_NONE)
   {
-    Array_clear(&entryIds);
-    error = Database_getIds(databaseHandle,
-                            &entryIds,
-                            "entries",
-                            "id",
-                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
-                            ",
-                            INDEX_CONST_TYPE_IMAGE
-                           );
-    if (error == ERROR_NONE)
+    n = 0L;
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&entryIds));
       ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
@@ -3286,24 +3896,26 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       }
       clearPercentage();
     }
+    (void)Database_flush(databaseHandle);
   }
+  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
   printInfo("  entries without directory entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  Array_clear(&entryIds);
+  error = Database_getIds(databaseHandle,
+                          &entryIds,
+                          "entries",
+                          "id",
+                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                          ",
+                          INDEX_CONST_TYPE_DIRECTORY
+                         );
+  if (error == ERROR_NONE)
   {
-    Array_clear(&entryIds);
-    error = Database_getIds(databaseHandle,
-                            &entryIds,
-                            "entries",
-                            "id",
-                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
-                            ",
-                            INDEX_CONST_TYPE_DIRECTORY
-                           );
-    if (error == ERROR_NONE)
+    n = 0L;
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
 //fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&entryIds));
       printPercentage(0,Array_length(&entryIds));
@@ -3319,26 +3931,27 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
         printPercentage(n,Array_length(&entryIds));
       }
-      clearPercentage();
     }
+    (void)Database_flush(databaseHandle);
   }
+  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
   printInfo("  entries without link entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  Array_clear(&entryIds);
+  error = Database_getIds(databaseHandle,
+                          &entryIds,
+                          "entries",
+                          "id",
+                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                          ",
+                          INDEX_CONST_TYPE_LINK
+                         );
+  if (error == ERROR_NONE)
   {
-    Array_clear(&entryIds);
-    error = Database_getIds(databaseHandle,
-                            &entryIds,
-                            "entries",
-                            "id",
-                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
-                            ",
-                            INDEX_CONST_TYPE_LINK
-                           );
-    if (error == ERROR_NONE)
+    n = 0L;
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&entryIds));
       ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
@@ -3353,26 +3966,27 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
         printPercentage(n,Array_length(&entryIds));
       }
-      clearPercentage();
     }
+    (void)Database_flush(databaseHandle);
   }
+  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
   printInfo("  entries without hardlink entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  Array_clear(&entryIds);
+  error = Database_getIds(databaseHandle,
+                          &entryIds,
+                          "entries",
+                          "id",
+                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                          ",
+                          INDEX_CONST_TYPE_HARDLINK
+                         );
+  if (error == ERROR_NONE)
   {
-    Array_clear(&entryIds);
-    error = Database_getIds(databaseHandle,
-                            &entryIds,
-                            "entries",
-                            "id",
-                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
-                            ",
-                            INDEX_CONST_TYPE_HARDLINK
-                           );
-    if (error == ERROR_NONE)
+    n = 0L;
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&entryIds));
       ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
@@ -3387,26 +4001,27 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
         printPercentage(n,Array_length(&entryIds));
       }
-      clearPercentage();
     }
+    (void)Database_flush(databaseHandle);
   }
+  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
   printInfo("  entries without special entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  Array_clear(&entryIds);
+  error = Database_getIds(databaseHandle,
+                          &entryIds,
+                          "entries",
+                          "id",
+                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                          ",
+                          INDEX_CONST_TYPE_SPECIAL
+                         );
+  if (error == ERROR_NONE)
   {
-    Array_clear(&entryIds);
-    error = Database_getIds(databaseHandle,
-                            &entryIds,
-                            "entries",
-                            "id",
-                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
-                            ",
-                            INDEX_CONST_TYPE_SPECIAL
-                           );
-    if (error == ERROR_NONE)
+    n = 0L;
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       printPercentage(0,Array_length(&entryIds));
       ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
@@ -3421,9 +4036,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               );
         printPercentage(n,Array_length(&entryIds));
       }
-      clearPercentage();
     }
+    (void)Database_flush(databaseHandle);
   }
+  clearPercentage();
   printInfo("%lu\n",n);
   total += n;
 
@@ -3440,6 +4056,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
 
@@ -3456,6 +4073,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
 
@@ -3472,6 +4090,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
 
@@ -3488,6 +4107,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                            "
                           );
   }
+  (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
 
@@ -3908,6 +4528,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
     printError("purge deleted fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  (void)Database_flush(databaseHandle);
 
   // free resources
 }
@@ -3986,25 +4607,45 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 
 /***********************************************************************\
 * Name   : getColumnsWidth
-* Purpose: get column width
+* Purpose: get columns width
 * Input  : columns - column names
-*          values  - values
 *          count   - number of values
-* Output : width - widths
-* Return : -
+* Output : -
+* Return : widths
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void getColumnsWidth(size_t widths[], const char *columns[], const char *values[], uint count)
+LOCAL size_t* getColumnsWidth(const char *columns[], uint count)
 {
-  uint i;
+  size_t *widths;
+  uint   i;
+
+  assert(columns != NULL);
+
+  widths = (size_t*)malloc(count*sizeof(size_t));
+  assert(widths != NULL);
 
   for (i = 0; i < count; i++)
   {
     widths[i] = 0;
     if ((columns[i] != NULL) && (stringLength(columns[i]) > widths[i])) widths[i] = stringLength(columns[i]);
-    if ((values [i] != NULL) && (stringLength(values [i]) > widths[i])) widths[i] = stringLength(values [i]);
   }
+
+  return widths;
+}
+
+/***********************************************************************\
+* Name   : freeColumnsWidth
+* Purpose: get columns width
+* Input  : widths - column widths
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeColumnsWidth(size_t widths[])
+{
+  if (widths != NULL) free(widths);
 }
 
 /***********************************************************************\
@@ -4027,6 +4668,43 @@ LOCAL void printSpaces(int n)
 }
 
 /***********************************************************************\
+* Name   : calculateColumnWidths
+* Purpose: calculate column width call back
+* Input  : columns  - column names
+*          values   - values
+*          count    - number of values
+*          userData - user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors calculateColumnWidths(const char *columns[], const char *values[], uint count, void *userData)
+{
+  PrintTableData *printTableData = (PrintTableData*)userData;
+  uint           i;
+
+  assert(columns != NULL);
+  assert(values != NULL);
+  assert(printTableData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if (printTableData->widths == NULL) printTableData->widths = getColumnsWidth(columns,count);
+  assert(printTableData->widths != NULL);
+
+  for (i = 0; i < count; i++)
+  {
+    if (values[i] != NULL)
+    {
+      printTableData->widths[i] = MAX(stringLength(values[i]),printTableData->widths[i]);
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : printRow
 * Purpose: print row call back
 * Input  : columns  - column names
@@ -4040,43 +4718,38 @@ LOCAL void printSpaces(int n)
 
 LOCAL Errors printRow(const char *columns[], const char *values[], uint count, void *userData)
 {
-  uint   i;
-  size_t *widths;
+  PrintTableData *printTableData = (PrintTableData*)userData;
+  uint           i;
 
   assert(columns != NULL);
   assert(values != NULL);
+  assert(printTableData != NULL);
+  assert(printTableData->widths != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  widths = (size_t*)malloc(count*sizeof(size_t));
-  assert(widths != NULL);
-  getColumnsWidth(widths,columns,values,count);
-
-  if (showHeaderFlag && !headerPrintedFlag)
+  if (printTableData->showHeaderFlag && !printTableData->headerPrintedFlag)
   {
     for (i = 0; i < count; i++)
     {
-      printf("%s ",columns[i]); printSpaces(widths[i]-stringLength(columns[i]));
+      printf("%s ",columns[i]); printSpaces(printTableData->widths[i]-stringLength(columns[i]));
     }
     printf("\n");
 
-    headerPrintedFlag = TRUE;
+    printTableData->headerPrintedFlag = TRUE;
   }
   for (i = 0; i < count; i++)
   {
     if (values[i] != NULL)
     {
-      if (showNamesFlag) printf("%s=",columns[i]);
-      printf("%s ",!stringIsEmpty(values[i]) ? values[i] : "''"); if (showHeaderFlag) { printSpaces(widths[i]-(!stringIsEmpty(values[i]) ? stringLength(values[i]) : 2)); }
+      printf("%s ",!stringIsEmpty(values[i]) ? values[i] : "''"); if (printTableData->showHeaderFlag) { printSpaces(printTableData->widths[i]-(!stringIsEmpty(values[i]) ? stringLength(values[i]) : 2)); }
     }
     else
     {
-      printf("- "); if (showHeaderFlag) { printSpaces(widths[i]-1); }
+      printf("- "); if (printTableData->showHeaderFlag) { printSpaces(printTableData->widths[i]-1); }
     }
   }
   printf("\n");
-
-  free(widths);
 
   return ERROR_NONE;
 }
@@ -4123,6 +4796,155 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
 
+  printf("Entities:");
+  if (verboseFlag)
+  {
+    // show number of entities
+    error = Database_getInteger64(databaseHandle,
+                                  &n,
+                                  "entities",
+                                  "COUNT(id)",
+                                  "WHERE id!=0 AND deletedFlag!=1"
+                                 );
+    if (error != ERROR_NONE)
+    {
+      printError("get entities data fail (error: %s)!",Error_getText(error));
+      exit(EXITCODE_FAIL);
+    }
+    printf(" %"PRIi64,n);
+  }
+  printf("\n");
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             printf("  Normal          : %lu\n",atol(values[0]));
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT COUNT(id) \
+                            FROM entities \
+                            WHERE type=%u \
+                           ",
+                           CHUNK_CONST_ARCHIVE_TYPE_NORMAL
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             printf("  Full            : %lu\n",atol(values[0]));
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT COUNT(id) \
+                            FROM entities \
+                            WHERE type=%u \
+                           ",
+                           CHUNK_CONST_ARCHIVE_TYPE_FULL
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             printf("  Differential    : %lu\n",atol(values[0]));
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT COUNT(id) \
+                            FROM entities \
+                            WHERE type=%u \
+                           ",
+                           CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             printf("  Incremental     : %lu\n",atol(values[0]));
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT COUNT(id) \
+                            FROM entities \
+                            WHERE type=%u \
+                           ",
+                           CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             printf("  Continuous      : %lu\n",atol(values[0]));
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT COUNT(id) \
+                            FROM entities \
+                            WHERE type=%u \
+                           ",
+                           CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
   printf("Storages:");
   if (verboseFlag)
   {
@@ -4138,7 +4960,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
       printError("get storage data fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printf(": %"PRIi64,n);
+    printf(" %"PRIi64,n);
   }
   printf("\n");
   error = Database_execute(databaseHandle,
@@ -4283,7 +5105,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalEntryCount = (ulong)atol(values[0]);
                              totalEntrySize  = (uint64)atoll(values[1]);
 
-                             printf("  Total           : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                             printf("  Total           : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4315,7 +5137,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalFileCount = (ulong)atol(values[0]);
                              totalFileSize  = (uint64)atoll(values[1]);
 
-                             printf("  Files           : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                             printf("  Files           : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4347,7 +5169,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalImageCount = (ulong)atol(values[0]);
                              totalImageSize  = (uint64)atoll(values[1]);
 
-                             printf("  Images          : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                             printf("  Images          : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4437,7 +5259,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalHardlinkCount = (ulong)atol(values[0]);
                              totalHardlinkSize  = (uint64)atoll(values[1]);
 
-                             printf("  Hardlinks       : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                             printf("  Hardlinks       : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4517,7 +5339,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalEntryCountNewest = (ulong)atol(values[0]);
                              totalEntrySizeNewest  = (uint64)atoll(values[1]);
 
-                             printf("  Total           : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCountNewest,getByteSize(totalEntrySizeNewest),getByteUnitShort(totalEntrySizeNewest),totalEntrySizeNewest);
+                             printf("  Total           : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCountNewest,getByteSize(totalEntrySizeNewest),getByteUnitShort(totalEntrySizeNewest),totalEntrySizeNewest);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4549,7 +5371,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalFileCountNewest = (ulong)atol(values[0]);
                              totalFileSizeNewest  = (uint64)atoll(values[1]);
 
-                             printf("  Files           : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalFileCountNewest,getByteSize(totalFileSizeNewest),getByteUnitShort(totalFileSizeNewest),totalFileSizeNewest);
+                             printf("  Files           : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCountNewest,getByteSize(totalFileSizeNewest),getByteUnitShort(totalFileSizeNewest),totalFileSizeNewest);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4581,7 +5403,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalImageCountNewest = (ulong)atol(values[0]);
                              totalImageSizeNewest  = (uint64)atoll(values[1]);
 
-                             printf("  Images          : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalImageCountNewest,getByteSize(totalImageSizeNewest),getByteUnitShort(totalImageSizeNewest),totalImageSizeNewest);
+                             printf("  Images          : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCountNewest,getByteSize(totalImageSizeNewest),getByteUnitShort(totalImageSizeNewest),totalImageSizeNewest);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4671,7 +5493,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              totalHardlinkCountNewest = (ulong)atol(values[0]);
                              totalHardlinkSizeNewest  = (uint64)atoll(values[1]);
 
-                             printf("  Hardlinks       : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalHardlinkCountNewest,getByteSize(totalHardlinkSizeNewest),getByteUnitShort(totalHardlinkSizeNewest),totalHardlinkSizeNewest);
+                             printf("  Hardlinks       : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalHardlinkCountNewest,getByteSize(totalHardlinkSizeNewest),getByteUnitShort(totalHardlinkSizeNewest),totalHardlinkSizeNewest);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4715,169 +5537,20 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-
-  printf("Entities:");
-  if (verboseFlag)
-  {
-    // show number of entities
-    error = Database_getInteger64(databaseHandle,
-                                  &n,
-                                  "entities",
-                                  "COUNT(id)",
-                                  "WHERE deletedFlag!=1"
-                                 );
-    if (error != ERROR_NONE)
-    {
-      printError("get storage data fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
-    }
-    printf(" %"PRIi64,n);
-  }
-  printf("\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                           {
-                             assert(count == 1);
-                             assert(values[0] != NULL);
-
-                             UNUSED_VARIABLE(columns);
-                             UNUSED_VARIABLE(count);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Normal          : %lu\n",atol(values[0]));
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_NORMAL
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                           {
-                             assert(count == 1);
-                             assert(values[0] != NULL);
-
-                             UNUSED_VARIABLE(columns);
-                             UNUSED_VARIABLE(count);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Full            : %lu\n",atol(values[0]));
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_FULL
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                           {
-                             assert(count == 1);
-                             assert(values[0] != NULL);
-
-                             UNUSED_VARIABLE(columns);
-                             UNUSED_VARIABLE(count);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Differential    : %lu\n",atol(values[0]));
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                           {
-                             assert(count == 1);
-                             assert(values[0] != NULL);
-
-                             UNUSED_VARIABLE(columns);
-                             UNUSED_VARIABLE(count);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Incremental     : %lu\n",atol(values[0]));
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                           {
-                             assert(count == 1);
-                             assert(values[0] != NULL);
-
-                             UNUSED_VARIABLE(columns);
-                             UNUSED_VARIABLE(count);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Continuous      : %lu\n",atol(values[0]));
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
 }
 
 /***********************************************************************\
 * Name   : printUUIDsInfo
 * Purpose: print UUIDs index info
 * Input  : databaseHandle - database handle
-*          uuidIdArray    - array with UUID ids or empty array
-*          uuidArray      - array with UUIDs or empty array
+*          uuidIds        - array with UUID ids or empty array
+*          uuIds          - array with UUIDs or empty array
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArray, const Array uuidArray)
+LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, const Array uuIds)
 {
   String       uuidIdsString,uuidsString;
   char         s[MISC_UUID_STRING_LENGTH];
@@ -4888,12 +5561,12 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
 
   uuidIdsString = String_new();
   uuidsString = String_new();
-  ARRAY_ITERATE(&uuidIdArray,i,uuidId)
+  ARRAY_ITERATE(&uuidIds,i,uuidId)
   {
     if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
     String_formatAppend(uuidIdsString,"%lld",uuidId);
   }
-  ARRAY_ITERATE(&uuidArray,i,s)
+  ARRAY_ITERATE(&uuIds,i,s)
   {
     String_setBuffer(uuid,s,MISC_UUID_STRING_LENGTH);
     if (!String_isEmpty(uuidsString)) String_appendChar(uuidsString,',');
@@ -4941,13 +5614,13 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
                              printf("  Id              : %"PRIi64"\n",uuidId);
                              printf("    UUID          : %s\n",values[ 1]);
                              printf("\n");
-                             printf("    Total entries : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                             printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                              printf("\n");
-                             printf("    Files         : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalFileCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalFileSize);
-                             printf("    Images        : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalImageCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalImageSize);
+                             printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalFileSize);
+                             printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalImageSize);
                              printf("    Directories   : %lu\n",totalDirectoryCount);
                              printf("    Links         : %lu\n",totalLinkCount);
-                             printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalHardlinkCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalHardlinkSize);
+                             printf("    Hardlinks     : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalHardlinkSize);
                              printf("    Special       : %lu\n",totalSpecialCount);
                              printf("\n");
 
@@ -5059,13 +5732,13 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
 * Name   : printEntitiesInfo
 * Purpose: print entities index info
 * Input  : databaseHandle - database handle
-*          entityIdArray  - database entity ids array or empty array
+*          entityIds      - database entity ids array or empty array
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityIdArray)
+LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityIds)
 {
   const char *TYPE_NAMES[] = {"none","normal","full","incremental","differential","continuous"};
 
@@ -5075,7 +5748,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
   Errors     error;
 
   entityIdsString = String_new();
-  ARRAY_ITERATE(&entityIdArray,i,entityId)
+  ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_formatAppend(entityIdsString,"%lld",entityId);
@@ -5129,13 +5802,13 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              printf("    Job UUID      : %s\n",values[ 2]);
                              printf("    Schedule UUID : %s\n",values[ 3]);
                              printf("\n");
-                             printf("    Total entries : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                             printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                              printf("\n");
-                             printf("    Files         : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
-                             printf("    Images        : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                             printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                             printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
                              printf("    Directories   : %lu\n",totalDirectoryCount);
                              printf("    Links         : %lu\n",totalLinkCount);
-                             printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalhardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                             printf("    Hardlinks     : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalhardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
                              printf("    Special       : %lu\n",totalSpecialCount);
                              printf("\n");
                              printf("    UUID id       : %"PRIi64"\n",uuidId);
@@ -5224,14 +5897,14 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 * Name   : printStoragesInfo
 * Purpose: print storages index info
 * Input  : databaseHandle - database handle
-*          storageIdArray - datbase storage ids array or empty array
+*          storageIds     - datbase storage ids array or empty array
 *          lostFlag       - TRUE to print lost storages
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storageIdArray, bool lostFlag)
+LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storageIds, bool lostFlag)
 {
   const char *STATE_TEXT[] = {"","OK","create","update requested","update","error"};
   const char *MODE_TEXT [] = {"manual","auto"};
@@ -5245,7 +5918,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   Errors     error;
 
   storageIdsString = String_new();
-  ARRAY_ITERATE(&storageIdArray,i,storageId)
+  ARRAY_ITERATE(&storageIds,i,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
     String_formatAppend(storageIdsString,"%lld",storageId);
@@ -5301,13 +5974,13 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              printf("    Last checked  : %s\n",values[12]);
                              printf("    Error message : %s\n",(values[13] != NULL) ? values[13] : "");
                              printf("\n");
-                             printf("    Total entries : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                             printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                              printf("\n");
-                             printf("    Files         : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
-                             printf("    Images        : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                             printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                             printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
                              printf("    Directories   : %lu\n",totalDirectoryCount);
                              printf("    Links         : %lu\n",totalLinkCount);
-                             printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                             printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
                              printf("    Special       : %lu\n",totalSpecialCount);
                              printf("\n");
                              printf("    UUID id       : %s\n",values[1]);
@@ -5383,7 +6056,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 * Name   : printEntriesInfo
 * Purpose: print entries index info
 * Input  : databaseHandle - database handle
-*          entityIdArray  - database entity ids array or empty array
+*          entityIds      - database entity ids array or empty array
 *          name           - name or NULL
 *          lostFlag       - TRUE to print lost entries
 * Output : -
@@ -5391,7 +6064,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityIdArray, ConstString name, bool lostFlag)
+LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityIds, ConstString name, bool lostFlag)
 {
   const char *TYPE_TEXT[] = {"","uuid","entity","storage","entry","file","image","directory","link","hardlink","special","history"};
 
@@ -5402,9 +6075,10 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   Errors     error;
 
 //TODO: lostFlag
+UNUSED_VARIABLE(lostFlag);
 
   entityIdsString = String_new();
-  ARRAY_ITERATE(&entityIdArray,i,entityId)
+  ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_formatAppend(entityIdsString,"%lld",entityId);
@@ -5612,11 +6286,328 @@ LOCAL void doneAll(void)
   Thread_doneAll();
 }
 
+LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, uint action)
+{
+  Errors error;
+  ulong  n;
+
+  // init variables
+
+  error = Database_createTemporaryTable(databaseHandle,
+                                        DATABASE_TEMPORARY_TABLE1,
+                                        "storageId       INTEGER, \
+                                         entryId         INTEGER, \
+                                         name            TEXT, \
+                                         timeLastChanged INTEGER, \
+                                         entriesNewestId INTEGER DEFAULT 0 \
+                                        "
+                                       );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+    printInfo("FAIL!\n");
+    return;
+  }
+
+  error = Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "INSERT INTO %1 \
+                              ( \
+                                storageId, \
+                                entryId, \
+                                name, \
+                                timeLastChanged \
+                              ) \
+                                  SELECT entryFragments.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
+                                  FROM entryFragments \
+                                    LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                  WHERE storageId=%lld \
+                            UNION SELECT directoryEntries.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
+                                  FROM directoryEntries \
+                                    LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                  WHERE storageId=%lld \
+                            UNION SELECT linkEntries.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
+                                  FROM linkEntries \
+                                    LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                  WHERE storageId=%lld \
+                            UNION SELECT specialEntries.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
+                                  FROM specialEntries \
+                                    LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                  WHERE storageId=%lld \
+                           ",
+                           storageId,
+                           storageId,
+                           storageId,
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+    printInfo("FAIL!\n");
+    return;
+  }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "UPDATE %1 \
+                            SET entriesNewestId=IFNULL((SELECT entriesNewest.id \
+                                                        FROM entriesNewest \
+                                                        WHERE entriesNewest.entryId=%1.entryId \
+                                                        LIMIT 0,1 \
+                                                       ), \
+                                                       0 \
+                                                      ) \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+    printInfo("FAIL!\n");
+    return;
+  }
+
+  if (show == 1)
+  {
+    printInfo("storages:\n");
+    n = 0;
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+fprintf(stdout,"storageId=%s: %s\n",values[0],values[1]);
+n++;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "SELECT entryFragments.storageId,storages.name FROM entryFragments \
+                                LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                              WHERE storages.deletedFlag!=1 \
+                              GROUP BY storageId \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+fprintf(stdout,"%lu storages\n",n);
+  }
+
+  if (show == 2)
+  {
+    printInfo("newest entries:\n");
+    n = 0;
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+fprintf(stdout,"storageId=%s entryId=%s name=%s timeLastChanged=%s\n",values[0],values[1],values[2],values[3]);
+n++;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "      SELECT entryFragments.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                    FROM entriesNewest \
+                                      LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                                    WHERE entriesNewest.type IN (5,6,9) \
+                                    GROUP BY entriesNewest.entryId \
+                              UNION SELECT directoryEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                    FROM entriesNewest \
+                                      LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                    WHERE entriesNewest.type=7 \
+                              UNION SELECT linkEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                    FROM entriesNewest \
+                                      LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
+                                    WHERE entriesNewest.type=8 \
+                              UNION SELECT specialEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                    FROM entriesNewest \
+                                      LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.entryId \
+                                    WHERE entriesNewest.type=10 \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+fprintf(stdout,"%lu newest entries\n",n);
+  }
+
+  if (show == 3)
+  {
+    printInfo("entries of storage:\n");
+    n = 0;
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+fprintf(stdout,"storageId=%s entryId=%s name=%s timeLastChanged=%s entriesNewestId=%s\n",values[0],values[1],values[2],values[3],values[4]);
+n++;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "SELECT storageId,entryId,name,timeLastChanged,entriesNewestId FROM %1 \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+fprintf(stdout,"%lu entries\n",n);
+  }
+
+  if (show == 4)
+  {
+    printInfo("newest entries of storage:\n");
+    n = 0;
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+fprintf(stdout,"storageId=%s entryId=%s name=%s timeLastChanged=%s\n",values[0],values[1],values[2],values[3]);
+n++;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "SELECT storageId,entryId,name,timeLastChanged FROM %1 \
+                              WHERE %1.entriesNewestId!=0 \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+fprintf(stdout,"%lu newest entries\n",n);
+  }
+
+  if (show == 5)
+  {
+fprintf(stderr,"%s, %d: newest entry to remove\n",__FILE__,__LINE__);
+    n = 0;
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+fprintf(stdout,"entryId=%s name=%s timeLastChanged=%s\n",values[0],values[1],values[2]);
+n++;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "SELECT entryId,name,timeLastChanged FROM %1 \
+                              WHERE %1.entriesNewestId!=0 \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+fprintf(stdout,"%lu newest entries to remove for storage %ld\n",n,storageId);
+  }
+
+  if (show == 6)
+  {
+fprintf(stderr,"%s, %d: newest entry to add from entries\n",__FILE__,__LINE__);
+    n = 0;
+    error = Database_execute(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             {
+                               UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
+                               UNUSED_VARIABLE(userData);
+
+fprintf(stdout,"new entryId=%s name=%s timeLastChanged=%s\n",values[0],values[1],values[2]);
+n++;
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "SELECT entries.id AS entryId,%1.name,entries.timeLastChanged FROM %1 \
+                                LEFT JOIN entries ON entries.id=(SELECT id \
+                                                                 FROM entries \
+                                                                 WHERE name=%1.name \
+                                                                 ORDER BY timeLastChanged DESC \
+                                                                 LIMIT 0,1 \
+                                                                ) \
+                              WHERE entries.id=%1.entryId \
+                             "
+                            );
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+fprintf(stdout,"%lu newest entries to add for storage %ld\n",n,storageId);
+  }
+
+  error = Database_dropTemporaryTable(databaseHandle,DATABASE_TEMPORARY_TABLE1);
+  if (error != ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+    printInfo("FAIL!\n");
+    return;
+  }
+
+  if      (action == 1)
+  {
+fprintf(stderr,"%s, %d: add newest entries\n",__FILE__,__LINE__);
+    error = addStorageToNewest(databaseHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+  }
+  else if (action == 2)
+  {
+fprintf(stderr,"%s, %d: remove newest entries\n",__FILE__,__LINE__);
+    error = removeStorageFromNewest(databaseHandle,storageId);
+    if (error != ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+      printInfo("FAIL!\n");
+      return;
+    }
+  }
+
+  // free resources
+}
+
 int main(int argc, const char *argv[])
 {
   const uint MAX_LINE_LENGTH = 8192;
 
-  Array            uuidIdArray,uuidArray,entityIdArray,storageIdArray;
+  Array            uuidIds,uuIds,entityIds,storageIds;
   StaticString     (uuid,MISC_UUID_STRING_LENGTH);
   String           entryName;
   uint             i,n;
@@ -5630,16 +6621,20 @@ int main(int argc, const char *argv[])
   Errors           error;
   DatabaseHandle   databaseHandle;
   uint64           t0,t1,dt;
+  PrintTableData   printTableData;
   String           s;
   const char       *l;
+DatabaseId xxxId=DATABASE_ID_NONE;
+uint xxxAction=0;
+uint xxxShow=0;
 
   initAll();
 
   // init variables
-  Array_init(&uuidIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Array_init(&uuidArray,MISC_UUID_STRING_LENGTH,64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Array_init(&entityIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Array_init(&storageIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&uuidIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&uuIds,MISC_UUID_STRING_LENGTH,64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&entityIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   entryName        = String_new();
   databaseFileName = NULL;
   command          = String_new();
@@ -5648,7 +6643,33 @@ int main(int argc, const char *argv[])
   n = 0;
   while (i < (uint)argc)
   {
-    if      (stringEquals(argv[i],"--info"))
+    if      (stringStartsWith(argv[i],"-C="))
+    {
+      changeToDirectory = &argv[i][3];
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--directory="))
+    {
+      changeToDirectory = &argv[i][12];
+      i++;
+    }
+    else if (stringEquals(argv[i],"-C") || stringEquals(argv[i],"--directory"))
+    {
+      if ((i+1) >= (uint)argc)
+      {
+        printError("no value for option '%s'!",argv[i]);
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
+        String_delete(command);
+        String_delete(entryName);
+        exit(EXITCODE_INVALID_ARGUMENT);
+      }
+      changeToDirectory = argv[i+1];
+      i += 2;
+    }
+    else if (stringEquals(argv[i],"--info"))
     {
       infoFlag = TRUE;
       i++;
@@ -5666,12 +6687,12 @@ int main(int argc, const char *argv[])
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&uuidIdArray,&databaseId);
+          Array_append(&uuidIds,&databaseId);
         }
         else
         {
           String_setCString(uuid,token);
-          Array_append(&uuidArray,String_cString(uuid));
+          Array_append(&uuIds,String_cString(uuid));
         }
       }
       stringTokenizerDone(&stringTokenizer);
@@ -5690,7 +6711,7 @@ int main(int argc, const char *argv[])
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&entityIdArray,&databaseId);
+          Array_append(&entityIds,&databaseId);
         }
       }
       stringTokenizerDone(&stringTokenizer);
@@ -5709,7 +6730,7 @@ int main(int argc, const char *argv[])
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&storageIdArray,&databaseId);
+          Array_append(&storageIds,&databaseId);
         }
       }
       stringTokenizerDone(&stringTokenizer);
@@ -5733,7 +6754,7 @@ int main(int argc, const char *argv[])
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&entityIdArray,&databaseId);
+          Array_append(&entityIds,&databaseId);
         }
         String_setCString(entryName,token);
       }
@@ -5782,6 +6803,16 @@ int main(int argc, const char *argv[])
       createTriggersFlag = TRUE;
       i++;
     }
+    else if (stringEquals(argv[i],"--table-names"))
+    {
+      showTableNames = TRUE;
+      i++;
+    }
+    else if (stringEquals(argv[i],"--index-names"))
+    {
+      showIndexNames = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--drop-triggers"))
     {
       dropTriggersFlag = TRUE;
@@ -5797,67 +6828,99 @@ int main(int argc, const char *argv[])
       dropIndizesFlag = TRUE;
       i++;
     }
+    else if (stringStartsWith(argv[i],"--create-newest="))
+    {
+      createNewestFlag = TRUE;
+      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-newest=")],",");
+      while (stringGetNextToken(&stringTokenizer,&token))
+      {
+        if (stringToInt64(token,&databaseId))
+        {
+          Array_append(&storageIds,&databaseId);
+        }
+      }
+      stringTokenizerDone(&stringTokenizer);
+      i++;
+    }
     else if (stringEquals(argv[i],"--create-newest"))
     {
       createNewestFlag = TRUE;
       i++;
     }
-    else if (stringStartsWith(argv[i],"--create-aggregates-directory-content"))
+    else if (stringStartsWith(argv[i],"--create-aggregates-directory-content="))
     {
       createAggregatesDirectoryContentFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][37],",");
+      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-directory-content=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&storageIdArray,&databaseId);
+          Array_append(&storageIds,&databaseId);
         }
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringStartsWith(argv[i],"--create-aggregates-entities"))
+    else if (stringEquals(argv[i],"--create-aggregates-directory-content"))
+    {
+      createAggregatesDirectoryContentFlag = TRUE;
+    }
+    else if (stringStartsWith(argv[i],"--create-aggregates-entities="))
     {
       createAggregatesEntitiesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][29],",");
+      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-entities=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&entityIdArray,&databaseId);
+          Array_append(&entityIds,&databaseId);
         }
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringStartsWith(argv[i],"--create-aggregates-storages"))
+    else if (stringEquals(argv[i],"--create-aggregates-entities"))
+    {
+      createAggregatesEntitiesFlag = TRUE;
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--create-aggregates-storages="))
     {
       createAggregatesStoragesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][29],",");
+      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-storages=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&storageIdArray,&databaseId);
+          Array_append(&storageIds,&databaseId);
         }
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringStartsWith(argv[i],"--create-aggregates"))
+    else if (stringEquals(argv[i],"--create-aggregates-storages"))
+    {
+      createAggregatesStoragesFlag = TRUE;
+    }
+    else if (stringStartsWith(argv[i],"--create-aggregates="))
     {
       createAggregatesDirectoryContentFlag = TRUE;
       createAggregatesEntitiesFlag         = TRUE;
       createAggregatesStoragesFlag         = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][20],",");
+      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates=")],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
         {
-          Array_append(&storageIdArray,&databaseId);
+          Array_append(&storageIds,&databaseId);
         }
       }
       stringTokenizerDone(&stringTokenizer);
+      i++;
+    }
+    else if (stringEquals(argv[i],"--create-aggregates"))
+    {
+      createAggregatesDirectoryContentFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--clean-orphaned"))
@@ -5936,7 +6999,12 @@ int main(int argc, const char *argv[])
       if ((i+1) >= (uint)argc)
       {
         printError("expected path name for option --tmp-directory!");
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
         String_delete(command);
+        String_delete(entryName);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
       tmpDirectory = argv[i+1];
@@ -5960,11 +7028,23 @@ int main(int argc, const char *argv[])
     else if (stringEquals(argv[i],"-h") || stringEquals(argv[i],"--help"))
     {
       printUsage(argv[0],FALSE);
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuIds);
+      Array_done(&uuidIds);
+      String_delete(command);
+      String_delete(entryName);
       exit(EXITCODE_OK);
     }
     else if (stringEquals(argv[i],"--xhelp"))
     {
       printUsage(argv[0],TRUE);
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuIds);
+      Array_done(&uuidIds);
+      String_delete(command);
+      String_delete(entryName);
       exit(EXITCODE_OK);
     }
     else if (stringEquals(argv[i],"-"))
@@ -5972,6 +7052,16 @@ int main(int argc, const char *argv[])
       pipeFlag = TRUE;
       i++;
     }
+else if (stringEquals(argv[i],"--xxx"))
+{
+  xxxId = atoi(argv[i+1]);
+  xxxShow = (argc >= (int)i+3) ? atoi(argv[i+2]) : 0;
+  xxxAction = (argc >= (int)i+4) ? atoi(argv[i+3]) : 0;
+  i++;
+  i++;
+  i++;
+  i++;
+}
     else if (stringEquals(argv[i],"--"))
     {
       i++;
@@ -5980,7 +7070,12 @@ int main(int argc, const char *argv[])
     else if (stringStartsWith(argv[i],"-"))
     {
       printError("unknown option '%s'!",argv[i]);
+      Array_done(&storageIds);
+      Array_done(&entityIds);
+      Array_done(&uuIds);
+      Array_done(&uuidIds);
       String_delete(command);
+      String_delete(entryName);
       exit(EXITCODE_INVALID_ARGUMENT);
     }
     else
@@ -6037,21 +7132,26 @@ int main(int argc, const char *argv[])
   if (databaseFileName == NULL)
   {
     printError("no database file name given!");
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuIds);
+    Array_done(&uuidIds);
     String_delete(command);
+    String_delete(entryName);
     exit(EXITCODE_INVALID_ARGUMENT);
   }
 
-#if 0
-  if (String_equalsCString(command,"-"))
+  if (!stringIsEmpty(changeToDirectory))
   {
-    // get command from stdin
-    String_clear(commands);
-    while (fgets(line,sizeof(line),stdin) != NULL)
+    error = File_changeDirectoryCString(changeToDirectory);
+    if (error != ERROR_NONE)
     {
-      String_appendCString(commands,line);
+      printError(_("Cannot change to directory '%s' (error: %s)!"),
+                 changeToDirectory,
+                 Error_getText(error)
+                );
     }
   }
-#endif
 
   if (createFlag)
   {
@@ -6061,18 +7161,28 @@ int main(int argc, const char *argv[])
   else
   {
     // open database
-    error = openDatabase(&databaseHandle,databaseFileName);
+    error = openDatabase(&databaseHandle,databaseFileName,!String_isEmpty(command) || pipeFlag);
   }
   if (error != ERROR_NONE)
   {
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuIds);
+    Array_done(&uuidIds);
     String_delete(command);
+    String_delete(entryName);
     exit(EXITCODE_FAIL);
   }
   error = Database_setEnabledForeignKeys(&databaseHandle,foreignKeysFlag);
   if (error != ERROR_NONE)
   {
     closeDatabase(&databaseHandle);
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuIds);
+    Array_done(&uuidIds);
     String_delete(command);
+    String_delete(entryName);
     exit(EXITCODE_FAIL);
   }
 
@@ -6091,7 +7201,12 @@ int main(int argc, const char *argv[])
   if (error != ERROR_NONE)
   {
     closeDatabase(&databaseHandle);
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuIds);
+    Array_done(&uuidIds);
     String_delete(command);
+    String_delete(entryName);
     exit(EXITCODE_FAIL);
   }
 
@@ -6103,6 +7218,9 @@ int main(int argc, const char *argv[])
           && !infoLostStoragesFlag
           && !infoEntriesFlag
           && !infoLostEntriesFlag
+          && !createFlag
+          && !showTableNames
+          && !showIndexNames
           && !checkIntegrityFlag
           && !checkOrphanedFlag
           && !checkDuplicatesFlag
@@ -6124,7 +7242,9 @@ int main(int argc, const char *argv[])
           && !showEntriesNewestFlag
           && String_isEmpty(command)
           && !pipeFlag
-          && !inputAvailable())
+          && !inputAvailable()
+&& (xxxId==DATABASE_ID_NONE)
+         )
      )
   {
     printIndexInfo(&databaseHandle);
@@ -6132,30 +7252,39 @@ int main(int argc, const char *argv[])
 
   if (infoUUIDsFlag)
   {
-    printUUIDsInfo(&databaseHandle,uuidIdArray,uuidArray);
+    printUUIDsInfo(&databaseHandle,uuidIds,uuIds);
   }
 
   if (infoEntitiesFlag)
   {
-    printEntitiesInfo(&databaseHandle,entityIdArray);
+    printEntitiesInfo(&databaseHandle,entityIds);
   }
 
   if      (infoLostStoragesFlag)
   {
-    printStoragesInfo(&databaseHandle,storageIdArray,TRUE);
+    printStoragesInfo(&databaseHandle,storageIds,TRUE);
   }
   else if (infoStoragesFlag)
   {
-    printStoragesInfo(&databaseHandle,storageIdArray,FALSE);
+    printStoragesInfo(&databaseHandle,storageIds,FALSE);
   }
 
   if      (infoLostEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entityIdArray,entryName,TRUE);
+    printEntriesInfo(&databaseHandle,entityIds,entryName,TRUE);
   }
   else if (infoEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entityIdArray,entryName,FALSE);
+    printEntriesInfo(&databaseHandle,entityIds,entryName,FALSE);
+  }
+
+  if (showTableNames)
+  {
+    printTableNames(&databaseHandle);
+  }
+  if (showIndexNames)
+  {
+    printIndexNames(&databaseHandle);
   }
 
   // drop triggeres
@@ -6209,21 +7338,21 @@ int main(int argc, const char *argv[])
   // recreate newest data
   if (createNewestFlag)
   {
-    createNewest(&databaseHandle);
+    createNewest(&databaseHandle,storageIds);
   }
 
   // calculate aggregates data
   if (createAggregatesDirectoryContentFlag)
   {
-    createAggregatesDirectoryContent(&databaseHandle,entityIdArray);
+    createAggregatesDirectoryContent(&databaseHandle,entityIds);
   }
   if (createAggregatesStoragesFlag)
   {
-    createAggregatesStorages(&databaseHandle,storageIdArray);
+    createAggregatesStorages(&databaseHandle,storageIds);
   }
   if (createAggregatesEntitiesFlag)
   {
-    createAggregatesEntities(&databaseHandle,entityIdArray);
+    createAggregatesEntities(&databaseHandle,entityIds);
   }
 
   // purge deleted storages
@@ -6244,7 +7373,13 @@ int main(int argc, const char *argv[])
     optimizeDatabase(&databaseHandle);
   }
 
-#warning remove? use storages-info?
+
+if (xxxId != DATABASE_ID_NONE)
+{
+  xxx(&databaseHandle,xxxId,xxxShow,xxxAction);
+}
+
+//TODO: remove? use storages-info?
   if (showStoragesFlag)
   {
     uint64 maxIdLength,maxStorageNameLength;
@@ -6443,22 +7578,50 @@ int main(int argc, const char *argv[])
     // execute command
     if (!String_isEmpty(command))
     {
-      s = String_new();
-      s = explainQueryPlanFlag
-            ? String_append(String_setCString(s,"EXPLAIN QUERY PLAN "),command)
-            : String_set(s,command);
-      t0 = Misc_getTimestamp();
-      error = Database_execute(&databaseHandle,
-                               CALLBACK_(printRow,NULL),
-                               NULL,  // changedRowCount
-                               String_cString(s)
-                              );
-      t1 = Misc_getTimestamp();
+      error = ERROR_NONE;
+
+      s = String_duplicate(command);
+      String_replaceAllCString(s,STRING_BEGIN,"%","%%");
+      if (explainQueryPlanFlag) String_insertCString(s,STRING_BEGIN,"EXPLAIN QUERY PLAN ");
+
+      printTableData.showHeaderFlag    = showHeaderFlag;
+      printTableData.headerPrintedFlag = FALSE;
+      printTableData.widths            = NULL;
+      if (showHeaderFlag)
+      {
+        if (error == ERROR_NONE)
+        {
+          error = Database_execute(&databaseHandle,
+                                   CALLBACK_(calculateColumnWidths,&printTableData),
+                                   NULL,  // changedRowCount
+                                   String_cString(s)
+                                  );
+        }
+      }
+      t0 = 0L;
+      t1 = 0L;
+      if (error == ERROR_NONE)
+      {
+        t0 = Misc_getTimestamp();
+        error = Database_execute(&databaseHandle,
+                                 CALLBACK_(printRow,&printTableData),
+                                 NULL,  // changedRowCount
+                                 String_cString(s)
+                                );
+        t1 = Misc_getTimestamp();
+      }
+      freeColumnsWidth(printTableData.widths);
+
       String_delete(s);
       if (error != ERROR_NONE)
       {
         printError("SQL command '%s' fail: %s!",String_cString(command),Error_getText(error));
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
         String_delete(command);
+        String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
 
@@ -6475,7 +7638,12 @@ int main(int argc, const char *argv[])
       if (error != ERROR_NONE)
       {
         printError("Init transaction fail: %s!",Error_getText(error));
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
         String_delete(command);
+        String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
     }
@@ -6486,6 +7654,7 @@ int main(int argc, const char *argv[])
       error = Database_execute(&databaseHandle,
                                CALLBACK_(printRow,NULL),
                                NULL,  // changedRowCount
+                               "%s",
                                l
                               );
       if (error == ERROR_NONE)
@@ -6495,7 +7664,12 @@ int main(int argc, const char *argv[])
       else
       {
         printError("SQL command '%s' fail: %s!",l,Error_getText(error));
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
         String_delete(command);
+        String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
       t1 = Misc_getTimestamp();
@@ -6509,7 +7683,12 @@ int main(int argc, const char *argv[])
       if (error != ERROR_NONE)
       {
         printError("Done transaction fail: %s!",Error_getText(error));
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
         String_delete(command);
+        String_delete(entryName);
         exit(EXITCODE_FAIL);
       }
     }
@@ -6519,11 +7698,11 @@ int main(int argc, const char *argv[])
   closeDatabase(&databaseHandle);
 
   // free resources
+  Array_done(&storageIds);
+  Array_done(&entityIds);
+  Array_done(&uuIds);
+  Array_done(&uuidIds);
   String_delete(entryName);
-  Array_done(&storageIdArray);
-  Array_done(&entityIdArray);
-  Array_done(&uuidArray);
-  Array_done(&uuidIdArray);
   String_delete(command);
 
   doneAll();
