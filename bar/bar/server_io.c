@@ -727,7 +727,7 @@ SOCKET_TYPE_PLAIN,
   serverIO->isConnected = TRUE;
 
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= 1)
+    if (globalOptions.debug.serverLevel >= 1)
     {
       fprintf(stderr,"DEBUG: connected to %s:%d\n",String_cString(hostName),hostPort);
     }
@@ -832,7 +832,7 @@ SOCKET_TYPE_PLAIN,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= 1)
+    if (globalOptions.debug.serverLevel >= 1)
     {
       fprintf(stderr,"DEBUG: send session data '%s'\n",String_cString(s));
     }
@@ -1476,7 +1476,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     {
       // command results: <id> <complete flag> <error code> <data>
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel >= 1)
+        if (globalOptions.debug.serverLevel >= 1)
         {
           fprintf(stderr,"DEBUG: received result #%u completed=%d error=%d: %s\n",resultId,completedFlag,errorCode,String_cString(data));
         }
@@ -1499,7 +1499,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         {
           // parse error -> discard
           #ifndef NDEBUG
-            if (globalOptions.serverDebugLevel >= 1)
+            if (globalOptions.debug.serverLevel >= 1)
             {
               fprintf(stderr,"DEBUG: parse result fail: %s\n",String_cString(data));
             }
@@ -1522,7 +1522,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     {
       // command: <id> <name> <data>
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel >= 1)
+        if (globalOptions.debug.serverLevel >= 1)
         {
           fprintf(stderr,"DEBUG: received command #%u %s: %s\n",*id,String_cString(name),String_cString(data));
         }
@@ -1536,7 +1536,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         #ifndef NDEBUG
           if (!commandFlag)
           {
-            if (globalOptions.serverDebugLevel >= 1)
+            if (globalOptions.debug.serverLevel >= 1)
             {
               fprintf(stderr,"DEBUG: skipped malformed data: %s\n",String_cString(serverIO->line));
             }
@@ -1552,7 +1552,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     {
       // unknown
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel >= 1)
+        if (globalOptions.debug.serverLevel >= 1)
         {
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
           STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
@@ -1621,7 +1621,7 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= debugLevel)
+    if (globalOptions.debug.serverLevel >= debugLevel)
     {
       fprintf(stderr,"DEBUG: sent command %s\n",String_cString(s));
     }
@@ -1709,7 +1709,7 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
   #ifndef NDEBUG
     if (error != ERROR_NONE)
     {
-      if (globalOptions.serverDebugLevel >= 1)
+      if (globalOptions.debug.serverLevel >= 1)
       {
         fprintf(stderr,"DEBUG: execute command %s fail: %s\n",format,Error_getText(error));
       }
@@ -1789,7 +1789,7 @@ Errors ServerIO_vsendResult(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= 1)
+    if (globalOptions.debug.serverLevel >= 1)
     {
       fprintf(stderr,"DEBUG: send result '%s'\n",String_cString(s));
     }
@@ -1872,7 +1872,7 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= 1)
+    if (globalOptions.debug.serverLevel >= 1)
     {
       fprintf(stderr,"DEBUG: send result '%s'\n",String_cString(s));
     }
@@ -2032,7 +2032,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
     return error;
   }
   #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= 1)
+    if (globalOptions.debug.serverLevel >= 1)
     {
       fprintf(stderr,"DEBUG: send action '%s'\n",String_cString(s));
     }
