@@ -70,6 +70,17 @@
 
 /***************************** Datatypes *******************************/
 
+/***********************************************************************\
+* Name   : IndexIsMaintenanceTime
+* Purpose: check if maintenance time callback
+* Input  : userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*IndexIsMaintenanceTime)(uint64 dateTime, void *userData);
+
 // index states
 typedef enum
 {
@@ -477,13 +488,20 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
 /***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
-* Input  : fileName - database file name
+* Input  : fileName                  - database file name
+*          isMaintenanceTimeFunction - check if maintenance time
+*                                      function or NULL
+*          isMaintenanceTimeUserData - user data for check if
+*                                      maintenance time function
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_init(const char *fileName);
+Errors Index_init(const char             *fileName,
+                  IndexIsMaintenanceTime isMaintenanceTimeFunction,
+                  void                   *isMaintenanceTimeUserData
+                 );
 
 /***********************************************************************\
 * Name   : Index_done
@@ -543,6 +561,17 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 
 void Index_beginInUse(void);
 void Index_endInUse(void);
+
+/***********************************************************************\
+* Name   : Index_isIndexInUse
+* Purpose: check if index is in-use by some other thread
+* Input  : -
+* Output : -
+* Return : TRUE iff in use by some other thread
+* Notes  : -
+\***********************************************************************/
+
+bool Index_isIndexInUse(void);
 
 /***********************************************************************\
 * Name   : Index_open
@@ -1791,6 +1820,20 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                        );
 
 /***********************************************************************\
+* Name   : Index_clearStorage
+* Purpose: clear index storage content
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_clearStorage(IndexHandle *indexHandle,
+                          IndexId    storageId
+                         );
+
+/***********************************************************************\
 * Name   : Index_updateStorage
 * Purpose: update storage index
 * Input  : indexHandle     - index handle
@@ -1801,6 +1844,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 *          createdDateTime - create date/time (can be 0)
 *          size            - size [bytes]
 *          comment         - comment (can be NULL)
+*          updateNewest    - TRUE to update newest entries (insert if
+*                            needed)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1813,7 +1858,8 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                            ConstString  storageName,
                            uint64       createdDateTime,
                            uint64       size,
-                           ConstString  comment
+                           ConstString  comment,
+                           bool         updateNewest
                           );
 
 /***********************************************************************\
@@ -1829,6 +1875,20 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
 Errors Index_deleteStorage(IndexHandle *indexHandle,
                            IndexId     storageId
                           );
+
+/***********************************************************************\
+* Name   : Index_hasDeletedStorages
+* Purpose: check if deleted storages exists
+* Input  : indexQueryHandle    - index query handle
+*          deletedStorageCount - delete storage count variable (can be
+*                                NULL)
+* Return : TRUE iff deleted storages exists
+* Notes  : -
+\***********************************************************************/
+
+bool Index_hasDeletedStorages(IndexHandle *indexHandle,
+                              ulong       *deletedStorageCount
+                             );
 
 /***********************************************************************\
 * Name   : Index_isDeletedStorage
@@ -1854,20 +1914,6 @@ bool Index_isDeletedStorage(IndexHandle *indexHandle,
 
 bool Index_isEmptyStorage(IndexHandle *indexHandle,
                           IndexId     storageId
-                         );
-
-/***********************************************************************\
-* Name   : Index_clearStorage
-* Purpose: clear index storage content
-* Input  : indexHandle - index handle
-*          storageId   - index id of storage
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_clearStorage(IndexHandle *indexHandle,
-                          IndexId    storageId
                          );
 
 /***********************************************************************\
@@ -2870,6 +2916,21 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
 Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
                                 IndexId     entryId
                                );
+
+#ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : Index_debugPrintInUseInfo
+* Purpose: print debug in-use info
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Index_debugPrintInUseInfo(void);
+
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }

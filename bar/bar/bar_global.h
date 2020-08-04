@@ -635,7 +635,7 @@ typedef struct MaintenanceNode
   uint id;                                                    // unique maintenance id
   MaintenanceDate       date;
   MaintenanceWeekDaySet weekDaySet;
-  MaintenanceTime       begin,end;
+  MaintenanceTime       beginTime,endTime;
 } MaintenanceNode;
 
 // maintenance list
@@ -712,9 +712,6 @@ typedef struct
                                                                    5 - some SSH debug debug
                                                                    6 - all SSH/FTP/WebDAV debug
                                                               */
-
-  uint                        serverDebugLevel;               // server debug level (for debug only)
-  bool                        serverDebugIndexOperationsFlag; // TRUE for server index operation only
 
   // --- job options default values
   ArchiveTypes                archiveType;                    // archive type for create
@@ -807,6 +804,17 @@ typedef struct
   bool                        skipUnreadableFlag;             // TRUE for skipping unreadable files
   bool                        errorCorrectionCodesFlag;       // TRUE iff error correction codes should be added
   bool                        waitFirstVolumeFlag;            // TRUE for wait for first volume
+
+  // debug/test only
+  struct
+  {
+    uint                      serverLevel;                    // server debug level (for debug only)
+    bool                      indexWaitOperationsFlag;        // TRUE to wait for index operation
+    bool                      indexPurgeDeletedStoragesFlag;  // TRUE to purge deleted storages
+    String                    indexAddStorage;                // add storage to index
+    String                    indexRemoveStorage;             // remove storage from index
+    String                    indexRefreshStorage;            // refresh storage index
+  } debug;
 } GlobalOptions;
 
 typedef ValueSet(GlobalOptionSet,32);

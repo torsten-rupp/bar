@@ -857,6 +857,40 @@ bool equalsHash(Hash *hash, const CryptHash *cryptHash);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : newMaintenanceNode
+* Purpose: create new maintenance node
+* Input  : -
+* Output : -
+* Return : maintenance node
+* Notes  : -
+\***********************************************************************/
+
+MaintenanceNode *newMaintenanceNode(void);
+
+/***********************************************************************\
+* Name   : deleteMaintenanceNode
+* Purpose: delete maintenance node
+* Input  : maintenanceNode - maintenance node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void deleteMaintenanceNode(MaintenanceNode *maintenanceNode);
+
+/***********************************************************************\
+* Name   : freeMaintenanceNode
+* Purpose: delete maintenance time node
+* Input  : maintenanceNode - maintenance node
+*          userData        - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData);
+
+/***********************************************************************\
 * Name   : initServer
 * Purpose: init server
 * Input  : server     - server variable
@@ -2381,17 +2415,6 @@ bool hasNoBackup(ConstString pathName);
 \***********************************************************************/
 
 bool hasNoDumpAttribute(ConstString name);
-
-/***********************************************************************\
-* Name   : isMaintenanceTime
-* Purpose: check if date/time is maintence time
-* Input  : dateTime - date/time
-* Output : -
-* Return : TRUE if maintenance, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool isMaintenanceTime(uint64 dateTime);
 
 #ifdef __cplusplus
   }

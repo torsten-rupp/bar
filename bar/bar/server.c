@@ -331,8 +331,8 @@ LOCAL Thread                jobThread;                   // thread executing job
 LOCAL Thread                schedulerThread;             // thread for scheduling jobs
 LOCAL Thread                pauseThread;
 LOCAL Thread                pairingThread;               // thread for pairing master/slaves
-LOCAL Semaphore             indexThreadTrigger;
-LOCAL Thread                indexThread;                 // thread to add/update index
+LOCAL Semaphore             updateIndexThreadTrigger;
+LOCAL Thread                updateIndexThread;           // thread to add/update index
 LOCAL Semaphore             autoIndexThreadTrigger;
 LOCAL Thread                autoIndexThread;             // thread to collect BAR files for auto-index
 LOCAL Thread                purgeExpiredEntitiesThread;  // thread to purge expired archive files
@@ -345,6 +345,7 @@ LOCAL struct
         bool storage;
         bool restore;
         bool indexUpdate;
+        bool indexMaintenance;
       } pauseFlags;                                      // TRUE iff pause
 LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
 LOCAL struct
@@ -356,6 +357,7 @@ LOCAL struct
   CryptHash    uuidHash;                                 // new master UUID hash
 } newMaster;
 LOCAL IndexHandle           *indexHandle;                // index handle
+LOCAL uint64                intermediateMaintenanceDateTime;  // intermediate maintenance date/time
 LOCAL bool                  quitFlag;                    // TRUE iff quit requested
 
 #ifdef SIMULATE_PURGE
@@ -373,6 +375,102 @@ LOCAL void deleteClient(ClientNode *clientNode);
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : parseMaintenanceDateTime
+* Purpose: parse schedule date/time
+* Input  : maintenanceNode - maintenance node variable
+*          date            - date string (<year|*>-<month|*>-<day|*>)
+*          weekDays        - week days string (<day>,...)
+*          beginTime       - begin time string <hour|*>:<minute|*>
+*          endTime         - end time string <hour|*>:<minute|*>
+* Output : maintenanceNode - maintenance node
+* Return : ERROR_NONE or error code
+* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+\***********************************************************************/
+
+LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
+                                      ConstString     date,
+                                      ConstString     weekDays,
+                                      ConstString     beginTime,
+                                      ConstString     endTime
+                                     )
+{
+  Errors error;
+  String s0,s1,s2;
+
+  assert(maintenanceNode != NULL);
+  assert(date != NULL);
+  assert(weekDays != NULL);
+  assert(time != NULL);
+
+  error = ERROR_NONE;
+
+  // init variables
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+
+  // parse date
+  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (   !parseDateTimeNumber(s0,&maintenanceNode->date.year )
+        || !parseDateMonth     (s1,&maintenanceNode->date.month)
+        || !parseDateTimeNumber(s2,&maintenanceNode->date.day  )
+       )
+    {
+      error = ERROR_PARSE_DATE;
+    }
+  }
+  else
+  {
+    error = ERROR_PARSE_DATE;
+  }
+
+  // parse week days
+  if (!parseWeekDaySet(String_cString(weekDays),&maintenanceNode->weekDaySet))
+  {
+    error = ERROR_PARSE_WEEKDAYS;
+  }
+
+  // parse begin/end time
+  if (String_parse(beginTime,STRING_BEGIN,"%S:%S",NULL,s0,s1))
+  {
+    if (   !parseDateTimeNumber(s0,&maintenanceNode->beginTime.hour  )
+        || !parseDateTimeNumber(s1,&maintenanceNode->beginTime.minute)
+       )
+    {
+      error = ERROR_PARSE_TIME;
+    }
+  }
+  else
+  {
+    error = ERROR_PARSE_TIME;
+  }
+  if (String_parse(endTime,STRING_BEGIN,"%S:%S",NULL,s0,s1))
+  {
+    if (   !parseDateTimeNumber(s0,&maintenanceNode->endTime.hour  )
+        || !parseDateTimeNumber(s1,&maintenanceNode->endTime.minute)
+       )
+    {
+      error = ERROR_PARSE_TIME;
+    }
+  }
+  else
+  {
+    error = ERROR_PARSE_TIME;
+  }
+
+  // free resources
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+
+  return error;
+}
+
 
 /***********************************************************************\
 * Name   : parseServerType
@@ -496,6 +594,86 @@ LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
 }
 
 /***********************************************************************\
+* Name   : parseScheduleDateTime
+* Purpose: parse schedule date/time
+* Input  : scheduleNode - schedule node variable
+*          date         - date string (<year|*>-<month|*>-<day|*>)
+*          weekDays     - week days string (<day>,...)
+*          time         - time string <hour|*>:<minute|*>
+* Output : scheduleNode - schedule node
+* Return : ERROR_NONE or error code
+* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
+*          nov, dec
+*          week day names: mon, tue, wed, thu, fri, sat, sun
+\***********************************************************************/
+
+LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
+                                   ConstString  date,
+                                   ConstString  weekDays,
+                                   ConstString  time
+                                  )
+{
+  Errors error;
+  String s0,s1,s2;
+
+  assert(scheduleNode != NULL);
+  assert(date != NULL);
+  assert(weekDays != NULL);
+  assert(time != NULL);
+
+  error = ERROR_NONE;
+
+  // init variables
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+
+  // parse date
+  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (   !parseDateTimeNumber(s0,&scheduleNode->date.year )
+        || !parseDateMonth     (s1,&scheduleNode->date.month)
+        || !parseDateTimeNumber(s2,&scheduleNode->date.day  )
+       )
+    {
+      error = ERROR_PARSE_DATE;
+    }
+  }
+  else
+  {
+    error = ERROR_PARSE_DATE;
+  }
+
+  // parse week days
+  if (!parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
+  {
+    error = ERROR_PARSE_WEEKDAYS;
+  }
+
+  // parse time
+  if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
+  {
+    if (   !parseDateTimeNumber(s0,&scheduleNode->time.hour  )
+        || !parseDateTimeNumber(s1,&scheduleNode->time.minute)
+       )
+    {
+      error = ERROR_PARSE_TIME;
+    }
+  }
+  else
+  {
+    error = ERROR_PARSE_TIME;
+  }
+
+  // free resources
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : freePersistenceNode
 * Purpose: free persistence node
 * Input  : persistenceNode - persistence node
@@ -590,82 +768,6 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
 
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
-}
-
-/***********************************************************************\
-* Name   : parseScheduleDateTime
-* Purpose: parse schedule date/time
-* Input  : scheduleNode - schedule node variable
-*          date         - date string (<year|*>-<month|*>-<day|*>)
-*          weekDays     - week days string (<day>,...)
-*          time         - time string <hour|*>:<minute|*>
-* Output : scheduleNode - schedule node
-* Return : ERROR_NONE or error code
-* Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-\***********************************************************************/
-
-LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
-                                   ConstString  date,
-                                   ConstString  weekDays,
-                                   ConstString  time
-                                  )
-{
-  Errors error;
-  String s0,s1,s2;
-
-  assert(scheduleNode != NULL);
-  assert(date != NULL);
-  assert(weekDays != NULL);
-  assert(time != NULL);
-
-  error = ERROR_NONE;
-
-  // parse date
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
-  {
-    if (   !parseDateTimeNumber(s0,&scheduleNode->date.year )
-        || !parseDateMonth     (s1,&scheduleNode->date.month)
-        || !parseDateTimeNumber(s2,&scheduleNode->date.day  )
-       )
-    {
-      error = ERROR_PARSE_DATE;
-    }
-  }
-  else
-  {
-    error = ERROR_PARSE_DATE;
-  }
-
-  // parse week days
-  if (!parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
-  {
-    error = ERROR_PARSE_WEEKDAYS;
-  }
-
-  // parse time
-  if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
-  {
-    if (   !parseDateTimeNumber(s0,&scheduleNode->time.hour  )
-        || !parseDateTimeNumber(s1,&scheduleNode->time.minute)
-       )
-    {
-      error = ERROR_PARSE_TIME;
-    }
-  }
-  else
-  {
-    error = ERROR_PARSE_TIME;
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-
-  return error;
 }
 
 #if 0
@@ -2748,10 +2850,11 @@ LOCAL void pauseThreadCode(void)
         if (Misc_getCurrentDateTime() > pauseEndDateTime)
         {
           // clear pause flags
-          pauseFlags.create      = FALSE;
-          pauseFlags.storage     = FALSE;
-          pauseFlags.restore     = FALSE;
-          pauseFlags.indexUpdate = FALSE;
+          pauseFlags.create           = FALSE;
+          pauseFlags.storage          = FALSE;
+          pauseFlags.restore          = FALSE;
+          pauseFlags.indexUpdate      = FALSE;
+          pauseFlags.indexMaintenance = FALSE;
 
           // continue all slaves
           if (serverMode == SERVER_MODE_MASTER)
@@ -2789,6 +2892,104 @@ LOCAL void pauseThreadCode(void)
     // sleep, check quit flag
     delayThread(SLEEP_TIME_PAUSE_THREAD,NULL);
   }
+}
+
+/***********************************************************************\
+* Name   : isMaintenanceTime
+* Purpose: check if date/time is maintence time
+* Input  : dateTime - date/time
+*          userData - user data (unused)
+* Output : -
+* Return : TRUE if maintenance, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
+{
+  // get time from hour/minute
+  #define TIME(hour,minute) ((hour)*60+(minute))
+  // get begin time from hour/minute or 00:00
+  #define TIME_BEGIN(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) :  0)*60+ \
+                                   (((minute) != TIME_ANY) ? (uint)(minute) :  0) \
+                                  )
+  // get end time from hour/minute or 24:00
+  #define TIME_END(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) : 23)*60+ \
+                                 (((minute) != TIME_ANY) ? (uint)(minute) : 60) \
+                                )
+
+  bool                  maintenanceTimeFlag;
+  uint                  year;
+  uint                  month;
+  uint                  day;
+  uint                  hour;
+  uint                  minute;
+  uint                  second;
+  WeekDays              weekDay;
+  const MaintenanceNode *maintenanceNode;
+
+  UNUSED_VARIABLE(userData);
+
+  if      (pauseFlags.indexMaintenance)
+  {
+    maintenanceTimeFlag = FALSE;
+  }
+  else if (dateTime < intermediateMaintenanceDateTime)
+  {
+    maintenanceTimeFlag = TRUE;
+  }
+  else
+  {
+    maintenanceTimeFlag = FALSE;
+
+    Misc_splitDateTime(dateTime,
+                       &year,
+                       &month,
+                       &day,
+                       &hour,
+                       &minute,
+                       &second,
+                       &weekDay
+                      );
+
+    SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      if (!List_isEmpty(&globalOptions.maintenanceList))
+      {
+        LIST_ITERATE(&globalOptions.maintenanceList,maintenanceNode)
+        {
+          if (   (   (maintenanceNode->date.year == DATE_ANY)
+                  || ((uint)maintenanceNode->date.year == year )
+                 )
+              && (   (maintenanceNode->date.month == DATE_ANY)
+                  || ((uint)maintenanceNode->date.month == month)
+                 )
+              && (   (maintenanceNode->date.day == DATE_ANY)
+                  || ((uint)maintenanceNode->date.day == day  )
+                 )
+              && (   (maintenanceNode->weekDaySet == WEEKDAY_SET_ANY)
+                  || IN_SET(maintenanceNode->weekDaySet,weekDay)
+                 )
+              && (TIME_BEGIN(maintenanceNode->beginTime.hour,maintenanceNode->beginTime.minute) <= TIME(hour,minute))
+              && (TIME_END  (maintenanceNode->endTime.hour,  maintenanceNode->endTime.minute  ) >= TIME(hour,minute))
+             )
+          {
+            maintenanceTimeFlag = TRUE;
+          }
+        }
+      }
+      else
+      {
+        maintenanceTimeFlag = TRUE;
+      }
+    }
+  }
+fprintf(stderr,"%s, %d: isMaintenanceTime %d %llu %llu -> %d\n",__FILE__,__LINE__,pauseFlags.indexMaintenance,dateTime,intermediateMaintenanceDateTime,maintenanceTimeFlag);
+
+  return maintenanceTimeFlag;
+
+  #undef TIME_END
+  #undef TIME_BEGIN
+  #undef TIME
 }
 
 /*---------------------------------------------------------------------*/
@@ -3659,7 +3860,9 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
     {
       error = ERROR_NONE;
 
-      if (Index_isInitialized())
+      if (   Index_isInitialized()
+          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
+         )
       {
         // get expiration entity list
         getExpirationEntityList(&expirationEntityList,
@@ -3809,8 +4012,9 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           // free resources
           List_done(&mountList,(ListNodeFreeFunction)freeMountNode,NULL);
         }
-        while (   !quitFlag
-               && !INDEX_ID_IS_NONE(expiredEntityId)
+        while (   !INDEX_ID_IS_NONE(expiredEntityId)
+               && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
+               && !quitFlag
               );
 
         // free resources
@@ -3963,7 +4167,7 @@ LOCAL void pauseIndexUpdate(void)
 }
 
 /***********************************************************************\
-* Name   : indexThreadCode
+* Name   : updateIndexThreadCode
 * Purpose: index update thread
 * Input  : -
 * Output : -
@@ -3971,7 +4175,7 @@ LOCAL void pauseIndexUpdate(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void indexThreadCode(void)
+LOCAL void updateIndexThreadCode(void)
 {
   IndexHandle            *indexHandle;
   IndexId                uuidId,entityId,storageId;
@@ -4014,7 +4218,7 @@ LOCAL void indexThreadCode(void)
 
       if (   Index_isInitialized()
           && globalOptions.indexDatabaseUpdateFlag
-          && isMaintenanceTime(Misc_getCurrentDateTime())
+          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
          )
       {
         // get all job crypt passwords and crypt private keys (including no password and default crypt password)
@@ -4226,7 +4430,7 @@ LOCAL void indexThreadCode(void)
       if (quitFlag) break;
 
       // sleep and check quit flag/trigger
-      delayThread(SLEEP_TIME_INDEX_THREAD,&indexThreadTrigger);
+      delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
     }
 
     // done index
@@ -4427,6 +4631,7 @@ LOCAL void autoIndexThreadCode(void)
                                            case FILE_TYPE_FILE:
                                            case FILE_TYPE_LINK:
                                            case FILE_TYPE_HARDLINK:
+                                             // get printable name
                                              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
                                              // get index id, request index update
@@ -5066,7 +5271,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   if      (!String_isEmpty(encryptedPassword))
   {
     // client => verify password
-    if (globalOptions.serverDebugLevel == 0)
+    if (globalOptions.debug.serverLevel == 0)
     {
       if (ServerIO_verifyPassword(&clientInfo->io,
                                   encryptedPassword,
@@ -5282,7 +5487,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  if (globalOptions.serverDebugLevel >= 1)
+  if (globalOptions.debug.serverLevel >= 1)
   {
     quitFlag = TRUE;
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -5769,8 +5974,471 @@ LOCAL void serverCommand_masterPairingStatus(ClientInfo *clientInfo, IndexHandle
 }
 
 /***********************************************************************\
+* Name   : serverCommand_maintenanceList
+* Purpose: get maintenance list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            id=<n> \
+*            date=<year>|*-<month>|*-<day>|* \
+*            weekDays=<week day>|* \
+*            beginTime=<hour>|*:<minute>|* \
+*            endTime=<hour>|*:<minute>|*
+*            ...
+\***********************************************************************/
+
+LOCAL void serverCommand_maintenanceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  String          date,weekDays,beginTime,endTime;
+  MaintenanceNode *maintenanceNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(argumentMap);
+
+  // init variables
+  date      = String_new();
+  weekDays  = String_new();
+  beginTime = String_new();
+  endTime   = String_new();
+
+  SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    LIST_ITERATE(&globalOptions.maintenanceList,maintenanceNode)
+    {
+      // get date string
+      String_clear(date);
+      if (maintenanceNode->date.year != DATE_ANY)
+      {
+        String_appendFormat(date,"%d",maintenanceNode->date.year);
+      }
+      else
+      {
+        String_appendCString(date,"*");
+      }
+      String_appendChar(date,'-');
+      if (maintenanceNode->date.month != DATE_ANY)
+      {
+        String_appendFormat(date,"%02d",maintenanceNode->date.month);
+      }
+      else
+      {
+        String_appendCString(date,"*");
+      }
+      String_appendChar(date,'-');
+      if (maintenanceNode->date.day != DATE_ANY)
+      {
+        String_appendFormat(date,"%02d",maintenanceNode->date.day);
+      }
+      else
+      {
+        String_appendCString(date,"*");
+      }
+
+      // get weekdays string
+      String_clear(weekDays);
+      if (maintenanceNode->weekDaySet != WEEKDAY_SET_ANY)
+      {
+        if (IN_SET(maintenanceNode->weekDaySet,WEEKDAY_MON)) { String_joinCString(weekDays,"Mon",','); }
+        if (IN_SET(maintenanceNode->weekDaySet,WEEKDAY_TUE)) { String_joinCString(weekDays,"Tue",','); }
+        if (IN_SET(maintenanceNode->weekDaySet,WEEKDAY_WED)) { String_joinCString(weekDays,"Wed",','); }
+        if (IN_SET(maintenanceNode->weekDaySet,WEEKDAY_THU)) { String_joinCString(weekDays,"Thu",','); }
+        if (IN_SET(maintenanceNode->weekDaySet,WEEKDAY_FRI)) { String_joinCString(weekDays,"Fri",','); }
+        if (IN_SET(maintenanceNode->weekDaySet,WEEKDAY_SAT)) { String_joinCString(weekDays,"Sat",','); }
+        if (IN_SET(maintenanceNode->weekDaySet,WEEKDAY_SUN)) { String_joinCString(weekDays,"Sun",','); }
+      }
+      else
+      {
+        String_appendCString(weekDays,"*");
+      }
+
+      // get begin/end time string
+      String_clear(beginTime);
+      if (maintenanceNode->beginTime.hour != TIME_ANY)
+      {
+        String_appendFormat(beginTime,"%02d",maintenanceNode->beginTime.hour);
+      }
+      else
+      {
+        String_appendCString(beginTime,"*");
+      }
+      String_appendChar(beginTime,':');
+      if (maintenanceNode->beginTime.minute != TIME_ANY)
+      {
+        String_appendFormat(beginTime,"%02d",maintenanceNode->beginTime.minute);
+      }
+      else
+      {
+        String_appendCString(beginTime,"*");
+      }
+
+      String_clear(endTime);
+      if (maintenanceNode->endTime.hour != TIME_ANY)
+      {
+        String_appendFormat(endTime,"%02d",maintenanceNode->endTime.hour);
+      }
+      else
+      {
+        String_appendCString(endTime,"*");
+      }
+      String_appendChar(endTime,':');
+      if (maintenanceNode->endTime.minute != TIME_ANY)
+      {
+        String_appendFormat(endTime,"%02d",maintenanceNode->endTime.minute);
+      }
+      else
+      {
+        String_appendCString(endTime,"*");
+      }
+
+      // send schedule info
+      ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                          "id=%u date=%S weekDays=%S beginTime=%S endTime=%S",
+                          maintenanceNode->id,
+                          date,
+                          weekDays,
+                          beginTime,
+                          endTime
+                         );
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(endTime);
+  String_delete(beginTime);
+  String_delete(weekDays);
+  String_delete(date);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_maintenanceListAdd
+* Purpose: add maintenance to list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            date=<year>|*-<month>|*-<day>|* \
+*            weekDays=<week day>|* \
+*            beginTime=<hour>|*:<minute>|* \
+*            endTime=<hour>|*:<minute>|*
+*          Result:
+*            id=<n>
+\***********************************************************************/
+
+LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  String          date;
+  String          weekDays;
+  String          beginTime,endTime;
+  MaintenanceNode *maintenanceNode;
+  Errors          error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get date, weekday, begin time, end time
+  date = String_new();
+  if (!StringMap_getString(argumentMap,"date",date,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"date=<date>|*");
+    String_delete(date);
+    return;
+  }
+  weekDays = String_new();
+  if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<names>|*");
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+  beginTime = String_new();
+  if (!StringMap_getString(argumentMap,"beginTime",beginTime,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"beginTime=<time>|*");
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+  endTime = String_new();
+  if (!StringMap_getString(argumentMap,"endTime",endTime,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+
+  // create new mainteance
+  maintenanceNode = newMaintenanceNode();
+  assert(maintenanceNode != NULL);
+
+  // parse maintenance
+  error = parseMaintenanceDateTime(maintenanceNode,
+                                   date,
+                                   weekDays,
+                                   beginTime,
+                                   endTime
+                                  );
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,
+                        id,
+                        TRUE,
+                        ERROR_PARSE_MAINTENANCE,
+                        "%S %S %S %S",
+                        date,
+                        weekDays,
+                        beginTime,
+                        endTime
+                       );
+    deleteMaintenanceNode(maintenanceNode);
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_append(&globalOptions.maintenanceList,maintenanceNode);
+  }
+
+  // update config file
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  error = updateConfig();
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",maintenanceNode->id);
+
+  // free resources
+  String_delete(endTime);
+  String_delete(beginTime);
+  String_delete(weekDays);
+  String_delete(date);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_maintenanceListUpdate
+* Purpose: update maintenance in list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            id=<n>
+*            date=<year>|*-<month>|*-<day>|* \
+*            weekDays=<week day>|* \
+*            beginTime=<hour>|*:<minute>|* \
+*            endTime=<hour>|*:<minute>|*
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint            maintenanceId;
+  String          date;
+  String          weekDays;
+  String          beginTime,endTime;
+  MaintenanceNode *maintenanceNode;
+  Errors          error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get date, weekday, begin time, end time
+  date = String_new();
+  if (!StringMap_getString(argumentMap,"date",date,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"date=<date>|*");
+    String_delete(date);
+    return;
+  }
+  weekDays = String_new();
+  if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<names>|*");
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+  beginTime = String_new();
+  if (!StringMap_getString(argumentMap,"beginTime",beginTime,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"beginTime=<time>|*");
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+  endTime = String_new();
+  if (!StringMap_getString(argumentMap,"endTime",endTime,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    // find maintenance
+    maintenanceNode = LIST_FIND(&globalOptions.maintenanceList,maintenanceNode,maintenanceNode->id == maintenanceId);
+    if (maintenanceNode == NULL)
+    {
+      Semaphore_unlock(&globalOptions.maintenanceList.lock);
+      ServerIO_sendResult(&clientInfo->io,maintenanceId,TRUE,ERROR_MAINTENANCE_ID_NOT_FOUND,"%u",maintenanceId);
+      String_delete(endTime);
+      String_delete(beginTime);
+      String_delete(weekDays);
+      String_delete(date);
+      return;
+    }
+
+    // parse maintenance
+    error = parseMaintenanceDateTime(maintenanceNode,
+                                     date,
+                                     weekDays,
+                                     beginTime,
+                                     endTime
+                                    );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,
+                          id,
+                          TRUE,
+                          ERROR_PARSE_MAINTENANCE,
+                          "%S %S %S %S",
+                          date,
+                          weekDays,
+                          beginTime,
+                          endTime
+                         );
+      String_delete(endTime);
+      String_delete(beginTime);
+      String_delete(weekDays);
+      String_delete(date);
+      return;
+    }
+  }
+
+  // update config file
+  error = updateConfig();
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
+    return;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+  String_delete(endTime);
+  String_delete(beginTime);
+  String_delete(weekDays);
+  String_delete(date);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_maintenanceListRemove
+* Purpose: delete maintenance from list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            id=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint            maintenanceId;
+  MaintenanceNode *maintenanceNode;
+  Errors          error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get storage maintenance id
+  if (!StringMap_getUInt(argumentMap,"id",&maintenanceId,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
+    return;
+  }
+
+  SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    // find maintenance
+    maintenanceNode = LIST_FIND(&globalOptions.maintenanceList,maintenanceNode,maintenanceNode->id == maintenanceId);
+    if (maintenanceNode == NULL)
+    {
+      Semaphore_unlock(&globalOptions.maintenanceList.lock);
+      ServerIO_sendResult(&clientInfo->io,maintenanceId,TRUE,ERROR_MAINTENANCE_ID_NOT_FOUND,"%u",maintenanceId);
+      return;
+    }
+
+    // delete storage server
+    List_removeAndFree(&globalOptions.maintenanceList,maintenanceNode,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
+  }
+
+  // update config file
+  error = updateConfig();
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
+    return;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : serverCommand_serverList
-* Purpose: get job server list
+* Purpose: get server list
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -6261,7 +6929,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
 
 /***********************************************************************\
 * Name   : serverCommand_serverListRemove
-* Purpose: delete entry in server list
+* Purpose: delete entry from server list
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -6432,7 +7100,7 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
 * Return : -
 * Notes  : Arguments:
 *            time=<pause time [s]>
-*            modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE
+*            modeMask=CREATE,STORAGE,RESTORE,INDEX_UPDATE,INDEX_MAINTENANCE
 *          Result:
 \***********************************************************************/
 
@@ -6451,7 +7119,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get pause time
+  // get pause time, mode mask
   if (!StringMap_getUInt(argumentMap,"time",&pauseTime,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"time=<time>");
@@ -6471,10 +7139,11 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     // set pause flags
     if (modeMask == NULL)
     {
-      pauseFlags.create      = TRUE;
-      pauseFlags.storage     = TRUE;
-      pauseFlags.restore     = TRUE;
-      pauseFlags.indexUpdate = TRUE;
+      pauseFlags.create           = TRUE;
+      pauseFlags.storage          = TRUE;
+      pauseFlags.restore          = TRUE;
+      pauseFlags.indexUpdate      = TRUE;
+      pauseFlags.indexMaintenance = TRUE;
     }
     else
     {
@@ -6487,22 +7156,27 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
         }
         else if (String_equalsIgnoreCaseCString(token,"STORAGE"))
         {
-          pauseFlags.storage     = TRUE;
+          pauseFlags.storage          = TRUE;
         }
         else if (String_equalsIgnoreCaseCString(token,"RESTORE"))
         {
-          pauseFlags.restore     = TRUE;
+          pauseFlags.restore          = TRUE;
         }
         else if (String_equalsIgnoreCaseCString(token,"INDEX_UPDATE"))
         {
-          pauseFlags.indexUpdate = TRUE;
+          pauseFlags.indexUpdate      = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"INDEX_MAINTENANCE"))
+        {
+          pauseFlags.indexMaintenance = TRUE;
         }
         else if (String_equalsIgnoreCaseCString(token,"ALL"))
         {
-          pauseFlags.create      = TRUE;
-          pauseFlags.storage     = TRUE;
-          pauseFlags.restore     = TRUE;
-          pauseFlags.indexUpdate = TRUE;
+          pauseFlags.create           = TRUE;
+          pauseFlags.storage          = TRUE;
+          pauseFlags.restore          = TRUE;
+          pauseFlags.indexUpdate      = TRUE;
+          pauseFlags.indexMaintenance = TRUE;
         }
       }
       String_doneTokenizer(&stringTokenizer);
@@ -6541,10 +7215,11 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
 
     // log info
     String_clear(modeMask);
-    if (pauseFlags.create     ) String_joinCString(modeMask,"create",',');
-    if (pauseFlags.storage    ) String_joinCString(modeMask,"storage",',');
-    if (pauseFlags.restore    ) String_joinCString(modeMask,"restore",',');
-    if (pauseFlags.indexUpdate) String_joinCString(modeMask,"indexUpdate",',');
+    if (pauseFlags.create          ) String_joinCString(modeMask,"create",           ',');
+    if (pauseFlags.storage         ) String_joinCString(modeMask,"storage",          ',');
+    if (pauseFlags.restore         ) String_joinCString(modeMask,"restore",          ',');
+    if (pauseFlags.indexUpdate     ) String_joinCString(modeMask,"index update",     ',');
+    if (pauseFlags.indexMaintenance) String_joinCString(modeMask,"index maintenance",',');
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Pause by %s for %dmin: %s",
@@ -6599,10 +7274,11 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     // set pause flags
     if (String_isEmpty(modeMask))
     {
-      pauseFlags.create      = TRUE;
-      pauseFlags.storage     = TRUE;
-      pauseFlags.restore     = TRUE;
-      pauseFlags.indexUpdate = TRUE;
+      pauseFlags.create           = TRUE;
+      pauseFlags.storage          = TRUE;
+      pauseFlags.restore          = TRUE;
+      pauseFlags.indexUpdate      = TRUE;
+      pauseFlags.indexMaintenance = TRUE;
     }
     else
     {
@@ -6611,19 +7287,23 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
       {
         if (String_equalsIgnoreCaseCString(token,"CREATE"))
         {
-          pauseFlags.create      = TRUE;
+          pauseFlags.create           = TRUE;
         }
         else if (String_equalsIgnoreCaseCString(token,"STORAGE"))
         {
-          pauseFlags.storage     = TRUE;
+          pauseFlags.storage          = TRUE;
         }
         else if (String_equalsIgnoreCaseCString(token,"RESTORE"))
         {
-          pauseFlags.restore     = TRUE;
+          pauseFlags.restore          = TRUE;
         }
         else if (String_equalsIgnoreCaseCString(token,"INDEX_UPDATE"))
         {
-          pauseFlags.indexUpdate = TRUE;
+          pauseFlags.indexUpdate      = TRUE;
+        }
+        else if (String_equalsIgnoreCaseCString(token,"INDEX_MAINTENANCE"))
+        {
+          pauseFlags.indexMaintenance = TRUE;
         }
       }
       String_doneTokenizer(&stringTokenizer);
@@ -6700,10 +7380,11 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
   SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // clear pause flags
-    pauseFlags.create      = FALSE;
-    pauseFlags.storage     = FALSE;
-    pauseFlags.restore     = FALSE;
-    pauseFlags.indexUpdate = FALSE;
+    pauseFlags.create           = FALSE;
+    pauseFlags.storage          = FALSE;
+    pauseFlags.restore          = FALSE;
+    pauseFlags.indexUpdate      = FALSE;
+    pauseFlags.indexMaintenance = FALSE;
 
     // set running state on slaves
     if (serverMode == SERVER_MODE_MASTER)
@@ -6737,6 +7418,54 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
                LOG_TYPE_ALWAYS,
                "Continued by %s",
                getClientInfo(clientInfo,s,sizeof(s))
+              );
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_maintenace
+* Purpose: set intermediate maintenance time slot
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            time=<maintenance time [s]>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_maintenance(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint maintenanceTime;
+  char s[256];
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get pause time
+  if (!StringMap_getUInt(argumentMap,"time",&maintenanceTime,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"time=<time>");
+    return;
+  }
+
+  // set intermediate maintenance time
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    intermediateMaintenanceDateTime = Misc_getCurrentDateTime()+maintenanceTime;
+
+    // log info
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Set intermediate maintenance time by %s for %dmin",
+               getClientInfo(clientInfo,s,sizeof(s)),
+               maintenanceTime/60
               );
   }
 
@@ -11070,7 +11799,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 *            scheduleUUID=<uuid> \
 *            archiveType=normal|full|incremental|differential
 *            date=<year>|*-<month>|*-<day>|* \
-*            weekDay=<week day>|* \
+*            weekDays=<week day>|* \
 *            time=<hour>|*:<minute>|* \
 *            interval=<n>
 *            customText=<text> \
@@ -11307,7 +12036,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   weekDays = String_new();
   if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<name>|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<names>|*");
     String_delete(weekDays);
     String_delete(date);
     String_delete(title);
@@ -16794,7 +17523,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   // trigger index thread
   if (updateRequestedFlag)
   {
-    Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+    Semaphore_signalModified(&updateIndexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
   }
 
   if (error == ERROR_NONE)
@@ -17502,7 +18231,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // trigger index thread
-  Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+  Semaphore_signalModified(&updateIndexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   // free resources
   Array_done(&storageIdArray);
@@ -18010,18 +18739,24 @@ SERVER_COMMANDS[] =
   { "MASTER_PAIRING_STOP",         serverCommand_masterPairingStop,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "MASTER_PAIRING_STATUS",       serverCommand_masterPairingStatus,      AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
+  { "MAINTENANCE_LIST",            serverCommand_maintenanceList,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MAINTENANCE_LIST_ADD",        serverCommand_maintenanceListAdd,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MAINTENANCE_LIST_UPDATE",     serverCommand_maintenanceListUpdate,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MAINTENANCE_LIST_REMOVE",     serverCommand_maintenanceListRemove,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+
   { "SERVER_LIST",                 serverCommand_serverList,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SERVER_LIST_ADD",             serverCommand_serverListAdd,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SERVER_LIST_UPDATE",          serverCommand_serverListUpdate,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SERVER_LIST_REMOVE",          serverCommand_serverListRemove,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-//TODO: obsolete?
+//TODO: GET obsolete?
   { "GET",                         serverCommand_get,                      AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "ABORT",                       serverCommand_abort,                    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "STATUS",                      serverCommand_status,                   AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "PAUSE",                       serverCommand_pause,                    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SUSPEND",                     serverCommand_suspend,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "CONTINUE",                    serverCommand_continue,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MAINTENANCE",                 serverCommand_maintenance,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "DEVICE_LIST",                 serverCommand_deviceList,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "ROOT_LIST",                   serverCommand_rootList,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "FILE_INFO",                   serverCommand_fileInfo,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
@@ -18319,7 +19054,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         )
   {
     // check authorization (if not in server debug mode)
-    if ((globalOptions.serverDebugLevel >= 1) || IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
+    if ((globalOptions.debug.serverLevel >= 1) || IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
     {
       // add command info
       commandInfoNode = NULL;
@@ -18338,7 +19073,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       // execute command
       #ifndef NDEBUG
         t0 = 0LL;
-        if (globalOptions.serverDebugLevel >= 1)
+        if (globalOptions.debug.serverLevel >= 1)
         {
           t0 = Misc_getTimestamp();
         }
@@ -18349,7 +19084,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
                                     command.argumentMap
                                    );
       #ifndef NDEBUG
-        if (globalOptions.serverDebugLevel >= 2)
+        if (globalOptions.debug.serverLevel >= 2)
         {
           t1 = Misc_getTimestamp();
           fprintf(stderr,"DEBUG: command time=%"PRIu64"ms\n",(t1-t0)/(uint64)US_PER_MS);
@@ -18958,7 +19693,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   {
     case SERVER_IO_TYPE_BATCH:
       // check authorization (if not in server debug mode)
-      if ((globalOptions.serverDebugLevel >= 1) || IS_SET(authorizationStateSet,clientInfo->authorizationState))
+      if ((globalOptions.debug.serverLevel >= 1) || IS_SET(authorizationStateSet,clientInfo->authorizationState))
       {
         // execute
         serverCommandFunction(clientInfo,
@@ -18979,7 +19714,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       {
         case AUTHORIZATION_STATE_WAITING:
           // check authorization (if not in server debug mode)
-          if ((globalOptions.serverDebugLevel >= 1) || IS_SET(authorizationStateSet,AUTHORIZATION_STATE_WAITING))
+          if ((globalOptions.debug.serverLevel >= 1) || IS_SET(authorizationStateSet,AUTHORIZATION_STATE_WAITING))
           {
             // execute command
             serverCommandFunction(clientInfo,
@@ -19088,20 +19823,23 @@ Errors Server_run(ServerModes       mode,
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
   List_init(&authorizationFailList);
-  jobList.activeCount            = 0;
+  jobList.activeCount             = 0;
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
-  serverState                    = SERVER_STATE_RUNNING;
-  pauseFlags.create              = FALSE;
-  pauseFlags.restore             = FALSE;
-  pauseFlags.indexUpdate         = FALSE;
-  pauseEndDateTime               = 0LL;
+  serverState                     = SERVER_STATE_RUNNING;
+  pauseFlags.create               = FALSE;
+  pauseFlags.storage              = FALSE;
+  pauseFlags.restore              = FALSE;
+  pauseFlags.indexUpdate          = FALSE;
+  pauseFlags.indexMaintenance     = FALSE;
+  pauseEndDateTime                = 0LL;
   Semaphore_init(&newMaster.lock,SEMAPHORE_TYPE_BINARY);
-  newMaster.pairingMode          = PAIRING_MODE_NONE;
+  newMaster.pairingMode           = PAIRING_MODE_NONE;
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
-  newMaster.name                 = String_new();
+  newMaster.name                  = String_new();
   Crypt_initHash(&newMaster.uuidHash,PASSWORD_HASH_ALGORITHM);
-  indexHandle                    = NULL;
-  quitFlag                       = FALSE;
+  indexHandle                     = NULL;
+  intermediateMaintenanceDateTime = 0LL;
+  quitFlag                        = FALSE;
   AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
@@ -19162,7 +19900,7 @@ Errors Server_run(ServerModes       mode,
   // init index database
   if (!stringIsEmpty(indexDatabaseFileName))
   {
-    error = Index_init(indexDatabaseFileName);
+    error = Index_init(indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
       printError("Cannot init index database '%s' (error: %s)!",
@@ -19180,22 +19918,6 @@ Errors Server_run(ServerModes       mode,
   if (Index_isAvailable())
   {
     indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-    if (indexHandle != NULL)
-    {
-      if (globalOptions.serverDebugIndexOperationsFlag)
-      {
-        // wait for index opertions
-        while (!Index_isInitialized())
-        {
-          Misc_udelay(1*US_PER_SECOND);
-        }
-
-        // terminate
-        Index_close(indexHandle);
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_NONE;
-      }
-    }
     AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
   }
 
@@ -19360,8 +20082,8 @@ Errors Server_run(ServerModes       mode,
       // init database pause callbacks
       Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
-      Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-      if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
+      Semaphore_init(&updateIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      if (!Thread_init(&updateIndexThread,"BAR update index",globalOptions.niceLevel,updateIndexThreadCode,NULL))
       {
         HALT_FATAL_ERROR("Cannot initialize index thread!");
       }
@@ -19378,7 +20100,7 @@ Errors Server_run(ServerModes       mode,
   }
 
   // run as server
-  if (globalOptions.serverDebugLevel >= 1)
+  if (globalOptions.debug.serverLevel >= 1)
   {
     printWarning("Server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
   }
@@ -19387,7 +20109,7 @@ Errors Server_run(ServerModes       mode,
   if (serverMode == SERVER_MODE_SLAVE)
   {
     if (   String_isEmpty(globalOptions.masterInfo.name)
-        || (globalOptions.serverDebugLevel >= 1)
+        || (globalOptions.debug.serverLevel >= 1)
        )
     {
       startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
@@ -19837,12 +20559,12 @@ Errors Server_run(ServerModes       mode,
       }
       Thread_done(&autoIndexThread);
       Semaphore_done(&autoIndexThreadTrigger);
-      if (!Thread_join(&indexThread))
+      if (!Thread_join(&updateIndexThread))
       {
         HALT_INTERNAL_ERROR("Cannot stop index thread!");
       }
-      Thread_done(&indexThread);
-      Semaphore_done(&indexThreadTrigger);
+      Thread_done(&updateIndexThread);
+      Semaphore_done(&updateIndexThreadTrigger);
 
       // done database pause callbacks
       Index_setPauseCallback(CALLBACK_(NULL,NULL));
@@ -19925,15 +20647,18 @@ Errors Server_batch(int        inputDescriptor,
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
   List_init(&authorizationFailList);
-  jobList.activeCount    = 0;
+  jobList.activeCount             = 0;
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
-  serverState            = SERVER_STATE_RUNNING;
-  pauseFlags.create      = FALSE;
-  pauseFlags.restore     = FALSE;
-  pauseFlags.indexUpdate = FALSE;
-  pauseEndDateTime       = 0LL;
-  indexHandle            = NULL;
-  quitFlag               = FALSE;
+  serverState                     = SERVER_STATE_RUNNING;
+  pauseFlags.create               = FALSE;
+  pauseFlags.storage              = FALSE;
+  pauseFlags.restore              = FALSE;
+  pauseFlags.indexUpdate          = FALSE;
+  pauseFlags.indexMaintenance     = FALSE;
+  pauseEndDateTime                = 0LL;
+  indexHandle                     = NULL;
+  intermediateMaintenanceDateTime = 0LL;
+  quitFlag                        = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
@@ -19942,7 +20667,7 @@ Errors Server_batch(int        inputDescriptor,
   // init index database
   if (!stringIsEmpty(indexDatabaseFileName))
   {
-    error = Index_init(indexDatabaseFileName);
+    error = Index_init(indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
@@ -19975,10 +20700,10 @@ Errors Server_batch(int        inputDescriptor,
     // init database pause callbacks
     Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
-    Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-    if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
+    Semaphore_init(&updateIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+    if (!Thread_init(&updateIndexThread,"BAR index",globalOptions.niceLevel,updateIndexThreadCode,NULL))
     {
-      HALT_FATAL_ERROR("Cannot initialize index thread!");
+      HALT_FATAL_ERROR("Cannot initialize update index thread!");
     }
     Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
@@ -19992,7 +20717,7 @@ Errors Server_batch(int        inputDescriptor,
   }
 
   // run in batch mode
-  if (globalOptions.serverDebugLevel >= 1)
+  if (globalOptions.debug.serverLevel >= 1)
   {
     printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
   }
@@ -20090,12 +20815,12 @@ processCommand(&clientInfo,commandString);
     }
     Thread_done(&autoIndexThread);
     Semaphore_done(&autoIndexThreadTrigger);
-    if (!Thread_join(&indexThread))
+    if (!Thread_join(&updateIndexThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop index thread!");
     }
-    Thread_done(&indexThread);
-    Semaphore_done(&indexThreadTrigger);
+    Thread_done(&updateIndexThread);
+    Semaphore_done(&updateIndexThreadTrigger);
 
     // done database pause callbacks
     Index_setPauseCallback(CALLBACK_(NULL,NULL));

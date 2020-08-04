@@ -41,11 +41,10 @@
 #include "index.h"
 
 /****************** Conditional compilation switches *******************/
-#define INDEX_INTIIAL_CLEANUP            // switch off for debugging only!
-#define INDEX_IMPORT_OLD_DATABASE        // switch off for debugging only!
-#define INDEX_SUPPORT_DELETE             // switch off for debugging only!
-
-#define _INDEX_DEBUG_IMPORT_OLD_DATABASE  // switch on for debugging only!
+// switch off for debugging only!
+#define INDEX_INTIIAL_CLEANUP
+#define INDEX_IMPORT_OLD_DATABASE
+#define INDEX_SUPPORT_DELETE
 
 #ifndef INDEX_IMPORT_OLD_DATABASE
   #warning Index import old databases disabled!
@@ -56,6 +55,11 @@
 #ifndef INDEX_SUPPORT_DELETE
   #warning Index delete storages disabled!
 #endif
+
+// switch on for debugging only!
+#warning remove/revert
+#define INDEX_DEBUG_LOCK
+#define _INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
   #define _INDEX_DEBUG_LIST_INFO  // enable to output list info
@@ -75,7 +79,8 @@ const IndexId INDEX_ID_ANY  = {INDEX_TYPE_NONE,-1LL};
 #define INDEX_OPEN_MASK_MODE  0x0000000F
 #define INDEX_OPEN_MASK_FLAGS 0xFFFF0000
 
-#define DATABASE_TIMEOUT (120L*MS_PER_SECOND)
+//TODO: 5
+#define DATABASE_TIMEOUT (5*120L*MS_PER_SECOND)
 
 LOCAL const struct
 {
@@ -213,6 +218,10 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 #define SERVER_IO_DEBUG_LEVEL 1
 #define SERVER_IO_TIMEOUT     (30LL*MS_PER_SECOND)
 
+// single step purge limit
+//  const uint SINGLE_STEP_PURGE_LIMIT = 64;
+const uint SINGLE_STEP_PURGE_LIMIT = 4096;
+
 #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
   #define IMPORT_INDEX_LOG_FILENAME "import_index.log"
 #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
@@ -231,11 +240,42 @@ typedef enum
 #define INDEX_OPEN_MODE_NO_JOURNAL   (1 << 16)
 #define INDEX_OPEN_MODE_FOREIGN_KEYS (1 << 17)
 
+// thread info
+typedef struct
+{
+  ThreadId   threadId;
+//TODO: remove
+//  uint       count;
+//  const char *fileName;
+//  uint       lineNb;
+//  uint64     cycleCounter;
+  #ifdef INDEX_DEBUG_LOCK
+    ThreadLWPId threadLWPId;
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      uint       stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+  #endif /* INDEX_DEBUG_LOCK */
+} ThreadInfo;
+
+// progress info data
+typedef struct
+{
+  const char *text;
+  uint64     startTimestamp;
+  uint64     steps,maxSteps;
+  ulong      lastProgressSum;  // last progress sum [1/1000]
+  uint       lastProgressCount;
+  uint64     lastProgressTimestamp;
+} ProgressInfo;
+
 /***************************** Variables *******************************/
 LOCAL const char                 *indexDatabaseFileName = NULL;
+LOCAL IndexIsMaintenanceTime     indexIsMaintenanceTimeFunction;
+LOCAL void                       *indexIsMaintenanceTimeUserData;
 LOCAL bool                       indexInitializedFlag = FALSE;
 LOCAL Semaphore                  indexLock;
-LOCAL uint                       indexUseCount = 0;
+LOCAL Array                      indexUsedBy;
 LOCAL Semaphore                  indexPauseLock;
 LOCAL IndexPauseCallbackFunction indexPauseCallbackFunction = NULL;
 LOCAL void                       *indexPauseCallbackUserData;
@@ -245,16 +285,16 @@ LOCAL IndexHandle                *indexThreadIndexHandle;
 LOCAL Semaphore                  indexClearStorageLock;
 LOCAL bool                       quitFlag;
 
-LOCAL uint64                     importStartTimestamp;
-LOCAL uint64                     importSteps,importMaxSteps;
-LOCAL ulong                      importLastProgressSum;  // last progress sum [1/1000]
-LOCAL uint                       importLastProgressCount;
-LOCAL uint64                     importLastProgressTimestamp;
+LOCAL ProgressInfo               importProgressInfo;
 
 #ifndef NDEBUG
   void const *indexBusyStackTrace[32];
   uint       indexBusyStackTraceSize;
 #endif /* not NDEBUG */
+
+#ifdef INDEX_DEBUG_LOCK
+  ThreadLWPId indexUseCountLPWIds[32];
+#endif /* INDEX_DEBUG_LOCK */
 
 #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
   LOCAL FILE *logImportIndexHandle;
@@ -300,7 +340,7 @@ LOCAL uint64                     importLastProgressTimestamp;
 #define INDEX_DO(indexHandle,block) \
   do \
   { \
-    ATOMIC_INCREMENT(indexUseCount); \
+    addIndexInUseThreadInfo(); \
     if (!Thread_isCurrentThread(Thread_getId(&indexThread))) \
     { \
       indexThreadInterrupt(); \
@@ -310,7 +350,7 @@ LOCAL uint64                     importLastProgressTimestamp;
       \
       void __closure__(void)block; __closure__; \
     })(); \
-    ATOMIC_DECREMENT(indexUseCount); \
+    removeIndexInUseThreadInfo(); \
   } \
   while (0)
 
@@ -327,34 +367,33 @@ LOCAL uint64                     importLastProgressTimestamp;
 #define INDEX_DOX(result,indexHandle,block) \
   do \
   { \
-    ATOMIC_INCREMENT(indexUseCount); \
+    addIndexInUseThreadInfo(); \
     result = ({ \
                auto typeof(result) __closure__(void); \
                \
                typeof(result) __closure__(void)block; __closure__; \
              })(); \
-    ATOMIC_DECREMENT(indexUseCount); \
+    removeIndexInUseThreadInfo(); \
   } \
   while (0)
 
 
 /***********************************************************************\
-* Name   : INDEX_PURGE_TRANSACTION_DOX
-* Purpose: index transaction purge block-operation
-* Input  : indexHandle - index handle
-*          block       - code block
+* Name   : INDEX_INTERRUPTABLE_OPERATION_DOX
+* Purpose: index interruptable block-operation
+* Input  : error           - error code
+*          indexHandle     - index handle
+*          transactionFlag - transaction flag
+*          block           - code block
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define INDEX_PURGE_TRANSACTION_DOX(error,indexHandle,transactionFlag,block) \
+#define INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,block) \
   do \
   { \
-    if (error == ERROR_NONE) \
-    { \
-      error = beginPurgeTransaction(indexHandle,&transactionFlag); \
-    } \
+    error = beginInterruptableOperation(indexHandle,&transactionFlag); \
     if (error == ERROR_NONE) \
     { \
       error = ({ \
@@ -363,7 +402,7 @@ LOCAL uint64                     importLastProgressTimestamp;
                 typeof(error) __closure__(void)block; __closure__; \
               })(); \
     } \
-    (void)endPurgeTransaction(indexHandle,&transactionFlag); \
+    (void)endInterruptableOperation(indexHandle,&transactionFlag); \
   } \
   while (0)
 
@@ -382,18 +421,182 @@ LOCAL uint64                     importLastProgressTimestamp;
 #endif
 
 /***********************************************************************\
-* Name   : isIndexInUse
-* Purpose: check if index is in use
+* Name   : addIndexInUseThreadInfo
+* Purpose: add in use thread info
 * Input  : -
 * Output : -
-* Return : TRUE iff index is in use
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE void addIndexInUseThreadInfo(void)
+{
+  ThreadInfo threadInfo;
+
+  threadInfo.threadId = Thread_getCurrentId();
+  #ifdef INDEX_DEBUG_LOCK
+    threadInfo.threadLWPId = Thread_getCurrentLWPId();
+    #ifdef HAVE_BACKTRACE
+      BACKTRACE(threadInfo.stackTrace,threadInfo.stackTraceSize);
+    #endif /* HAVE_BACKTRACE */
+  #endif /* INDEX_DEBUG_LOCK */
+
+  SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    Array_append(&indexUsedBy,&threadInfo);
+  }
+//Index_debugPrintInUseInfo();
+}
+
+/***********************************************************************\
+* Name   : removeIndexInUseThreadInfo
+* Purpose: remove in use thread info
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE void removeIndexInUseThreadInfo(void)
+{
+  ThreadId threadId;
+  long     i;
+
+  threadId = Thread_getCurrentId();
+
+  SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    i = Array_find(&indexUsedBy,
+                   ARRAY_FIND_BACKWARD,
+                   NULL,
+                   CALLBACK_INLINE(int,(const void *data1, const void *data2, void *userData),
+                   {
+                     const ThreadInfo *threadInfo = (ThreadInfo*)data1;
+
+                     assert(threadInfo != NULL);
+                     assert(data2 == NULL);
+
+                     UNUSED_VARIABLE(data2);
+                     UNUSED_VARIABLE(userData);
+
+                     return Thread_equalThreads(threadInfo->threadId,threadId) ? 0 : -1;
+                   },NULL)
+                  );
+    if (i >= 0)
+    {
+      Array_remove(&indexUsedBy,i);
+    }
+  }
+//Index_debugPrintInUseInfo();
+}
+
+/***********************************************************************\
+* Name   : isIndexInUse
+* Purpose: check if index is in use by some other thread
+* Input  : -
+* Output : -
+* Return : TRUE iff index is in use by some other thread
 * Notes  : -
 \***********************************************************************/
 
 LOCAL_INLINE bool isIndexInUse(void)
 {
-  return indexUseCount > 0;
+  ThreadId      threadId;
+  bool          indexInUse;
+  ArrayIterator arrayIterator;
+  ThreadInfo    threadInfo;
+
+  threadId   = Thread_getCurrentId();
+  indexInUse = FALSE;
+  SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    ARRAY_ITERATEX(&indexUsedBy,arrayIterator,threadInfo,!indexInUse)
+    {
+      if (Thread_equalThreads(threadInfo.threadId,threadId))
+      {
+        indexInUse = TRUE;
+      }
+    }
+  }
+
+  return indexInUse;
 }
+
+/***********************************************************************\
+* Name   : isMaintenanceTime
+* Purpose: check if maintenance time
+* Input  : dateTime - date/time
+* Output : -
+* Return : TRUE iff maintenance time
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isMaintenanceTime(uint64 dateTime)
+{
+  return    (indexIsMaintenanceTimeFunction == NULL)
+         || indexIsMaintenanceTimeFunction(dateTime,indexIsMaintenanceTimeUserData);
+}
+
+#warning remove/revert
+#ifdef INDEX_DEBUG_LOCK
+/***********************************************************************\
+* Name   : debugAddThreadLWPId
+* Purpose: add LWP thread id to array
+* Input  : threadLWPIds    - thread LWP id array
+*          threadLWPIdSize - size of thread LWP id array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugAddThreadLWPId(ThreadLWPId threadLWPIds[], uint threadLWPIdSize)
+{
+  uint i;
+
+  i = 0;
+  while ((i < threadLWPIdSize) && threadLWPIds[i] != 0)
+  {
+    i++;
+  }
+  if (i < threadLWPIdSize)
+  {
+    threadLWPIds[i] = Thread_getCurrentLWPId();
+  }
+}
+
+/***********************************************************************\
+* Name   : debugRemoveThreadLWPId
+* Purpose: remove LWP thread id from array
+* Input  : threadLWPIds    - thread LWP id array
+*          threadLWPIdSize - size of thread LWP id array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugRemoveThreadLWPId(ThreadLWPId threadLWPIds[], uint threadLWPIdSize)
+{
+  ThreadLWPId id;
+  uint i;
+
+  id = Thread_getCurrentLWPId();
+
+  i = 0;
+  while ((i < threadLWPIdSize) && threadLWPIds[i] != id)
+  {
+    i++;
+  }
+  if (i < threadLWPIdSize)
+  {
+    while (i < threadLWPIdSize-1)
+    {
+      threadLWPIds[i] = threadLWPIds[i+1];
+      i++;
+    }
+    threadLWPIds[threadLWPIdSize-1] = 0;
+  }
+}
+#endif /* INDEX_DEBUG_LOCK */
 
 /***********************************************************************\
 * Name   : busyHandler
@@ -427,7 +630,10 @@ LOCAL void busyHandler(void *userData)
 
 LOCAL void indexThreadInterrupt(void)
 {
-  if (indexInitializedFlag && !quitFlag)
+  if (   indexInitializedFlag
+      && !isMaintenanceTime(Misc_getCurrentDateTime())
+      && !quitFlag
+     )
   {
     assert(indexThreadIndexHandle != NULL);
 
@@ -543,14 +749,20 @@ LOCAL void indexThreadInterrupt(void)
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,
                              databaseFileName,
-                             ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE) ? DATABASE_OPENMODE_READWRITE : DATABASE_OPENMODE_READ,
+                             (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
+                               ? DATABASE_OPENMODE_READWRITE
+                               : DATABASE_OPENMODE_READ
+                             )|DATABASE_OPENMODE_AUX,
                              timeout
                             );
       #else /* not NDEBUG */
         return __Database_open(__fileName__,__lineNb__,
                                &indexHandle->databaseHandle,
                                databaseFileName,
-                               ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE) ? DATABASE_OPENMODE_READWRITE : DATABASE_OPENMODE_READ,
+                               (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
+                                 ? DATABASE_OPENMODE_READWRITE
+                                 : DATABASE_OPENMODE_READ
+                               )|DATABASE_OPENMODE_AUX,
                                timeout
                               );
       #endif /* NDEBUG */
@@ -761,83 +973,115 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 }
 
 /***********************************************************************\
-* Name   : initImportProgress
-* Purpose: init import progress
-* Input  : maxSteps - max. number of steps
+* Name   : initProgress
+* Purpose: init progress
+* Input  : text - text
+* Output : progressInfo - progress info
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initProgress(ProgressInfo *progressInfo, const char *text)
+{
+  assert(progressInfo != NULL);
+
+  progressInfo->text                  = text;
+  progressInfo->startTimestamp        = 0ll;
+  progressInfo->steps                 = 0;
+  progressInfo->maxSteps              = 0;
+  progressInfo->lastProgressSum       = 0L;
+  progressInfo->lastProgressCount     = 0;
+  progressInfo->lastProgressTimestamp = 0LL;
+}
+
+/***********************************************************************\
+* Name   : resetProgress
+* Purpose: RESET progress
+* Input  : progressInfo - progress info
+*          maxSteps     - max. number of steps
+* Output :
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
+{
+  if (progressInfo != NULL)
+  {
+    progressInfo->startTimestamp        = Misc_getTimestamp();
+    progressInfo->steps                 = 0;
+    progressInfo->maxSteps              = maxSteps;
+    progressInfo->lastProgressSum       = 0L;
+    progressInfo->lastProgressCount     = 0;
+    progressInfo->lastProgressTimestamp = 0LL;
+  }
+}
+
+/***********************************************************************\
+* Name   : doneProgress
+* Purpose: done progress
+* Input  : progressInfo - progress info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initImportProgress(uint64 maxSteps)
+LOCAL void doneProgress(ProgressInfo *progressInfo)
 {
-  importStartTimestamp        = Misc_getTimestamp();
-  importSteps                 = 0;
-  importMaxSteps              = maxSteps;
-  importLastProgressSum       = 0L;
-  importLastProgressCount     = 0;
-  importLastProgressTimestamp = 0LL;
+  if (progressInfo != NULL)
+  {
+  }
 }
 
 /***********************************************************************\
-* Name   : doneImportProgress
-* Purpose: done import progress
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneImportProgress(void)
-{
-}
-
-/***********************************************************************\
-* Name   : importProgress
-* Purpose: log import progress
-* Input  : userData - user data (not used)
+* Name   : progressStep
+* Purpose: step progress and log
+* Input  : userData - user data (progress info)
 * Output : -
 * Return : -
 * Notes  : increment step counter for each call!
 \***********************************************************************/
 
-LOCAL void importProgress(void *userData)
+LOCAL void progressStep(void *userData)
 {
-  uint   progress;
-  uint   importLastProgress;
-  uint64 now;
-  uint64 elapsedTime,importTotalTime;
-  uint64 estimatedRestTime;
+  ProgressInfo *progressInfo = (ProgressInfo*)userData;
+  uint         progress;
+  uint         importLastProgress;
+  uint64       now;
+  uint64       elapsedTime,totalTime;
+  uint64       estimatedRestTime;
 
-  UNUSED_VARIABLE(userData);
-
-  importSteps++;
-
-  if (importMaxSteps > 0)
+  if (progressInfo != NULL)
   {
-    progress           = (importSteps*1000)/importMaxSteps;
-    importLastProgress = (importLastProgressCount > 0) ? (uint)(importLastProgressSum/(ulong)importLastProgressCount) : 0;
-    now                = Misc_getTimestamp();
-    if (   (progress >= (importLastProgress+1))
-        && (now > (importLastProgressTimestamp+60*US_PER_SECOND))
-       )
-    {
-      elapsedTime       = now-importStartTimestamp;
-      importTotalTime   = (elapsedTime*importMaxSteps)/importSteps;
-      estimatedRestTime = importTotalTime-elapsedTime;
+    progressInfo->steps++;
 
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Imported %0.1f%%, estimated rest time %uh:%02umin:%02us",
-                  (float)progress/10.0,
-                  (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
-                  (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
-                  (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
-                 );
-      importLastProgressSum       += progress;
-      importLastProgressCount     += 1;
-      importLastProgressTimestamp = now;
+    if (progressInfo->maxSteps > 0)
+    {
+      progress           = (progressInfo->steps*1000)/progressInfo->maxSteps;
+      importLastProgress = (progressInfo->lastProgressCount > 0) ? (uint)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount) : 0;
+      now                = Misc_getTimestamp();
+      if (   (progress >= (importLastProgress+1))
+          && (now > (progressInfo->lastProgressTimestamp+60*US_PER_SECOND))
+         )
+      {
+        elapsedTime       = now-progressInfo->startTimestamp;
+        totalTime         = (elapsedTime*progressInfo->maxSteps)/progressInfo->steps;
+        estimatedRestTime = totalTime-elapsedTime;
+
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    "%s %0.1f%%, estimated rest time %uh:%02umin:%02us",
+                    progressInfo->text,
+                    (float)progress/10.0,
+                    (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
+                    (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
+                    (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
+                   );
+        progressInfo->lastProgressSum       += progress;
+        progressInfo->lastProgressCount     += 1;
+        progressInfo->lastProgressTimestamp = now;
+      }
     }
   }
 }
@@ -864,8 +1108,6 @@ LOCAL void logImportProgress(const char *format, ...)
               arguments
              );
   va_end(arguments);
-
-  importProgress(NULL);
 }
 
 #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
@@ -1021,7 +1263,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
-  initImportProgress(maxSteps);
+  initProgress(&importProgressInfo,"Import");
+  resetProgress(&importProgressInfo,maxSteps);
   switch (indexVersion)
   {
     case 1:
@@ -1108,7 +1351,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      importProgress(NULL);
+      progressStep(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1154,7 +1397,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      importProgress(NULL);
+      progressStep(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1190,13 +1433,13 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
                           (t1-t0)/US_PER_SECOND
                          );
       }
-      importProgress(NULL);
+      progressStep(&importProgressInfo);
     }
     Index_doneList(&indexQueryHandle);
   }
   DIMPORT("create aggregates done (error: %s)",Error_getText(error));
 
-  doneImportProgress();
+  doneProgress(&importProgressInfo);
 
   if (error == ERROR_NONE)
   {
@@ -1452,7 +1695,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
 LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
 {
   Errors           error;
-  IndexId          indexId;
+  IndexId          storageId;
   StorageSpecifier storageSpecifier;
   String           storageName,printableStorageName;
 
@@ -1467,7 +1710,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Start clean-up incomplete created entries"
+              "Start clean-up incomplete created archives"
              );
 
   // init variables
@@ -1482,7 +1725,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
                                   NULL,  // jobUUID
                                   NULL,  // entityId
                                   NULL,  // scheduleUUID
-                                  &indexId,
+                                  &storageId,
                                   storageName,
                                   NULL,  // dateTime
                                   NULL,  // size
@@ -1506,14 +1749,14 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
       String_set(printableStorageName,storageName);
     }
 
-    error = Index_deleteStorage(indexHandle,indexId);
+    error = Index_deleteStorage(indexHandle,storageId);
     if (error == ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Deleted incomplete index #%lld: '%s'",
-                  indexId,
+                  "Deleted incomplete storage #%lld: '%s'",
+                  storageId,
                   String_cString(printableStorageName)
                  );
     }
@@ -1882,10 +2125,10 @@ return ERROR_NONE;
 * Notes  : -
 \***********************************************************************/
 
+//TODO: use
+#if 0
 LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
 {
-//TODO
-#if 0
   Errors              error;
   String              name1,name2;
   DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
@@ -2027,11 +2270,8 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
               "INDEX",
               "Clean-up no entity-entries"
              );
-#else
-UNUSED_VARIABLE(indexHandle);
-return ERROR_NONE;
-#endif
 }
+#endif
 
 /***********************************************************************\
 * Name   : cleanUpNoUUID
@@ -2101,8 +2341,8 @@ LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
 }
 
 /***********************************************************************\
-* Name   : beginPurgeTransaction
-* Purpose: begin purge transaction
+* Name   : beginInterruptableOperation
+* Purpose: begin interruptable operation
 * Input  : indexHandle     - index handle
 *          transactionFlag - transaction variable
 * Output : -
@@ -2110,7 +2350,7 @@ LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors beginPurgeTransaction(IndexHandle *indexHandle, bool *transactionFlag)
+LOCAL Errors beginInterruptableOperation(IndexHandle *indexHandle, bool *transactionFlag)
 {
   Errors error;
 
@@ -2129,8 +2369,8 @@ LOCAL Errors beginPurgeTransaction(IndexHandle *indexHandle, bool *transactionFl
 }
 
 /***********************************************************************\
-* Name   : endPurgeTransaction
-* Purpose: end purge transaction
+* Name   : endInterruptableOperation
+* Purpose: end interruptable operation
 * Input  : indexHandle     - index handle
 *          transactionFlag - transaction variable
 * Output : -
@@ -2138,7 +2378,7 @@ LOCAL Errors beginPurgeTransaction(IndexHandle *indexHandle, bool *transactionFl
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors endPurgeTransaction(IndexHandle *indexHandle, bool *transactionFlag)
+LOCAL Errors endInterruptableOperation(IndexHandle *indexHandle, bool *transactionFlag)
 {
   Errors error;
 
@@ -2158,1916 +2398,6 @@ LOCAL Errors endPurgeTransaction(IndexHandle *indexHandle, bool *transactionFlag
 
   return ERROR_NONE;
 }
-
-/***********************************************************************\
-* Name   : pausePurge
-* Purpose: pause purge
-* Input  : indexHandle     - index handle
-*          transactionFlag - transaction variable
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pausePurge(IndexHandle *indexHandle, bool *transactionFlag)
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(transactionFlag != NULL);
-  assert(*transactionFlag);
-
-  // temporary end transaction
-  error = Index_endTransaction(indexHandle);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  (*transactionFlag) = FALSE;
-
-  // sleep a short time
-  Misc_udelay(SLEEP_TIME_PURGE*US_PER_SECOND);
-
-  // begin transaction
-  error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  (*transactionFlag) = TRUE;
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : purge
-* Purpose: purge with delay/check if index-usage
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag variable (can be NULL)
-*          deletedCounter - deleted entries count variable (can be NULL)
-*          tableName      - table name
-*          filter         - filter string
-*          ...            - optional arguments for filter
-* Output : doneFlag       - set to FALSE if delete not completely done
-*          deletedCounter - updated deleted entries count
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors purge(IndexHandle *indexHandle,
-                   bool        *doneFlag,
-                   ulong       *deletedCounter,
-                   const char  *tableName,
-                   const char  *filter,
-                   ...
-                  )
-{
-  const uint SINGLE_STEP_PURGE_LIMIT = 64;
-//  const uint SINGLE_STEP_PURGE_LIMIT = 640000;
-
-  String  filterString;
-  va_list arguments;
-  Errors  error;
-  ulong   changedRowCount;
-
-  // init variables
-  filterString = String_new();
-
-  // get filter
-  va_start(arguments,filter);
-  String_vformat(filterString,filter,arguments);
-  va_end(arguments);
-
-//fprintf(stderr,"%s, %d: purge (%d): %s %s\n",__FILE__,__LINE__,indexUseCount,tableName,String_cString(filterString));
-  error = ERROR_NONE;
-  do
-  {
-    changedRowCount = 0;
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             &changedRowCount,
-                             "DELETE FROM %s \
-                              WHERE %S \
-                              LIMIT %u \
-                             ",
-                             tableName,
-                             filterString,
-                             SINGLE_STEP_PURGE_LIMIT
-                            );
-    if (error == ERROR_NONE)
-    {
-      if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
-    }
-//fprintf(stderr,"%s, %d: tableName=%s indexUseCount=%d isIndexInUse()=%d changedRowCount=%d doneFlag=%d\n",__FILE__,__LINE__,tableName,indexUseCount,isIndexInUse(),changedRowCount,(doneFlag != NULL) ? *doneFlag : -1);
-  }
-  while (   (error == ERROR_NONE)
-         && (changedRowCount > 0)
-         && !isIndexInUse()
-        );
-  #ifdef INDEX_DEBUG_PURGE
-    if (error == ERROR_INTERRUPTED)
-    {
-      fprintf(stderr,"%s, %d: purge interrupted\n",__FILE__,__LINE__);
-    }
-  #endif
-
-  // update done-flag
-  if ((error == ERROR_NONE) && (doneFlag != NULL))
-  {
-//fprintf(stderr,"%s, %d: exists check %s: %s c=%lu count=%d inuse=%d\n",__FILE__,__LINE__,tableName,String_cString(filterString),x,changedRowCount,isIndexInUse());
-    if ((changedRowCount > 0) && isIndexInUse())
-    {
-//fprintf(stderr,"%s, %d: clear done %d %d\n",__FILE__,__LINE__,changedRowCount,isIndexInUse());
-      (*doneFlag) = FALSE;
-    }
-//fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,*doneFlag,isIndexInUse());
-  }
-
-  // free resources
-  String_delete(filterString);
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : isEmptyUUID
-* Purpose: check if UUID if empty
-* Input  : indexHandle - index handle
-*          uuidId      - UUID database id
-* Output : -
-* Return : TRUE iff UUID is empty
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
-                       DatabaseId  uuidId
-                      )
-{
-  assert(indexHandle != NULL);
-
-  return    (uuidId != DATABASE_ID_NONE)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entities",
-                             "entities.id",
-                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE uuids.id=%lld \
-                             ",
-                             uuidId
-                            );
-}
-
-/***********************************************************************\
-* Name   : pruneUUID
-* Purpose: prune empty UUID
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-*          uuidId         - UUID database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneUUID(IndexHandle *indexHandle,
-                       bool        *doneFlag,
-                       ulong       *deletedCounter,
-                       DatabaseId  uuidId
-                      )
-{
-  Errors        error;
-
-  assert(indexHandle != NULL);
-  assert(uuidId != DATABASE_ID_NONE);
-
-  UNUSED_VARIABLE(doneFlag);
-  UNUSED_VARIABLE(deletedCounter);
-
-  // delete uuid if empty
-  if (isEmptyUUID(indexHandle,uuidId))
-  {
-    // delete UUID index
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM uuids WHERE id=%lld",
-                             uuidId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Purged UUID #%llu: no entities",
-                Index_getDatabaseId(uuidId)
-               );
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : pruneUUIDs
-* Purpose: prune all enpty UUIDs
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneUUIDs(IndexHandle *indexHandle,
-                        bool        *doneFlag,
-                        ulong       *deletedCounter
-                       )
-{
-  Array         uuidIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    uuidId;
-
-  assert(indexHandle != NULL);
-
-  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &uuidIds,
-                          "uuids",
-                          "id",
-                          ""
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&uuidIds);
-    return error;
-  }
-  ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
-  {
-    error = pruneUUID(indexHandle,
-                      doneFlag,
-                      deletedCounter,
-                      uuidId
-                     );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&uuidIds);
-    return error;
-  }
-  Array_done(&uuidIds);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : isEmptyEntity
-* Purpose: check if entity if empty
-* Input  : indexHandle - index handle
-*          entityId    - entity database id
-* Output : -
-* Return : TRUE iff entity is empty
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
-                         DatabaseId  entityId
-                        )
-{
-  assert(indexHandle != NULL);
-
-  return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "storages",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entries",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entriesNewest",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            );
-}
-
-/***********************************************************************\
-* Name   : pruneEntity
-* Purpose: prune entity if empty, not default entity and not locked,
-*          prune UUID if empty
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-*          entityId       - entity database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneEntity(IndexHandle *indexHandle,
-                         bool        *doneFlag,
-                         ulong       *deletedCounter,
-                         DatabaseId  entityId
-                        )
-{
-  String              string;
-  int64               lockedCount;
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          uuidId;
-  StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64              createdDateTime;
-  ArchiveTypes        archiveType;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-  string = String_new();
-
-  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
-  {
-    // get locked count
-    error = Database_getInteger64(&indexHandle->databaseHandle,
-                                  &lockedCount,
-                                  "entities",
-                                  "lockedCount",
-                                  "WHERE id=%lld",
-                                  entityId
-                                 );
-    if (error != ERROR_NONE)
-    {
-      String_delete(string);
-      return error;
-    }
-
-    // prune if not locked entity and empty
-    if ((lockedCount == 0LL) && isEmptyEntity(indexHandle,entityId))
-    {
-      // get uuid id, job UUID, created date/time, archive type
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT uuids.id, \
-                                       entities.jobUUID, \
-                                       UNIXTIMESTAMP(entities.created), \
-                                       entities.type \
-                                FROM entities \
-                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE entities.id=%lld \
-                               ",
-                               entityId
-                              );
-      if (error != ERROR_NONE)
-      {
-        String_delete(string);
-        return error;
-      }
-      if (!Database_getNextRow(&databaseQueryHandle,
-                               "%llu %S %llu %u",
-                               &uuidId,
-                               jobUUID,
-                               &createdDateTime,
-                               &archiveType
-                              )
-         )
-      {
-        String_clear(jobUUID);
-        createdDateTime = 0LL;
-        archiveType     = ARCHIVE_TYPE_NONE;
-      }
-      Database_finalize(&databaseQueryHandle);
-
-      // delete entity from index
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "DELETE FROM entities WHERE id=%lld",
-                               entityId
-                              );
-      if (error != ERROR_NONE)
-      {
-        String_delete(string);
-        return error;
-      }
-
-      // purge skipped entries of entity
-      error = purge(indexHandle,
-                    doneFlag,
-                    deletedCounter,
-                    "skippedEntries",
-                    "entityId=%lld",
-                    entityId
-                   );
-      if (error != ERROR_NONE)
-      {
-        String_delete(string);
-        return error;
-      }
-
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Purged entity #%llu, job %s, created at %s: no archives",
-                  entityId,
-                  String_cString(jobUUID),
-                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
-                 );
-
-      // prune UUID
-      if (uuidId != DATABASE_ID_NONE)
-      {
-        error = pruneUUID(indexHandle,
-                          doneFlag,
-                          deletedCounter,
-                          uuidId
-                         );
-        if (error != ERROR_NONE)
-        {
-          String_delete(string);
-          return error;
-        }
-      }
-    }
-  }
-
-  // free resources
-  String_delete(string);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : pruneEntities
-* Purpose: prune all empty entities
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneEntities(IndexHandle *indexHandle,
-                           bool        *doneFlag,
-                           ulong       *deletedCounter
-                          )
-{
-  Array         entityIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    entityId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  // get all entity ids (Note: skip default entity!)
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &entityIds,
-                          "entities",
-                          "id",
-                          "WHERE id!=%lld \
-                          ",
-                          INDEX_DEFAULT_ENTITY_DATABASE_ID
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&entityIds);
-    return error;
-  }
-
-  // prune entities
-  ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
-  {
-    error = pruneEntity(indexHandle,doneFlag,deletedCounter,entityId);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&entityIds);
-    return error;
-  }
-
-  // free resources
-  Array_done(&entityIds);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : purgeEntry
-* Purpose: purge entry
-* Input  : indexHandle - index handle
-*          entryId     - entry database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors purgeEntry(IndexHandle *indexHandle,
-                        DatabaseId  entryId
-                       )
-{
-  Errors              error;
-//  DatabaseQueryHandle databaseQueryHandle;
-//  uint64              createdDateTime;
-//  bool                transactionFlag;
-//  bool                doneFlag;
-  #ifndef NDEBUG
-//    ulong               deletedCounter;
-  #endif
-
-  assert(indexHandle != NULL);
-  assert(entryId != DATABASE_ID_NONE);
-
-  // init variables
-
-//    INDEX_PURGE_TRANSACTION_DOX(error,
-//                                indexHandle,
-//                                transactionFlag,
-//    {
-
-  error = ERROR_NONE;
-
-  // purge FTS entry
-  if (error == ERROR_NONE)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM FTS_entries \
-                              WHERE entryId=%lld \
-                             ",
-                             entryId
-                            );
-  }
-
-  // update newest entries
-  if (error == ERROR_NONE)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest \
-                              WHERE entryId=%lld \
-                             ",
-                             entryId
-                            );
-//TODO
-#if 0
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT OR IGNORE INTO entriesNewest \
-                                ( \
-                                 uuidId,\
-                                 entityId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              SELECT \
-                                uuidId,\
-                                entityId, \
-                                type, \
-                                name, \
-                                timeLastAccess, \
-                                timeModified, \
-                                timeLastChanged, \
-                                userId, \
-                                groupId, \
-                                permission \
-                              FROM entries \
-                              WHERE id!=%lld AND name=%'S \
-                              ORDER BY timeModified DESC \
-                              LIMIT 0,1 \
-                              WHERE name \
-                             ",
-                             entryId,
-                             name
-                            );
-#endif
-  }
-
-  // delete entry
-  if (error == ERROR_NONE)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries \
-                              WHERE id=%lld \
-                             ",
-                             entryId
-                            );
-  }
-
-  // free resources
-
-  return error;
-}
-
-#if 0
-//TODO: still not used
-/***********************************************************************\
-* Name   : pruneEntries
-* Purpose: prune all entries (file, image, hardlink) with no fragments
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneEntries(IndexHandle *indexHandle,
-                          bool        *doneFlag,
-                          ulong       *deletedCounter
-                         )
-{
-  Array         databaseIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
-
-  assert(indexHandle != NULL);
-  assert(doneFlag != NULL);
-  assert(deletedCounter != NULL);
-
-  // init vairables
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  // get all file entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "fileEntries",
-                          "fileEntries.id",
-                          "LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id WHERE entryFragments.id IS NULL \
-                          "
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // purge file entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
-  {
-    error = purge(indexHandle,
-                  doneFlag,
-                  deletedCounter,
-                  "fileEntries",
-                  "id=%lld",
-                  databaseId
-                 );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // get all image entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "imageEntries",
-                          "imageEntries.id",
-                          "LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id WHERE entryFragments.id IS NULL \
-                          "
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // purge image entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
-  {
-    error = purge(indexHandle,
-                  doneFlag,
-                  deletedCounter,
-                  "imageEntries",
-                  "id=%lld",
-                  databaseId
-                 );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // get all hardlink entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "hardlinkEntries",
-                          "hardlinkEntries.id",
-                          "LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id WHERE entryFragments.id IS NULL \
-                          "
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // purge hardlink entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
-  {
-    error = purge(indexHandle,
-                  doneFlag,
-                  deletedCounter,
-                  "hardlinkEntries",
-                  "id=%lld",
-                  databaseId
-                 );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-
-  // free resources
-  Array_done(&databaseIds);
-
-  return ERROR_NONE;
-}
-#endif
-
-/***********************************************************************\
-* Name   : getStorageState
-* Purpose: get index storage state
-* Input  : indexHandle - index handle
-*          storageId   - index id of storage
-* Output : indexState          - index state; see IndexStates
-*          lastCheckedDateTime - last checked date/time stamp [s] (can
-*                                be NULL)
-*          errorMessage        - error message (can be NULL)
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors getStorageState(IndexHandle *indexHandle,
-                             DatabaseId  storageId,
-                             IndexStates *indexState,
-                             uint64      *lastCheckedDateTime,
-                             String      errorMessage
-                            )
-{
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT state, \
-                                   UNIXTIMESTAMP(lastChecked), \
-                                   errorMessage \
-                            FROM storages \
-                            WHERE id=%lld \
-                           ",
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  if (!Database_getNextRow(&databaseQueryHandle,
-                           "%d %llu %S",
-                           indexState,
-                           lastCheckedDateTime,
-                           errorMessage
-                          )
-     )
-  {
-    (*indexState) = INDEX_STATE_UNKNOWN;
-    if (errorMessage != NULL) String_clear(errorMessage);
-  }
-
-  Database_finalize(&databaseQueryHandle);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : isEmptyStorage
-* Purpose: check if storage if empty
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-* Output : -
-* Return : TRUE iff entity is empty
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isEmptyStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
-                         )
-{
-  assert(indexHandle != NULL);
-
-  return    (storageId != DATABASE_ID_NONE)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entryFragments",
-                              "id",
-                              "WHERE storageId=%lld",
-                              storageId
-                             )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "directoryEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "linkEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "specialEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            );
-}
-
-/***********************************************************************\
-* Name   : purgeStorage
-* Purpose: purge storage
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors purgeStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
-                         )
-{
-  String              name;
-  String              string;
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  uint64              createdDateTime;
-  bool                transactionFlag;
-  bool                doneFlag;
-  #ifndef NDEBUG
-    ulong               deletedCounter;
-  #endif
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-
-  // init variables
-  name   = String_new();
-  string = String_new();
-
-  // get storage name, created date/time, entity id
-  error = Database_prepare(&databaseQueryHandle,
-                           &indexHandle->databaseHandle,
-                           "SELECT storages.name, \
-                                   UNIXTIMESTAMP(entities.created) \
-                            FROM storages \
-                              LEFT JOIN entities ON entities.id=storages.entityId \
-                            WHERE storages.id=%lld \
-                           ",
-                           storageId
-                          );
-  if (error == ERROR_NONE)
-  {
-    if (!Database_getNextRow(&databaseQueryHandle,
-                             "%'S %llu",
-                             name,
-                             &createdDateTime
-                            )
-       )
-    {
-      error = ERRORX_(DATABASE,0,"prune storages");
-    }
-    Database_finalize(&databaseQueryHandle);
-  }
-  if (error != ERROR_NONE)
-  {
-    String_clear(name);
-    createdDateTime = 0LL;
-  }
-
-  // purge FTS entry
-  if (error == ERROR_NONE)
-  {
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
-    {
-      do
-      {
-        doneFlag = TRUE;
-        error = purge(indexHandle,
-                      &doneFlag,
-                      #ifndef NDEBUG
-                        &deletedCounter,
-                      #else
-                        NULL,  // deletedCounter
-                      #endif
-                      "FTS_storages",
-                      "storageId=%lld",
-                      storageId
-                     );
-        if ((error == ERROR_NONE) && !doneFlag)
-        {
-          error = pausePurge(indexHandle,&transactionFlag);
-        }
-      }
-      while ((error == ERROR_NONE) && !doneFlag);
-
-      return error;
-    });
-  }
-
-  // delete storage
-  if (error == ERROR_NONE)
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM storages \
-                              WHERE id=%lld \
-                             ",
-                             storageId
-                            );
-  }
-
-  if (error != ERROR_NONE)
-  {
-    String_delete(string);
-    String_delete(name);
-    return error;
-  }
-
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "Removed deleted storage #%llu from index: %s, created at %s",
-              storageId,
-              String_cString(name),
-              (createdDateTime != 0LL) ? String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)) : "unknown"
-             );
-
-  // free resources
-  String_delete(string);
-  String_delete(name);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : pruneStorage
-* Purpose: prune storage if empty, prune entity/UUID
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
-                         )
-{
-  String              name;
-  String              string;
-  IndexStates         indexState;
-  Errors              error;
-  DatabaseId          entityId;
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-
-  // init variables
-  name   = String_new();
-  string = String_new();
-
-  // get storage state
-  error = getStorageState(indexHandle,
-                          storageId,
-                          &indexState,
-                          NULL,  // lastCheckedDateTime
-                          NULL  // errorMessage
-                         );
-  if (error != ERROR_NONE)
-  {
-    String_delete(string);
-    String_delete(name);
-    return error;
-  }
-
-  // prune storage if not in error state/in use and empty
-  if ((indexState == INDEX_STATE_OK) && isEmptyStorage(indexHandle,storageId))
-  {
-    // get entity id
-    error = Database_getId(&indexHandle->databaseHandle,
-                           &entityId,
-                           "storages",
-                           "entityId",
-                           "WHERE id=%lld",
-                           storageId
-                          );
-    if (error != ERROR_NONE)
-    {
-      entityId = DATABASE_ID_NONE;
-    }
-
-    // purge storage
-    error = purgeStorage(indexHandle,storageId);
-    if (error != ERROR_NONE)
-    {
-      String_delete(string);
-      String_delete(name);
-      return error;
-    }
-
-    // prune entity
-    if (entityId != DATABASE_ID_NONE)
-    {
-      error = pruneEntity(indexHandle,
-                          NULL,  // doneFlag
-                          NULL,  // deletedCounter
-                          entityId
-                         );
-      if (error != ERROR_NONE)
-      {
-        String_delete(string);
-        String_delete(name);
-        return error;
-      }
-    }
-  }
-
-  // free resources
-  String_delete(string);
-  String_delete(name);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : pruneStorages
-* Purpose: prune all empty storages which have state OK or ERROR
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneStorages(IndexHandle *indexHandle)
-{
-  Array         storageIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  // get all storage ids
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &storageIds,
-                          "storages",
-                          "id",
-                          "WHERE state IN (%u,%u) \
-                          ",
-                          INDEX_STATE_OK,
-                          INDEX_STATE_ERROR
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    return error;
-  }
-
-  // prune storages
-  ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,error == ERROR_NONE)
-  {
-    error = pruneStorage(indexHandle,databaseId);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    return error;
-  }
-
-  // free resources
-  Array_done(&storageIds);
-
-  return ERROR_NONE;
-}
-
-#if 0
-//TODO: not used, remove
-/***********************************************************************\
-* Name   : refreshStoragesInfos
-* Purpose: refresh storages info
-* Input  : indexHandle - index handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
-{
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          indexId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-
-  // clean-up
-  error = Index_initListStorages(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 INDEX_ID_ANY,  // entityId
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID,
-                                 NULL,  // indexIds
-                                 0,  // indexIdCount,
-                                 INDEX_TYPE_SET_ANY,
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // hostName
-                                 NULL,  // userName
-                                 NULL,  // name
-                                 INDEX_STORAGE_SORT_MODE_NONE,
-                                 DATABASE_ORDERING_NONE,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error == ERROR_NONE)
-  {
-    while (Index_getNextStorage(&indexQueryHandle,
-                                NULL,  // uuidId
-                                NULL,  // jobUUID
-                                NULL,  // entityId
-                                NULL,  // scheduleUUID
-                                NULL,  // hostName
-                                NULL,  // userName
-                                NULL,  // comment
-                                NULL,  // createdDateTime
-                                NULL,  // archiveType
-                                &storageId,
-                                NULL,  // storageName,
-                                NULL,  // dateTime
-                                NULL,  // size,
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL,  // errorMessage
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               )
-          )
-    {
-      error = Index_updateStorageInfos(indexHandle,indexId);
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-  if (error == ERROR_NONE)
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Refreshed storages infos"
-               );
-  }
-  else
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Refreshed storages infos fail (error: %s)",
-                Error_getText(error)
-               );
-  }
-
-  // free resource
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : refreshEntitiesInfos
-* Purpose: refresh entities infos
-* Input  : indexHandle - index handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
-{
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          entityId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-
-  // clean-up
-  error = Index_initListEntities(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 NULL,  // jobUUID,
-                                 NULL,  // scheduldUUID
-                                 ARCHIVE_TYPE_ANY,
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // name
-                                 DATABASE_ORDERING_ASCENDING,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error == ERROR_NONE)
-  {
-    while (Index_getNextEntity(&indexQueryHandle,
-                               NULL,  // uuidId,
-                               NULL,  // jobUUID,
-                               NULL,  // scheduleUUID,
-                               &entityId,
-                               NULL,  // archiveType,
-                               NULL,  // createdDateTime,
-                               NULL,  // lastErrorMessage
-                               NULL,  // totalSize
-                               NULL,  // totalEntryCount
-                               NULL,  // totalEntrySize
-                               NULL  // lockedCount
-                              )
-          )
-    {
-      error = Index_updateEntityInfos(indexHandle,entityId);
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-  if (error == ERROR_NONE)
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Refreshed entities infos"
-               );
-  }
-  else
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Refreshed entities infos fail (error: %s)",
-                Error_getText(error)
-               );
-  }
-
-  // free resource
-
-  return error;
-}
-
-//TODO: not used, remove
-/***********************************************************************\
-* Name   : refreshUUIDsInfos
-* Purpose: refresh UUIDs infos
-* Input  : indexHandle - index handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
-{
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          indexId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-
-  // clean-up
-  error = Index_initListUUIDs(&indexQueryHandle,
-                              indexHandle,
-                              INDEX_STATE_SET_ALL,
-                              INDEX_MODE_SET_ALL,
-                              NULL,  // name
-                              0LL,  // offset
-                              INDEX_UNLIMITED
-                             );
-  if (error == ERROR_NONE)
-  {
-    while (Index_getNextUUID(&indexQueryHandle,
-                             &indexId,
-                             NULL,  // jobUUID
-                             NULL,  // lastCheckedDateTime
-                             NULL,  // lastErrorMessage
-                             NULL,  // size
-                             NULL,  // totalEntryCount
-                             NULL  // totalEntrySize
-                            )
-          )
-    {
-      error = Index_updateUUIDInfos(indexHandle,indexId);
-    }
-    Index_doneList(&indexQueryHandle);
-  }
-  if (error == ERROR_NONE)
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Refreshed UUID infos"
-               );
-  }
-  else
-  {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Refreshed UUID infos fail (error: %s)",
-                Error_getText(error)
-               );
-  }
-
-  // free resource
-
-  return error;
-}
-#endif
-
-/***********************************************************************\
-* Name   : rebuildNewestInfo
-* Purpose:
-* Input  : indexHandle - index handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-//TODO
-#if 0
-// not used
-LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
-{
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  DatabaseId       entryId;
-  String           name;
-  uint64           size;
-  uint64           timeModified;
-
-
-  error = Index_initListEntries(&indexQueryHandle,
-                                indexHandle,
-                                NULL,  // indexIds
-                                0L,  // indexIdCount
-                                NULL,  // entryIds
-                                0L,  // entryIdCount
-                                INDEX_TYPE_SET_ANY_ENTRY,
-                                NULL,  // entryPattern,
-                                FALSE,  // newestOnly
-                                FALSE,  // fragmentsCount
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
-                                0LL,  // offset
-                                INDEX_UNLIMITED
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  name = String_new();
-  while (Index_getNextEntry(&indexQueryHandle,
-                            NULL,  // uuidId
-                            NULL,  // jobUUID
-                            NULL,  // entityId
-                            NULL,  // scheduleUUID
-                            NULL,  // hostName
-                            NULL,  // userName
-                            NULL,  // archiveType
-                            NULL,  // storageId
-                            NULL,  // storageName
-                            NULL,  // storageDateTime
-                            &entryId,
-                            name,
-                            NULL,  // destinationName
-                            NULL,  // fileSystemType
-                            &size,
-                            &timeModified,
-                            NULL,  // userId
-                            NULL,  // groupId
-                            NULL,  // permission
-                            NULL  // fragmentCount
-                           )
-        )
-  {
-  }
-  String_delete(name);
-  Index_doneList(&indexQueryHandle);
-
-  return ERROR_NONE;
-}
-#endif
-
-/***********************************************************************\
-* Name   : initIndexQueryHandle
-* Purpose: init index query handle
-* Input  : indexQueryHandle - index query handle
-*          indexHandle - index handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, IndexHandle *indexHandle)
-{
-  assert(indexQueryHandle != NULL);
-  assert(indexHandle != NULL);
-
-  indexQueryHandle->indexHandle = indexHandle;
-}
-
-/***********************************************************************\
-* Name   : doneIndexQueryHandle
-* Purpose: done index query handle
-* Input  : indexQueryHandle - index query handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
-{
-  assert(indexQueryHandle != NULL);
-  assert(indexQueryHandle->indexHandle != NULL);
-
-  UNUSED_VARIABLE(indexQueryHandle);
-}
-
-/***********************************************************************\
-* Name   : getIndexStateSetString
-* Purpose: get index state filter string
-* Input  : string        - string variable
-*          indexStateSet - index state set
-* Output : -
-* Return : string for IN statement
-* Notes  : -
-\***********************************************************************/
-
-LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
-{
-  IndexStates indexState;
-
-  String_clear(string);
-  for (indexState = INDEX_STATE_MIN; indexState <= INDEX_STATE_MAX; indexState++)
-  {
-    if (IN_SET(indexStateSet,indexState))
-    {
-      if (!String_isEmpty(string)) String_appendChar(string,',');
-      String_appendFormat(string,"%d",indexState);
-    }
-  }
-
-  return string;
-}
-
-/***********************************************************************\
-* Name   : getIndexModeSetString
-* Purpose: get index mode filter string
-* Input  : string       - string variable
-*          indexModeSet - index mode set
-* Output : -
-* Return : string for IN statement
-* Notes  : -
-\***********************************************************************/
-
-LOCAL String getIndexModeSetString(String string, IndexModeSet indexModeSet)
-{
-  IndexModes indexMode;
-
-  String_clear(string);
-  for (indexMode = INDEX_MODE_MIN; indexMode <= INDEX_MODE_MAX; indexMode++)
-  {
-    if (IN_SET(indexModeSet,indexMode))
-    {
-      if (!String_isEmpty(string)) String_appendChar(string,',');
-      String_appendFormat(string,"%d",indexMode);
-    }
-  }
-
-  return string;
-}
-
-/***********************************************************************\
-* Name   : getFTSString
-* Purpose: get full-text-search filter string
-* Input  : string      - string variable
-*          patternText - pattern text
-* Output : -
-* Return : string for WHERE filter-statement
-* Notes  : -
-\***********************************************************************/
-
-LOCAL String getFTSString(String string, ConstString patternText)
-{
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  bool            addedTextFlag,addedPatternFlag;
-  size_t          iteratorVariable;
-  Codepoint       codepoint;
-
-  String_clear(string);
-
-  if (!String_isEmpty(patternText))
-  {
-    String_initTokenizer(&stringTokenizer,
-                         patternText,
-                         STRING_BEGIN,
-                         STRING_WHITE_SPACES,
-                         STRING_QUOTES,
-                         TRUE
-                        );
-    while (String_getNextToken(&stringTokenizer,&token,NULL))
-    {
-      addedTextFlag    = FALSE;
-      addedPatternFlag = FALSE;
-      STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
-      {
-        if (isalnum(codepoint) || (codepoint >= 128))
-        {
-          if (addedPatternFlag)
-          {
-            String_appendChar(string,' ');
-            addedPatternFlag = FALSE;
-          }
-          String_appendCharUTF8(string,codepoint);
-          addedTextFlag = TRUE;
-        }
-        else
-        {
-          if (addedTextFlag && !addedPatternFlag)
-          {
-            String_appendChar(string,'*');
-            addedTextFlag    = FALSE;
-            addedPatternFlag = TRUE;
-          }
-        }
-      }
-      if (addedTextFlag && !addedPatternFlag)
-      {
-        String_appendChar(string,'*');
-      }
-    }
-    String_doneTokenizer(&stringTokenizer);
-  }
-
-  return string;
-}
-
-/***********************************************************************\
-* Name   : filterAppend
-* Purpose: append to SQL filter string
-* Input  : filterString - filter string
-*          condition    - append iff true
-*          concatenator - concatenator string
-*          format       - format string (printf-style)
-*          ...          - optional arguments for format
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void filterAppend(String filterString, bool condition, const char *concatenator, const char *format, ...)
-{
-  va_list arguments;
-
-  if (condition)
-  {
-    if (!String_isEmpty(filterString))
-    {
-      String_appendChar(filterString,' ');
-      String_appendCString(filterString,concatenator);
-      String_appendChar(filterString,' ');
-    }
-    va_start(arguments,format);
-    String_appendVFormat(filterString,format,arguments);
-    va_end(arguments);
-  }
-}
-
-/***********************************************************************\
-* Name   : appendOrdering
-* Purpose: append to SQL ordering string
-* Input  : filterString - filter string
-*          condition    - append iff true
-*          columnName   - column name
-*          ordering     - database ordering
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering)
-{
-  if (condition && (ordering != DATABASE_ORDERING_NONE))
-  {
-    if (String_isEmpty(orderString))
-    {
-      String_appendCString(orderString,"ORDER BY ");
-    }
-    else
-    {
-      String_appendChar(orderString,',');
-    }
-    String_appendCString(orderString,columnName);
-    switch (ordering)
-    {
-      case DATABASE_ORDERING_NONE:       /* nothing tod do */                       break;
-      case DATABASE_ORDERING_ASCENDING:  String_appendCString(orderString," ASC");  break;
-      case DATABASE_ORDERING_DESCENDING: String_appendCString(orderString," DESC"); break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-  }
-}
-
-// ----------------------------------------------------------------------
-
-#if 0
-//TODO: trigger or implementation here?
-/***********************************************************************\
-* Name   : insertUpdateNewestEntry
-* Purpose: insert or update newest entry
-* Input  : indexHandle     - index handle
-*          entryId         - entry database id
-*          uuidId          - index id of UUID
-*          entityId        - index id of entity
-*          name            - file name
-*          size            - size [bytes]
-*          timeLastChanged - last changed date/time stamp [s]
-*          userId          - user id
-*          groupId         - group id
-*          permission      - permission flags
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
-                                     DatabaseId  entryId,
-                                     DatabaseId  uuidId,
-                                     DatabaseId  entityId,
-                                     ConstString name,
-                                     IndexTypes  indexType,
-                                     uint64      size,
-                                     uint64      timeLastChanged,
-                                     uint32      userId,
-                                     uint32      groupId,
-                                     uint32      permission
-                                    )
-{
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          newestEntryId;
-  uint64              newestTimeLastChanged;
-
-  assert(indexHandle != NULL);
-  assert(entryId != DATABASE_ID_NONE);
-  assert(name != NULL);
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    // atomic add/get entry
-    DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      // get existing newest entry
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT id, \
-                                       UNIXTIMESTAMP(timeLastChanged) \
-                                FROM entriesNewest\
-                                WHERE name=%'S \
-                               ",
-                               name
-                              );
-      if (error == ERROR_NONE)
-
-      {
-        if (!Database_getNextRow(&databaseQueryHandle,
-                                 "%lld %llu",
-                                 &newestEntryId,
-                                 &newestTimeLastChanged
-                                )
-           )
-        {
-          newestEntryId         = DATABASE_ID_NONE;
-          newestTimeLastChanged = 0LL;
-        }
-        Database_finalize(&databaseQueryHandle);
-      }
-
-      // insert/update newest
-      if (error == ERROR_NONE)
-      {
-        if (timeLastChanged > newestTimeLastChanged)
-        {
-          if (newestEntryId != DATABASE_ID_NONE)
-          {
-            // update
-            error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     "UPDATE entriesNewest \
-                                      SET entryId=%lld, \
-                                          uuidId=%lld, \
-                                          entityId=%lld, \
-                                          type=%u, \
-                                          timeLastChanged=%lld, \
-                                          userId=%u, \
-                                          groupId=%u, \
-                                          permission=%u \
-                                      WHERE id=%lld \
-                                     ",
-                                     entryId,
-                                     uuidId,
-                                     entityId,
-                                     indexType,
-                                     timeLastChanged,
-                                     userId,
-                                     groupId,
-                                     permission,
-                                     newestEntryId
-                                    );
-          }
-          else
-          {
-            // insert
-            error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     "INSERT INTO entriesNewest \
-                                        ( \
-                                         entryId, \
-                                         uuidId, \
-                                         entityId, \
-                                         type, \
-                                         name, \
-                                         timeLastChanged, \
-                                         userId, \
-                                         groupId, \
-                                         permission, \
-                                        ) \
-                                      VALUES \
-                                        ( \
-                                         %lld, \
-                                         %lld, \
-                                         %lld, \
-                                         %u, \
-                                         %'S, \
-                                         %llu, \
-                                         %u, \
-                                         %u, \
-                                         %u \
-                                        ) \
-                                     ",
-                                     entryId,
-                                     uuidId,
-                                     entityId,
-                                     indexType,
-                                     name,
-                                     timeLastChanged,
-                                     userId,
-                                     groupId,
-                                     permission
-                                    );
-          }
-        }
-      }
-    }
-
-    return error;
-  });
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : removeUpdateNewestEntry
-* Purpose: remove or update newest entry
-* Input  : indexHandle - index handle
-*          entryId     - entry database id
-*          name        - file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
-                                     DatabaseId  entryId,
-                                     ConstString name
-                                    )
-{
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          newestEntryId;
-  uint64              newestTimeLastChanged;
-
-  assert(indexHandle != NULL);
-  assert(entryId != DATABASE_ID_NONE);
-  assert(name != NULL);
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest \
-                              WHERE id=%lld \
-                             ",
-                             entryId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT OR IGNORE INTO entriesNewest \
-                                ( \
-                                 entryId, \
-                                 uuidId, \
-                                 entityId, \
-                                 type, \
-                                 name, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission, \
-                                ) \
-                              SELECT id, \
-                                     uuidId, \
-                                     entityId, \
-                                     type, \
-                                     name, \
-                                     timeLastChanged, \
-                                     userId, \
-                                     groupId, \
-                                     permission \
-                               FROM entries \
-                               WHERE name=%'S \
-                               ORDER BY timeLastChanged DESC \
-                               LIMIT 0,1 \
-                             ",
-                             name
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-#endif
 
 /***********************************************************************\
 * Name   : updateDirectoryContentAggregates
@@ -5103,17 +3433,1781 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : clearStorage
-* Purpose: clear index storage content
-* Input  : indexHandle - index handle
-*          storageId   - database id of storage
+* Name   : interruptOperation
+* Purpose: interrupt and pause operation
+* Input  : indexHandle     - index handle
+*          transactionFlag - transaction variable
+*          time            - interruption time [ms[
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors clearStorage(IndexHandle *indexHandle,
+LOCAL Errors interruptOperation(IndexHandle *indexHandle, bool *transactionFlag, ulong time)
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(transactionFlag != NULL);
+  assert(*transactionFlag);
+
+  // temporary end transaction
+  error = Index_endTransaction(indexHandle);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  (*transactionFlag) = FALSE;
+
+  // sleep a short time
+  Misc_udelay(time);
+
+  // begin transaction
+  error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  (*transactionFlag) = TRUE;
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : purge
+* Purpose: purge with delay/check if index-usage
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag variable (can be NULL)
+*          deletedCounter - deleted entries count variable (can be NULL)
+*          tableName      - table name
+*          filter         - filter string
+*          ...            - optional arguments for filter
+* Output : doneFlag       - set to FALSE if delete not completely done
+*          deletedCounter - updated deleted entries count
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors purge(IndexHandle *indexHandle,
+                   bool        *doneFlag,
+                   ulong       *deletedCounter,
+                   const char  *tableName,
+                   const char  *filter,
+                   ...
+                  )
+{
+  #ifdef INDEX_DEBUG_PURGE
+    uint64 t0;
+  #endif
+
+  String  filterString;
+  va_list arguments;
+  Errors  error;
+  ulong   changedRowCount;
+
+  // init variables
+  filterString = String_new();
+
+  // get filter
+  va_start(arguments,filter);
+  String_vformat(filterString,filter,arguments);
+  va_end(arguments);
+
+//fprintf(stderr,"%s, %d: purge (%d): %s %s\n",__FILE__,__LINE__,indexUseCount,tableName,String_cString(filterString));
+  error = ERROR_NONE;
+  do
+  {
+    changedRowCount = 0;
+    #ifdef INDEX_DEBUG_PURGE
+      t0 = Misc_getTimestamp();
+    #endif
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             &changedRowCount,
+                             "DELETE FROM %s \
+                              WHERE %S \
+                              LIMIT %u \
+                             ",
+                             tableName,
+                             filterString,
+                             SINGLE_STEP_PURGE_LIMIT
+                            );
+    if (error == ERROR_NONE)
+    {
+      if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
+    }
+    #ifdef INDEX_DEBUG_PURGE
+      if (changedRowCount > 0)
+      {
+        fprintf(stderr,"%s, %d: error: %s, purged %lu entries from '%s': %llums\n",__FILE__,__LINE__,
+                Error_getText(error),
+                changedRowCount,
+                tableName,
+                (Misc_getTimestamp()-t0)/US_PER_MS
+               );
+      }
+    #endif
+  }
+  while (   (error == ERROR_NONE)
+         && (changedRowCount > 0)
+         && !isIndexInUse()
+        );
+  #ifdef INDEX_DEBUG_PURGE
+    if (error == ERROR_INTERRUPTED)
+    {
+      fprintf(stderr,"%s, %d: purge interrupted\n",__FILE__,__LINE__);
+    }
+  #endif
+
+  // update done-flag
+  if ((error == ERROR_NONE) && (doneFlag != NULL))
+  {
+//fprintf(stderr,"%s, %d: exists check %s: %s c=%lu count=%d inuse=%d\n",__FILE__,__LINE__,tableName,String_cString(filterString),x,changedRowCount,isIndexInUse());
+    if ((changedRowCount > 0) && isIndexInUse())
+    {
+//fprintf(stderr,"%s, %d: clear done %d %d\n",__FILE__,__LINE__,changedRowCount,isIndexInUse());
+      (*doneFlag) = FALSE;
+    }
+//fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,*doneFlag,isIndexInUse());
+  }
+
+  // free resources
+  String_delete(filterString);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : isEmptyUUID
+* Purpose: check if UUID if empty
+* Input  : indexHandle - index handle
+*          uuidId      - UUID database id
+* Output : -
+* Return : TRUE iff UUID is empty
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
+                       DatabaseId  uuidId
+                      )
+{
+  assert(indexHandle != NULL);
+
+  return    (uuidId != DATABASE_ID_NONE)
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entities",
+                             "entities.id",
+                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              WHERE uuids.id=%lld \
+                             ",
+                             uuidId
+                            );
+}
+
+/***********************************************************************\
+* Name   : pruneUUID
+* Purpose: prune empty UUID
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+*          uuidId         - UUID database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneUUID(IndexHandle *indexHandle,
+                       bool        *doneFlag,
+                       ulong       *deletedCounter,
+                       DatabaseId  uuidId
+                      )
+{
+  Errors        error;
+
+  assert(indexHandle != NULL);
+  assert(uuidId != DATABASE_ID_NONE);
+
+  UNUSED_VARIABLE(doneFlag);
+  UNUSED_VARIABLE(deletedCounter);
+
+  // delete uuid if empty
+  if (isEmptyUUID(indexHandle,uuidId))
+  {
+    // delete UUID index
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM uuids WHERE id=%lld",
+                             uuidId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Purged UUID #%llu: no entities",
+                Index_getDatabaseId(uuidId)
+               );
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : pruneUUIDs
+* Purpose: prune all enpty UUIDs
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneUUIDs(IndexHandle *indexHandle,
+                        bool        *doneFlag,
+                        ulong       *deletedCounter
+                       )
+{
+  Array         uuidIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    uuidId;
+
+  assert(indexHandle != NULL);
+
+  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &uuidIds,
+                          "uuids",
+                          "id",
+                          ""
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&uuidIds);
+    return error;
+  }
+  ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
+  {
+    error = pruneUUID(indexHandle,
+                      doneFlag,
+                      deletedCounter,
+                      uuidId
+                     );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&uuidIds);
+    return error;
+  }
+  Array_done(&uuidIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : isEmptyEntity
+* Purpose: check if entity if empty
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+* Output : -
+* Return : TRUE iff entity is empty
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
+                         DatabaseId  entityId
+                        )
+{
+  assert(indexHandle != NULL);
+
+  return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "storages",
+                             "id",
+                             "WHERE entityId=%lld",
+                             entityId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entries",
+                             "id",
+                             "WHERE entityId=%lld",
+                             entityId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entriesNewest",
+                             "id",
+                             "WHERE entityId=%lld",
+                             entityId
+                            );
+}
+
+/***********************************************************************\
+* Name   : pruneEntity
+* Purpose: prune entity if empty, not default entity and not locked,
+*          prune UUID if empty
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+*          entityId       - entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneEntity(IndexHandle *indexHandle,
+                         bool        *doneFlag,
+                         ulong       *deletedCounter,
+                         DatabaseId  entityId
+                        )
+{
+  String              string;
+  int64               lockedCount;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          uuidId;
+  StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64              createdDateTime;
+  ArchiveTypes        archiveType;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  string = String_new();
+
+  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+  {
+    // get locked count
+    error = Database_getInteger64(&indexHandle->databaseHandle,
+                                  &lockedCount,
+                                  "entities",
+                                  "lockedCount",
+                                  "WHERE id=%lld",
+                                  entityId
+                                 );
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      return error;
+    }
+
+    // prune if not locked entity and empty
+    if ((lockedCount == 0LL) && isEmptyEntity(indexHandle,entityId))
+    {
+      // get uuid id, job UUID, created date/time, archive type
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       entities.jobUUID, \
+                                       UNIXTIMESTAMP(entities.created), \
+                                       entities.type \
+                                FROM entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                WHERE entities.id=%lld \
+                               ",
+                               entityId
+                              );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        return error;
+      }
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%llu %S %llu %u",
+                               &uuidId,
+                               jobUUID,
+                               &createdDateTime,
+                               &archiveType
+                              )
+         )
+      {
+        String_clear(jobUUID);
+        createdDateTime = 0LL;
+        archiveType     = ARCHIVE_TYPE_NONE;
+      }
+      Database_finalize(&databaseQueryHandle);
+
+      // delete entity from index
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "DELETE FROM entities WHERE id=%lld",
+                               entityId
+                              );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        return error;
+      }
+
+      // purge skipped entries of entity
+      error = purge(indexHandle,
+                    doneFlag,
+                    deletedCounter,
+                    "skippedEntries",
+                    "entityId=%lld",
+                    entityId
+                   );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        return error;
+      }
+
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Purged entity #%llu, job %s, created at %s: no archives",
+                  entityId,
+                  String_cString(jobUUID),
+                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+                 );
+
+      // prune UUID
+      if (uuidId != DATABASE_ID_NONE)
+      {
+        error = pruneUUID(indexHandle,
+                          doneFlag,
+                          deletedCounter,
+                          uuidId
+                         );
+        if (error != ERROR_NONE)
+        {
+          String_delete(string);
+          return error;
+        }
+      }
+    }
+  }
+
+  // free resources
+  String_delete(string);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : pruneEntities
+* Purpose: prune all empty entities
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneEntities(IndexHandle *indexHandle,
+                           bool        *doneFlag,
+                           ulong       *deletedCounter
+                          )
+{
+  Array         entityIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    entityId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all entity ids (Note: skip default entity!)
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &entityIds,
+                          "entities",
+                          "id",
+                          "WHERE id!=%lld \
+                          ",
+                          INDEX_DEFAULT_ENTITY_DATABASE_ID
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // prune entities
+  ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
+  {
+    error = pruneEntity(indexHandle,doneFlag,deletedCounter,entityId);
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&entityIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : purgeEntry
+* Purpose: purge entry
+* Input  : indexHandle - index handle
+*          entryId     - entry database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+//TODO: use
+#if 0
+LOCAL Errors purgeEntry(IndexHandle *indexHandle,
+                        DatabaseId  entryId
+                       )
+{
+  Errors              error;
+//  DatabaseQueryHandle databaseQueryHandle;
+//  uint64              createdDateTime;
+//  bool                transactionFlag;
+//  bool                doneFlag;
+  #ifndef NDEBUG
+//    ulong               deletedCounter;
+  #endif
+
+  assert(indexHandle != NULL);
+  assert(entryId != DATABASE_ID_NONE);
+
+  // init variables
+
+//    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+//                                      indexHandle,
+//                                      transactionFlag,
+//    {
+
+  error = ERROR_NONE;
+
+  // purge FTS entry
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM FTS_entries \
+                              WHERE entryId=%lld \
+                             ",
+                             entryId
+                            );
+  }
+
+  // update newest entries
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM entriesNewest \
+                              WHERE entryId=%lld \
+                             ",
+                             entryId
+                            );
+//TODO
+#if 0
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "INSERT OR IGNORE INTO entriesNewest \
+                                ( \
+                                 uuidId,\
+                                 entityId, \
+                                 type, \
+                                 name, \
+                                 timeLastAccess, \
+                                 timeModified, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission \
+                                ) \
+                              SELECT \
+                                uuidId,\
+                                entityId, \
+                                type, \
+                                name, \
+                                timeLastAccess, \
+                                timeModified, \
+                                timeLastChanged, \
+                                userId, \
+                                groupId, \
+                                permission \
+                              FROM entries \
+                              WHERE id!=%lld AND name=%'S \
+                              ORDER BY timeModified DESC \
+                              LIMIT 0,1 \
+                              WHERE name \
+                             ",
+                             entryId,
+                             name
+                            );
+#endif
+  }
+
+  // delete entry
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM entries \
+                              WHERE id=%lld \
+                             ",
+                             entryId
+                            );
+  }
+
+  // free resources
+
+  return error;
+}
+#endif
+
+#if 0
+//TODO: still not used
+/***********************************************************************\
+* Name   : pruneEntries
+* Purpose: prune all entries (file, image, hardlink) with no fragments
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneEntries(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter
+                         )
+{
+  Array         databaseIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    databaseId;
+
+  assert(indexHandle != NULL);
+  assert(doneFlag != NULL);
+  assert(deletedCounter != NULL);
+
+  // init vairables
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all file entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "fileEntries",
+                          "fileEntries.id",
+                          "LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id \
+                           WHERE entryFragments.id IS NULL \
+                          "
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge file entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  {
+    error = purge(indexHandle,
+                  doneFlag,
+                  deletedCounter,
+                  "fileEntries",
+                  "id=%lld",
+                  databaseId
+                 );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // get all image entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "imageEntries",
+                          "imageEntries.id",
+                          "LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id \
+                           WHERE entryFragments.id IS NULL \
+                          "
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge image entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  {
+    error = purge(indexHandle,
+                  doneFlag,
+                  deletedCounter,
+                  "imageEntries",
+                  "id=%lld",
+                  databaseId
+                 );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // get all hardlink entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "hardlinkEntries",
+                          "hardlinkEntries.id",
+                          "LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id \
+                           WHERE entryFragments.id IS NULL \
+                          "
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge hardlink entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  {
+    error = purge(indexHandle,
+                  doneFlag,
+                  deletedCounter,
+                  "hardlinkEntries",
+                  "id=%lld",
+                  databaseId
+                 );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&databaseIds);
+
+  return ERROR_NONE;
+}
+#endif
+
+/***********************************************************************\
+* Name   : getStorageState
+* Purpose: get index storage state
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
+* Output : indexState          - index state; see IndexStates
+*          lastCheckedDateTime - last checked date/time stamp [s] (can
+*                                be NULL)
+*          errorMessage        - error message (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getStorageState(IndexHandle *indexHandle,
+                             DatabaseId  storageId,
+                             IndexStates *indexState,
+                             uint64      *lastCheckedDateTime,
+                             String      errorMessage
+                            )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT state, \
+                                   UNIXTIMESTAMP(lastChecked), \
+                                   errorMessage \
+                            FROM storages \
+                            WHERE id=%lld \
+                           ",
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%d %llu %S",
+                           indexState,
+                           lastCheckedDateTime,
+                           errorMessage
+                          )
+     )
+  {
+    (*indexState) = INDEX_STATE_UNKNOWN;
+    if (errorMessage != NULL) String_clear(errorMessage);
+  }
+
+  Database_finalize(&databaseQueryHandle);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : isEmptyStorage
+* Purpose: check if storage if empty
+* Input  : indexHandle - index handle
+*          storageId   - storage database id
+* Output : -
+* Return : TRUE iff entity is empty
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isEmptyStorage(IndexHandle *indexHandle,
                           DatabaseId  storageId
+                         )
+{
+  assert(indexHandle != NULL);
+
+  return    (storageId != DATABASE_ID_NONE)
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entryFragments",
+                              "id",
+                              "WHERE storageId=%lld",
+                              storageId
+                             )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "directoryEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "linkEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "specialEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            );
+}
+
+/***********************************************************************\
+* Name   : addStorageToNewest
+* Purpose: add storage entries to newest entries (if newest)
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
+                                DatabaseId   storageId,
+                                ProgressInfo *progressInfo
+                               )
+{
+  typedef struct EntryNode
+  {
+    LIST_NODE_HEADER(struct EntryNode);
+
+    DatabaseId entryId;
+    DatabaseId uuidId;
+    DatabaseId entityId;
+    IndexTypes indexType;
+    String     name;
+    uint64     timeLastChanged;
+    uint32     userId;
+    uint32     groupId;
+    uint32     permission;
+    uint64     size;
+
+    struct
+    {
+      DatabaseId entryId;
+      uint64     timeLastChanged;
+    } newest;
+  } EntryNode;
+
+  typedef struct
+  {
+    LIST_HEADER(EntryNode);
+  } EntryList;
+
+  /***********************************************************************\
+  * Name   : freeEntryNode
+  * Purpose: free entry node
+  * Input  : entryNode - entry node
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeEntryNode(EntryNode *entryNode);
+  void freeEntryNode(EntryNode *entryNode)
+  {
+    assert(entryNode != NULL);
+
+    String_delete(entryNode->name);
+  }
+
+  EntryList           entryList;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          entryId;
+  DatabaseId          uuidId;
+  DatabaseId          entityId;
+  uint                indexType;
+  String              entryName;
+  uint64              timeLastChanged;
+  uint32              userId;
+  uint32              groupId;
+  uint32              permission;
+  uint64              size;
+  Errors              error;
+  EntryNode           *entryNode;
+  bool                transactionFlag;
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  List_init(&entryList);
+  entryName = String_new();
+  error     = ERROR_NONE;
+
+  // get entries info to add
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+#if 0
+      return Database_prepare(&indexHandle->databaseHandle,
+                              CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                              {
+                                EntryNode *entryNode;
+
+                                assert(count == 10);
+                                assert(values != NULL);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+                                assert(values[2] != NULL);
+                                assert(values[3] != NULL);
+                                assert(values[4] != NULL);
+                                assert(values[5] != NULL);
+                                assert(values[6] != NULL);
+                                assert(values[7] != NULL);
+                                assert(values[8] != NULL);
+                                assert(values[9] != NULL);
+
+                                UNUSED_VARIABLE(columns);
+                                UNUSED_VARIABLE(count);
+                                UNUSED_VARIABLE(userData);
+
+                                entryNode = LIST_NEW_NODE(EntryNode);
+                                if (entryNode == NULL)
+                                {
+                                  HALT_INSUFFICIENT_MEMORY();
+                                }
+
+                                entryNode->entryId                = (DatabaseId)strtoll(values[0],NULL,10);
+                                entryNode->uuidId                 = (DatabaseId)strtoll(values[1],NULL,10);
+                                entryNode->entityId               = (DatabaseId)strtoll(values[2],NULL,10);
+                                entryNode->indexType              = (IndexTypes)(uint)strtoul(values[3],NULL,10);
+                                entryNode->name                   = String_newCString(values[4]);
+                                entryNode->timeLastChanged        = (uint64)strtoull(values[5],NULL,10);
+                                entryNode->userId                 = (uint32)strtoul(values[6],NULL,10);
+                                entryNode->groupId                = (uint32)strtoul(values[7],NULL,10);
+                                entryNode->permission             = (uint32)strtoul(values[8],NULL,10);
+                                entryNode->size                   = (uint64)strtoull(values[9],NULL,10);
+                                entryNode->newest.entryId         = DATABASE_ID_NONE;
+                                entryNode->newest.timeLastChanged = 0LL;
+
+                                List_append(&entryList,entryNode);
+
+                                return ERROR_NONE;
+                              },NULL),
+                              NULL,  // changedRowCount
+                              "      SELECT entries.id, \
+                                            entries.uuidId, \
+                                            entries.entityId, \
+                                            entries.type, \
+                                            entries.name, \
+                                            UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                            entries.userId, \
+                                            entries.groupId, \
+                                            entries.permission, \
+                                            entries.size \
+                                     FROM entryFragments \
+                                       LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                     WHERE entryFragments.storageId=%lld \
+                               UNION SELECT entries.id, \
+                                            entries.uuidId, \
+                                            entries.entityId, \
+                                            entries.type, \
+                                            entries.name, \
+                                            UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                            entries.userId, \
+                                            entries.groupId, \
+                                            entries.permission, \
+                                            entries.size \
+                                     FROM directoryEntries \
+                                       LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                     WHERE directoryEntries.storageId=%lld \
+                               UNION SELECT entries.id, \
+                                            entries.uuidId, \
+                                            entries.entityId, \
+                                            entries.type, \
+                                            entries.name, \
+                                            UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                            entries.userId, \
+                                            entries.groupId, \
+                                            entries.permission, \
+                                            entries.size \
+                                     FROM linkEntries \
+                                       LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                     WHERE linkEntries.storageId=%lld \
+                               UNION SELECT entries.id, \
+                                            entries.uuidId, \
+                                            entries.entityId, \
+                                            entries.type, \
+                                            entries.name, \
+                                            UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                            entries.userId, \
+                                            entries.groupId, \
+                                            entries.permission, \
+                                            entries.size \
+                                     FROM specialEntries \
+                                       LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                     WHERE specialEntries.storageId=%lld \
+                               GROUP BY entries.name \
+                              ",
+                              storageId,
+                              storageId,
+                              storageId,
+                              storageId
+                             );
+#else
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "      SELECT entries.id, \
+                                             entries.uuidId, \
+                                             entries.entityId, \
+                                             entries.type, \
+                                             entries.name, \
+                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             entries.userId, \
+                                             entries.groupId, \
+                                             entries.permission, \
+                                             entries.size \
+                                      FROM entryFragments \
+                                        LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                      WHERE entryFragments.storageId=%lld \
+                                UNION SELECT entries.id, \
+                                             entries.uuidId, \
+                                             entries.entityId, \
+                                             entries.type, \
+                                             entries.name, \
+                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             entries.userId, \
+                                             entries.groupId, \
+                                             entries.permission, \
+                                             entries.size \
+                                      FROM directoryEntries \
+                                        LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                      WHERE directoryEntries.storageId=%lld \
+                                UNION SELECT entries.id, \
+                                             entries.uuidId, \
+                                             entries.entityId, \
+                                             entries.type, \
+                                             entries.name, \
+                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             entries.userId, \
+                                             entries.groupId, \
+                                             entries.permission, \
+                                             entries.size \
+                                      FROM linkEntries \
+                                        LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                      WHERE linkEntries.storageId=%lld \
+                                UNION SELECT entries.id, \
+                                             entries.uuidId, \
+                                             entries.entityId, \
+                                             entries.type, \
+                                             entries.name, \
+                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             entries.userId, \
+                                             entries.groupId, \
+                                             entries.permission, \
+                                             entries.size \
+                                      FROM specialEntries \
+                                        LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                      WHERE specialEntries.storageId=%lld \
+                                GROUP BY entries.name \
+                               ",
+                               storageId,
+                               storageId,
+                               storageId,
+                               storageId
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      while (Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %lld %lld %u %S %llu %u %u %u %llu",
+                                 &entryId,
+                                 &uuidId,
+                                 &entityId,
+                                 &indexType,
+                                 entryName,
+                                 &timeLastChanged,
+                                 &userId,
+                                 &groupId,
+                                 &permission,
+                                 &size
+                                )
+            )
+      {
+        entryNode = LIST_NEW_NODE(EntryNode);
+        if (entryNode == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+
+        entryNode->entryId                = entryId;
+        entryNode->uuidId                 = uuidId;
+        entryNode->entityId               = entityId;
+        entryNode->indexType              = (IndexTypes)indexType;
+        entryNode->name                   = String_duplicate(entryName);
+        entryNode->timeLastChanged        = timeLastChanged;
+        entryNode->userId                 = (uint32)userId;
+        entryNode->groupId                = (uint32)groupId;
+        entryNode->permission             = (uint32)permission;
+        entryNode->size                   = (uint64)size;
+        entryNode->newest.entryId         = DATABASE_ID_NONE;
+        entryNode->newest.timeLastChanged = 0LL;
+
+        List_append(&entryList,entryNode);
+      }
+
+      Database_finalize(&databaseQueryHandle);
+
+      return ERROR_NONE;
+#endif
+    });
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // find newest entries for entries to add
+fprintf(stderr,"%s, %d: find newest entries for entries to add %d\n",__FILE__,__LINE__,List_count(&entryList));
+  resetProgress(progressInfo,List_count(&entryList));
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  {
+//fprintf(stderr,"a");
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_execute(&indexHandle->databaseHandle,
+                              CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                              {
+                                assert(count == 2);
+                                assert(values != NULL);
+
+                                UNUSED_VARIABLE(columns);
+                                UNUSED_VARIABLE(count);
+                                UNUSED_VARIABLE(userData);
+
+                                entryNode->newest.entryId         = (values[0] != NULL) ? (DatabaseId)strtoll(values[0],NULL,10) : DATABASE_ID_NONE;
+                                entryNode->newest.timeLastChanged = (values[1] != NULL) ? (uint64)strtoull(values[1],NULL,10) : 0LL;
+
+                                return ERROR_NONE;
+                              },NULL),
+                              NULL,  // changedRowCount
+                              "      SELECT entriesNewest.id, \
+                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                     FROM entryFragments \
+                                       LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                       LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
+                                     WHERE     storages.deletedFlag!=1 \
+                                           AND entriesNewest.name=%'S \
+                               UNION SELECT entriesNewest.id, \
+                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                     FROM directoryEntries \
+                                       LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                       LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
+                                     WHERE     storages.deletedFlag!=1 \
+                                           AND entriesNewest.name=%'S \
+                               UNION SELECT entriesNewest.id, \
+                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                     FROM linkEntries \
+                                       LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                       LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
+                                     WHERE     storages.deletedFlag!=1 \
+                                           AND entriesNewest.name=%'S \
+                               UNION SELECT entriesNewest.id, \
+                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                     FROM specialEntries \
+                                       LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                       LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
+                                     WHERE     storages.deletedFlag!=1 \
+                                           AND entriesNewest.name=%'S \
+                               ORDER BY timeLastChanged DESC \
+                               LIMIT 0,1 \
+                              ",
+                              entryNode->name,
+                              entryNode->name,
+                              entryNode->name,
+                              entryNode->name
+                             );
+    });
+    progressStep(progressInfo);
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // add entries to newest entries
+fprintf(stderr,"%s, %d: add entries to newest entries %d\n",__FILE__,__LINE__,List_count(&entryList));
+  INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,
+  {
+    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+    {
+//fprintf(stderr,"b");
+      if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
+      {
+        INDEX_DOX(error,
+                  indexHandle,
+        {
+          return Database_execute(&indexHandle->databaseHandle,
+                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                  NULL,  // changedRowCount
+                                  "INSERT OR REPLACE INTO entriesNewest \
+                                     ( \
+                                      entryId, \
+                                      uuidId, \
+                                      entityId, \
+                                      type, \
+                                      name, \
+                                      timeLastChanged, \
+                                      userId, \
+                                      groupId, \
+                                      permission, \
+                                      size \
+                                     ) \
+                                   VALUES \
+                                     ( \
+                                       %lld, \
+                                       %lld, \
+                                       %lld, \
+                                       %u, \
+                                       %'S, \
+                                       %llu, \
+                                       %lu, \
+                                       %lu, \
+                                       %lu, \
+                                       %llu \
+                                     ) \
+                                  ",
+                                  entryNode->entryId,
+                                  entryNode->uuidId,
+                                  entryNode->entityId,
+                                  entryNode->indexType,
+                                  entryNode->name,
+                                  entryNode->timeLastChanged,
+                                  entryNode->userId,
+                                  entryNode->groupId,
+                                  entryNode->permission,
+                                  entryNode->size
+                                 );
+        });
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (isIndexInUse())
+        {
+          error = interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
+        }
+      }
+    }
+
+    return error;
+  });
+fprintf(stderr,"%s, %d: add entries to newest entries %d done\n",__FILE__,__LINE__,List_count(&entryList));
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // free resources
+  String_delete(entryName);
+  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : removeStorageFromNewest
+* Purpose: remove storage entries from newest entries
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
+                                     DatabaseId   storageId,
+                                     ProgressInfo *progressInfo
+                                    )
+{
+  typedef struct EntryNode
+  {
+    LIST_NODE_HEADER(struct EntryNode);
+
+    DatabaseId entryId;
+    String     name;
+
+    struct
+    {
+      DatabaseId entryId;
+      DatabaseId uuidId;
+      DatabaseId entityId;
+      IndexTypes indexType;
+      uint64     timeLastChanged;
+      uint32     userId;
+      uint32     groupId;
+      uint32     permission;
+      uint64     size;
+    } newest;
+  } EntryNode;
+
+  typedef struct
+  {
+    LIST_HEADER(EntryNode);
+  } EntryList;
+
+  /***********************************************************************\
+  * Name   : freeEntryNode
+  * Purpose: free entry node
+  * Input  : entryNode - entry node
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeEntryNode(EntryNode *entryNode);
+  void freeEntryNode(EntryNode *entryNode)
+  {
+    assert(entryNode != NULL);
+
+    String_delete(entryNode->name);
+  }
+
+  EntryList           entryList;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          entryId;
+  String              entryName;
+  Errors              error;
+  EntryNode           *entryNode;
+  bool                transactionFlag;
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  List_init(&entryList);
+  entryName = String_new();
+  error     = ERROR_NONE;
+
+  // get entries info to remove
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+#if 0
+      return Database_execute(&indexHandle->databaseHandle,
+                              CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                              {
+//fprintf(stderr,"%s, %d: name=%s t=%s newid=%s newt=%s\n",__FILE__,__LINE__,values[2],values[3],values[4],values[5]);
+                                EntryNode *entryNode;
+
+                                assert(count == 2);
+                                assert(values != NULL);
+                                assert(values[0] != NULL);
+                                assert(values[1] != NULL);
+
+                                UNUSED_VARIABLE(columns);
+                                UNUSED_VARIABLE(count);
+                                UNUSED_VARIABLE(userData);
+
+                                entryNode = LIST_NEW_NODE(EntryNode);
+                                if (entryNode == NULL)
+                                {
+                                  HALT_INSUFFICIENT_MEMORY();
+                                }
+
+                                entryNode->entryId        = (DatabaseId)strtoll(values[0],NULL,10);
+                                entryNode->name           = String_newCString(values[1]);
+                                entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                                List_append(&entryList,entryNode);
+
+                                return ERROR_NONE;
+                              },NULL),
+                              NULL,  // changedRowCount
+                              "      SELECT entries.id, \
+                                            entries.name \
+                                     FROM entryFragments \
+                                       LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                     WHERE entryFragments.storageId=%lld \
+                               UNION SELECT entries.id, \
+                                            entries.name \
+                                     FROM directoryEntries \
+                                       LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                     WHERE directoryEntries.storageId=%lld \
+                               UNION SELECT entries.id, \
+                                            entries.name \
+                                     FROM linkEntries \
+                                       LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                     WHERE linkEntries.storageId=%lld \
+                               UNION SELECT entries.id, \
+                                            entries.name \
+                                     FROM specialEntries \
+                                       LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                     WHERE specialEntries.storageId=%lld \
+                               ORDER BY entries.name \
+                              ",
+                              storageId,
+                              storageId,
+                              storageId,
+                              storageId
+                             );
+#else
+      error = Database_prepare(&databaseQueryHandle,
+                                &indexHandle->databaseHandle,
+                               "      SELECT entries.id, \
+                                             entries.name \
+                                      FROM entryFragments \
+                                        LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                      WHERE entryFragments.storageId=%lld \
+                                UNION SELECT entries.id, \
+                                             entries.name \
+                                      FROM directoryEntries \
+                                        LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                      WHERE directoryEntries.storageId=%lld \
+                                UNION SELECT entries.id, \
+                                             entries.name \
+                                      FROM linkEntries \
+                                        LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                      WHERE linkEntries.storageId=%lld \
+                                UNION SELECT entries.id, \
+                                             entries.name \
+                                      FROM specialEntries \
+                                        LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                      WHERE specialEntries.storageId=%lld \
+                                ORDER BY entries.name \
+                               ",
+                               storageId,
+                               storageId,
+                               storageId,
+                               storageId
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      while (Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %S",
+                                 &entryId,
+                                 entryName
+                                )
+            )
+      {
+        entryNode = LIST_NEW_NODE(EntryNode);
+        if (entryNode == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+
+        entryNode->entryId        = entryId;
+        entryNode->name           = String_duplicate(entryName);
+        entryNode->newest.entryId = DATABASE_ID_NONE;
+
+        List_append(&entryList,entryNode);
+      }
+
+      Database_finalize(&databaseQueryHandle);
+
+      return ERROR_NONE;
+#endif
+    });
+  }
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // find new newest entries for entries to remove
+fprintf(stderr,"%s, %d: find new newest entries for entries to remove %d\n",__FILE__,__LINE__,List_count(&entryList));
+  resetProgress(progressInfo,List_count(&entryList));
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  {
+//fprintf(stderr,"c");
+    // wait until index is unused
+    while (   isIndexInUse()
+           && !quitFlag
+          )
+    {
+      Misc_udelay(5*US_PER_SECOND);
+    }
+
+    if ((entryNode->prev == NULL) || !String_equals(entryNode->prev->name,entryNode->name))
+    {
+      INDEX_DOX(error,
+                indexHandle,
+      {
+        return Database_execute(&indexHandle->databaseHandle,
+                                CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                                {
+                                  assert(count == 9);
+                                  assert(values != NULL);
+
+                                  UNUSED_VARIABLE(columns);
+                                  UNUSED_VARIABLE(count);
+                                  UNUSED_VARIABLE(userData);
+
+                                  entryNode->newest.entryId         = (values[0] != NULL) ? (DatabaseId)strtoll(values[0],NULL,10) : DATABASE_ID_NONE;
+                                  entryNode->newest.uuidId          = (values[1] != NULL) ? (DatabaseId)strtoll(values[1],NULL,10) : DATABASE_ID_NONE;
+                                  entryNode->newest.entityId        = (values[2] != NULL) ? (DatabaseId)strtoll(values[2],NULL,10) : DATABASE_ID_NONE;
+                                  entryNode->newest.indexType       = (values[3] != NULL) ? (IndexTypes)(uint)strtoul(values[3],NULL,10) : INDEX_TYPE_NONE;
+                                  entryNode->newest.timeLastChanged = (values[4] != NULL) ? (uint64)strtoull(values[4],NULL,10) : 0LL;
+                                  entryNode->newest.userId          = (values[5] != NULL) ? (uint32)strtoul(values[5],NULL,10) : 0;
+                                  entryNode->newest.groupId         = (values[6] != NULL) ? (uint32)strtoul(values[6],NULL,10) : 0;
+                                  entryNode->newest.permission      = (values[7] != NULL) ? (uint32)strtoul(values[7],NULL,10) : 0;
+                                  entryNode->newest.size            = (values[8] != NULL) ? (uint64)strtoull(values[8],NULL,10) : 0LL;
+
+                                  return ERROR_NONE;
+                                },NULL),
+                                NULL,  // changedRowCount
+                                "      SELECT entries.id, \
+                                              entries.uuidId, \
+                                              entries.entityId, \
+                                              entries.type, \
+                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              entries.userId, \
+                                              entries.groupId, \
+                                              entries.permission, \
+                                              entries.size \
+                                       FROM entryFragments \
+                                         LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                         LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                       WHERE     storages.deletedFlag!=1 \
+                                             AND entries.name=%'S \
+                                 UNION SELECT entries.id, \
+                                              entries.uuidId, \
+                                              entries.entityId, \
+                                              entries.type, \
+                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              entries.userId, \
+                                              entries.groupId, \
+                                              entries.permission, \
+                                              entries.size \
+                                       FROM directoryEntries \
+                                         LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                         LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                       WHERE     storages.deletedFlag!=1 \
+                                             AND entries.name=%'S \
+                                 UNION SELECT entries.id, \
+                                              entries.uuidId, \
+                                              entries.entityId, \
+                                              entries.type, \
+                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              entries.userId, \
+                                              entries.groupId, \
+                                              entries.permission, \
+                                              entries.size \
+                                       FROM linkEntries \
+                                         LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                         LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                       WHERE     storages.deletedFlag!=1 \
+                                             AND entries.name=%'S \
+                                 UNION SELECT entries.id, \
+                                              entries.uuidId, \
+                                              entries.entityId, \
+                                              entries.type, \
+                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              entries.userId, \
+                                              entries.groupId, \
+                                              entries.permission, \
+                                              entries.size \
+                                       FROM specialEntries \
+                                         LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                         LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                       WHERE     storages.deletedFlag!=1 \
+                                             AND entries.name=%'S \
+                                 ORDER BY timeLastChanged DESC \
+                                 LIMIT 0,1 \
+                                ",
+                                entryNode->name,
+                                entryNode->name,
+                                entryNode->name,
+                                entryNode->name
+                               );
+      });
+    }
+    progressStep(progressInfo);
+  }
+fprintf(stderr,"%s, %d: find new newest entries for entries to remove %d done\n",__FILE__,__LINE__,List_count(&entryList));
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // remove/update entries from newest entries
+fprintf(stderr,"%s, %d: remove/update entries from newest entries %d\n",__FILE__,__LINE__,List_count(&entryList));
+  INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,
+  {
+    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+    {
+//fprintf(stderr,"d");
+      INDEX_DOX(error,
+                indexHandle,
+      {
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "DELETE FROM entriesNewest \
+                                  WHERE entryId=%lld \
+                                 ",
+                                 entryNode->entryId
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        if (entryNode->newest.entryId != DATABASE_ID_NONE)
+        {
+          error = Database_execute(&indexHandle->databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   "INSERT OR REPLACE INTO entriesNewest \
+                                      ( \
+                                       entryId, \
+                                       uuidId, \
+                                       entityId, \
+                                       type, \
+                                       name, \
+                                       timeLastChanged, \
+                                       userId, \
+                                       groupId, \
+                                       permission, \
+                                       size \
+                                      ) \
+                                    VALUES \
+                                      ( \
+                                        %lld, \
+                                        %lld, \
+                                        %lld, \
+                                        %u, \
+                                        %'S, \
+                                        %llu, \
+                                        %lu, \
+                                        %lu, \
+                                        %lu, \
+                                        %llu \
+                                      ) \
+                                   ",
+                                   entryNode->newest.entryId,
+                                   entryNode->newest.uuidId,
+                                   entryNode->newest.entityId,
+                                   entryNode->newest.indexType,
+                                   entryNode->name,
+                                   entryNode->newest.timeLastChanged,
+                                   entryNode->newest.userId,
+                                   entryNode->newest.groupId,
+                                   entryNode->newest.permission,
+                                   entryNode->newest.size
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        return ERROR_NONE;
+      });
+
+      if (error == ERROR_NONE)
+      {
+        if (isIndexInUse())
+        {
+          error = interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
+        }
+      }
+    }
+
+    return error;
+  });
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
+
+  // free resources
+  String_delete(entryName);
+  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : clearStorage
+* Purpose: clear index storage content
+* Input  : indexHandle  - index handle
+*          storageId    - database id of storage
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors clearStorage(IndexHandle  *indexHandle,
+                          DatabaseId   storageId,
+                          ProgressInfo *progressInfo
                          )
 {
   Array                entryIds;
@@ -5124,6 +5218,7 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   ArraySegmentIterator arraySegmentIterator;
   ArrayIterator        arrayIterator;
   DatabaseId           entryId;
+  DatabaseId           entityId;
   #ifndef NDEBUG
     ulong              deletedCounter;
   #endif
@@ -5158,7 +5253,9 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     deletedCounter = 0;
   #endif
 
-  /* purge entries without associated file/image/directory/link/hardlink/special entry
+//TODO: do regulary in index thread?
+#if 0
+  /* get entries to purge without associated file/image/directory/link/hardlink/special entry
      Note: may be left from interrupted purge of previous run
   */
 //l=0; Database_getInteger64(&indexHandle->databaseHandle,&l,"entries","count(id)",""); fprintf(stderr,"%s, %d: l=%lld\n",__FILE__,__LINE__,l);
@@ -5173,9 +5270,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     {
       return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
-                             "entries LEFT JOIN fileEntries ON fileEntries.entryId=entries.id",
+                             "entries",
                              "entries.id",
-                             "WHERE entries.type=%u AND fileEntries.id IS NULL",
+                             "LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
+                              WHERE entries.type=%u AND fileEntries.id IS NULL \
+                             ",
                              INDEX_TYPE_FILE
                             );
     });
@@ -5193,9 +5292,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     {
       return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
-                             "entries LEFT JOIN imageEntries ON imageEntries.entryId=entries.id",
+                             "entries",
                              "entries.id",
-                             "WHERE entries.type=%u AND imageEntries.id IS NULL",
+                             "LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
+                              WHERE entries.type=%u AND imageEntries.id IS NULL \
+                             ",
                              INDEX_TYPE_IMAGE
                             );
     });
@@ -5213,9 +5314,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     {
       return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
-                             "entries LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id",
+                             "entries",
                              "entries.id",
-                             "WHERE entries.type=%u AND directoryEntries.id IS NULL",
+                             "LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                              WHERE entries.type=%u AND directoryEntries.id IS NULL \
+                             ",
                              INDEX_TYPE_DIRECTORY
                             );
     });
@@ -5233,9 +5336,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     {
       return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
-                             "entries LEFT JOIN linkEntries ON linkEntries.entryId=entries.id",
+                             "entries",
                              "entries.id",
-                             "WHERE entries.type=%u AND linkEntries.id IS NULL",
+                             "LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                              WHERE entries.type=%u AND linkEntries.id IS NULL \
+                             ",
                              INDEX_TYPE_LINK
                             );
     });
@@ -5253,9 +5358,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     {
       return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
-                             "entries LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id",
+                             "entries",
                              "entries.id",
-                             "WHERE entries.type=%u AND hardlinkEntries.id IS NULL",
+                             "LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
+                              WHERE entries.type=%u AND hardlinkEntries.id IS NULL \
+                             ",
                              INDEX_TYPE_HARDLINK
                             );
     });
@@ -5273,9 +5380,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     {
       return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
-                             "entries LEFT JOIN specialEntries ON specialEntries.entryId=entries.id",
+                             "entries",
                              "entries.id",
-                             "WHERE entries.type=%u AND specialEntries.id IS NULL",
+                             "LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
+                              WHERE entries.type=%u AND specialEntries.id IS NULL \
+                             ",
                              INDEX_TYPE_SPECIAL
                             );
     });
@@ -5284,7 +5393,8 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     dt[5] = Misc_getTimestamp()-t0;
   #endif
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: %lu entries without associated entry to purge: file %llums, image %llums, directory %llums, link %llums, hardlink %llums, special %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, %lu entries without associated entry to purge: file %llums, image %llums, directory %llums, link %llums, hardlink %llums, special %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
             Array_length(&entryIds),
             dt[0]/US_PER_MS,
             dt[1]/US_PER_MS,
@@ -5295,16 +5405,18 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
            );
   #endif
 
+  /* purge entries without associated file/image/directory/link/hardlink/special entry
+  */
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
   if (error == ERROR_NONE)
   {
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
-      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,64,error == ERROR_NONE)
+      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
       {
         String_clear(entryIdsString);
         ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
@@ -5327,9 +5439,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
                         "id IN (%S)",
                         entryIdsString
                        );
-          if ((error == ERROR_NONE) && !doneFlag)
+          if (error == ERROR_NONE)
           {
-            error = pausePurge(indexHandle,&transactionFlag);
+            if (isIndexInUse())
+            {
+              error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+            }
           }
         }
         while ((error == ERROR_NONE) && !doneFlag);
@@ -5339,8 +5454,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged entries: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged orphaned entries: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
+#endif
 
   // get entries to purge
   #ifdef INDEX_DEBUG_PURGE
@@ -5426,7 +5545,8 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     dt[3] = Misc_getTimestamp()-t0;
   #endif
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: %lu entries to purge: fragment %llums, directory %llums, link %llums, special %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, %lu entries to purge: fragment %llums, directory %llums, link %llums, special %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
             Array_length(&entryIds),
             dt[0]/US_PER_MS,
             dt[1]/US_PER_MS,
@@ -5435,15 +5555,15 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
            );
   #endif
 
-  // purge fragments
+  // purge fragments of entries
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
   if (error == ERROR_NONE)
   {
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
       do
       {
@@ -5460,9 +5580,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
                       "storageId=%lld",
                       storageId
                      );
-        if ((error == ERROR_NONE) && !doneFlag)
+        if (error == ERROR_NONE)
         {
-          error = pausePurge(indexHandle,&transactionFlag);
+          if (isIndexInUse())
+          {
+            error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+          }
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
@@ -5474,7 +5597,10 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
 //fprintf(stderr,"%s, %d: 1 fragments done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
 #endif
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged fragments: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged fragments: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
 
   // purge file/image/directory/link/hardlink/special entries
@@ -5484,36 +5610,54 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     // purge file entries without fragments
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
-      do
+      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
       {
-//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=fileEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: fileEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
-        doneFlag = TRUE;
-        error = purge(indexHandle,
-                      &doneFlag,
-                      #ifndef NDEBUG
-                        &deletedCounter,
-                      #else
-                        NULL,  // deletedCounter
-                      #endif
-                      "fileEntries",
-                      "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)"
-                     );
-        if ((error == ERROR_NONE) && !doneFlag)
+        String_clear(entryIdsString);
+        ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
-          error = pausePurge(indexHandle,&transactionFlag);
+          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+          String_formatAppend(entryIdsString,"%lld",entryId);
         }
+
+        do
+        {
+          doneFlag = TRUE;
+          error = purge(indexHandle,
+                        &doneFlag,
+                        #ifndef NDEBUG
+                          &deletedCounter,
+                        #else
+                          NULL,  // deletedCounter
+                        #endif
+                        "fileEntries",
+                        "    entryId IN (%S) \
+                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1) \
+                        ",
+                        entryIdsString
+                       );
+          if (error == ERROR_NONE)
+          {
+            if (isIndexInUse())
+            {
+              error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+            }
+          }
+        }
+        while ((error == ERROR_NONE) && !doneFlag);
       }
-      while ((error == ERROR_NONE) && !doneFlag);
 
       return error;
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged file entries without fragments: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged file entries without fragments: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
@@ -5521,36 +5665,54 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     // purge image entries without fragments
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
-      do
+      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
       {
-//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=imageEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: imageEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
-        doneFlag = TRUE;
-        error = purge(indexHandle,
-                      &doneFlag,
-                      #ifndef NDEBUG
-                        &deletedCounter,
-                      #else
-                        NULL,  // deletedCounter
-                      #endif
-                      "imageEntries",
-                      "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)"
-                     );
-        if ((error == ERROR_NONE) && !doneFlag)
+        String_clear(entryIdsString);
+        ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
-          error = pausePurge(indexHandle,&transactionFlag);
+          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+          String_formatAppend(entryIdsString,"%lld",entryId);
         }
+
+        do
+        {
+          doneFlag = TRUE;
+          error = purge(indexHandle,
+                        &doneFlag,
+                        #ifndef NDEBUG
+                          &deletedCounter,
+                        #else
+                          NULL,  // deletedCounter
+                        #endif
+                        "imageEntries",
+                        "    entryId IN (%S) \
+                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1) \
+                        ",
+                        entryIdsString
+                       );
+          if (error == ERROR_NONE)
+          {
+            if (isIndexInUse())
+            {
+              error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+            }
+          }
+        }
+        while ((error == ERROR_NONE) && !doneFlag);
       }
-      while ((error == ERROR_NONE) && !doneFlag);
 
       return error;
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged image entries without fragments: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged image entries without fragments: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
@@ -5558,9 +5720,9 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     // purge directory entries
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
       do
       {
@@ -5577,9 +5739,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
                       "storageId=%lld",
                       storageId
                      );
-        if ((error == ERROR_NONE) && !doneFlag)
+        if (error == ERROR_NONE)
         {
-          error = pausePurge(indexHandle,&transactionFlag);
+          if (isIndexInUse())
+          {
+            error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+          }
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
@@ -5588,7 +5753,10 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged directory entries: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged directory entries: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
@@ -5596,9 +5764,9 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     // purge link entries
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
       do
       {
@@ -5615,9 +5783,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
                       "storageId=%lld",
                       storageId
                      );
-        if ((error == ERROR_NONE) && !doneFlag)
+        if (error == ERROR_NONE)
         {
-          error = pausePurge(indexHandle,&transactionFlag);
+          if (isIndexInUse())
+          {
+            error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+          }
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
@@ -5626,7 +5797,10 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged link entries: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged link entries: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
@@ -5634,36 +5808,54 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     // purge hardlink entries without fragments
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
-      do
+      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
       {
-//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=hardlinkEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: hardlinkEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
-        doneFlag = TRUE;
-        error = purge(indexHandle,
-                      &doneFlag,
-                      #ifndef NDEBUG
-                        &deletedCounter,
-                      #else
-                        NULL,  // deletedCounter
-                      #endif
-                      "hardlinkEntries",
-                      "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)"
-                     );
-        if ((error == ERROR_NONE) && !doneFlag)
+        String_clear(entryIdsString);
+        ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
-          error = pausePurge(indexHandle,&transactionFlag);
+          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+          String_formatAppend(entryIdsString,"%lld",entryId);
         }
+
+        do
+        {
+          doneFlag = TRUE;
+          error = purge(indexHandle,
+                        &doneFlag,
+                        #ifndef NDEBUG
+                          &deletedCounter,
+                        #else
+                          NULL,  // deletedCounter
+                        #endif
+                        "hardlinkEntries",
+                        "    entryId IN (%S) \
+                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1) \
+                        ",
+                        entryIdsString
+                       );
+          if (error == ERROR_NONE)
+          {
+            if (isIndexInUse())
+            {
+              error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+            }
+          }
+        }
+        while ((error == ERROR_NONE) && !doneFlag);
       }
-      while ((error == ERROR_NONE) && !doneFlag);
 
       return error;
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged hardlink entries without fragments: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged hardlink entries without fragments: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
@@ -5671,9 +5863,9 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     // purge special entries
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
       do
       {
@@ -5690,9 +5882,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
                       "storageId=%lld",
                       storageId
                      );
-        if ((error == ERROR_NONE) && !doneFlag)
+        if (error == ERROR_NONE)
         {
-          error = pausePurge(indexHandle,&transactionFlag);
+          if (isIndexInUse())
+          {
+            error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+          }
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
@@ -5701,7 +5896,10 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged special entries: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged special entries: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
 
   // purge FTS entries
@@ -5710,11 +5908,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   #endif
   if (error == ERROR_NONE)
   {
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
-      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,64,error == ERROR_NONE)
+      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
       {
         String_clear(entryIdsString);
         ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
@@ -5737,9 +5935,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
                         "entryId IN (%S)",
                         entryIdsString
                        );
-          if ((error == ERROR_NONE) && !doneFlag)
+          if (error == ERROR_NONE)
           {
-            error = pausePurge(indexHandle,&transactionFlag);
+            if (isIndexInUse())
+            {
+              error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+            }
           }
         }
         while ((error == ERROR_NONE) && !doneFlag);
@@ -5749,7 +5950,10 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged FTS entries: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged FTS entries: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
 
   // purge entries
@@ -5758,11 +5962,11 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   #endif
   if (error == ERROR_NONE)
   {
-    INDEX_PURGE_TRANSACTION_DOX(error,
-                                indexHandle,
-                                transactionFlag,
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
     {
-      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,64,error == ERROR_NONE)
+      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,SINGLE_STEP_PURGE_LIMIT,error == ERROR_NONE)
       {
         String_clear(entryIdsString);
         ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
@@ -5785,9 +5989,12 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
                         "id IN (%S)",
                         entryIdsString
                        );
-          if ((error == ERROR_NONE) && !doneFlag)
+          if (error == ERROR_NONE)
           {
-            error = pausePurge(indexHandle,&transactionFlag);
+            if (isIndexInUse())
+            {
+              error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE*MS_PER_SECOND);
+            }
           }
         }
         while ((error == ERROR_NONE) && !doneFlag);
@@ -5797,7 +6004,10 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: purged entries: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, purged entries: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
 
   if (error != ERROR_NONE)
@@ -5807,21 +6017,89 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
     Array_done(&entryIds);
     return error;
   }
+
+  // remove from newest entries
+  #ifdef INDEX_DEBUG_PURGE
+    t0 = Misc_getTimestamp();
+  #endif
+  if (error == ERROR_NONE)
+  {
+    error = removeStorageFromNewest(indexHandle,
+                                    storageId,
+                                    progressInfo
+                                   );
+  }
+  #ifdef INDEX_DEBUG_PURGE
+    fprintf(stderr,"%s, %d: error: %s, removed from newest entries: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
+  #endif
 
   // update aggregates
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
-  error = updateStorageAggregates(indexHandle,storageId);
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    Semaphore_unlock(&indexClearStorageLock);
-    String_delete(entryIdsString);
-    Array_done(&entryIds);
-    return error;
+    // clear storage aggregates
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_execute(&indexHandle->databaseHandle,
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
+                              NULL,  // changedRowCount
+                              "UPDATE storages \
+                               SET totalEntryCount          =0, \
+                                   totalEntrySize           =0, \
+                                   totalFileCount           =0, \
+                                   totalFileSize            =0, \
+                                   totalImageCount          =0, \
+                                   totalImageSize           =0, \
+                                   totalDirectoryCount      =0, \
+                                   totalLinkCount           =0, \
+                                   totalHardlinkCount       =0, \
+                                   totalHardlinkSize        =0, \
+                                   totalSpecialCount        =0, \
+                                   \
+                                   totalEntryCountNewest    =0, \
+                                   totalEntrySizeNewest     =0, \
+                                   totalFileCountNewest     =0, \
+                                   totalFileSizeNewest      =0, \
+                                   totalImageCountNewest    =0, \
+                                   totalImageSizeNewest     =0, \
+                                   totalDirectoryCountNewest=0, \
+                                   totalLinkCountNewest     =0, \
+                                   totalHardlinkCountNewest =0, \
+                                   totalHardlinkSizeNewest  =0, \
+                                   totalSpecialCountNewest  =0 \
+                               WHERE id=%lld \
+                              ",
+                              storageId
+                             );
+    });
+  }
+  if (error == ERROR_NONE)
+  {
+    // update entity aggregates
+    error = Database_getId(&indexHandle->databaseHandle,
+                           &entityId,
+                           "storages",
+                           "entityId",
+                           "WHERE id=%lld \
+                           ",
+                           storageId
+                          );
+    if (error == ERROR_NONE)
+    {
+      error = updateEntityAggregates(indexHandle,entityId);
+    }
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: updated aggregates: %llums\n",__FILE__,__LINE__,(Misc_getTimestamp()-t0)/US_PER_MS);
+    fprintf(stderr,"%s, %d: error: %s, updated aggregates: %llums\n",__FILE__,__LINE__,
+            Error_getText(error),
+            (Misc_getTimestamp()-t0)/US_PER_MS
+           );
   #endif
 
   // unlock
@@ -5838,6 +6116,1082 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
+* Name   : purgeStorage
+* Purpose: purge storage
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors purgeStorage(IndexHandle  *indexHandle,
+                          DatabaseId   storageId,
+                          ProgressInfo *progressInfo
+                         )
+{
+  String              name;
+  String              string;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  uint64              createdDateTime;
+  bool                transactionFlag;
+  bool                doneFlag;
+  #ifndef NDEBUG
+    ulong               deletedCounter;
+  #endif
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  name   = String_new();
+  string = String_new();
+
+  // get storage name, created date/time, entity id
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT storages.name, \
+                                   UNIXTIMESTAMP(entities.created) \
+                            FROM storages \
+                              LEFT JOIN entities ON entities.id=storages.entityId \
+                            WHERE storages.id=%lld \
+                           ",
+                           storageId
+                          );
+  if (error == ERROR_NONE)
+  {
+    if (!Database_getNextRow(&databaseQueryHandle,
+                             "%'S %llu",
+                             name,
+                             &createdDateTime
+                            )
+       )
+    {
+      error = ERRORX_(DATABASE,0,"prune storages");
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    String_clear(name);
+    createdDateTime = 0LL;
+  }
+
+  error = ERROR_NONE;
+
+  // clear storage
+  if (error == ERROR_NONE)
+  {
+    error = clearStorage(indexHandle,storageId,progressInfo);
+  }
+
+  // purge FTS entry
+  if (error == ERROR_NONE)
+  {
+    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                      indexHandle,
+                                      transactionFlag,
+    {
+      do
+      {
+        doneFlag = TRUE;
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "FTS_storages",
+                      "storageId=%lld",
+                      storageId
+                     );
+        if (error == ERROR_NONE)
+        {
+          if (isIndexInUse())
+          {
+            error = interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
+          }
+        }
+      }
+      while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
+    });
+  }
+
+  // delete storage
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM storages \
+                              WHERE id=%lld \
+                             ",
+                             storageId
+                            );
+  }
+
+  if (error != ERROR_NONE)
+  {
+    String_delete(string);
+    String_delete(name);
+    return error;
+  }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Removed deleted storage #%llu from index: %s, created at %s",
+              storageId,
+              String_cString(name),
+              (createdDateTime != 0LL) ? String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)) : "unknown"
+             );
+
+  // free resources
+  String_delete(string);
+  String_delete(name);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : pruneStorage
+* Purpose: prune storage if empty, prune entity/UUID
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneStorage(IndexHandle  *indexHandle,
+                          DatabaseId   storageId,
+                          ProgressInfo *progressInfo
+                         )
+{
+  String              name;
+  String              string;
+  IndexStates         indexState;
+  Errors              error;
+  DatabaseId          entityId;
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  name   = String_new();
+  string = String_new();
+
+  // get storage state
+  error = getStorageState(indexHandle,
+                          storageId,
+                          &indexState,
+                          NULL,  // lastCheckedDateTime
+                          NULL  // errorMessage
+                         );
+  if (error != ERROR_NONE)
+  {
+    String_delete(string);
+    String_delete(name);
+    return error;
+  }
+
+  // prune storage if not in error state/in use and empty
+  if ((indexState == INDEX_STATE_OK) && isEmptyStorage(indexHandle,storageId))
+  {
+    // get entity id
+    error = Database_getId(&indexHandle->databaseHandle,
+                           &entityId,
+                           "storages",
+                           "entityId",
+                           "WHERE id=%lld",
+                           storageId
+                          );
+    if (error != ERROR_NONE)
+    {
+      entityId = DATABASE_ID_NONE;
+    }
+
+    // purge storage
+    error = purgeStorage(indexHandle,storageId,progressInfo);
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      String_delete(name);
+      return error;
+    }
+
+    // prune entity
+    if (entityId != DATABASE_ID_NONE)
+    {
+      error = pruneEntity(indexHandle,
+                          NULL,  // doneFlag
+                          NULL,  // deletedCounter
+                          entityId
+                         );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        String_delete(name);
+        return error;
+      }
+    }
+  }
+
+  // free resources
+  String_delete(string);
+  String_delete(name);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : pruneStorages
+* Purpose: prune all empty storages which have state OK or ERROR
+* Input  : indexHandle  - index handle
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneStorages(IndexHandle  *indexHandle,
+                           ProgressInfo *progressInfo
+                          )
+{
+  Array         storageIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    storageId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all storage ids
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &storageIds,
+                          "storages",
+                          "id",
+                          "WHERE state IN (%u,%u) \
+                          ",
+                          INDEX_STATE_OK,
+                          INDEX_STATE_ERROR
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // prune storages
+  ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+  {
+    error = pruneStorage(indexHandle,storageId,progressInfo);
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&storageIds);
+
+  return ERROR_NONE;
+}
+
+#if 0
+//TODO: not used, remove
+/***********************************************************************\
+* Name   : refreshStoragesInfos
+* Purpose: refresh storages info
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          indexId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // clean-up
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
+                                 NULL,  // indexIds
+                                 0,  // indexIdCount,
+                                 INDEX_TYPE_SET_ANY,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
+                                 NULL,  // userName
+                                 NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextStorage(&indexQueryHandle,
+                                NULL,  // uuidId
+                                NULL,  // jobUUID
+                                NULL,  // entityId
+                                NULL,  // scheduleUUID
+                                NULL,  // hostName
+                                NULL,  // userName
+                                NULL,  // comment
+                                NULL,  // createdDateTime
+                                NULL,  // archiveType
+                                &storageId,
+                                NULL,  // storageName,
+                                NULL,  // dateTime
+                                NULL,  // size,
+                                NULL,  // indexState
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
+                               )
+          )
+    {
+      error = Index_updateStorageInfos(indexHandle,indexId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed storages infos"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed storages infos fail (error: %s)",
+                Error_getText(error)
+               );
+  }
+
+  // free resource
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : refreshEntitiesInfos
+* Purpose: refresh entities infos
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // clean-up
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 NULL,  // jobUUID,
+                                 NULL,  // scheduldUUID
+                                 ARCHIVE_TYPE_ANY,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextEntity(&indexQueryHandle,
+                               NULL,  // uuidId,
+                               NULL,  // jobUUID,
+                               NULL,  // scheduleUUID,
+                               &entityId,
+                               NULL,  // archiveType,
+                               NULL,  // createdDateTime,
+                               NULL,  // lastErrorMessage
+                               NULL,  // totalSize
+                               NULL,  // totalEntryCount
+                               NULL,  // totalEntrySize
+                               NULL  // lockedCount
+                              )
+          )
+    {
+      error = Index_updateEntityInfos(indexHandle,entityId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed entities infos"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed entities infos fail (error: %s)",
+                Error_getText(error)
+               );
+  }
+
+  // free resource
+
+  return error;
+}
+
+//TODO: not used, remove
+/***********************************************************************\
+* Name   : refreshUUIDsInfos
+* Purpose: refresh UUIDs infos
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          indexId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // clean-up
+  error = Index_initListUUIDs(&indexQueryHandle,
+                              indexHandle,
+                              INDEX_STATE_SET_ALL,
+                              INDEX_MODE_SET_ALL,
+                              NULL,  // name
+                              0LL,  // offset
+                              INDEX_UNLIMITED
+                             );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextUUID(&indexQueryHandle,
+                             &indexId,
+                             NULL,  // jobUUID
+                             NULL,  // lastCheckedDateTime
+                             NULL,  // lastErrorMessage
+                             NULL,  // size
+                             NULL,  // totalEntryCount
+                             NULL  // totalEntrySize
+                            )
+          )
+    {
+      error = Index_updateUUIDInfos(indexHandle,indexId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed UUID infos"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed UUID infos fail (error: %s)",
+                Error_getText(error)
+               );
+  }
+
+  // free resource
+
+  return error;
+}
+#endif
+
+/***********************************************************************\
+* Name   : rebuildNewestInfo
+* Purpose:
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+//TODO
+#if 0
+// not used
+LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       entryId;
+  String           name;
+  uint64           size;
+  uint64           timeModified;
+
+
+  error = Index_initListEntries(&indexQueryHandle,
+                                indexHandle,
+                                NULL,  // indexIds
+                                0L,  // indexIdCount
+                                NULL,  // entryIds
+                                0L,  // entryIdCount
+                                INDEX_TYPE_SET_ANY_ENTRY,
+                                NULL,  // entryPattern,
+                                FALSE,  // newestOnly
+                                FALSE,  // fragmentsCount
+                                INDEX_ENTRY_SORT_MODE_NONE,
+                                DATABASE_ORDERING_NONE,
+                                0LL,  // offset
+                                INDEX_UNLIMITED
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  name = String_new();
+  while (Index_getNextEntry(&indexQueryHandle,
+                            NULL,  // uuidId
+                            NULL,  // jobUUID
+                            NULL,  // entityId
+                            NULL,  // scheduleUUID
+                            NULL,  // hostName
+                            NULL,  // userName
+                            NULL,  // archiveType
+                            NULL,  // storageId
+                            NULL,  // storageName
+                            NULL,  // storageDateTime
+                            &entryId,
+                            name,
+                            NULL,  // destinationName
+                            NULL,  // fileSystemType
+                            &size,
+                            &timeModified,
+                            NULL,  // userId
+                            NULL,  // groupId
+                            NULL,  // permission
+                            NULL  // fragmentCount
+                           )
+        )
+  {
+  }
+  String_delete(name);
+  Index_doneList(&indexQueryHandle);
+
+  return ERROR_NONE;
+}
+#endif
+
+/***********************************************************************\
+* Name   : initIndexQueryHandle
+* Purpose: init index query handle
+* Input  : indexQueryHandle - index query handle
+*          indexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initIndexQueryHandle(IndexQueryHandle *indexQueryHandle, IndexHandle *indexHandle)
+{
+  assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+
+  indexQueryHandle->indexHandle = indexHandle;
+}
+
+/***********************************************************************\
+* Name   : doneIndexQueryHandle
+* Purpose: done index query handle
+* Input  : indexQueryHandle - index query handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
+{
+  assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+
+  UNUSED_VARIABLE(indexQueryHandle);
+}
+
+/***********************************************************************\
+* Name   : getIndexStateSetString
+* Purpose: get index state filter string
+* Input  : string        - string variable
+*          indexStateSet - index state set
+* Output : -
+* Return : string for IN statement
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getIndexStateSetString(String string, IndexStateSet indexStateSet)
+{
+  IndexStates indexState;
+
+  String_clear(string);
+  for (indexState = INDEX_STATE_MIN; indexState <= INDEX_STATE_MAX; indexState++)
+  {
+    if (IN_SET(indexStateSet,indexState))
+    {
+      if (!String_isEmpty(string)) String_appendChar(string,',');
+      String_appendFormat(string,"%d",indexState);
+    }
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : getIndexModeSetString
+* Purpose: get index mode filter string
+* Input  : string       - string variable
+*          indexModeSet - index mode set
+* Output : -
+* Return : string for IN statement
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getIndexModeSetString(String string, IndexModeSet indexModeSet)
+{
+  IndexModes indexMode;
+
+  String_clear(string);
+  for (indexMode = INDEX_MODE_MIN; indexMode <= INDEX_MODE_MAX; indexMode++)
+  {
+    if (IN_SET(indexModeSet,indexMode))
+    {
+      if (!String_isEmpty(string)) String_appendChar(string,',');
+      String_appendFormat(string,"%d",indexMode);
+    }
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : getFTSString
+* Purpose: get full-text-search filter string
+* Input  : string      - string variable
+*          patternText - pattern text
+* Output : -
+* Return : string for WHERE filter-statement
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getFTSString(String string, ConstString patternText)
+{
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  bool            addedTextFlag,addedPatternFlag;
+  size_t          iteratorVariable;
+  Codepoint       codepoint;
+
+  String_clear(string);
+
+  if (!String_isEmpty(patternText))
+  {
+    String_initTokenizer(&stringTokenizer,
+                         patternText,
+                         STRING_BEGIN,
+                         STRING_WHITE_SPACES,
+                         STRING_QUOTES,
+                         TRUE
+                        );
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      addedTextFlag    = FALSE;
+      addedPatternFlag = FALSE;
+      STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
+      {
+        if (isalnum(codepoint) || (codepoint >= 128))
+        {
+          if (addedPatternFlag)
+          {
+            String_appendChar(string,' ');
+            addedPatternFlag = FALSE;
+          }
+          String_appendCharUTF8(string,codepoint);
+          addedTextFlag = TRUE;
+        }
+        else
+        {
+          if (addedTextFlag && !addedPatternFlag)
+          {
+            String_appendChar(string,'*');
+            addedTextFlag    = FALSE;
+            addedPatternFlag = TRUE;
+          }
+        }
+      }
+      if (addedTextFlag && !addedPatternFlag)
+      {
+        String_appendChar(string,'*');
+      }
+    }
+    String_doneTokenizer(&stringTokenizer);
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : filterAppend
+* Purpose: append to SQL filter string
+* Input  : filterString - filter string
+*          condition    - append iff true
+*          concatenator - concatenator string
+*          format       - format string (printf-style)
+*          ...          - optional arguments for format
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void filterAppend(String filterString, bool condition, const char *concatenator, const char *format, ...)
+{
+  va_list arguments;
+
+  if (condition)
+  {
+    if (!String_isEmpty(filterString))
+    {
+      String_appendChar(filterString,' ');
+      String_appendCString(filterString,concatenator);
+      String_appendChar(filterString,' ');
+    }
+    va_start(arguments,format);
+    String_appendVFormat(filterString,format,arguments);
+    va_end(arguments);
+  }
+}
+
+/***********************************************************************\
+* Name   : appendOrdering
+* Purpose: append to SQL ordering string
+* Input  : filterString - filter string
+*          condition    - append iff true
+*          columnName   - column name
+*          ordering     - database ordering
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering)
+{
+  if (condition && (ordering != DATABASE_ORDERING_NONE))
+  {
+    if (String_isEmpty(orderString))
+    {
+      String_appendCString(orderString,"ORDER BY ");
+    }
+    else
+    {
+      String_appendChar(orderString,',');
+    }
+    String_appendCString(orderString,columnName);
+    switch (ordering)
+    {
+      case DATABASE_ORDERING_NONE:       /* nothing tod do */                       break;
+      case DATABASE_ORDERING_ASCENDING:  String_appendCString(orderString," ASC");  break;
+      case DATABASE_ORDERING_DESCENDING: String_appendCString(orderString," DESC"); break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+  }
+}
+
+// ----------------------------------------------------------------------
+
+#if 0
+//TODO: trigger or implementation here?
+/***********************************************************************\
+* Name   : insertUpdateNewestEntry
+* Purpose: insert or update newest entry
+* Input  : indexHandle     - index handle
+*          entryId         - entry database id
+*          uuidId          - index id of UUID
+*          entityId        - index id of entity
+*          name            - file name
+*          size            - size [bytes]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
+                                     DatabaseId  entryId,
+                                     DatabaseId  uuidId,
+                                     DatabaseId  entityId,
+                                     ConstString name,
+                                     IndexTypes  indexType,
+                                     uint64      size,
+                                     uint64      timeLastChanged,
+                                     uint32      userId,
+                                     uint32      groupId,
+                                     uint32      permission
+                                    )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          newestEntryId;
+  uint64              newestTimeLastChanged;
+
+  assert(indexHandle != NULL);
+  assert(entryId != DATABASE_ID_NONE);
+  assert(name != NULL);
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    // atomic add/get entry
+    DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      // get existing newest entry
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT id, \
+                                       UNIXTIMESTAMP(timeLastChanged) \
+                                FROM entriesNewest\
+                                WHERE name=%'S \
+                               ",
+                               name
+                              );
+      if (error == ERROR_NONE)
+
+      {
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %llu",
+                                 &newestEntryId,
+                                 &newestTimeLastChanged
+                                )
+           )
+        {
+          newestEntryId         = DATABASE_ID_NONE;
+          newestTimeLastChanged = 0LL;
+        }
+        Database_finalize(&databaseQueryHandle);
+      }
+
+      // insert/update newest
+      if (error == ERROR_NONE)
+      {
+        if (timeLastChanged > newestTimeLastChanged)
+        {
+          if (newestEntryId != DATABASE_ID_NONE)
+          {
+            // update
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "UPDATE entriesNewest \
+                                      SET entryId=%lld, \
+                                          uuidId=%lld, \
+                                          entityId=%lld, \
+                                          type=%u, \
+                                          timeLastChanged=%lld, \
+                                          userId=%u, \
+                                          groupId=%u, \
+                                          permission=%u \
+                                      WHERE id=%lld \
+                                     ",
+                                     entryId,
+                                     uuidId,
+                                     entityId,
+                                     indexType,
+                                     timeLastChanged,
+                                     userId,
+                                     groupId,
+                                     permission,
+                                     newestEntryId
+                                    );
+          }
+          else
+          {
+            // insert
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "INSERT INTO entriesNewest \
+                                        ( \
+                                         entryId, \
+                                         uuidId, \
+                                         entityId, \
+                                         type, \
+                                         name, \
+                                         timeLastChanged, \
+                                         userId, \
+                                         groupId, \
+                                         permission, \
+                                        ) \
+                                      VALUES \
+                                        ( \
+                                         %lld, \
+                                         %lld, \
+                                         %lld, \
+                                         %u, \
+                                         %'S, \
+                                         %llu, \
+                                         %u, \
+                                         %u, \
+                                         %u \
+                                        ) \
+                                     ",
+                                     entryId,
+                                     uuidId,
+                                     entityId,
+                                     indexType,
+                                     name,
+                                     timeLastChanged,
+                                     userId,
+                                     groupId,
+                                     permission
+                                    );
+          }
+        }
+      }
+    }
+
+    return error;
+  });
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : removeUpdateNewestEntry
+* Purpose: remove or update newest entry
+* Input  : indexHandle - index handle
+*          entryId     - entry database id
+*          name        - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
+                                     DatabaseId  entryId,
+                                     ConstString name
+                                    )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          newestEntryId;
+  uint64              newestTimeLastChanged;
+
+  assert(indexHandle != NULL);
+  assert(entryId != DATABASE_ID_NONE);
+  assert(name != NULL);
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM entriesNewest \
+                              WHERE id=%lld \
+                             ",
+                             entryId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "INSERT OR IGNORE INTO entriesNewest \
+                                ( \
+                                 entryId, \
+                                 uuidId, \
+                                 entityId, \
+                                 type, \
+                                 name, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission, \
+                                ) \
+                              SELECT id, \
+                                     uuidId, \
+                                     entityId, \
+                                     type, \
+                                     name, \
+                                     timeLastChanged, \
+                                     userId, \
+                                     groupId, \
+                                     permission \
+                               FROM entries \
+                               WHERE name=%'S \
+                               ORDER BY timeLastChanged DESC \
+                               LIMIT 0,1 \
+                             ",
+                             name
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+#endif
+
+/***********************************************************************\
 * Name   : indexThreadCode
 * Purpose: index upgrade and cleanup thread
 * Input  : -
@@ -5848,30 +7202,6 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
 
 LOCAL void indexThreadCode(void)
 {
-  /***********************************************************************\
-  * Name   : delayThread
-  * Purpose: delay thread and check quit flag
-  * Input  : sleepTime - sleep time [s]
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  auto void delayThread(uint sleepTime);
-  void delayThread(uint sleepTime)
-  {
-    uint n;
-
-    n = 0;
-    while (   !quitFlag
-           && (n < sleepTime)
-          )
-    {
-      Misc_udelay(10LL*US_PER_SECOND);
-      n += 10;
-    }
-  }
-
   IndexHandle         indexHandle;
   Errors              error;
   #ifdef INDEX_IMPORT_OLD_DATABASE
@@ -5884,20 +7214,29 @@ LOCAL void indexThreadCode(void)
     String              failFileName;
   #endif /* INDEX_IMPORT_OLD_DATABASE */
   DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          databaseId;
+  DatabaseId          storageId;
   String              storageName;
   uint                sleepTime;
 
   assert(indexDatabaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,INDEX_PURGE_TIMEOUT);
+  do
+  {
+    error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,INDEX_PURGE_TIMEOUT);
+    if ((error != ERROR_NONE) && !quitFlag)
+    {
+      Misc_mdelay(1*MS_PER_SECOND);
+    }
+  }
+  while ((error != ERROR_NONE) && !quitFlag);
+  if (quitFlag) return;
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
-                "Cannot open index database '$s' fail: %s",
+                "Cannot open index database '%s' fail: %s",
                 indexDatabaseFileName,
                 Error_getText(error)
                );
@@ -6002,13 +7341,26 @@ LOCAL void indexThreadCode(void)
   {
     #ifdef INDEX_SUPPORT_DELETE
       // remove deleted storages from index if maintenance time
-      if (   !isIndexInUse()
-          && isMaintenanceTime(Misc_getCurrentDateTime())
-         )
+      if (isMaintenanceTime(Misc_getCurrentDateTime()))
       {
         do
         {
           error = ERROR_NONE;
+
+          // wait until index is unused
+          while (   isIndexInUse()
+                 && isMaintenanceTime(Misc_getCurrentDateTime())
+                 && !quitFlag
+                )
+          {
+            Misc_udelay(5*US_PER_SECOND);
+          }
+          if (   !isMaintenanceTime(Misc_getCurrentDateTime())
+              || quitFlag
+             )
+          {
+            break;
+          }
 
           // find next storage to remove (Note: get single entry for remove to avoid long-running prepare!)
           INDEX_DOX(error,
@@ -6027,25 +7379,39 @@ LOCAL void indexThreadCode(void)
             {
               if (!Database_getNextRow(&databaseQueryHandle,
                                        "%lld %S",
-                                       &databaseId,
+                                       &storageId,
                                        storageName
                                       )
                  )
               {
-                databaseId = DATABASE_ID_NONE;
+                storageId = DATABASE_ID_NONE;
               }
 
               Database_finalize(&databaseQueryHandle);
             }
             else
             {
-              databaseId = DATABASE_ID_NONE;
+              storageId = DATABASE_ID_NONE;
             }
 
             return error;
           });
-          if (   isIndexInUse()
-              || !isMaintenanceTime(Misc_getCurrentDateTime())
+          if (   !isMaintenanceTime(Misc_getCurrentDateTime())
+              || quitFlag
+             )
+          {
+            break;
+          }
+
+          // wait until index is unused
+          while (   isIndexInUse()
+                 && isMaintenanceTime(Misc_getCurrentDateTime())
+                 && !quitFlag
+                )
+          {
+            Misc_udelay(5*US_PER_SECOND);
+          }
+          if (   !isMaintenanceTime(Misc_getCurrentDateTime())
               || quitFlag
              )
           {
@@ -6053,37 +7419,34 @@ LOCAL void indexThreadCode(void)
           }
 
           // remove from database
-          if (databaseId != DATABASE_ID_NONE)
+          if (storageId != DATABASE_ID_NONE)
           {
-            error = ERROR_NONE;
             do
             {
-              // clear storage
-              if ((error == ERROR_NONE) && !quitFlag)
-              {
-                error = clearStorage(&indexHandle,databaseId);
-              }
-
               // purge storage
-              if ((error == ERROR_NONE) && !quitFlag)
+              error = purgeStorage(&indexHandle,
+                                   storageId,
+                                   NULL  // progressInfo
+                                  );
+              if (error == ERROR_INTERRUPTED)
               {
-                error = purgeStorage(&indexHandle,databaseId);
-              }
-
-              if ((error == ERROR_INTERRUPTED) || isIndexInUse())
-              {
-                // sleep a short time
-                delayThread(5LL);
+                // wait until index is unused
+                while (   isIndexInUse()
+                       && isMaintenanceTime(Misc_getCurrentDateTime())
+                       && !quitFlag
+                      )
+                {
+                  Misc_udelay(5*US_PER_SECOND);
+                }
               }
             }
             while (   (error == ERROR_INTERRUPTED)
-                   && !isIndexInUse()
+                   && isMaintenanceTime(Misc_getCurrentDateTime())
                    && !quitFlag
                   );
           }
         }
-        while (   (databaseId != DATABASE_ID_NONE)
-               && !isIndexInUse()
+        while (   (storageId != DATABASE_ID_NONE)
                && isMaintenanceTime(Misc_getCurrentDateTime())
                && !quitFlag
               );
@@ -6904,6 +8267,7 @@ Errors Index_initAll(void)
 
   // init variables
   Semaphore_init(&indexLock,SEMAPHORE_TYPE_BINARY);
+  Array_init(&indexUsedBy,sizeof(ThreadInfo),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Semaphore_init(&indexPauseLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexClearStorageLock,SEMAPHORE_TYPE_BINARY);
@@ -6915,9 +8279,14 @@ Errors Index_initAll(void)
     Semaphore_done(&indexClearStorageLock);
     Semaphore_done(&indexThreadTrigger);
     Semaphore_done(&indexPauseLock);
+    Array_done(&indexUsedBy);
     Semaphore_done(&indexLock);
     return error;
   }
+
+  #ifdef INDEX_DEBUG_LOCK
+    memClear(indexUseCountLPWIds,sizeof(indexUseCountLPWIds));
+  #endif /* INDEX_DEBUG_LOCK */
 
   return ERROR_NONE;
 }
@@ -6929,6 +8298,7 @@ void Index_doneAll(void)
   Semaphore_done(&indexClearStorageLock);
   Semaphore_done(&indexThreadTrigger);
   Semaphore_done(&indexPauseLock);
+  Array_done(&indexUsedBy);
   Semaphore_done(&indexLock);
 }
 
@@ -7192,19 +8562,25 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
   }
 }
 
-Errors Index_init(const char *fileName)
+Errors Index_init(const char             *fileName,
+                  IndexIsMaintenanceTime isMaintenanceTimeFunction,
+                  void                   *isMaintenanceTimeUserData
+                 )
 {
-  bool        createFlag;
-  Errors      error;
-  int64       indexVersion;
-  String      oldDatabaseFileName;
-  uint        n;
-  IndexHandle indexHandleReference,indexHandle;
+  bool         createFlag;
+  Errors       error;
+  int64        indexVersion;
+  String       oldDatabaseFileName;
+  uint         n;
+  IndexHandle  indexHandleReference,indexHandle;
+  ProgressInfo progressInfo;
 
   assert(fileName != NULL);
 
   // init variables
-  quitFlag = FALSE;
+  indexIsMaintenanceTimeFunction = isMaintenanceTimeFunction;
+  indexIsMaintenanceTimeUserData = isMaintenanceTimeUserData;
+  quitFlag                       = FALSE;
 
   // get database file name
   indexDatabaseFileName = stringDuplicate(fileName);
@@ -7308,7 +8684,7 @@ Errors Index_init(const char *fileName)
                                 );
         String_delete(oldDatabaseFileName);
 
-        // corrupt -> create new
+        // outdated or corrupt -> create new
         createFlag = TRUE;
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
@@ -7394,15 +8770,17 @@ Errors Index_init(const char *fileName)
              );
 
   #ifdef INDEX_INTIIAL_CLEANUP
+    initProgress(&progressInfo,"Clean");
     (void)cleanUpDuplicateMeta(&indexHandle);
     (void)cleanUpIncompleteUpdate(&indexHandle);
     (void)cleanUpIncompleteCreate(&indexHandle);
     (void)cleanUpStorageNoName(&indexHandle);
     (void)cleanUpStorageNoEntity(&indexHandle);
     (void)cleanUpNoUUID(&indexHandle);
-    (void)pruneStorages(&indexHandle);
+    (void)pruneStorages(&indexHandle,&progressInfo);
     (void)pruneEntities(&indexHandle,NULL,NULL);
     (void)pruneUUIDs(&indexHandle,NULL,NULL);
+    doneProgress(&progressInfo);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
 
@@ -7464,12 +8842,17 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 
 void Index_beginInUse(void)
 {
-  ATOMIC_INCREMENT(indexUseCount);
+  addIndexInUseThreadInfo();
 }
 
 void Index_endInUse(void)
 {
-  ATOMIC_DECREMENT(indexUseCount);
+  removeIndexInUseThreadInfo();
+}
+
+bool Index_isIndexInUse(void)
+{
+  return isIndexInUse();
 }
 
 #ifdef NDEBUG
@@ -10458,10 +11841,11 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                           IndexId     entityId
                          )
 {
-  Errors              error;
-  DatabaseId          uuidId;
-  DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          storageId;
+  Errors        error;
+  DatabaseId    uuidId;
+  Array         storageIds;
+  ArrayIterator arrayIterator;
+  DatabaseId    storageId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
@@ -10474,6 +11858,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
+    // init variables
+    Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
     INDEX_DOX(error,
               indexHandle,
     {
@@ -10491,35 +11878,47 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
         return error;
       }
 
-      // delete storages
-      error = Database_prepare(&databaseQueryHandle,
-                               &indexHandle->databaseHandle,
-                               "SELECT storages.id \
-                                FROM storages \
-                                  LEFT JOIN entities ON entities.id=storages.entityId \
-                                WHERE entities.id=%lld \
-                               ",
-                               Index_getDatabaseId(entityId)
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      while (   Database_getNextRow(&databaseQueryHandle,
-                                    "%lld",
-                                    &storageId
-                                   )
-             && (error == ERROR_NONE)
-            )
-      {
-        error = Index_deleteStorage(indexHandle,INDEX_ID_STORAGE(storageId));
-      }
-      Database_finalize(&databaseQueryHandle);
+      // get storages to delete
+      error = Database_getIds(&indexHandle->databaseHandle,
+                              &storageIds,
+                              "storages",
+                              "storages.id",
+                              "LEFT JOIN entities ON entities.id=storages.entityId \
+                               WHERE entities.id=%lld \
+                              ",
+                              Index_getDatabaseId(entityId)
+                             );
       if (error != ERROR_NONE)
       {
         return error;
       }
 
+      return ERROR_NONE;
+    });
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      return error;
+    }
+
+    // delete storages
+    if (error == ERROR_NONE)
+    {
+fprintf(stderr,"%s, %d: %llu\n",__FILE__,__LINE__,storageId);
+      ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+      {
+        error = Index_deleteStorage(indexHandle,INDEX_ID_STORAGE(storageId));
+      }
+    }
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      return error;
+    }
+
+    INDEX_DOX(error,
+              indexHandle,
+    {
       // set deleted flag
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -10548,11 +11947,20 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 
       return ERROR_NONE;
     });
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      return error;
+    }
+
     if (error == ERROR_NONE)
     {
       // trigger clean-up thread
       Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
     }
+
+    // free resources
+    Array_done(&storageIds);
   }
   else
   {
@@ -10922,6 +12330,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexModeSet          indexModeSet,
                               ConstString           hostName,
                               ConstString           userName,
+//TODO: name+pattern
                               ConstString           name,
                               IndexStorageSortModes sortMode,
                               DatabaseOrdering      ordering,
@@ -11175,7 +12584,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     *storageId
                        )
 {
-  Errors error;
+  Errors     error;
+  DatabaseId databaseId;
 
   assert(indexHandle != NULL);
   assert(storageId != NULL);
@@ -11237,7 +12647,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       {
         return error;
       }
-      (*storageId) = INDEX_ID_STORAGE(Database_getLastRowId(&indexHandle->databaseHandle));
+      databaseId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // insert FTS storage
       error = Database_execute(&indexHandle->databaseHandle,
@@ -11254,16 +12664,26 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                    %'S \
                                   ) \
                                ",
-                               Index_getDatabaseId(*storageId),
+                               databaseId,
                                storageName
                               );
       if (error != ERROR_NONE)
       {
+        (void)Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "DELETE FROM storages \
+                                WHERE id=%lld \
+                               ",
+                               databaseId
+                              );
         return error;
       }
 
       return ERROR_NONE;
     });
+
+    (*storageId) = INDEX_ID_STORAGE(databaseId);
   }
   else
   {
@@ -11301,6 +12721,25 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   return error;
 }
 
+Errors Index_clearStorage(IndexHandle *indexHandle,
+                          IndexId     storageId
+                         )
+{
+  assert(indexHandle != NULL);
+  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  return clearStorage(indexHandle,
+                      Index_getDatabaseId(storageId),
+                      NULL  // progressInfo
+                     );
+}
+
 Errors Index_updateStorage(IndexHandle  *indexHandle,
                            IndexId      storageId,
                            ConstString  hostName,
@@ -11308,7 +12747,8 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                            ConstString  storageName,
                            uint64       dateTime,
                            uint64       size,
-                           ConstString  comment
+                           ConstString  comment,
+                           bool         updateNewest
                           )
 {
   Errors error;
@@ -11449,6 +12889,18 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
 
       return ERROR_NONE;
     });
+
+    if (updateNewest)
+    {
+      error = addStorageToNewest(indexHandle,
+                                 Index_getDatabaseId(storageId),
+                                 NULL  // progressInfo
+                                );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+    }
   }
   else
   {
@@ -11456,14 +12908,15 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_STORAGE_UPDATE storageId=%lld hostName=%'S userName=%'S storageName=%'S dateTime=%llu storageSize=%llu comment=%'S",
+                                    "INDEX_STORAGE_UPDATE storageId=%lld hostName=%'S userName=%'S storageName=%'S dateTime=%llu storageSize=%llu comment=%'S updateNewest=%y",
                                     storageId,
                                     hostName,
                                     userName,
                                     storageName,
                                     dateTime,
                                     size,
-                                    comment
+                                    comment,
+                                    updateNewest
                                    );
   }
 
@@ -11585,6 +13038,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
       {
         return error;
       }
+//fprintf(stderr,"%s, %d: deleted storageId=%lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
 #if 0
 fprintf(stderr,"%s, %d: deleted storage %lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
 fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu %llu  totalDirectory=%lu  totalLink=%lu  totalHardlink=%lu %llu totalSpecial=%lu\n",__FILE__,__LINE__,
@@ -11602,6 +13056,26 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
 );
 #endif
 
+      return ERROR_NONE;
+    });
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    // remove from newest entries
+    error = removeStorageFromNewest(indexHandle,
+                                    Index_getDatabaseId(storageId),
+                                    NULL  // progressInfo
+                                   );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    INDEX_DOX(error,
+              indexHandle,
+    {
       // update aggregates
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -11651,11 +13125,13 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
 
       return ERROR_NONE;
     });
-    if (error == ERROR_NONE)
+    if (error != ERROR_NONE)
     {
-      // trigger clean-up thread
-      Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+      return error;
     }
+
+    // trigger clean-up thread
+    Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
   }
   else
   {
@@ -11669,6 +13145,42 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
   }
 
   return error;
+}
+
+bool Index_hasDeletedStorages(IndexHandle *indexHandle,
+                              ulong       *deletedStorageCount
+                             )
+{
+  Errors error;
+  int64  n;
+
+  assert(indexHandle != NULL);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_getInteger64(&indexHandle->databaseHandle,
+                                   &n,
+                                   "storages",
+                                   "COUNT(id)",
+                                   "WHERE deletedFlag=1"
+                                  );
+    });
+    if (error != ERROR_NONE)
+    {
+      return FALSE;
+    }
+  }
+  else
+  {
+    // slave mode: no deleted
+    n = 0LL;
+  }
+  if (deletedStorageCount != NULL) (*deletedStorageCount) = (ulong)n;
+
+  return (n > 0LL);
 }
 
 bool Index_isDeletedStorage(IndexHandle *indexHandle,
@@ -11728,22 +13240,6 @@ bool Index_isEmptyStorage(IndexHandle *indexHandle,
   }
 
   return emptyFlag;
-}
-
-Errors Index_clearStorage(IndexHandle *indexHandle,
-                          IndexId     storageId
-                         )
-{
-  assert(indexHandle != NULL);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  return clearStorage(indexHandle,Index_getDatabaseId(storageId));
 }
 
 Errors Index_getStorage(IndexHandle *indexHandle,
@@ -14261,26 +15757,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
         return error;
       }
 
-#if 0
-      // update newest
-      error = insertUpdateNewestEntry(indexHandle,
-                                      entryId,
-                                      Index_getDatabaseId(uuidId),
-                                      Index_getDatabaseId(entityId),
-                                      name,
-                                      INDEX_TYPE_FILE,
-                                      size,
-                                      timeLastChanged,
-                                      userId,
-                                      groupId,
-                                      permission
-                                     );
-      if (error == ERROR_NONE)
-      {
-        return error;
-      }
-#endif
-
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
                                                Index_getDatabaseId(storageId),
@@ -14520,26 +15996,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
         return error;
       }
 
-#if 0
-      // update newest
-      error = insertUpdateNewestEntry(indexHandle,
-                                      entryId,
-                                      Index_getDatabaseId(uuidId),
-                                      Index_getDatabaseId(entityId),
-                                      name,
-                                      INDEX_TYPE_FILE,
-                                      size,
-                                      0LL,  // timeLastChanged,
-                                      0,  // userId,
-                                      0,  // groupId,
-                                      0  // permission
-                                     );
-      if (error == ERROR_NONE)
-      {
-        return error;
-      }
-#endif
-
       #ifndef NDEBUG
         verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%lld AND totalEntrySize<0",Index_getDatabaseId(storageId));
         verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%lld AND totalFileSize<0",Index_getDatabaseId(storageId));
@@ -14705,26 +16161,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       {
         return error;
       }
-
-#if 0
-      // update newest
-      error = insertUpdateNewestEntry(indexHandle,
-                                      entryId,
-                                      Index_getDatabaseId(uuidId),
-                                      Index_getDatabaseId(entityId),
-                                      name,
-                                      INDEX_TYPE_DIRECTORY,
-                                      0LL,
-                                      timeLastChanged,
-                                      userId,
-                                      groupId,
-                                      permission
-                                     );
-      if (error == ERROR_NONE)
-      {
-        return error;
-      }
-#endif
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
@@ -14911,26 +16347,6 @@ Errors Index_addLink(IndexHandle *indexHandle,
       {
         return error;
       }
-
-#if 0
-      // update newest
-      error = insertUpdateNewestEntry(indexHandle,
-                                      entryId,
-                                      Index_getDatabaseId(uuidId),
-                                      Index_getDatabaseId(entityId),
-                                      linkName,
-                                      INDEX_TYPE_LINK,
-                                      0LL,
-                                      timeLastChanged,
-                                      userId,
-                                      groupId,
-                                      permission
-                                     );
-      if (error == ERROR_NONE)
-      {
-        return error;
-      }
-#endif
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
@@ -15158,26 +16574,6 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
         return error;
       }
 
-#if 0
-      // update newest
-      error = insertUpdateNewestEntry(indexHandle,
-                                      entryId,
-                                      Index_getDatabaseId(uuidId),
-                                      Index_getDatabaseId(entityId),
-                                      name,
-                                      INDEX_TYPE_HARDLINK,
-                                      size,
-                                      timeLastChanged,
-                                      userId,
-                                      groupId,
-                                      permission
-                                     );
-      if (error == ERROR_NONE)
-      {
-        return error;
-      }
-#endif
-
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
                                                Index_getDatabaseId(storageId),
@@ -15373,26 +16769,6 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       {
         return error;
       }
-
-#if 0
-      // update newest
-      error = insertUpdateNewestEntry(indexHandle,
-                                      entryId,
-                                      Index_getDatabaseId(uuidId),
-                                      Index_getDatabaseId(entityId),
-                                      name,
-                                      INDEX_TYPE_SPECIAL,
-                                      0LL,
-                                      timeLastChanged,
-                                      userId,
-                                      groupId,
-                                      permission
-                                     );
-      if (error == ERROR_NONE)
-      {
-        return error;
-      }
-#endif
 
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
@@ -15710,7 +17086,10 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    return pruneStorage(indexHandle,Index_getDatabaseId(indexId));
+    return pruneStorage(indexHandle,
+                        Index_getDatabaseId(indexId),
+                        NULL  // progressInfo
+                       );
   });
 
   return error;
@@ -15877,6 +17256,40 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
 
   return error;
 }
+
+#ifndef NDEBUG
+void Index_debugPrintInUseInfo(void)
+{
+  ArrayIterator arrayIterator;
+  ThreadInfo    threadInfo;
+
+  SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    fprintf(stderr,
+            "Index in use by: %lu threads\n",
+            Array_length(&indexUsedBy)
+           );
+    ARRAY_ITERATE(&indexUsedBy,arrayIterator,threadInfo)
+    {
+      fprintf(stderr,
+              "  %s: %s\n",
+              Thread_getIdString(threadInfo.threadId),
+              Thread_getName(threadInfo.threadId)
+             );
+
+      #ifdef HAVE_BACKTRACE
+        debugDumpStackTrace(stderr,
+                            2,
+                            DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
+                            threadInfo.stackTrace,
+                            threadInfo.stackTraceSize,
+                            0
+                           );
+      #endif /* HAVE_BACKTRACE */
+    }
+  }
+}
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
