@@ -30,6 +30,12 @@
 #endif
 #include <assert.h>
 
+#if   defined(PLATFORM_LINUX)
+  #include <unistd.h>
+  #include <sys/syscall.h>
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
+
 #ifndef NDEBUG
   #include "common/lists.h"
 #endif /* not NDEBUG */
@@ -418,9 +424,24 @@ void __dprintf__(const char *__fileName__,
                  ...
                 )
 {
+  #if   defined(PLATFORM_LINUX)
+    pid_t threadLWPId;
+  #elif defined(PLATFORM_WINDOWS)
+    return THREAD_LPW_ID_NONE;
+  #endif /* PLATFORM_... */
   va_list arguments;
 
-  fprintf(stdout,"DEBUG %s, %lu: ",__fileName__,__lineNb__);
+  #if   defined(PLATFORM_LINUX)
+    #ifdef SYS_gettid
+      threadLWPId = syscall(SYS_gettid);
+    #else
+      threadLWPId = 0;
+    #endif
+  #elif defined(PLATFORM_WINDOWS)
+    threadLWPId = 0;
+  #endif /* PLATFORM_... */
+
+  fprintf(stdout,"DEBUG [%6u] %s, %lu: ",threadLWPId,__fileName__,__lineNb__);
   va_start(arguments,format);
   vfprintf(stdout,format,arguments);
   va_end(arguments);
