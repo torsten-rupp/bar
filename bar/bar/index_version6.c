@@ -587,12 +587,12 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
   error = ERROR_NONE;
 
   // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storage");     importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"files");       importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"images");      importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"directories"); importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"links");       importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"special");     importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"storage");     progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"files");       progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"images");      progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"directories"); progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"links");       progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"special");     progressStep(&importProgressInfo);
   DIMPORT("fixed broken ids");
 
   // transfer uuids (if not exists, ignore errors)
@@ -605,7 +605,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(importProgress,NULL),  // progress
+                           CALLBACK_(progressStep,&importProgressInfo),  // progress
                            NULL  // filter
                           );
   DIMPORT("imported UUIDs");
@@ -760,7 +760,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       },NULL),
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(importProgress,NULL),  // progress
+                                                                                                                      CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                                                       "WHERE entryId=%lld \
                                                                                                                        GROUP BY entryId \
                                                                                                                       ",
@@ -819,7 +819,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       },NULL),
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(importProgress,NULL),  // progress
+                                                                                                                      CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                                                       "WHERE entryId=%lld \
                                                                                                                        GROUP BY entryId \
                                                                                                                       ",
@@ -846,7 +846,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       },NULL),
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(importProgress,NULL),  // progress
+                                                                                                                      CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                                                       "WHERE entryId=%lld \
                                                                                                                        GROUP BY entryId \
                                                                                                                       ",
@@ -873,7 +873,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       },NULL),
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(importProgress,NULL),  // progress
+                                                                                                                      CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                                                       "WHERE entryId=%lld \
                                                                                                                        GROUP BY entryId \
                                                                                                                       ",
@@ -928,7 +928,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       },NULL),
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(importProgress,NULL),  // progress
+                                                                                                                      CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                                                       "WHERE entryId=%lld \
                                                                                                                        GROUP BY entryId \
                                                                                                                       ",
@@ -955,7 +955,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                                                       },NULL),
                                                                                                                       CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                       CALLBACK_(NULL,NULL),  // pause
-                                                                                                                      CALLBACK_(importProgress,NULL),  // progress
+                                                                                                                      CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                                                       "WHERE entryId=%lld \
                                                                                                                        GROUP BY entryId \
                                                                                                                       ",
@@ -985,7 +985,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(importProgress,NULL),  // progress
+                                                          CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -1007,12 +1007,11 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
-                             CALLBACK_(importProgress,NULL),  // progress
+                             CALLBACK_(progressStep,&importProgressInfo),  // progress
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
   {
-    doneImportProgress();
     return error;
   }
 
@@ -1181,7 +1180,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
-                                                                                         CALLBACK_(importProgress,NULL),  // progress
+                                                                                         CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                          "WHERE entryId=%lld \
                                                                                           GROUP BY entryId \
                                                                                          ",
@@ -1236,7 +1235,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
-                                                                                         CALLBACK_(importProgress,NULL),  // progress
+                                                                                         CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                          "WHERE entryId=%lld \
                                                                                           GROUP BY entryId \
                                                                                          ",
@@ -1264,7 +1263,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
-                                                                                         CALLBACK_(importProgress,NULL),  // progress
+                                                                                         CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                          "WHERE entryId=%lld \
                                                                                           GROUP BY entryId \
                                                                                          ",
@@ -1291,7 +1290,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
-                                                                                         CALLBACK_(importProgress,NULL),  // progress
+                                                                                         CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                          "WHERE entryId=%lld \
                                                                                           GROUP BY entryId \
                                                                                          ",
@@ -1346,7 +1345,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
-                                                                                         CALLBACK_(importProgress,NULL),  // progress
+                                                                                         CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                          "WHERE entryId=%lld \
                                                                                           GROUP BY entryId \
                                                                                          ",
@@ -1373,7 +1372,7 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
-                                                                                         CALLBACK_(importProgress,NULL),  // progress
+                                                                                         CALLBACK_(progressStep,&importProgressInfo),  // progress
                                                                                          "WHERE entryId=%lld \
                                                                                           GROUP BY entryId \
                                                                                          ",
@@ -1403,12 +1402,11 @@ LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                return error;
                              },NULL),
                              CALLBACK_(NULL,NULL),
-                             CALLBACK_(importProgress,NULL),  // progress
+                             CALLBACK_(progressStep,&importProgressInfo),  // progress
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)
   {
-    doneImportProgress();
     return error;
   }
 

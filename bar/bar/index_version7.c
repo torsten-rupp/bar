@@ -657,12 +657,12 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   error = ERROR_NONE;
 
   // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storage");     importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"files");       importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"images");      importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"directories"); importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"links");       importProgress(NULL);
-  fixBrokenIds(oldIndexHandle,"special");     importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"storage");     progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"files");       progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"images");      progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"directories"); progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"links");       progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"special");     progressStep(&importProgressInfo);
   DIMPORT("fixed broken ids");
 
   // transfer uuids (if not exists, ignore errors)
@@ -675,7 +675,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(importProgress,NULL),  // progress
+                           CALLBACK_(progressStep,&importProgressInfo),  // progress
                            NULL  // filter
                           );
   DIMPORT("imported UUIDs");
@@ -760,7 +760,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(importProgress,NULL),
+                                                          CALLBACK_(progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -991,7 +991,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(importProgress,NULL),
+                                                          CALLBACK_(progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -1010,7 +1010,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
-                             CALLBACK_(importProgress,NULL),
+                             CALLBACK_(progressStep,NULL),
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
@@ -1328,7 +1328,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(NULL,NULL),  // pause
-                             CALLBACK_(importProgress,NULL),
+                             CALLBACK_(progressStep,NULL),
                              "WHERE entityId IS NULL"
                             );
   String_delete(storageIdsString);
