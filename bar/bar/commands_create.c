@@ -157,7 +157,11 @@ typedef struct
   FileTypes  fileType;
   String     name;                                                // file/image/directory/link/special name
   StringList nameList;                                            // list of hard link names
-  FileInfo   fileInfo;
+  union
+  {
+    FileInfo   fileInfo;
+    DeviceInfo deviceInfo;
+  };
   uint       fragmentNumber;                                      // fragment number [0..n-1]
   uint       fragmentCount;                                       // fragment count
   uint64     fragmentOffset;
@@ -1076,6 +1080,71 @@ LOCAL void appendFileToEntryList(MsgQueue       *entryMsgQueue,
 }
 
 /***********************************************************************\
+* Name   : appendImageToEntryList
+* Purpose: append image to entry list
+* Input  : entryMsgQueue    - entry message queue
+*          entryType        - entry type
+*          name             - name (will be copied!)
+*          deviceInfo       - device info
+*          maxFragmentSize  - max. fragment size or 0
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void appendImageToEntryList(MsgQueue         *entryMsgQueue,
+                                  EntryTypes       entryType,
+                                  ConstString      name,
+                                  const DeviceInfo *deviceInfo,
+                                  uint64           maxFragmentSize
+                                 )
+{
+  uint     fragmentCount;
+  uint     fragmentNumber;
+  uint64   fragmentOffset,fragmentSize;
+  EntryMsg entryMsg;
+
+  assert(entryMsgQueue != NULL);
+  assert(name != NULL);
+  assert(deviceInfo != NULL);
+
+  fragmentCount  = (maxFragmentSize > 0LL)
+                     ? (deviceInfo->size+maxFragmentSize-1)/maxFragmentSize
+                     : 1;
+  fragmentNumber = 0;
+  fragmentOffset = 0LL;
+  do
+  {
+    // calculate fragment size
+    fragmentSize = ((maxFragmentSize > 0LL) && ((deviceInfo->size-fragmentOffset) > maxFragmentSize))
+                     ? maxFragmentSize
+                     : deviceInfo->size-fragmentOffset;
+
+    // init
+    entryMsg.entryType         = entryType;
+    entryMsg.fileType          = FILE_TYPE_SPECIAL;
+    entryMsg.name              = String_duplicate(name);
+    StringList_init(&entryMsg.nameList);
+    memCopyFast(&entryMsg.deviceInfo,sizeof(entryMsg.deviceInfo),deviceInfo,sizeof(DeviceInfo));
+    entryMsg.fragmentNumber    = fragmentNumber;
+    entryMsg.fragmentCount     = fragmentCount;
+    entryMsg.fragmentOffset    = fragmentOffset;
+    entryMsg.fragmentSize      = fragmentSize;
+
+    // put into message queue
+    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    {
+      freeEntryMsg(&entryMsg,NULL);
+    }
+
+    // next fragment offset
+    fragmentNumber++;
+    fragmentOffset += fragmentSize;
+  }
+  while (fragmentOffset < deviceInfo->size);
+}
+
+/***********************************************************************\
 * Name   : appendDirectoryToEntryList
 * Purpose: append directory to entry list
 * Input  : entryMsgQueue - entry message queue
@@ -1232,30 +1301,44 @@ LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
 * Input  : entryMsgQueue - entry message queue
 *          entryType     - entry type
 *          name          - name (will be copied!)
-*          fileInfo      - file info
+*          fileInfo      - file info or NULL
+*          deviceInfo    - device info or NULL
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendSpecialToEntryList(MsgQueue       *entryMsgQueue,
-                                    EntryTypes     entryType,
-                                    ConstString    name,
-                                    const FileInfo *fileInfo
+LOCAL void appendSpecialToEntryList(MsgQueue         *entryMsgQueue,
+                                    EntryTypes       entryType,
+                                    ConstString      name,
+                                    const FileInfo   *fileInfo,
+                                    const DeviceInfo *deviceInfo
                                    )
 {
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
-  assert(fileInfo != NULL);
+  assert((fileInfo != NULL) || (deviceInfo != NULL));
 
   // init
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_SPECIAL;
   entryMsg.name           = String_duplicate(name);
   StringList_init(&entryMsg.nameList);
-  memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
+  switch (entryType)
+  {
+    case ENTRY_TYPE_FILE:
+      assert(fileInfo != NULL);
+      memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
+      break;
+    case ENTRY_TYPE_IMAGE:
+      assert(deviceInfo != NULL);
+      memCopyFast(&entryMsg.deviceInfo,sizeof(entryMsg.deviceInfo),deviceInfo,sizeof(DeviceInfo));
+      break;
+    case ENTRY_TYPE_UNKNOWN:
+      break;
+  }
   entryMsg.fragmentNumber = 0;
   entryMsg.fragmentCount  = 0;
   entryMsg.fragmentOffset = 0LL;
@@ -2834,7 +2917,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                            ENTRY_TYPE_FILE,
                                            name,
-                                           &fileInfo
+                                           &fileInfo,
+                                           NULL  // deviceInfo
                                           );
                 }
               }
@@ -3226,11 +3310,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                         }
 
                                         // add to entry list
-                                        appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                                 ENTRY_TYPE_IMAGE,
-                                                                 name,
-                                                                 &fileInfo
-                                                                );
+                                        appendImageToEntryList(&createInfo->entryMsgQueue,
+                                                               ENTRY_TYPE_IMAGE,
+                                                               name,
+                                                               &deviceInfo,
+                                                               !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                              );
                                       }
                                     }
                                     break;
@@ -3349,19 +3434,43 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_FILE,
                                                                fileName,
-                                                               &fileInfo
+                                                               &fileInfo,
+                                                               NULL  // deviceInfo
                                                               );
                                     }
                                     break;
                                   case ENTRY_TYPE_IMAGE:
                                     if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                     {
+                                      DeviceInfo deviceInfo;
+
+                                      // get device info
+                                      error = Device_getInfo(&deviceInfo,fileName,TRUE);
+                                      if (error != ERROR_NONE)
+                                      {
+                                        printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                                        logMessage(createInfo->logHandle,
+                                                   LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                                   "Access denied '%s' (error: %s)",
+                                                   String_cString(name),
+                                                   Error_getText(error)
+                                                  );
+
+                                        STATUS_INFO_UPDATE(createInfo,name,NULL)
+                                        {
+                                          createInfo->statusInfo.error.count++;
+                                        }
+
+                                        continue;
+                                      }
+
                                       // add to entry list
-                                      appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                               ENTRY_TYPE_IMAGE,
-                                                               fileName,
-                                                               &fileInfo
-                                                              );
+                                      appendImageToEntryList(&createInfo->entryMsgQueue,
+                                                             ENTRY_TYPE_IMAGE,
+                                                             fileName,
+                                                             &deviceInfo,
+                                                             !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                            );
                                     }
                                     break;
                                   default:
@@ -3488,11 +3597,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             }
 
                             // add to entry list
-                            appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                     ENTRY_TYPE_IMAGE,
-                                                     name,
-                                                     &fileInfo
-                                                    );
+                            appendImageToEntryList(&createInfo->entryMsgQueue,
+                                                   ENTRY_TYPE_IMAGE,
+                                                   name,
+                                                   &deviceInfo,
+                                                   !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                  );
                           }
                         }
                         break;
@@ -3641,7 +3751,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                    ENTRY_TYPE_FILE,
                                                    name,
-                                                   &fileInfo
+                                                   &fileInfo,
+                                                   NULL  // deviceInfo
                                                   );
                         }
                         break;
@@ -3672,11 +3783,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             }
 
                             // add to entry list
-                            appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                     ENTRY_TYPE_IMAGE,
-                                                     name,
-                                                     &fileInfo
-                                                    );
+                            appendImageToEntryList(&createInfo->entryMsgQueue,
+                                                   ENTRY_TYPE_IMAGE,
+                                                   name,
+                                                   &deviceInfo,
+                                                   !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                  );
                           }
                         }
                         break;
@@ -5943,7 +6055,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 * Purpose: store an image entry into archive
 * Input  : createInfo     - create info structure
 *          deviceName     - device name
-*          fileInfo       - file info
+*          deviceInfo     - device info
 *          fragmentNumber - fragment number [0..n-1]
 *          fragmentCount  - fragment count
 *          fragmentOffset - fragment offset [blocks]
@@ -5955,20 +6067,18 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeImageEntry(CreateInfo     *createInfo,
-                             ConstString    deviceName,
-//TODO: use deviceInfo
-                             const FileInfo *fileInfo,
-                             uint           fragmentNumber,
-                             uint           fragmentCount,
-                             uint64         fragmentOffset,
-                             uint64         fragmentSize,
-                             byte           *buffer,
-                             uint           bufferSize
+LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
+                             ConstString      deviceName,
+                             const DeviceInfo *deviceInfo,
+                             uint             fragmentNumber,
+                             uint             fragmentCount,
+                             uint64           fragmentOffset,
+                             uint64           fragmentSize,
+                             byte             *buffer,
+                             uint             bufferSize
                             )
 {
   Errors           error;
-  DeviceInfo       deviceInfo;
   uint             maxBufferBlockCount;
   DeviceHandle     deviceHandle;
   bool             fileSystemFlag;
@@ -5988,60 +6098,24 @@ LOCAL Errors storeImageEntry(CreateInfo     *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(deviceName != NULL);
-  assert(fileInfo != NULL);
+  assert(deviceInfo != NULL);
   assert((fragmentCount == 0) || (fragmentNumber < fragmentCount));
   assert(buffer != NULL);
 
-//TODO:
-UNUSED_VARIABLE(fileInfo);
-
   printInfo(1,"Add image     '%s'...",String_cString(deviceName));
 
-  // get device info
-  error = Device_getInfo(&deviceInfo,deviceName,TRUE);
-  if (error != ERROR_NONE)
-  {
-    if (createInfo->jobOptions->skipUnreadableFlag)
-    {
-      printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,
-                 LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Access denied '%s' (error: %s)",
-                 String_cString(deviceName),
-                 Error_getText(error)
-                );
-
-      STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
-      {
-        createInfo->statusInfo.error.count++;
-      }
-
-      return ERROR_NONE;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      printError("Cannot open device '%s' (error: %s)",
-                 String_cString(deviceName),
-                 Error_getText(error)
-                );
-
-      return error;
-    }
-  }
-
   // check device block size, get max. blocks in buffer
-  if (deviceInfo.blockSize > bufferSize)
+  if (deviceInfo->blockSize > bufferSize)
   {
     printInfo(1,"FAIL\n");
     printError("Device block size %llu on '%s' is too big (max: %llu)",
-               deviceInfo.blockSize,
+               deviceInfo->blockSize,
                String_cString(deviceName),
                bufferSize
               );
     return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
-  if (deviceInfo.blockSize <= 0)
+  if (deviceInfo->blockSize <= 0)
   {
     printInfo(1,"FAIL\n");
     printError("Invalid device block size for '%s'",
@@ -6049,8 +6123,8 @@ UNUSED_VARIABLE(fileInfo);
               );
     return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
-  assert(deviceInfo.blockSize > 0);
-  maxBufferBlockCount = bufferSize/deviceInfo.blockSize;
+  assert(deviceInfo->blockSize > 0);
+  maxBufferBlockCount = bufferSize/deviceInfo->blockSize;
 
   // open device
   error = Device_open(&deviceHandle,deviceName,DEVICE_OPEN_READ);
@@ -6069,7 +6143,7 @@ UNUSED_VARIABLE(fileInfo);
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
         createInfo->statusInfo.error.count++;
-        createInfo->statusInfo.error.size += (uint64)deviceInfo.size;
+        createInfo->statusInfo.error.size += (uint64)deviceInfo->size;
       }
 
       return ERROR_NONE;
@@ -6099,7 +6173,7 @@ UNUSED_VARIABLE(fileInfo);
   }
 
   // init fragment
-  fragmentInit(createInfo,deviceName,deviceInfo.size,fragmentCount);
+  fragmentInit(createInfo,deviceName,deviceInfo->size,fragmentCount);
 
   if (!createInfo->storageFlags.noStorage)
   {
@@ -6108,7 +6182,7 @@ UNUSED_VARIABLE(fileInfo);
     archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
-    if (   (deviceInfo.size > globalOptions.compressMinFileSize)
+    if (   (deviceInfo->size > globalOptions.compressMinFileSize)
         && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta)
        )
     {
@@ -6116,7 +6190,7 @@ UNUSED_VARIABLE(fileInfo);
     }
 
     // check if file data should be byte compressed
-    if (   (deviceInfo.size > globalOptions.compressMinFileSize)
+    if (   (deviceInfo->size > globalOptions.compressMinFileSize)
         && !PatternList_match(&createInfo->jobOptions->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
        )
     {
@@ -6129,10 +6203,10 @@ UNUSED_VARIABLE(fileInfo);
                                   createInfo->jobOptions->compressAlgorithms.delta,
                                   createInfo->jobOptions->compressAlgorithms.byte,
                                   deviceName,
-                                  &deviceInfo,
+                                  deviceInfo,
                                   fileSystemHandle.type,
-                                  fragmentOffset/(uint64)deviceInfo.blockSize,
-                                  (fragmentSize+(uint64)deviceInfo.blockSize-1)/(uint64)deviceInfo.blockSize,
+                                  fragmentOffset/(uint64)deviceInfo->blockSize,
+                                  (fragmentSize+(uint64)deviceInfo->blockSize-1)/(uint64)deviceInfo->blockSize,
                                   archiveFlags
                                  );
     if (error != ERROR_NONE)
@@ -6149,8 +6223,8 @@ UNUSED_VARIABLE(fileInfo);
     }
 
     // write device content to archive
-    blockOffset = fragmentOffset/(uint64)deviceInfo.blockSize;
-    blockCount  = (fragmentSize+(uint64)deviceInfo.blockSize-1)/(uint64)deviceInfo.blockSize;
+    blockOffset = fragmentOffset/(uint64)deviceInfo->blockSize;
+    blockCount  = (fragmentSize+(uint64)deviceInfo->blockSize-1)/(uint64)deviceInfo->blockSize;
     error       = ERROR_NONE;
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
@@ -6168,21 +6242,21 @@ UNUSED_VARIABLE(fileInfo);
             )
       {
         if (   !fileSystemFlag
-            || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo.blockSize)
+            || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo->blockSize)
            )
         {
           // seek to block
-          error = Device_seek(&deviceHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo.blockSize);
+          error = Device_seek(&deviceHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo->blockSize);
           if (error != ERROR_NONE) break;
 
           // read block
-          error = Device_read(&deviceHandle,buffer+bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize,NULL);
+          error = Device_read(&deviceHandle,buffer+bufferBlockCount*deviceInfo->blockSize,deviceInfo->blockSize,NULL);
           if (error != ERROR_NONE) break;
         }
         else
         {
           // block not used -> store as "0"-block
-          memClear(buffer+bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
+          memClear(buffer+bufferBlockCount*deviceInfo->blockSize,deviceInfo->blockSize);
         }
         bufferBlockCount++;
         blockCount--;
@@ -6192,7 +6266,7 @@ UNUSED_VARIABLE(fileInfo);
       // write data to archive
       if (bufferBlockCount > 0)
       {
-        error = Archive_writeData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
+        error = Archive_writeData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo->blockSize,deviceInfo->blockSize);
         if (error == ERROR_NONE)
         {
           // get current archive size
@@ -6204,7 +6278,7 @@ UNUSED_VARIABLE(fileInfo);
             if (fragmentNode != NULL)
             {
               // add fragment
-              FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize);
+              FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo->blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo->blockSize);
 
               // update status info
               if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
@@ -6213,7 +6287,7 @@ UNUSED_VARIABLE(fileInfo);
                 createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
               }
             }
-            createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
+            createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo->blockSize;
             createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
             createInfo->statusInfo.compressionRatio = (!createInfo->storageFlags.dryRun && (createInfo->statusInfo.done.size > 0))
                                                         ? 100.0-(archiveSize*100.0)/createInfo->statusInfo.done.size
@@ -6323,7 +6397,7 @@ UNUSED_VARIABLE(fileInfo);
     // get final compression ratio
     if (archiveEntryInfo.image.chunkImageData.blockCount > 0)
     {
-      compressionRatio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo.blockSize);
+      compressionRatio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo->blockSize);
     }
     else
     {
@@ -6332,7 +6406,7 @@ UNUSED_VARIABLE(fileInfo);
 
     // get fragment info
     stringClear(s1);
-    if (fragmentSize < deviceInfo.size)
+    if (fragmentSize < deviceInfo->size)
     {
       stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
@@ -6386,7 +6460,7 @@ UNUSED_VARIABLE(fileInfo);
       if (fragmentNode != NULL)
       {
         // add fragment
-        FragmentList_addRange(fragmentNode,0,deviceInfo.size);
+        FragmentList_addRange(fragmentNode,0,deviceInfo->size);
       }
     }
 
@@ -7543,7 +7617,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
             case ENTRY_TYPE_IMAGE:
               error = storeImageEntry(createInfo,
                                       entryMsg.name,
-                                      &entryMsg.fileInfo,
+                                      &entryMsg.deviceInfo,
                                       entryMsg.fragmentNumber,
                                       entryMsg.fragmentCount,
                                       entryMsg.fragmentOffset,
