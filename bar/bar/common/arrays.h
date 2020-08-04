@@ -491,7 +491,7 @@ bool Array_contains(const Array          *array,
                    );
 
 /***********************************************************************\
-* Name   : Array_findFirst
+* Name   : Array_find
 * Purpose: find data element in array
 * Input  : array                - array
 *          arrayFindMode        - array find mode
@@ -502,12 +502,12 @@ bool Array_contains(const Array          *array,
 * Notes  : -
 \***********************************************************************/
 
-long Array_findFirst(const Array          *array,
-                     ArrayFindModes       arrayFindMode,
-                     void                 *data,
-                     ArrayCompareFunction arrayCompareFunction,
-                     void                 *arrayCompareUserData
-                    );
+long Array_find(const Array          *array,
+                ArrayFindModes       arrayFindMode,
+                void                 *data,
+                ArrayCompareFunction arrayCompareFunction,
+                void                 *arrayCompareUserData
+               );
 
 /***********************************************************************\
 * Name   : Array_findNext

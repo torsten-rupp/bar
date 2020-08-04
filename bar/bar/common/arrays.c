@@ -585,12 +585,12 @@ bool Array_contains(const Array          *array,
   return FALSE;
 }
 
-long Array_findFirst(const Array          *array,
-                     ArrayFindModes       arrayFindMode,
-                     void                 *data,
-                     ArrayCompareFunction arrayCompareFunction,
-                     void                 *arrayCompareUserData
-                    )
+long Array_find(const Array          *array,
+                ArrayFindModes       arrayFindMode,
+                void                 *data,
+                ArrayCompareFunction arrayCompareFunction,
+                void                 *arrayCompareUserData
+               )
 {
   long i;
 
