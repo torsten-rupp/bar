@@ -238,14 +238,18 @@
     #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        int __result; \
+        \
         assert(semaphore != NULL); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         switch (type) \
         { \
-          case SEMAPHORE_SIGNAL_MODIFY_SINGLE: pthread_cond_signal(condition);    break; \
-          case SEMAPHORE_SIGNAL_MODIFY_ALL:    pthread_cond_broadcast(condition); break; \
+          case SEMAPHORE_SIGNAL_MODIFY_SINGLE: __result = pthread_cond_signal(condition);    break; \
+          case SEMAPHORE_SIGNAL_MODIFY_ALL:    __result = pthread_cond_broadcast(condition); break; \
         } \
+        assert(__result == 0); \
+        UNUSED_VARIABLE(__result); \
       } \
       while (0)
   #elif defined(PLATFORM_WINDOWS)
@@ -339,6 +343,8 @@
     #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        int __result; \
+        \
         assert(semaphore != NULL); \
         \
         UNUSED_VARIABLE(type); \
@@ -346,9 +352,11 @@
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) signal %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
         switch (type) \
         { \
-          case SEMAPHORE_SIGNAL_MODIFY_SINGLE: pthread_cond_signal(condition);    break; \
-          case SEMAPHORE_SIGNAL_MODIFY_ALL:    pthread_cond_broadcast(condition); break; \
+          case SEMAPHORE_SIGNAL_MODIFY_SINGLE: __result = pthread_cond_signal(condition);    break; \
+          case SEMAPHORE_SIGNAL_MODIFY_ALL:    __result = pthread_cond_broadcast(condition); break; \
         } \
+        assert(__result == 0);
+        UNUSED_VARIABLE(__result); \
       } \
       while (0)
   #endif /* PLATFORM_... */
@@ -431,11 +439,18 @@
     #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        int __result; \
+        \
         UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
-        UNUSED_VARIABLE(type); \
         \
-        pthread_cond_broadcast(condition); \
+        switch (type) \
+        { \
+          case SEMAPHORE_SIGNAL_MODIFY_SINGLE: __result = pthread_cond_signal(condition);    break; \
+          case SEMAPHORE_SIGNAL_MODIFY_ALL:    __result = pthread_cond_broadcast(condition); break; \
+        } \
+        assert(__result == 0); \
+        UNUSED_VARIABLE(__result); \
       } \
       while (0)
   #elif defined(PLATFORM_WINDOWS)
@@ -507,11 +522,18 @@
     #define __SEMAPHORE_SIGNAL(semaphore,debugFlag,text,condition,type) \
       do \
       { \
+        int __result; \
+        \
         UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
-        UNUSED_VARIABLE(type); \
         \
-        pthread_cond_broadcast(condition); \
+        switch (type) \
+        { \
+          case SEMAPHORE_SIGNAL_MODIFY_SINGLE: __result = pthread_cond_signal(condition);    break; \
+          case SEMAPHORE_SIGNAL_MODIFY_ALL:    __result = pthread_cond_broadcast(condition); break; \
+        } \
+        assert(__result == 0); \
+        UNUSED_VARIABLE(__result); \
       } \
       while (0)
   #endif /* PLATFORM_... */
