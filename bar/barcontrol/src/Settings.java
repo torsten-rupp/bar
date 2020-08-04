@@ -450,6 +450,8 @@ public class Settings
   public static boolean                        pauseRestoreFlag                = true;
   @SettingValue(name="pause-index-update")
   public static boolean                        pauseIndexUpdateFlag            = false;
+  @SettingValue(name="pause-index-maintenance")
+  public static boolean                        pauseIndexMaintenanceFlag       = false;
 
   // server settings
   @SettingComment(text={"","Server settings"})
@@ -486,6 +488,7 @@ public class Settings
   public static ArchiveTypes                   archiveType                     = ArchiveTypes.NORMAL;
   public static String                         abortJobName                    = null;
   public static int                            pauseTime                       = 0;
+  public static int                            maintenanceTime                 = 0;
   public static boolean                        pingFlag                        = false;
   public static boolean                        suspendFlag                     = false;
   public static boolean                        continueFlag                    = false;

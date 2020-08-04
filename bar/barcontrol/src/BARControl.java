@@ -936,12 +936,12 @@ class Units
   {
     String result;
 
-    if      (n >= 1024L*1024L*1024L*1024L*1024L) result =  "P";
-    else if (n >=       1024L*1024L*1024L*1024L) result =  "T";
-    else if (n >=             1024L*1024L*1024L) result =  "G";
-    else if (n >=                   1024L*1024L) result =  "M";
-    else if (n >=                         1024L) result =  "K";
-    else                                         result =  "";
+    if      (n >= 1024L*1024L*1024L*1024L*1024L) result =  "PB";
+    else if (n >=       1024L*1024L*1024L*1024L) result =  "TB";
+    else if (n >=             1024L*1024L*1024L) result =  "GB";
+    else if (n >=                   1024L*1024L) result =  "MB";
+    else if (n >=                         1024L) result =  "KB";
+    else                                         result =  "B";
 
     return result;
   }
@@ -1032,7 +1032,7 @@ class Units
    */
   public static String formatByteSize(long n)
   {
-    return getByteSize(n)+getByteShortUnit(n);
+    return getByteSize(n)+" "+getByteShortUnit(n);
   }
 
   /** get time string
@@ -1735,6 +1735,7 @@ public class BARControl
     new Option("--archive-type",                 null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
     new Option("--abort",                        null,Options.Types.STRING,     "abortJobName"),
     new Option("--pause",                        "-t",Options.Types.INTEGER,    "pauseTime",new Object[]{"s",1,"m",60,"h",60*60}),
+    new Option("--maintenance",                  null,Options.Types.INTEGER,    "maintenanceTime",new Object[]{"s",1,"m",60,"h",60*60}),
     new Option("--ping",                         "-i",Options.Types.BOOLEAN,    "pingFlag"),
     new Option("--suspend",                      "-s",Options.Types.BOOLEAN,    "suspendFlag"),
     new Option("--continue",                     "-c",Options.Types.BOOLEAN,    "continueFlag"),
@@ -2081,10 +2082,11 @@ public class BARControl
     System.out.println("                                                        incremental");
     System.out.println("                                                        differential");
     System.out.println("         --abort=<name>                             - abort execution of job <name>");
-    System.out.println("         -i|--ping                                  - check connection to server");
-    System.out.println("         -t|--pause=<n>[s|m|h]                      - pause job execution for <n> seconds/minutes/hours");
     System.out.println("         -s|--suspend                               - suspend job execution");
     System.out.println("         -c|--continue                              - continue job execution");
+    System.out.println("         -t|--pause=<n>[s|m|h]                      - pause job execution for <n> seconds/minutes/hours");
+    System.out.println("         --maintenance=<n>[s|m|h]                   - set intermediate maintenance for <n> seconds/minutes/hours");
+    System.out.println("         -i|--ping                                  - check connection to server");
     System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");
     System.out.println("         --index-database-info                      - print index info");
@@ -2951,6 +2953,21 @@ if (false) {
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseIndexUpdateFlag = widget.getSelection();
+          }
+        });
+
+        menuItem = Widgets.addMenuItemCheckbox(subMenu,BARControl.tr("Index maintenance operation"),Settings.pauseIndexMaintenanceFlag,true);
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MenuItem widget = (MenuItem)selectionEvent.widget;
+            Settings.pauseIndexMaintenanceFlag = widget.getSelection();
           }
         });
       }
@@ -4497,6 +4514,7 @@ if (false) {
           || (Settings.runJobName != null)
           || (Settings.abortJobName != null)
           || (Settings.pauseTime > 0)
+          || (Settings.maintenanceTime > 0)
           || (Settings.pingFlag)
           || (Settings.suspendFlag)
           || (Settings.continueFlag)
@@ -4649,6 +4667,25 @@ if (false) {
           catch (Exception exception)
           {
             printError("cannot pause (error: %s)",exception.getMessage());
+            BARServer.disconnect();
+            System.exit(ExitCodes.FAIL);
+          }
+        }
+
+        if (Settings.maintenanceTime > 0)
+        {
+          // maintenance
+          try
+          {
+            BARServer.executeCommand(StringParser.format("MAINTENANCE time=%d",
+                                                         Settings.maintenanceTime
+                                                        ),
+                                     1  // debug level
+                                    );
+          }
+          catch (Exception exception)
+          {
+            printError("cannot set maintenance (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4877,40 +4914,40 @@ if (false) {
                                          long   totalDeletedStorageCount    = valueMap.getLong  ("totalDeletedStorageCount"   , 0L);
 
                                          System.out.println("Entities");
-                                         System.out.println(String.format("  total             : %d",totalEntityCount           ));
-                                         System.out.println(String.format("  deleted           : %d",totalDeletedEntityCount    ));
-                                         System.out.println("Entries");
-                                         System.out.println(String.format("  total             : %d",totalEntryCount            ));
-                                         System.out.println(String.format("  total size        : %d",totalEntrySize             ));
-                                         System.out.println(String.format("  total content size: %d",totalEntryContentSize      ));
-                                         System.out.println(String.format("  files             : %d",totalFileCount             ));
-                                         System.out.println(String.format("  file size         : %d",totalFileSize              ));
-                                         System.out.println(String.format("  images            : %d",totalImageCount            ));
-                                         System.out.println(String.format("  image size        : %d",totalImageSize             ));
-                                         System.out.println(String.format("  directories       : %d",totalDirectoryCount        ));
-                                         System.out.println(String.format("  links             : %d",totalLinkCount             ));
-                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCount         ));
-                                         System.out.println(String.format("  hardlink size     : %d",totalHardlinkSize          ));
-                                         System.out.println(String.format("  special           : %d",totalSpecialCount          ));
-                                         System.out.println("Newest entries:");
-                                         System.out.println(String.format("  total             : %d",totalEntryCountNewest      ));
-                                         System.out.println(String.format("  total size        : %d",totalEntrySizeNewest       ));
-                                         System.out.println(String.format("  entry content size: %d",totalEntryContentSizeNewest));
-                                         System.out.println(String.format("  files             : %d",totalFileCountNewest       ));
-                                         System.out.println(String.format("  file size         : %d",totalFileSizeNewest        ));
-                                         System.out.println(String.format("  images            : %d",totalImageCountNewest      ));
-                                         System.out.println(String.format("  image size        : %d",totalImageSizeNewest       ));
-                                         System.out.println(String.format("  directories       : %d",totalDirectoryCountNewest  ));
-                                         System.out.println(String.format("  links             : %d",totalLinkCountNewest       ));
-                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCountNewest   ));
-                                         System.out.println(String.format("  hardlink size     : %d",totalHardlinkSizeNewest    ));
-                                         System.out.println(String.format("  special           : %d",totalSpecialCountNewest    ));
-                                         System.out.println("Skipped:");
-                                         System.out.println(String.format("  total             : %d",totalSkippedEntryCount     ));
+                                         System.out.println(String.format("  total             : %d",totalEntityCount                                                                       ));
+                                         System.out.println(String.format("  deleted           : %d",totalDeletedEntityCount                                                                ));
                                          System.out.println("Storages:");
-                                         System.out.println(String.format("  total             : %d",totalStorageCount          ));
-                                         System.out.println(String.format("  total size        : %d",totalStorageSize           ));
-                                         System.out.println(String.format("  deleted           : %d",totalDeletedStorageCount   ));
+                                         System.out.println(String.format("  total             : %d",totalStorageCount                                                                      ));
+                                         System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalStorageSize),totalStorageSize                      ));
+                                         System.out.println(String.format("  deleted           : %d",totalDeletedStorageCount                                                               ));
+                                         System.out.println("Entries");
+                                         System.out.println(String.format("  total             : %d",totalEntryCount                                                                        ));
+                                         System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalEntrySize),totalEntrySize                          ));
+                                         System.out.println(String.format("  total content size: %s (%d bytes)",Units.formatByteSize(totalEntryContentSize),totalEntryContentSize            ));
+                                         System.out.println(String.format("  files             : %d",totalFileCount                                                                         ));
+                                         System.out.println(String.format("  file size         : %s (%d bytes)",Units.formatByteSize(totalFileSize),totalFileSize                            ));
+                                         System.out.println(String.format("  images            : %d",totalImageCount                                                                        ));
+                                         System.out.println(String.format("  image size        : %s (%d bytes)",Units.formatByteSize(totalImageSize),totalImageSize                          ));
+                                         System.out.println(String.format("  directories       : %d",totalDirectoryCount                                                                    ));
+                                         System.out.println(String.format("  links             : %d",totalLinkCount                                                                         ));
+                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCount                                                                     ));
+                                         System.out.println(String.format("  hardlink size     : %s (%d bytes)",Units.formatByteSize(totalHardlinkSize),totalHardlinkSize                    ));
+                                         System.out.println(String.format("  special           : %d",totalSpecialCount                                                                      ));
+                                         System.out.println("Newest entries:");
+                                         System.out.println(String.format("  total             : %d",totalEntryCountNewest                                                                  ));
+                                         System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalEntrySizeNewest),totalEntrySizeNewest              ));
+                                         System.out.println(String.format("  entry content size: %s (%d bytes)",Units.formatByteSize(totalEntryContentSizeNewest),totalEntryContentSizeNewest));
+                                         System.out.println(String.format("  files             : %d",totalFileCountNewest                                                                   ));
+                                         System.out.println(String.format("  file size         : %s (%d bytes)",Units.formatByteSize(totalFileSizeNewest),totalFileSizeNewest                ));
+                                         System.out.println(String.format("  images            : %d",totalImageCountNewest                                                                  ));
+                                         System.out.println(String.format("  image size        : %s (%d bytes)",Units.formatByteSize(totalImageSizeNewest),totalImageSizeNewest              ));
+                                         System.out.println(String.format("  directories       : %d",totalDirectoryCountNewest                                                              ));
+                                         System.out.println(String.format("  links             : %d",totalLinkCountNewest                                                                   ));
+                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCountNewest                                                               ));
+                                         System.out.println(String.format("  hardlink size     : %s (%d bytes)",Units.formatByteSize(totalHardlinkSizeNewest),totalHardlinkSizeNewest        ));
+                                         System.out.println(String.format("  special           : %d",totalSpecialCountNewest                                                                ));
+                                         System.out.println("Skipped:");
+                                         System.out.println(String.format("  total             : %d",totalSkippedEntryCount                                                                 ));
                                        }
                                      }
                                     );

@@ -30,11 +30,13 @@ import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
@@ -52,6 +54,531 @@ import org.eclipse.swt.widgets.Widget;
  */
 public class ServerSettings
 {
+  /** storage maintenance data
+   */
+  static class MaintenanceData implements Cloneable
+  {
+    final static int NONE = 0;
+    final static int ANY  = -1;
+    final static int MON  = 0;
+    final static int TUE  = 1;
+    final static int WED  = 2;
+    final static int THU  = 3;
+    final static int FRI  = 4;
+    final static int SAT  = 5;
+    final static int SUN  = 6;
+
+    int id;
+    int year,month,day;
+    int weekDays;
+    int beginHour,beginMinute;
+    int endHour,endMinute;
+
+    /** create storage maintenance data
+     * @param id id
+     * @param year year
+     * @param month month
+     * @param day day
+     * @param weekDays week days
+     * @param beginHour begin hour
+     * @param beginMinute begin minute
+     * @param endHour end hour
+     * @param endMinute end minute
+     */
+    MaintenanceData(int id, int year, int month, int day, int weekDays, int beginHour, int beginMinute, int endHour, int endMinute)
+    {
+      assert (year == ANY) || (year >= 1) : year;
+      assert (month == ANY) || ((month >= 1) && (month <= 12)) : month;
+      assert (day == ANY) || ((day >= 1) && (day <= 31)) : day;
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << MaintenanceData.MON)
+                               | (1 << MaintenanceData.TUE)
+                               | (1 << MaintenanceData.WED)
+                               | (1 << MaintenanceData.THU)
+                               | (1 << MaintenanceData.FRI)
+                               | (1 << MaintenanceData.SAT)
+                               | (1 << MaintenanceData.SUN)
+                              )) == 0
+                ) : weekDays;
+      assert (beginHour == ANY) || ((beginHour >= 0) && (beginHour <= 23)) : beginHour;
+      assert (beginMinute == ANY) || ((beginMinute >= 0) && (beginMinute <= 59)) : beginMinute;
+      assert (endHour == ANY) || ((endHour >= 0) && (endHour <= 23)) : endHour;
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+
+      this.id          = id;
+      this.year        = year;
+      this.month       = month;
+      this.day         = day;
+      this.weekDays    = weekDays;
+      this.beginHour   = beginHour;
+      this.beginMinute = beginMinute;
+      this.endHour     = endHour;
+      this.endMinute   = endMinute;
+    }
+
+    /** create storage maintenance data
+     * @param id id
+     */
+    MaintenanceData(int id)
+    {
+      this(id,ANY,ANY,ANY,ANY,ANY,ANY,ANY,ANY);
+    }
+
+    /** create storage maintenance data
+     * @param id id
+     * @param date date
+     * @param weekDays week days
+     * @param begin begin time
+     * @param end end time
+     */
+    MaintenanceData(int id, String date, String weekDays, String begin, String end)
+    {
+      this(id);
+      setDate(date);
+      setWeekDays(weekDays);
+      setBeginTime(begin);
+      setEndTime(end);
+    }
+
+    /** create storage maintenance data
+     */
+    MaintenanceData()
+    {
+      this(0);
+    }
+
+    /** clone storage maintenance data object
+     * @return clone of object
+     */
+    public MaintenanceData clone()
+    {
+      return new MaintenanceData(id,year,month,day,weekDays,beginHour,beginMinute,endHour,endMinute);
+    }
+
+    /** get year value
+     * @return year string
+     */
+    String getYear()
+    {
+      assert (year == ANY) || (year >= 1) : year;
+
+      return (year != ANY) ? String.format("%04d",year) : "*";
+    }
+
+    /** get month value
+     * @return month string
+     */
+    String getMonth()
+    {
+      assert (month == ANY) || ((month >= 1) && (month <= 12)) : month;
+
+      switch (month)
+      {
+        case ANY: return "*";
+        case 1:   return "Jan";
+        case 2:   return "Feb";
+        case 3:   return "Mar";
+        case 4:   return "Apr";
+        case 5:   return "May";
+        case 6:   return "Jun";
+        case 7:   return "Jul";
+        case 8:   return "Aug";
+        case 9:   return "Sep";
+        case 10:  return "Oct";
+        case 11:  return "Nov";
+        case 12:  return "Dec";
+        default:  return "*";
+      }
+    }
+
+    /** get day value
+     * @return day string
+     */
+    String getDay()
+    {
+      assert (day == ANY) || ((day >= 1) && (day <= 31)) : day;
+
+      return (day != ANY) ? String.format("%02d",day) : "*";
+    }
+
+    /** get date value
+     * @return date string
+     */
+    String getDate()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getYear());
+      buffer.append('-');
+      buffer.append(getMonth());
+      buffer.append('-');
+      buffer.append(getDay());
+
+      return buffer.toString();
+    }
+
+    /** get week days value
+     * @return week days string
+     */
+    String getWeekDays()
+    {
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << MaintenanceData.MON)
+                               | (1 << MaintenanceData.TUE)
+                               | (1 << MaintenanceData.WED)
+                               | (1 << MaintenanceData.THU)
+                               | (1 << MaintenanceData.FRI)
+                               | (1 << MaintenanceData.SAT)
+                               | (1 << MaintenanceData.SUN)
+                              )) == 0
+                ) : weekDays;
+
+      if (weekDays == ANY)
+      {
+        return "*";
+      }
+      else
+      {
+        StringBuilder buffer = new StringBuilder();
+
+        if ((weekDays & (1 << MaintenanceData.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Mon")); }
+        if ((weekDays & (1 << MaintenanceData.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Tue")); }
+        if ((weekDays & (1 << MaintenanceData.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Wed")); }
+        if ((weekDays & (1 << MaintenanceData.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Thu")); }
+        if ((weekDays & (1 << MaintenanceData.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Fri")); }
+        if ((weekDays & (1 << MaintenanceData.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Sat")); }
+        if ((weekDays & (1 << MaintenanceData.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Sun")); }
+
+        return buffer.toString();
+      }
+    }
+
+    /** get begin hour value
+     * @return begin hour string
+     */
+    String getBeginHour()
+    {
+      assert (beginHour == ANY) || ((beginHour >= 0) && (beginHour <= 23)) : beginHour;
+
+      return (beginHour != ANY) ? String.format("%02d",beginHour) : "*";
+    }
+
+    /** get begin minute value
+     * @return begin minute string
+     */
+    String getBeginMinute()
+    {
+      assert (beginMinute == ANY) || ((beginMinute >= 0) && (beginMinute <= 59)) : beginMinute;
+
+      return (beginMinute != ANY) ? String.format("%02d",beginMinute) : "*";
+    }
+
+    /** get begin time value
+     * @return time string
+     */
+    String getBeginTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getBeginHour());
+      buffer.append(':');
+      buffer.append(getBeginMinute());
+
+      return buffer.toString();
+    }
+
+    /** get end hour value
+     * @return end hour string
+     */
+    String getEndHour()
+    {
+      assert (endHour == ANY) || ((endHour >= 0) && (endHour <= 23)) : endHour;
+
+      return (endHour != ANY) ? String.format("%02d",endHour) : "*";
+    }
+
+    /** get end minute value
+     * @return end minute string
+     */
+    String getEndMinute()
+    {
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+
+      return (endMinute != ANY) ? String.format("%02d",endMinute) : "*";
+    }
+
+    /** get end time value
+     * @return time string
+     */
+    String getEndTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getEndHour());
+      buffer.append(':');
+      buffer.append(getEndMinute());
+
+      return buffer.toString();
+    }
+
+    /** set date
+     * @param year year value
+     * @param month month value
+     * @param day day value
+     */
+    private void setDate(String year, String month, String day)
+    {
+      this.year = !year.equals("*") ? Integer.parseInt(year) : ANY;
+      if      (month.equals("*")) this.month = ANY;
+      else if (month.toLowerCase().equals("jan")) this.month =  1;
+      else if (month.toLowerCase().equals("feb")) this.month =  2;
+      else if (month.toLowerCase().equals("mar")) this.month =  3;
+      else if (month.toLowerCase().equals("apr")) this.month =  4;
+      else if (month.toLowerCase().equals("may")) this.month =  5;
+      else if (month.toLowerCase().equals("jun")) this.month =  6;
+      else if (month.toLowerCase().equals("jul")) this.month =  7;
+      else if (month.toLowerCase().equals("aug")) this.month =  8;
+      else if (month.toLowerCase().equals("sep")) this.month =  9;
+      else if (month.toLowerCase().equals("oct")) this.month = 10;
+      else if (month.toLowerCase().equals("nov")) this.month = 11;
+      else if (month.toLowerCase().equals("dec")) this.month = 12;
+      else
+      {
+        try
+        {
+          this.month = Integer.parseInt(month);
+        }
+        catch (NumberFormatException exception)
+        {
+          this.month = ANY;
+        }
+      }
+      this.day = !day.equals("*") ? Integer.parseInt(day) : ANY;
+    }
+
+    /** set date
+     * @param date date string
+     */
+    private void setDate(String date)
+    {
+      String[] parts = date.split("-");
+      setDate(parts[0],parts[1],parts[2]);
+    }
+
+    /** set week days
+     * @param weekDays week days string; values separated by ','
+     */
+    void setWeekDays(String weekDays)
+    {
+      if (weekDays.equals("*"))
+      {
+        this.weekDays = MaintenanceData.ANY;
+      }
+      else
+      {
+        for (String name : weekDays.split(","))
+        {
+          if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << MaintenanceData.MON);
+          else if (name.toLowerCase().equals("tue")) this.weekDays |= (1 << MaintenanceData.TUE);
+          else if (name.toLowerCase().equals("wed")) this.weekDays |= (1 << MaintenanceData.WED);
+          else if (name.toLowerCase().equals("thu")) this.weekDays |= (1 << MaintenanceData.THU);
+          else if (name.toLowerCase().equals("fri")) this.weekDays |= (1 << MaintenanceData.FRI);
+          else if (name.toLowerCase().equals("sat")) this.weekDays |= (1 << MaintenanceData.SAT);
+          else if (name.toLowerCase().equals("sun")) this.weekDays |= (1 << MaintenanceData.SUN);
+        }
+      }
+    }
+
+    /** set week days
+     * @param monFlag true for Monday
+     * @param tueFlag true for Tuesday
+     * @param wedFlag true for Wednesday
+     * @param thuFlag true for Thursday
+     * @param friFlag true for Friday
+     * @param satFlag true for Saturday
+     * @param SunFlag true for Sunday
+     */
+    void setWeekDays(boolean monFlag,
+                     boolean tueFlag,
+                     boolean wedFlag,
+                     boolean thuFlag,
+                     boolean friFlag,
+                     boolean satFlag,
+                     boolean SunFlag
+                    )
+    {
+
+      if (   monFlag
+          && tueFlag
+          && wedFlag
+          && thuFlag
+          && friFlag
+          && satFlag
+          && SunFlag
+         )
+      {
+        this.weekDays = MaintenanceData.ANY;
+      }
+      else
+      {
+        this.weekDays = 0;
+        if (monFlag) this.weekDays |= (1 << MaintenanceData.MON);
+        if (tueFlag) this.weekDays |= (1 << MaintenanceData.TUE);
+        if (wedFlag) this.weekDays |= (1 << MaintenanceData.WED);
+        if (thuFlag) this.weekDays |= (1 << MaintenanceData.THU);
+        if (friFlag) this.weekDays |= (1 << MaintenanceData.FRI);
+        if (satFlag) this.weekDays |= (1 << MaintenanceData.SAT);
+        if (SunFlag) this.weekDays |= (1 << MaintenanceData.SUN);
+      }
+    }
+
+    /** set time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setBeginTime(String hour, String minute)
+    {
+      this.beginHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.beginMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+    }
+
+    /** set begin time
+     * @param time time string
+     */
+    void setBeginTime(String time)
+    {
+      String[] parts = time.split(":");
+      setBeginTime(parts[0],parts[1]);
+    }
+
+    /** set end time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setEndTime(String hour, String minute)
+    {
+      this.endHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.endMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+    }
+
+    /** set end time
+     * @param time time string
+     */
+    void setEndTime(String time)
+    {
+      String[] parts = time.split(":");
+      setEndTime(parts[0],parts[1]);
+    }
+
+    /** check if week day enabled
+     * @param weekDay week data
+     * @return TRUE iff enabled
+     */
+    boolean weekDayIsEnabled(int weekDay)
+    {
+      assert(   (weekDay == MaintenanceData.MON)
+             || (weekDay == MaintenanceData.TUE)
+             || (weekDay == MaintenanceData.WED)
+             || (weekDay == MaintenanceData.THU)
+             || (weekDay == MaintenanceData.FRI)
+             || (weekDay == MaintenanceData.SAT)
+             || (weekDay == MaintenanceData.SUN)
+            );
+
+      return (weekDays == MaintenanceData.ANY) || ((weekDays & (1 << weekDay)) != 0);
+    }
+
+    /** convert week days to string
+     * @return week days string
+     */
+    String weekDaysToString()
+    {
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << MaintenanceData.MON)
+                               | (1 << MaintenanceData.TUE)
+                               | (1 << MaintenanceData.WED)
+                               | (1 << MaintenanceData.THU)
+                               | (1 << MaintenanceData.FRI)
+                               | (1 << MaintenanceData.SAT)
+                               | (1 << MaintenanceData.SUN)
+                              )) == 0
+                ) : weekDays;
+
+      if (weekDays == ANY)
+      {
+        return "*";
+      }
+      else
+      {
+        StringBuilder buffer = new StringBuilder();
+
+        if ((weekDays & (1 << MaintenanceData.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Mon"); }
+        if ((weekDays & (1 << MaintenanceData.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Tue"); }
+        if ((weekDays & (1 << MaintenanceData.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Wed"); }
+        if ((weekDays & (1 << MaintenanceData.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Thu"); }
+        if ((weekDays & (1 << MaintenanceData.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Fri"); }
+        if ((weekDays & (1 << MaintenanceData.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sat"); }
+        if ((weekDays & (1 << MaintenanceData.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sun"); }
+
+        return buffer.toString();
+      }
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "Maintenance {"+id+", "+year+", "+month+", "+day+", "+beginHour+", "+beginMinute+", "+endHour+", "+endMinute+"}";
+    }
+  }
+
+  /** maintenance data comparator
+   */
+  static class MaintenanceDataComparator implements Comparator<MaintenanceData>
+  {
+    // Note: enum in inner classes are not possible in Java, thus use the old way...
+    private final static int SORTMODE_TYPE = 0;
+    private final static int SORTMODE_NAME = 1;
+
+    private int sortMode;
+
+    /** create maintenance data comparator
+     * @param table maintenance table
+     * @param sortColumn column to sort
+     */
+    MaintenanceDataComparator(Table table, TableColumn sortColumn)
+    {
+    }
+
+    /** create maintenance data comparator
+     * @param table maintenance table
+     */
+    MaintenanceDataComparator(Table table)
+    {
+      this(table,table.getSortColumn());
+    }
+
+    /** compare maintenance data
+     * @param maintenanceData1, maintenanceData2 index maintenance data to compare
+     * @return -1 iff maintenanceData1 < maintenanceData2,
+                0 iff maintenanceData1 = maintenanceData2,
+                1 iff maintenanceData1 > maintenanceData2
+     */
+    public int compare(MaintenanceData maintenanceData1, MaintenanceData maintenanceData2)
+    {
+        return 0;
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "MaintenanceDataComparator {"+sortMode+"}";
+    }
+  }
+
   /**
    * Storage server types
    */
@@ -251,8 +778,13 @@ public class ServerSettings
     }
   }
 
-  // inactive background color
+  private static Display display;
+
+  // colors
   private final static Color COLOR_INACTIVE = new Color(null,0xF4,0xF4,0xF4);
+
+  // images
+  private static Image IMAGE_TOGGLE_MARK;
 
   // last key file name
   private static String lastKeyFileName = "";
@@ -369,13 +901,28 @@ public class ServerSettings
     WidgetVariable          logFormat                  = new WidgetVariable<String >("log-format",                    ""   );
     WidgetVariable          logPostCommand             = new WidgetVariable<String >("log-post-command",              ""   );
 
-    final ServerDataComparator serverDataComparator;
+    final MaintenanceDataComparator maintenanceDataComparator;
+    final ServerDataComparator      serverDataComparator;
+
+    // get display
+    display = shell.getDisplay();
+
+    // get colors
+
+    // get images
+    IMAGE_TOGGLE_MARK = Widgets.loadImage(display,"togglemark.png");
 
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Server settings"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
     tabFolder = Widgets.newTabFolder(dialog);
     Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
+
+    final Table  widgetMaintenanceTable;
+    final Button widgetAddMaintenance;
+    final Button widgetEditMaintenance;
+    final Button widgetRemoveMaintenance;
+
     final Table  widgetServerTable;
     final Button widgetAddServer;
     final Button widgetEditServer;
@@ -539,6 +1086,207 @@ public class ServerSettings
         Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       }
       row++;
+
+      label = Widgets.newLabel(composite,BARControl.tr("Maintenance")+":");
+      Widgets.layout(label,row,0,TableLayoutData.NW);
+
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,0.0,2));
+      Widgets.layout(subComposite,row,1,TableLayoutData.W);
+      {
+        widgetMaintenanceTable = Widgets.newTable(subComposite);
+        Widgets.layout(widgetMaintenanceTable,0,0,TableLayoutData.NSWE,0,4,0,0,SWT.DEFAULT,200);
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Date"),SWT.LEFT,200,false);
+        tableColumn.setToolTipText(BARControl.tr("Click to sort by type."));
+        tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,1,BARControl.tr("Begin"),SWT.LEFT,120,true );
+        tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
+        tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,2,BARControl.tr("End"),SWT.LEFT,120,true );
+        tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
+        tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+        maintenanceDataComparator = new MaintenanceDataComparator(widgetMaintenanceTable);
+
+        widgetAddMaintenance = Widgets.newButton(subComposite,BARControl.tr("Add")+"\u2026");
+        Widgets.layout(widgetAddMaintenance,1,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        widgetAddMaintenance.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            MaintenanceData maintenanceData = new MaintenanceData();
+            if (maintenanceEdit(dialog,maintenanceData,BARControl.tr("Add maintenance time"),BARControl.tr("Add")))
+            {
+              try
+              {
+                ValueMap resultMap = new ValueMap();
+
+                BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_ADD date=%s weekDays=%s beginTime=%s endTime=%s",
+                                                             maintenanceData.getDate(),
+                                                             maintenanceData.getWeekDays(),
+                                                             maintenanceData.getBeginTime(),
+                                                             maintenanceData.getEndTime()
+                                                            ),
+                                         0,  // debugLevel
+                                         resultMap
+                                        );
+                maintenanceData.id = resultMap.getInt("id");
+
+                Widgets.insertTableItem(widgetMaintenanceTable,
+                                        maintenanceDataComparator,
+                                        maintenanceData,
+                                        maintenanceData.getDate(),
+                                        maintenanceData.getBeginTime(),
+                                        maintenanceData.getEndTime()
+                                       );
+              }
+              catch (Exception exception)
+              {
+                Dialogs.error(dialog,BARControl.tr("Add maintenance time fail:\n\n{0}",exception.getMessage()));
+              }
+            }
+          }
+        });
+
+        widgetEditMaintenance = Widgets.newButton(subComposite,BARControl.tr("Edit")+"\u2026");
+        Widgets.layout(widgetEditMaintenance,1,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        widgetEditMaintenance.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            int index = widgetMaintenanceTable.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
+              MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
+
+              if (maintenanceEdit(dialog,maintenanceData,BARControl.tr("Edit maintenance time"),BARControl.tr("Save")))
+              {
+                try
+                {
+                  BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_UPDATE id=%d date=%s weekDays=%s beginTime=%s endTime=%s",
+                                                               maintenanceData.id,
+                                                               maintenanceData.getDate(),
+                                                               maintenanceData.getWeekDays(),
+                                                               maintenanceData.getBeginTime(),
+                                                               maintenanceData.getEndTime()
+                                                              ),
+                                           0  // debugLevel
+                                          );
+
+                  Widgets.updateTableItem(tableItem,
+                                          maintenanceData,
+                                          maintenanceData.getDate(),
+                                          maintenanceData.getBeginTime(),
+                                          maintenanceData.getEndTime()
+                                         );
+                }
+                catch (Exception exception)
+                {
+                  Dialogs.error(dialog,BARControl.tr("Save maintenance time fail:\n\n{0}",exception.getMessage()));
+                }
+              }
+            }
+          }
+        });
+
+        button = Widgets.newButton(subComposite,BARControl.tr("Clone")+"\u2026");
+        Widgets.layout(button,1,2,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            int index = widgetMaintenanceTable.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
+              MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
+
+              MaintenanceData cloneMaintenanceData = (MaintenanceData)maintenanceData.clone();
+              if (maintenanceEdit(dialog,cloneMaintenanceData,BARControl.tr("Clone maintenance time"),BARControl.tr("Add")))
+              {
+                try
+                {
+                  ValueMap resultMap = new ValueMap();
+
+                  BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_ADD date=%s weekDays=%s beginTime=%s endTime=%s",
+                                                               cloneMaintenanceData.getDate(),
+                                                               cloneMaintenanceData.getWeekDays(),
+                                                               cloneMaintenanceData.getBeginTime(),
+                                                               cloneMaintenanceData.getEndTime()
+                                                              ),
+                                           0,  // debugLevel
+                                           resultMap
+                                          );
+
+                  cloneMaintenanceData.id = resultMap.getInt("id");
+
+                  Widgets.insertTableItem(widgetMaintenanceTable,
+                                          maintenanceDataComparator,
+                                          cloneMaintenanceData,
+                                          cloneMaintenanceData.getDate(),
+                                          cloneMaintenanceData.getBeginTime(),
+                                          cloneMaintenanceData.getEndTime()
+                                         );
+                }
+                catch (Exception exception)
+                {
+                  Dialogs.error(dialog,BARControl.tr("Add maintenance time fail:\n\n{0}",exception.getMessage()));
+                }
+              }
+            }
+          }
+        });
+
+        widgetRemoveMaintenance = Widgets.newButton(subComposite,BARControl.tr("Remove")+"\u2026");
+        Widgets.layout(widgetRemoveMaintenance,1,3,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+        widgetRemoveMaintenance.addSelectionListener(new SelectionListener()
+        {
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            int index = widgetMaintenanceTable.getSelectionIndex();
+            if (index >= 0)
+            {
+              TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
+              MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
+
+              if (Dialogs.confirm(dialog,BARControl.tr("Delete maintenance time {0}, {1}..{2}?",maintenanceData.getDate(),maintenanceData.getBeginTime(),maintenanceData.getEndTime())))
+              {
+                try
+                {
+                  ValueMap resultMap = new ValueMap();
+
+                  BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_REMOVE id=%d",
+                                                               maintenanceData.id
+                                                              ),
+                                           0,  // debugLevel
+                                           resultMap
+                                          );
+                  Widgets.removeTableItem(widgetMaintenanceTable,
+                                          tableItem
+                                         );
+                }
+                catch (Exception exception)
+                {
+                  Dialogs.error(dialog,BARControl.tr("Delete maintenance time fail:\n\n{0}",exception.getMessage()));
+                }
+              }
+            }
+          }
+        });
+      }
+      row++;
     }
 
     // servers
@@ -625,7 +1373,6 @@ public class ServerSettings
       tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
       row++;
       serverDataComparator = new ServerDataComparator(widgetServerTable);
-
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(1.0,0.0,2));
@@ -2089,6 +2836,40 @@ public class ServerSettings
     }
 
     // add selection listeners
+    widgetMaintenanceTable.addMouseListener(new MouseListener()
+    {
+      public void mouseDoubleClick(final MouseEvent mouseEvent)
+      {
+        Widgets.invoke(widgetEditMaintenance);
+      }
+      public void mouseDown(final MouseEvent mouseEvent)
+      {
+      }
+      public void mouseUp(final MouseEvent mouseEvent)
+      {
+      }
+    });
+    widgetMaintenanceTable.addKeyListener(new KeyListener()
+    {
+      public void keyPressed(KeyEvent keyEvent)
+      {
+      }
+      public void keyReleased(KeyEvent keyEvent)
+      {
+        if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
+        {
+          Widgets.invoke(widgetAddMaintenance);
+        }
+        else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
+        {
+          Widgets.invoke(widgetRemoveMaintenance);
+        }
+        else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
+        {
+          Widgets.invoke(widgetEditMaintenance);
+        }
+      }
+    });
     widgetServerTable.addMouseListener(new MouseListener()
     {
       public void mouseDoubleClick(final MouseEvent mouseEvent)
@@ -2231,8 +3012,46 @@ public class ServerSettings
     BARServer.getServerOption(logFormat                  );
     BARServer.getServerOption(logPostCommand             );
 
-    Widgets.removeAllTableItems(widgetServerTable);
+    Widgets.removeAllTableItems(widgetMaintenanceTable);
+    try
+    {
+      BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST"),
+                               0,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                   throws BARException
+                                 {
+                                   // get data
+                                   int    id        = valueMap.getInt   ("id"       );
+                                   String date      = valueMap.getString("date"     );
+                                   String weekDays  = valueMap.getString("weekDays" );
+                                   String beginTime = valueMap.getString("beginTime");
+                                   String endTime   = valueMap.getString("endTime"  );
 
+                                   // create server data
+                                   MaintenanceData maintenanceData = new MaintenanceData(id,date,weekDays,beginTime,endTime);
+
+                                   // add table entry
+                                   Widgets.insertTableItem(widgetMaintenanceTable,
+                                                           maintenanceDataComparator,
+                                                           maintenanceData,
+                                                           maintenanceData.getDate(),
+                                                           maintenanceData.getBeginTime(),
+                                                           maintenanceData.getEndTime()
+                                                          );
+                                 }
+                               }
+                              );
+    }
+    catch (Exception exception)
+    {
+      Dialogs.error(dialog,BARControl.tr("Get maintenance list fail:\n\n{0}",exception.getMessage()));
+      return;
+    }
+
+    Widgets.removeAllTableItems(widgetServerTable);
     ServerData serverData;
     serverData = new ServerData(0,"default",ServerTypes.FTP);
     Widgets.insertTableItem(widgetServerTable,
@@ -2243,7 +3062,6 @@ public class ServerSettings
                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
                             (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                            );
-//    servers.getValue().put(0,serverData);
     serverData = new ServerData(0,"default",ServerTypes.SSH);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
@@ -2414,6 +3232,225 @@ public class ServerSettings
         }
       }
     }
+  }
+
+  /** edit mainteance time
+   * @param shell shell
+   * @param maintenanceData maintenance data
+   * @param title window title
+   * @param okText OK button text
+   * @return true iff edited
+   */
+  private static boolean maintenanceEdit(final Shell           shell,
+                                         final MaintenanceData maintenanceData,
+                                         String                title,
+                                         String                okText
+                                        )
+  {
+    Composite composite,subComposite;
+    Label     label;
+    Button    button;
+
+    final Shell dialog = Dialogs.openModal(shell,title,SWT.DEFAULT,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+
+    // create widgets
+    final Combo    widgetYear,widgetMonth,widgetDay;
+    final Button[] widgetWeekDays = new Button[7];
+    final Combo    widgetBeginHour,widgetBeginMinute,widgetEndHour,widgetEndMinute;
+    final Button   widgetSave;
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
+    {
+      label = Widgets.newLabel(composite,BARControl.tr("Date")+":",Settings.hasNormalRole());
+      Widgets.layout(label,0,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE,Settings.hasNormalRole());
+      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+      {
+        widgetYear = Widgets.newOptionMenu(subComposite);
+        widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
+        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"});
+        widgetYear.setText(maintenanceData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
+        if (widgetYear.getText().equals("")) widgetYear.setText("*");
+        Widgets.layout(widgetYear,0,0,TableLayoutData.W);
+
+        widgetMonth = Widgets.newOptionMenu(subComposite);
+        widgetMonth.setToolTipText(BARControl.tr("Month to execute job. Leave to '*' for each month."));
+        widgetMonth.setItems(new String[]{"*","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"});
+        widgetMonth.setText(maintenanceData.getMonth()); if (widgetMonth.getText().equals("")) widgetMonth.setText("*");
+        Widgets.layout(widgetMonth,0,1,TableLayoutData.W);
+
+        widgetDay = Widgets.newOptionMenu(subComposite);
+        widgetDay.setToolTipText(BARControl.tr("Day to execute job. Leave to '*' for each day."));
+        widgetDay.setItems(new String[]{"*","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
+        widgetDay.setText(maintenanceData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
+        Widgets.layout(widgetDay,0,2,TableLayoutData.W);
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("Week days")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
+      {
+        widgetWeekDays[MaintenanceData.MON] = Widgets.newCheckbox(subComposite,BARControl.tr("Mon"));
+        widgetWeekDays[MaintenanceData.MON].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[MaintenanceData.MON],0,0,TableLayoutData.W);
+        widgetWeekDays[MaintenanceData.MON].setSelection(maintenanceData.weekDayIsEnabled(MaintenanceData.MON));
+
+        widgetWeekDays[MaintenanceData.TUE] = Widgets.newCheckbox(subComposite,BARControl.tr("Tue"));
+        widgetWeekDays[MaintenanceData.TUE].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[MaintenanceData.TUE],0,1,TableLayoutData.W);
+        widgetWeekDays[MaintenanceData.TUE].setSelection(maintenanceData.weekDayIsEnabled(MaintenanceData.TUE));
+
+        widgetWeekDays[MaintenanceData.WED] = Widgets.newCheckbox(subComposite,BARControl.tr("Wed"));
+        widgetWeekDays[MaintenanceData.WED].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[MaintenanceData.WED],0,2,TableLayoutData.W);
+        widgetWeekDays[MaintenanceData.WED].setSelection(maintenanceData.weekDayIsEnabled(MaintenanceData.WED));
+
+        widgetWeekDays[MaintenanceData.THU] = Widgets.newCheckbox(subComposite,BARControl.tr("Thu"));
+        widgetWeekDays[MaintenanceData.THU].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[MaintenanceData.THU],0,3,TableLayoutData.W);
+        widgetWeekDays[MaintenanceData.THU].setSelection(maintenanceData.weekDayIsEnabled(MaintenanceData.THU));
+
+        widgetWeekDays[MaintenanceData.FRI] = Widgets.newCheckbox(subComposite,BARControl.tr("Fri"));
+        widgetWeekDays[MaintenanceData.FRI].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[MaintenanceData.FRI],0,4,TableLayoutData.W);
+        widgetWeekDays[MaintenanceData.FRI].setSelection(maintenanceData.weekDayIsEnabled(MaintenanceData.FRI));
+
+        widgetWeekDays[MaintenanceData.SAT] = Widgets.newCheckbox(subComposite,BARControl.tr("Sat"));
+        widgetWeekDays[MaintenanceData.SAT].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[MaintenanceData.SAT],0,5,TableLayoutData.W);
+        widgetWeekDays[MaintenanceData.SAT].setSelection(maintenanceData.weekDayIsEnabled(MaintenanceData.SAT));
+
+        widgetWeekDays[MaintenanceData.SUN] = Widgets.newCheckbox(subComposite,BARControl.tr("Sun"));
+        widgetWeekDays[MaintenanceData.SUN].setToolTipText(BARControl.tr("Week days to execute job."));
+        Widgets.layout(widgetWeekDays[MaintenanceData.SUN],0,6,TableLayoutData.W);
+        widgetWeekDays[MaintenanceData.SUN].setSelection(maintenanceData.weekDayIsEnabled(MaintenanceData.SUN));
+
+        button = Widgets.newButton(subComposite,IMAGE_TOGGLE_MARK);
+        button.setToolTipText(BARControl.tr("Toggle week days set."));
+        Widgets.layout(button,0,7,TableLayoutData.W);
+        button.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            for (Button button : widgetWeekDays)
+            {
+              button.setSelection(!button.getSelection());
+            }
+          }
+        });
+      }
+
+      label = Widgets.newLabel(composite,BARControl.tr("Time")+":");
+      Widgets.layout(label,2,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      {
+        widgetBeginHour = Widgets.newOptionMenu(subComposite);
+        widgetBeginHour.setToolTipText(BARControl.tr("Hour to execute job. Leave to '*' for every hour."));
+        widgetBeginHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
+        widgetBeginHour.setText(maintenanceData.getBeginHour()); if (widgetBeginHour.getText().equals("")) widgetBeginHour.setText("*");
+        Widgets.layout(widgetBeginHour,0,0,TableLayoutData.W);
+
+        widgetBeginMinute = Widgets.newOptionMenu(subComposite);
+        widgetBeginMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
+        widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetBeginMinute.setText(maintenanceData.getBeginMinute()); if (widgetBeginMinute.getText().equals("")) widgetBeginMinute.setText("*");
+        Widgets.layout(widgetBeginMinute,0,1,TableLayoutData.W);
+
+        label = Widgets.newLabel(subComposite,"\u2026");
+        Widgets.layout(label,0,2,TableLayoutData.W);
+
+        widgetEndHour = Widgets.newOptionMenu(subComposite);
+        widgetEndHour.setToolTipText(BARControl.tr("Hour to execute job. Leave to '*' for every hour."));
+        widgetEndHour.setItems(new String[]{"*","00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23"});
+        widgetEndHour.setText(maintenanceData.getEndHour()); if (widgetEndHour.getText().equals("")) widgetEndHour.setText("*");
+        Widgets.layout(widgetEndHour,0,3,TableLayoutData.W);
+
+        widgetEndMinute = Widgets.newOptionMenu(subComposite);
+        widgetEndMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
+        widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetEndMinute.setText(maintenanceData.getEndMinute()); if (widgetEndMinute.getText().equals("")) widgetEndMinute.setText("*");
+        Widgets.layout(widgetEndMinute,0,4,TableLayoutData.W);
+      }
+    }
+
+    // buttons
+    composite = Widgets.newComposite(dialog,SWT.NONE);
+    composite.setLayout(new TableLayout(0.0,1.0));
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
+    {
+      widgetSave = Widgets.newButton(composite,okText);
+      Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+
+      button = Widgets.newButton(composite,BARControl.tr("Cancel"));
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+      button.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Dialogs.close(dialog,false);
+        }
+      });
+    }
+
+    // add selection listeners
+    widgetSave.addSelectionListener(new SelectionListener()
+    {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        maintenanceData.setDate(widgetYear.getText(),widgetMonth.getText(),widgetDay.getText());
+        maintenanceData.setWeekDays(widgetWeekDays[MaintenanceData.MON].getSelection(),
+                                    widgetWeekDays[MaintenanceData.TUE].getSelection(),
+                                    widgetWeekDays[MaintenanceData.WED].getSelection(),
+                                    widgetWeekDays[MaintenanceData.THU].getSelection(),
+                                    widgetWeekDays[MaintenanceData.FRI].getSelection(),
+                                    widgetWeekDays[MaintenanceData.SAT].getSelection(),
+                                    widgetWeekDays[MaintenanceData.SUN].getSelection()
+                                   );
+        maintenanceData.setBeginTime(widgetBeginHour.getText(),widgetBeginMinute.getText());
+        maintenanceData.setEndTime(widgetEndHour.getText(),widgetEndMinute.getText());
+
+        if (maintenanceData.weekDays == MaintenanceData.NONE)
+        {
+          Dialogs.error(dialog,BARControl.tr("No weekdays specified!"));
+          return;
+        }
+        if ((maintenanceData.day != MaintenanceData.ANY) && (maintenanceData.weekDays != MaintenanceData.ANY))
+        {
+          if (!Dialogs.confirm(dialog,
+                               BARControl.tr("The maintenance time may not be used if the specified day is not in the set of spedified weekdays.\nReally keep this setting?")
+                              )
+             )
+          {
+            return;
+          }
+        }
+
+        Dialogs.close(dialog,true);
+      }
+    });
+
+    return (Boolean)Dialogs.run(dialog,false);
   }
 
   /** edit storage server

@@ -2944,10 +2944,11 @@ public class TabStatus
   public void jobPause(long pauseTime)
   {
     StringBuffer buffer = new StringBuffer();
-    if (Settings.pauseCreateFlag     ) { if (buffer.length() > 0) buffer.append(','); buffer.append("CREATE"      ); }
-    if (Settings.pauseStorageFlag    ) { if (buffer.length() > 0) buffer.append(','); buffer.append("STORAGE"     ); }
-    if (Settings.pauseRestoreFlag    ) { if (buffer.length() > 0) buffer.append(','); buffer.append("RESTORE"     ); }
-    if (Settings.pauseIndexUpdateFlag) { if (buffer.length() > 0) buffer.append(','); buffer.append("INDEX_UPDATE"); }
+    if (Settings.pauseCreateFlag          ) { if (buffer.length() > 0) buffer.append(','); buffer.append("CREATE"           ); }
+    if (Settings.pauseStorageFlag         ) { if (buffer.length() > 0) buffer.append(','); buffer.append("STORAGE"          ); }
+    if (Settings.pauseRestoreFlag         ) { if (buffer.length() > 0) buffer.append(','); buffer.append("RESTORE"          ); }
+    if (Settings.pauseIndexUpdateFlag     ) { if (buffer.length() > 0) buffer.append(','); buffer.append("INDEX_UPDATE"     ); }
+    if (Settings.pauseIndexMaintenanceFlag) { if (buffer.length() > 0) buffer.append(','); buffer.append("INDEX_MAINTENANCE"); }
 
     if (buffer.length() > 0)
     {
