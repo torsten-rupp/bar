@@ -1580,24 +1580,30 @@ String Misc_expandMacros(String           string,
     {
       if (templateString[i] == '%')
       {
-        if ((templateString[i+1] == '%'))
+        switch (templateString[i+1])
         {
-          // escaped %
-          if (expandMacroCharacter)
-          {
-            String_appendChar(expanded,'%');
-          }
-          else
-          {
-            String_appendCString(expanded,"%%");
-          }
-          i+=2;
-        }
-        else
-        {
-          // macro %
-          macroFlag = TRUE;
-          i++;
+          case '%':
+            // escaped %
+            if (expandMacroCharacter)
+            {
+              String_appendChar(expanded,'%');
+            }
+            else
+            {
+              String_appendCString(expanded,"%%");
+            }
+            i+=2;
+            break;
+          case ':':
+            // escaped :
+            String_appendChar(expanded,':');
+            i+=2;
+            break;
+          default:
+            // macro %
+            macroFlag = TRUE;
+            i++;
+            break;
         }
       }
       else
