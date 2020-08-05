@@ -133,6 +133,47 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 #define DICTIONARY_BYTE_COPY CALLBACK_((DictionaryCopyFunction)Dictionary_byteCopy,NULL)
 #define DICTIONARY_BYTE_FREE CALLBACK_((DictionaryFreeFunction)Dictionary_byteFree,NULL)
 
+/***********************************************************************\
+* Name   : DICTIONARY_ITERATE
+* Purpose: iterated over dictionary and execute block
+* Input  : dictionary - dictionary
+*          variable   - iteration variable
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            LIST_ITERATE(list,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define DICTIONARY_ITERATE(dictionary,keyData,keyLength,data,length) \
+  for (DictionaryIterator dictionaryIterator, Dictionary_initIterator(&dictionaryIterator,dictionary); \
+       Dictionary_getNext(&dictionaryIterator,keyData,keyLength,data,length); \
+      )
+
+/***********************************************************************\
+* Name   : DICTIONARY_ITERATEX
+* Purpose: iterated over dictionary and execute block
+* Input  : dictionary - dictionary
+*          variable   - iteration variable
+*          condition  - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            LIST_ITERATEX(list,variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define DICTIONARY_ITERATEX(dictionary,keyData,keyLength,data,length,condition) \
+  for (DictionaryIterator dictionaryIterator, Dictionary_initIterator(&dictionaryIterator,dictionary); \
+       Dictionary_getNext(&dictionaryIterator,keyData,keyLength,data,length) && (condition); \
+      )
+
 #ifndef NDEBUG
   #define Dictionary_init(...) __Dictionary_init(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Dictionary_done(...) __Dictionary_done(__FILE__,__LINE__, ## __VA_ARGS__)
