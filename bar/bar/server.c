@@ -715,7 +715,7 @@ LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  persistenceNode->id          = Misc_getId();
+  persistenceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   persistenceNode->archiveType = archiveType;
   persistenceNode->minKeep     = minKeep;
   persistenceNode->maxKeep     = maxKeep;
@@ -2624,14 +2624,14 @@ LOCAL void schedulerThreadCode(void)
   // open continuous database
   if (Continuous_isAvailable())
   {
-      Errors  error = Continuous_open(&continuousDatabaseHandle);
-      if (error != ERROR_NONE)
-      {
-        printError("Cannot initialise continuous database (error: %s)!",
-                   Error_getText(error)
-                  );
-        return;
-      }
+    Errors  error = Continuous_open(&continuousDatabaseHandle);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot initialise continuous database (error: %s)!",
+                 Error_getText(error)
+                );
+      return;
+    }
   }
 
   // open index
@@ -2663,7 +2663,7 @@ LOCAL void schedulerThreadCode(void)
 
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
-    currentDateTime     = Misc_getCurrentDateTime();
+    currentDateTime     = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
 #ifndef WERROR
 #warning remove/revert
 #endif
@@ -2749,7 +2749,7 @@ LOCAL void schedulerThreadCode(void)
                                &weekDay
                               );
 
-            // check if matching with some schedule list node
+            // check if date/time is matching with some schedule list node
             LIST_ITERATEX(&jobNode->job.options.scheduleList,scheduleNode,executeScheduleNode == NULL)
             {
               if (   scheduleNode->enabled
@@ -6223,9 +6223,7 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
   }
 
   // update config file
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = updateConfig();
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -6277,7 +6275,12 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get date, weekday, begin time, end time
+  // get maintenance id, date, weekday, begin time, end time
+  if (!StringMap_getUInt(argumentMap,"id",&maintenanceId,0))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
+    return;
+  }
   date = String_new();
   if (!StringMap_getString(argumentMap,"date",date,NULL))
   {
@@ -6320,7 +6323,7 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
     if (maintenanceNode == NULL)
     {
       Semaphore_unlock(&globalOptions.maintenanceList.lock);
-      ServerIO_sendResult(&clientInfo->io,maintenanceId,TRUE,ERROR_MAINTENANCE_ID_NOT_FOUND,"%u",maintenanceId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_MAINTENANCE_ID_NOT_FOUND,"%u",maintenanceId);
       String_delete(endTime);
       String_delete(beginTime);
       String_delete(weekDays);
@@ -6401,7 +6404,7 @@ LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get storage maintenance id
+  // get maintenance id
   if (!StringMap_getUInt(argumentMap,"id",&maintenanceId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -6415,7 +6418,7 @@ LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHand
     if (maintenanceNode == NULL)
     {
       Semaphore_unlock(&globalOptions.maintenanceList.lock);
-      ServerIO_sendResult(&clientInfo->io,maintenanceId,TRUE,ERROR_MAINTENANCE_ID_NOT_FOUND,"%u",maintenanceId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_MAINTENANCE_ID_NOT_FOUND,"%u",maintenanceId);
       return;
     }
 
@@ -13110,6 +13113,10 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   JobNode      *jobNode;
   ScheduleNode *scheduleNode;
+  uint64       executeScheduleDateTime;
+  uint64       dateTime;
+  uint         year,month,day,hour,minute;
+  WeekDays     weekDay;
   char         s[256];
 
   assert(clientInfo != NULL);
@@ -13149,6 +13156,44 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
       return;
     }
 
+    // get matching time for schedule
+    executeScheduleDateTime = 0LL;
+    dateTime                = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
+    while (   (executeScheduleDateTime == 0LL)
+           && (dateTime >= 60LL)
+          )
+    {
+      // get date/time values
+      Misc_splitDateTime(dateTime,
+                         &year,
+                         &month,
+                         &day,
+                         &hour,
+                         &minute,
+                         NULL,
+                         &weekDay
+                        );
+
+      // check if date/time is matching with schedule node
+      if (   ((scheduleNode->date.year   == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
+          && ((scheduleNode->date.month  == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
+          && ((scheduleNode->date.day    == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
+          && ((scheduleNode->weekDaySet  == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
+          && ((scheduleNode->time.hour   == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
+          && ((scheduleNode->time.minute == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
+         )
+      {
+        executeScheduleDateTime = dateTime;
+      }
+
+      // next time
+      dateTime -= 60LL;
+    }
+    if (executeScheduleDateTime == 0LL)
+    {
+      executeScheduleDateTime = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
+    }
+
     // trigger job
     if (!Job_isActive(jobNode->jobState))
     {
@@ -13157,7 +13202,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
                   scheduleNode->customText,
                   scheduleNode->archiveType,
                   scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
-                  Misc_getCurrentDateTime(),
+                  executeScheduleDateTime,
                   getClientInfo(clientInfo,s,sizeof(s))
                  );
     }

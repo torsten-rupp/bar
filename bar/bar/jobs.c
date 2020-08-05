@@ -527,7 +527,7 @@ LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  persistenceNode->id          = Misc_getId();
+  persistenceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   persistenceNode->archiveType = archiveType;
   persistenceNode->minKeep     = minKeep;
   persistenceNode->maxKeep     = maxKeep;
@@ -561,7 +561,7 @@ LOCAL PersistenceNode *duplicatePersistenceNode(PersistenceNode *fromPersistence
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  persistenceNode->id          = Misc_getId();
+  persistenceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   persistenceNode->archiveType = fromPersistenceNode->archiveType;
   persistenceNode->minKeep     = fromPersistenceNode->minKeep;
   persistenceNode->maxKeep     = fromPersistenceNode->maxKeep;
@@ -1387,7 +1387,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
     String_appendChar(line,'-');
     if (scheduleDate->month != DATE_ANY)
     {
-      String_appendFormat(line,"%2d",scheduleDate->month);
+      String_appendFormat(line,"%02d",scheduleDate->month);
     }
     else
     {
@@ -1396,7 +1396,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
     String_appendChar(line,'-');
     if (scheduleDate->day != DATE_ANY)
     {
-      String_appendFormat(line,"%2d",scheduleDate->day);
+      String_appendFormat(line,"%02d",scheduleDate->day);
     }
     else
     {
@@ -1661,7 +1661,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
   {
     if (scheduleTime->hour != TIME_ANY)
     {
-      String_appendFormat(line,"%2d",scheduleTime->hour);
+      String_appendFormat(line,"%02d",scheduleTime->hour);
     }
     else
     {
@@ -1670,7 +1670,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
     String_appendChar(line,':');
     if (scheduleTime->minute != TIME_ANY)
     {
-      String_appendFormat(line,"%2d",scheduleTime->minute);
+      String_appendFormat(line,"%02d",scheduleTime->minute);
     }
     else
     {

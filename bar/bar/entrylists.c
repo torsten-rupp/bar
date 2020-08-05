@@ -30,6 +30,7 @@
 #include "common/strings.h"
 #include "common/stringlists.h"
 
+#include "bar.h"
 #include "bar_global.h"
 #include "common/patterns.h"
 
@@ -94,7 +95,7 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
   }
 
   // create entry
-  newEntryNode->id          = Misc_getId();
+  newEntryNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   newEntryNode->type        = entryNode->type;
   newEntryNode->string      = String_duplicate(entryNode->string);
   newEntryNode->patternType = entryNode->patternType;
@@ -315,7 +316,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  entryNode->id          = Misc_getId();
+  entryNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   entryNode->type        = type;
   entryNode->string      = String_newCString(string);
   entryNode->patternType = patternType;

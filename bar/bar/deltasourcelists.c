@@ -79,7 +79,7 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  newDeltaSourceNode->id          = Misc_getId();
+  newDeltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   newDeltaSourceNode->storageName = String_duplicate(deltaSourceNode->storageName);
   newDeltaSourceNode->patternType = deltaSourceNode->patternType;
   newDeltaSourceNode->locked      = FALSE;
@@ -253,7 +253,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = Misc_getId();
+    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -304,7 +304,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          deltaSourceNode->id          = Misc_getId();
+          deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
           deltaSourceNode->locked      = FALSE;
@@ -331,7 +331,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = Misc_getId();
+    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -397,7 +397,7 @@ UNUSED_VARIABLE(id);
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = Misc_getId();
+    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -448,7 +448,7 @@ UNUSED_VARIABLE(id);
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          deltaSourceNode->id          = Misc_getId();
+          deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
           deltaSourceNode->locked      = FALSE;
@@ -475,7 +475,7 @@ UNUSED_VARIABLE(id);
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = Misc_getId();
+    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;

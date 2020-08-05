@@ -768,6 +768,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                 0,cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
 
   CMD_OPTION_INCREMENT    ("debug-server",                      0,  2,1,globalOptions.debug.serverLevel,                  0,0,2,                                                         "debug level for server"                                                   ),
+  CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,1,globalOptions.debug.serverFixedIdsFlag,           0,                                                             "fixed server ids"                                                         ),
   CMD_OPTION_BOOLEAN      ("debug-index-wait-operations",       0,  2,1,globalOptions.debug.indexWaitOperationsFlag,      0,                                                             "wait for index operations"                                                ),
   CMD_OPTION_BOOLEAN      ("debug-index-purge-deleted-storages",0,  2,1,globalOptions.debug.indexPurgeDeletedStoragesFlag,0,                                                             "wait for index operations"                                                ),
   CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,1,globalOptions.debug.indexAddStorage,              0,                                                             "add storage to index database","file name"                                ),
@@ -1580,7 +1581,7 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
 
   initDevice(&deviceNode->device);
 
-  deviceNode->id          = Misc_getId();
+  deviceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   deviceNode->device.name = String_duplicate(name);
 
   return deviceNode;
@@ -6841,7 +6842,7 @@ MaintenanceNode *newMaintenanceNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  maintenanceNode->id               = Misc_getId();
+  maintenanceNode->id               = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   maintenanceNode->date.year        = DATE_ANY;
   maintenanceNode->date.month       = DATE_ANY;
   maintenanceNode->date.day         = DATE_ANY;
@@ -6882,7 +6883,7 @@ ServerNode *newServerNode(ConstString name, ServerTypes serverType)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  serverNode->id                                  = Misc_getId();
+  serverNode->id                                  = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   initServer(&serverNode->server,name,serverType);
   serverNode->connection.lowPriorityRequestCount  = 0;
   serverNode->connection.highPriorityRequestCount = 0;
@@ -7642,7 +7643,7 @@ MountNode *newMountNodeCString(const char *mountName, const char *deviceName)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  mountNode->id            = Misc_getId();
+  mountNode->id            = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
   mountNode->name          = String_newCString(mountName);
   mountNode->device        = String_newCString(deviceName);
   mountNode->mounted       = FALSE;
