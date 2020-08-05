@@ -644,8 +644,8 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Input  : n         - value
 *          alignment - alignment
 * Output : -
-* Return : n >= n with n module alignment = 0
-* Notes  : -
+* Return : n >= n with n modulo alignment = 0
+* Notes  : alignment must be 2^n!
 \***********************************************************************/
 
 #define ALIGN(n,alignment) (((alignment)>0) ? (((n)+(alignment)-1) & ~((alignment)-1)) : (n))
