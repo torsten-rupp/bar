@@ -1376,7 +1376,7 @@ LOCAL Errors formatArchiveFileName(String           fileName,
                                    ArchiveTypes     archiveType,
                                    ConstString      scheduleTitle,
                                    ConstString      scheduleCustomText,
-                                   time_t           time,
+                                   uint64           time,
                                    int              partNumber
                                   )
 {
