@@ -111,6 +111,7 @@ LOCAL bool       createFlag                           = FALSE;  // create new in
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
 LOCAL bool       dropTriggersFlag                     = FALSE;  // drop triggers
 LOCAL bool       createIndizesFlag                    = FALSE;  // re-create indizes
+LOCAL bool       createFTSFlag                        = FALSE;  // re-create FTS indizes
 LOCAL bool       showTableNames                       = FALSE;  // output index database table names
 LOCAL bool       showIndexNames                       = FALSE;  // output index database index names
 LOCAL bool       dropIndizesFlag                      = FALSE;  // drop indizes
@@ -172,6 +173,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --create                              - create new index database\n");
   printf("          --create-triggers                     - re-create triggers\n");
   printf("          --create-indizes                      - re-create indizes\n");
+  printf("          --create-fts                          - re-create FTS indizes (full text search)\n");
   printf("          --create-newest[=id,...]              - re-create newest data\n");
   printf("          --create-aggregates                   - re-create aggregated data\n");
   printf("          --create-aggregates-directory-content - re-create aggregated data directory content\n");
@@ -1413,6 +1415,70 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL\n");
     printError("recreate indizes fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+  (void)Database_flush(databaseHandle);
+}
+
+/***********************************************************************\
+* Name   : createFTS
+* Purpose: create FTS indizes
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void createFTS(DatabaseHandle *databaseHandle)
+{
+  Errors error;
+
+  printInfo("Create FTS indizes:\n");
+
+  // delete all existing indizes
+  error = ERROR_UNKNOWN;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    printInfo("  Discard FTS...");
+
+    // clear FTS names
+    printInfo("  Discard FTS indizes...");
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM FTS_storages"
+                            );
+    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM FTS_entries"
+                            );
+    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+    printInfo("OK  \n");
+
+    // create FTS names
+    printInfo("  Create new storage FTS index...");
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "INSERT INTO FTS_storages SELECT id,name FROM storages"
+                            );
+    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+    printInfo("OK  \n");
+    printInfo("  Create new entries FTS index...");
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "INSERT INTO FTS_entries SELECT id,name FROM entries"
+                            );
+    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+    printInfo("OK  \n");
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("recreate FTS fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
@@ -6823,6 +6889,11 @@ uint xxxShow=0;
       createIndizesFlag = TRUE;
       i++;
     }
+    else if (stringEquals(argv[i],"--create-fts"))
+    {
+      createFTSFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--drop-indizes"))
     {
       dropIndizesFlag = TRUE;
@@ -7228,6 +7299,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && !createTriggersFlag
           && !dropTriggersFlag
           && !createIndizesFlag
+          && !createFTSFlag
           && !dropIndizesFlag
           && !createNewestFlag
           && !createAggregatesDirectoryContentFlag
@@ -7323,6 +7395,10 @@ else if (stringEquals(argv[i],"--xxx"))
   if (createIndizesFlag)
   {
     createIndizes(&databaseHandle);
+  }
+  if (createFTSFlag)
+  {
+    createFTS(&databaseHandle);
   }
 
   // clean
