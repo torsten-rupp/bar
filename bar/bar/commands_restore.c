@@ -565,7 +565,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
     {
       // check if fragment already exist -> get/create file fragment node
-      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,destinationFileName);
+      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
       if (fragmentNode != NULL)
       {
         if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
@@ -607,7 +607,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 {
                   String_set(destinationFileName,prefixFileName);
                   Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                  String_appendFormat(destinationFileName,"-%04u",n);
+                  String_appendFormat(destinationFileName,"-%u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
                 }
@@ -624,6 +624,13 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
       else
       {
+        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
+                                        fileName,
+                                        fileInfo.size,
+                                        &fileInfo,sizeof(FileInfo),
+                                        0
+                                       );
+
         // check if file already exists
         if (File_exists(destinationFileName))
         {
@@ -659,7 +666,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                 {
                   String_set(destinationFileName,prefixFileName);
                   Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                  String_appendFormat(destinationFileName,"-%04u",n);
+                  String_appendFormat(destinationFileName,"-%u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
                 }
@@ -673,7 +680,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               break;
           }
         }
-        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo),0);
       }
       assert(fragmentNode != NULL);
     }
@@ -1194,7 +1200,12 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
       else
       {
-        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,deviceName,deviceInfo.size,NULL,0,0);
+        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
+                                        deviceName,
+                                        deviceInfo.size,
+                                        NULL,0,
+                                        0
+                                       );
       }
       assert(fragmentNode != NULL);
     }
@@ -1650,7 +1661,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
             {
               String_set(destinationFileName,prefixFileName);
               Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-              String_appendFormat(destinationFileName,"-%04u",n);
+              String_appendFormat(destinationFileName,"-%u",n);
               String_append(destinationFileName,postfixFileName);
               n++;
             }
@@ -1990,7 +2001,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
             {
               String_set(destinationFileName,prefixFileName);
               Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-              String_appendFormat(destinationFileName,"-%04u",n);
+              String_appendFormat(destinationFileName,"-%u",n);
               String_append(destinationFileName,postfixFileName);
               n++;
             }
@@ -2329,7 +2340,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                     {
                       String_set(destinationFileName,prefixFileName);
                       Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                      String_appendFormat(destinationFileName,"-%04u",n);
+                      String_appendFormat(destinationFileName,"-%u",n);
                       String_append(destinationFileName,postfixFileName);
                       n++;
                     }
@@ -2346,6 +2357,13 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
+            fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
+                                            fileName,
+                                            fileInfo.size,
+                                            &fileInfo,sizeof(FileInfo),
+                                            0
+                                           );
+
             // check if file already exists
             if (File_exists(destinationFileName))
             {
@@ -2381,7 +2399,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                     {
                       String_set(destinationFileName,prefixFileName);
                       Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                      String_appendFormat(destinationFileName,"-%04u",n);
+                      String_appendFormat(destinationFileName,"-%u",n);
                       String_append(destinationFileName,postfixFileName);
                       n++;
                     }
@@ -2395,7 +2413,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                   break;
               }
             }
-            fragmentNode = FragmentList_add(&restoreInfo->fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo),0);
           }
           assert(fragmentNode != NULL);
         }
@@ -2697,7 +2714,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 {
                   String_set(destinationFileName,prefixFileName);
                   Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                  String_appendFormat(destinationFileName,"-%04u",n);
+                  String_appendFormat(destinationFileName,"-%u",n);
                   String_append(destinationFileName,postfixFileName);
                   n++;
                 }
@@ -2963,7 +2980,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
             {
               String_set(destinationFileName,prefixFileName);
               Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-              String_appendFormat(destinationFileName,"-%04u",n);
+              String_appendFormat(destinationFileName,"-%u",n);
               String_append(destinationFileName,postfixFileName);
               n++;
             }
