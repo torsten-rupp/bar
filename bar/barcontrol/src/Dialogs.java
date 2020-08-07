@@ -4035,7 +4035,7 @@ class Dialogs
     */
     class FileComparator<T extends File> implements Comparator<T>
     {
-      // Note: enum in inner classes are not possible in Java, thus use the old way...
+      // Note: enum in non-static inner classes are not possible in Java, thus use the old way...
       private final static int SORTMODE_NONE     = 0;
       private final static int SORTMODE_NAME     = 1;
       private final static int SORTMODE_TYPE     = 2;

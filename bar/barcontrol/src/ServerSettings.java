@@ -376,6 +376,7 @@ public class ServerSettings
       }
       else
       {
+        this.weekDays = MaintenanceData.NONE;
         for (String name : weekDays.split(","))
         {
           if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << MaintenanceData.MON);
@@ -537,11 +538,18 @@ public class ServerSettings
    */
   static class MaintenanceDataComparator implements Comparator<MaintenanceData>
   {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_TYPE = 0;
-    private final static int SORTMODE_NAME = 1;
+    // sort modes
+    enum SortModes
+    {
+      DATE,
+      WEEKDAYS,
+      BEGIN_TIME,
+      END_TIME
+    };
 
-    private int sortMode;
+    private SortModes sortMode;
+
+//    private final String[] WEEK_DAYS = new String[]{"mon","tue","wed","thu","fri","sat","sun"};
 
     /** create maintenance data comparator
      * @param table maintenance table
@@ -549,6 +557,11 @@ public class ServerSettings
      */
     MaintenanceDataComparator(Table table, TableColumn sortColumn)
     {
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.DATE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.WEEKDAYS;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.BEGIN_TIME;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.END_TIME;
+      else                                       sortMode = SortModes.DATE;
     }
 
     /** create maintenance data comparator
@@ -556,7 +569,13 @@ public class ServerSettings
      */
     MaintenanceDataComparator(Table table)
     {
-      this(table,table.getSortColumn());
+      TableColumn sortColumn = table.getSortColumn();
+
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.DATE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.WEEKDAYS;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.BEGIN_TIME;
+      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.END_TIME;
+      else                                       sortMode = SortModes.DATE;
     }
 
     /** compare maintenance data
@@ -567,7 +586,30 @@ public class ServerSettings
      */
     public int compare(MaintenanceData maintenanceData1, MaintenanceData maintenanceData2)
     {
-        return 0;
+      switch (sortMode)
+      {
+        case DATE:
+          String date1 = maintenanceData1.getDate();
+          String date2 = maintenanceData2.getDate();
+
+          return date1.compareTo(date2);
+        case WEEKDAYS:
+          if      (maintenanceData1.weekDays < maintenanceData2.weekDays) return -1;
+          else if (maintenanceData1.weekDays > maintenanceData2.weekDays) return  1;
+          else                                                            return  0;
+        case BEGIN_TIME:
+          String beginTime1 = maintenanceData1.getBeginTime();
+          String beginTime2 = maintenanceData2.getBeginTime();
+
+          return beginTime1.compareTo(beginTime2);
+        case END_TIME:
+          String endTime1 = maintenanceData1.getEndTime();
+          String endTime2 = maintenanceData2.getEndTime();
+
+          return endTime1.compareTo(endTime2);
+        default:
+          return 0;
+      }
     }
 
     /** convert data to string
@@ -714,11 +756,14 @@ public class ServerSettings
    */
   static class ServerDataComparator implements Comparator<ServerData>
   {
-    // Note: enum in inner classes are not possible in Java, thus use the old way...
-    private final static int SORTMODE_TYPE = 0;
-    private final static int SORTMODE_NAME = 1;
+    // sort modes
+    enum SortModes
+    {
+      TYPE,
+      NAME
+    };
 
-    private int sortMode;
+    private SortModes sortMode;
 
     /** create server data comparator
      * @param table server table
@@ -726,9 +771,9 @@ public class ServerSettings
      */
     ServerDataComparator(Table table, TableColumn sortColumn)
     {
-      if      (table.getColumn(0) == sortColumn) sortMode = SORTMODE_TYPE;
-      else if (table.getColumn(1) == sortColumn) sortMode = SORTMODE_NAME;
-      else                                       sortMode = SORTMODE_TYPE;
+      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.TYPE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.NAME;
+      else                                       sortMode = SortModes.TYPE;
     }
 
     /** create server data comparator
@@ -749,7 +794,7 @@ public class ServerSettings
     {
       switch (sortMode)
       {
-        case SORTMODE_TYPE:
+        case TYPE:
           if      (serverData1.type.toString().compareTo(serverData2.type.toString()) < 0)
           {
             return -1;
@@ -762,7 +807,7 @@ public class ServerSettings
           {
             return serverData1.name.compareTo(serverData2.name);
           }
-        case SORTMODE_NAME:
+        case NAME:
           return serverData1.name.compareTo(serverData2.name);
         default:
           return 0;
@@ -1091,150 +1136,63 @@ public class ServerSettings
       Widgets.layout(label,row,0,TableLayoutData.NW);
 
       subComposite = Widgets.newComposite(composite);
-      subComposite.setLayout(new TableLayout(0.0,0.0,2));
-      Widgets.layout(subComposite,row,1,TableLayoutData.W);
+      subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,2));
+      Widgets.layout(subComposite,row,1,TableLayoutData.NSWE);
       {
         widgetMaintenanceTable = Widgets.newTable(subComposite);
-        Widgets.layout(widgetMaintenanceTable,0,0,TableLayoutData.NSWE,0,4,0,0,SWT.DEFAULT,200);
-        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Date"),SWT.LEFT,200,false);
-        tableColumn.setToolTipText(BARControl.tr("Click to sort by type."));
+        Widgets.layout(widgetMaintenanceTable,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,200);
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Date"),     SWT.LEFT,120,false);
+        tableColumn.setToolTipText(BARControl.tr("Click to sort by date."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,1,BARControl.tr("Begin"),SWT.LEFT,120,true );
-        tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Week days"),SWT.LEFT,250,false);
+        tableColumn.setToolTipText(BARControl.tr("Click to sort by week days."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,2,BARControl.tr("End"),SWT.LEFT,120,true );
-        tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,1,BARControl.tr("Begin"),    SWT.LEFT,120,true );
+        tableColumn.setToolTipText(BARControl.tr("Click to sort by begin time."));
+        tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+        tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,2,BARControl.tr("End"),      SWT.LEFT,120,true );
+        tableColumn.setToolTipText(BARControl.tr("Click to sort by end time."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
         maintenanceDataComparator = new MaintenanceDataComparator(widgetMaintenanceTable);
 
-        widgetAddMaintenance = Widgets.newButton(subComposite,BARControl.tr("Add")+"\u2026");
-        Widgets.layout(widgetAddMaintenance,1,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
-        widgetAddMaintenance.addSelectionListener(new SelectionListener()
+        subSubComposite = Widgets.newComposite(subComposite);
+        subSubComposite.setLayout(new TableLayout(0.0,0.0));
+        Widgets.layout(subSubComposite,1,0,TableLayoutData.E);
         {
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          widgetAddMaintenance = Widgets.newButton(subSubComposite,BARControl.tr("Add")+"\u2026");
+          Widgets.layout(widgetAddMaintenance,0,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+          widgetAddMaintenance.addSelectionListener(new SelectionListener()
           {
-          }
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            MaintenanceData maintenanceData = new MaintenanceData();
-            if (maintenanceEdit(dialog,maintenanceData,BARControl.tr("Add maintenance time"),BARControl.tr("Add")))
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              try
-              {
-                ValueMap resultMap = new ValueMap();
-
-                BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_ADD date=%s weekDays=%s beginTime=%s endTime=%s",
-                                                             maintenanceData.getDate(),
-                                                             maintenanceData.getWeekDays(),
-                                                             maintenanceData.getBeginTime(),
-                                                             maintenanceData.getEndTime()
-                                                            ),
-                                         0,  // debugLevel
-                                         resultMap
-                                        );
-                maintenanceData.id = resultMap.getInt("id");
-
-                Widgets.insertTableItem(widgetMaintenanceTable,
-                                        maintenanceDataComparator,
-                                        maintenanceData,
-                                        maintenanceData.getDate(),
-                                        maintenanceData.getBeginTime(),
-                                        maintenanceData.getEndTime()
-                                       );
-              }
-              catch (Exception exception)
-              {
-                Dialogs.error(dialog,BARControl.tr("Add maintenance time fail:\n\n{0}",exception.getMessage()));
-              }
             }
-          }
-        });
-
-        widgetEditMaintenance = Widgets.newButton(subComposite,BARControl.tr("Edit")+"\u2026");
-        Widgets.layout(widgetEditMaintenance,1,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
-        widgetEditMaintenance.addSelectionListener(new SelectionListener()
-        {
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            int index = widgetMaintenanceTable.getSelectionIndex();
-            if (index >= 0)
+            public void widgetSelected(SelectionEvent selectionEvent)
             {
-              TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
-              MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
-
-              if (maintenanceEdit(dialog,maintenanceData,BARControl.tr("Edit maintenance time"),BARControl.tr("Save")))
-              {
-                try
-                {
-                  BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_UPDATE id=%d date=%s weekDays=%s beginTime=%s endTime=%s",
-                                                               maintenanceData.id,
-                                                               maintenanceData.getDate(),
-                                                               maintenanceData.getWeekDays(),
-                                                               maintenanceData.getBeginTime(),
-                                                               maintenanceData.getEndTime()
-                                                              ),
-                                           0  // debugLevel
-                                          );
-
-                  Widgets.updateTableItem(tableItem,
-                                          maintenanceData,
-                                          maintenanceData.getDate(),
-                                          maintenanceData.getBeginTime(),
-                                          maintenanceData.getEndTime()
-                                         );
-                }
-                catch (Exception exception)
-                {
-                  Dialogs.error(dialog,BARControl.tr("Save maintenance time fail:\n\n{0}",exception.getMessage()));
-                }
-              }
-            }
-          }
-        });
-
-        button = Widgets.newButton(subComposite,BARControl.tr("Clone")+"\u2026");
-        Widgets.layout(button,1,2,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
-        button.addSelectionListener(new SelectionListener()
-        {
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            int index = widgetMaintenanceTable.getSelectionIndex();
-            if (index >= 0)
-            {
-              TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
-              MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
-
-              MaintenanceData cloneMaintenanceData = (MaintenanceData)maintenanceData.clone();
-              if (maintenanceEdit(dialog,cloneMaintenanceData,BARControl.tr("Clone maintenance time"),BARControl.tr("Add")))
+              MaintenanceData maintenanceData = new MaintenanceData();
+              if (maintenanceEdit(dialog,maintenanceData,BARControl.tr("Add maintenance time"),BARControl.tr("Add")))
               {
                 try
                 {
                   ValueMap resultMap = new ValueMap();
 
                   BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_ADD date=%s weekDays=%s beginTime=%s endTime=%s",
-                                                               cloneMaintenanceData.getDate(),
-                                                               cloneMaintenanceData.getWeekDays(),
-                                                               cloneMaintenanceData.getBeginTime(),
-                                                               cloneMaintenanceData.getEndTime()
+                                                               maintenanceData.getDate(),
+                                                               maintenanceData.getWeekDays(),
+                                                               maintenanceData.getBeginTime(),
+                                                               maintenanceData.getEndTime()
                                                               ),
                                            0,  // debugLevel
                                            resultMap
                                           );
-
-                  cloneMaintenanceData.id = resultMap.getInt("id");
+                  maintenanceData.id = resultMap.getInt("id");
 
                   Widgets.insertTableItem(widgetMaintenanceTable,
                                           maintenanceDataComparator,
-                                          cloneMaintenanceData,
-                                          cloneMaintenanceData.getDate(),
-                                          cloneMaintenanceData.getBeginTime(),
-                                          cloneMaintenanceData.getEndTime()
+                                          maintenanceData,
+                                          maintenanceData.getDate(),
+                                          maintenanceData.getWeekDays(),
+                                          maintenanceData.getBeginTime(),
+                                          maintenanceData.getEndTime()
                                          );
                 }
                 catch (Exception exception)
@@ -1243,48 +1201,146 @@ public class ServerSettings
                 }
               }
             }
-          }
-        });
+          });
 
-        widgetRemoveMaintenance = Widgets.newButton(subComposite,BARControl.tr("Remove")+"\u2026");
-        Widgets.layout(widgetRemoveMaintenance,1,3,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
-        widgetRemoveMaintenance.addSelectionListener(new SelectionListener()
-        {
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          widgetEditMaintenance = Widgets.newButton(subSubComposite,BARControl.tr("Edit")+"\u2026");
+          Widgets.layout(widgetEditMaintenance,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+          widgetEditMaintenance.addSelectionListener(new SelectionListener()
           {
-          }
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            int index = widgetMaintenanceTable.getSelectionIndex();
-            if (index >= 0)
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
-              MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
-
-              if (Dialogs.confirm(dialog,BARControl.tr("Delete maintenance time {0}, {1}..{2}?",maintenanceData.getDate(),maintenanceData.getBeginTime(),maintenanceData.getEndTime())))
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              int index = widgetMaintenanceTable.getSelectionIndex();
+              if (index >= 0)
               {
-                try
-                {
-                  ValueMap resultMap = new ValueMap();
+                TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
+                MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
 
-                  BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_REMOVE id=%d",
-                                                               maintenanceData.id
-                                                              ),
-                                           0,  // debugLevel
-                                           resultMap
-                                          );
-                  Widgets.removeTableItem(widgetMaintenanceTable,
-                                          tableItem
-                                         );
-                }
-                catch (Exception exception)
+                if (maintenanceEdit(dialog,maintenanceData,BARControl.tr("Edit maintenance time"),BARControl.tr("Save")))
                 {
-                  Dialogs.error(dialog,BARControl.tr("Delete maintenance time fail:\n\n{0}",exception.getMessage()));
+                  try
+                  {
+                    BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_UPDATE id=%d date=%s weekDays=%s beginTime=%s endTime=%s",
+                                                                 maintenanceData.id,
+                                                                 maintenanceData.getDate(),
+                                                                 maintenanceData.getWeekDays(),
+                                                                 maintenanceData.getBeginTime(),
+                                                                 maintenanceData.getEndTime()
+                                                                ),
+                                             0  // debugLevel
+                                            );
+
+                    Widgets.updateTableItem(tableItem,
+                                            maintenanceData,
+                                            maintenanceData.getDate(),
+                                            maintenanceData.getWeekDays(),
+                                            maintenanceData.getBeginTime(),
+                                            maintenanceData.getEndTime()
+                                           );
+                  }
+                  catch (Exception exception)
+                  {
+                    Dialogs.error(dialog,BARControl.tr("Save maintenance time fail:\n\n{0}",exception.getMessage()));
+                  }
                 }
               }
             }
-          }
-        });
+          });
+
+          button = Widgets.newButton(subSubComposite,BARControl.tr("Clone")+"\u2026");
+          Widgets.layout(button,0,2,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+          button.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              int index = widgetMaintenanceTable.getSelectionIndex();
+              if (index >= 0)
+              {
+                TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
+                MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
+
+                MaintenanceData cloneMaintenanceData = (MaintenanceData)maintenanceData.clone();
+                if (maintenanceEdit(dialog,cloneMaintenanceData,BARControl.tr("Clone maintenance time"),BARControl.tr("Add")))
+                {
+                  try
+                  {
+                    ValueMap resultMap = new ValueMap();
+
+                    BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_ADD date=%s weekDays=%s beginTime=%s endTime=%s",
+                                                                 cloneMaintenanceData.getDate(),
+                                                                 cloneMaintenanceData.getWeekDays(),
+                                                                 cloneMaintenanceData.getBeginTime(),
+                                                                 cloneMaintenanceData.getEndTime()
+                                                                ),
+                                             0,  // debugLevel
+                                             resultMap
+                                            );
+
+                    cloneMaintenanceData.id = resultMap.getInt("id");
+
+                    Widgets.insertTableItem(widgetMaintenanceTable,
+                                            maintenanceDataComparator,
+                                            cloneMaintenanceData,
+                                            cloneMaintenanceData.getDate(),
+                                            cloneMaintenanceData.getWeekDays(),
+                                            cloneMaintenanceData.getBeginTime(),
+                                            cloneMaintenanceData.getEndTime()
+                                           );
+                  }
+                  catch (Exception exception)
+                  {
+                    Dialogs.error(dialog,BARControl.tr("Add maintenance time fail:\n\n{0}",exception.getMessage()));
+                  }
+                }
+              }
+            }
+          });
+
+          widgetRemoveMaintenance = Widgets.newButton(subSubComposite,BARControl.tr("Remove")+"\u2026");
+          Widgets.layout(widgetRemoveMaintenance,0,3,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
+          widgetRemoveMaintenance.addSelectionListener(new SelectionListener()
+          {
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              int index = widgetMaintenanceTable.getSelectionIndex();
+              if (index >= 0)
+              {
+                TableItem       tableItem       = widgetMaintenanceTable.getItem(index);
+                MaintenanceData maintenanceData = (MaintenanceData)tableItem.getData();
+
+                if (Dialogs.confirm(dialog,BARControl.tr("Delete maintenance time {0}, {1}..{2}?",maintenanceData.getDate(),maintenanceData.getBeginTime(),maintenanceData.getEndTime())))
+                {
+                  try
+                  {
+                    ValueMap resultMap = new ValueMap();
+
+                    BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST_REMOVE id=%d",
+                                                                 maintenanceData.id
+                                                                ),
+                                             0,  // debugLevel
+                                             resultMap
+                                            );
+                    Widgets.removeTableItem(widgetMaintenanceTable,
+                                            tableItem
+                                           );
+                  }
+                  catch (Exception exception)
+                  {
+                    Dialogs.error(dialog,BARControl.tr("Delete maintenance time fail:\n\n{0}",exception.getMessage()));
+                  }
+                }
+              }
+            }
+          });
+        }
       }
       row++;
     }
@@ -3038,6 +3094,7 @@ public class ServerSettings
                                                            maintenanceDataComparator,
                                                            maintenanceData,
                                                            maintenanceData.getDate(),
+                                                           maintenanceData.getWeekDays(),
                                                            maintenanceData.getBeginTime(),
                                                            maintenanceData.getEndTime()
                                                           );

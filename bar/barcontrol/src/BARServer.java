@@ -4721,7 +4721,6 @@ throw new Error("NYI");
 
     // asynchronous init session
     initSessionThread.start();
-Dprintf.dprintf("display=%s",display);
     while (initSessionThread.getState() != Thread.State.TERMINATED)
     {
       if (display != null)

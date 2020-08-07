@@ -1367,6 +1367,7 @@ public class TabJobs
       }
       else
       {
+        this.weekDays = ScheduleData.NONE;
         for (String name : weekDays.split(","))
         {
           if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << ScheduleData.MON);
@@ -1387,7 +1388,7 @@ public class TabJobs
      * @param thuFlag true for Thursday
      * @param friFlag true for Friday
      * @param satFlag true for Saturday
-     * @param SunFlag true for Sunday
+     * @param sunFlag true for Sunday
      */
     void setWeekDays(boolean monFlag,
                      boolean tueFlag,
@@ -1395,7 +1396,7 @@ public class TabJobs
                      boolean thuFlag,
                      boolean friFlag,
                      boolean satFlag,
-                     boolean SunFlag
+                     boolean sunFlag
                     )
     {
 
@@ -1405,21 +1406,21 @@ public class TabJobs
           && thuFlag
           && friFlag
           && satFlag
-          && SunFlag
+          && sunFlag
          )
       {
         this.weekDays = ScheduleData.ANY;
       }
       else
       {
-        this.weekDays = 0;
+        this.weekDays = ScheduleData.NONE;
         if (monFlag) this.weekDays |= (1 << ScheduleData.MON);
         if (tueFlag) this.weekDays |= (1 << ScheduleData.TUE);
         if (wedFlag) this.weekDays |= (1 << ScheduleData.WED);
         if (thuFlag) this.weekDays |= (1 << ScheduleData.THU);
         if (friFlag) this.weekDays |= (1 << ScheduleData.FRI);
         if (satFlag) this.weekDays |= (1 << ScheduleData.SAT);
-        if (SunFlag) this.weekDays |= (1 << ScheduleData.SUN);
+        if (sunFlag) this.weekDays |= (1 << ScheduleData.SUN);
       }
     }
 
@@ -1553,8 +1554,6 @@ public class TabJobs
 
     private SortModes sortMode;
 
-    private final String[] weekDays = new String[]{"mon","tue","wed","thu","fri","sat","sun"};
-
     /** create schedule data comparator
      * @param table schedule table
      * @param sortColumn sorting column
@@ -1585,6 +1584,7 @@ public class TabJobs
       else if (table.getColumn(5) == sortColumn) sortMode = SortModes.ENABLED;
       else                                       sortMode = SortModes.DATE;
     }
+
     /** compare schedule data
      * @param scheduleData1, scheduleData2 tree data to compare
      * @return -1 iff scheduleData1 < scheduleData2,
@@ -1628,8 +1628,10 @@ public class TabJobs
      */
     private int indexOfWeekDay(String weekDay)
     {
+      final String[] WEEK_DAYS = new String[]{"mon","tue","wed","thu","fri","sat","sun"};
+
       int index = 0;
-      while ((index < weekDays.length) && !weekDays[index].equals(weekDay))
+      while ((index < WEEK_DAYS.length) && !WEEK_DAYS[index].equals(weekDay))
       {
         index++;
       }
