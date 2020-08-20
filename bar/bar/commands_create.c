@@ -4144,6 +4144,245 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 }
 
 /***********************************************************************\
+* Name   : deleteStorage
+* Purpose: delete storage
+* Input  : indexHandle - index handle
+*          storageId   - storage to delete
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors deleteStorage(IndexHandle *indexHandle,
+                           IndexId     storageId
+                          )
+{
+  Errors           error;
+  String           storageName;
+  StorageSpecifier storageSpecifier;
+  StorageInfo      storageInfo;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  storageName = String_new();
+
+  // find storage
+  if (!Index_findStorageById(indexHandle,
+                             storageId,
+                             NULL,  // jobUUID,
+                             NULL,  // scheduleUUID
+                             NULL,  // uuidId
+                             NULL,  // entityId
+                             storageName,
+                             NULL,  // createdDateTime,
+                             NULL,  // size
+                             NULL,  // indexState
+                             NULL,  // indexMode
+                             NULL,  // lastCheckedDateTime
+                             NULL,  // errorMessage
+                             NULL,  // totalEntryCount
+                             NULL  // totalEntrySize
+                            )
+     )
+  {
+    String_delete(storageName);
+    return ERROR_DATABASE_INDEX_NOT_FOUND;
+  }
+
+  error = ERROR_NONE;
+
+  if (!String_isEmpty(storageName))
+  {
+    // delete storage file
+    Storage_initSpecifier(&storageSpecifier);
+    error = Storage_parseName(&storageSpecifier,storageName);
+    if (error == ERROR_NONE)
+    {
+//TODO
+#ifndef WERROR
+#warning NYI: move this special handling of limited scp into Storage_delete()?
+#endif
+      // init storage
+      if (storageSpecifier.type == STORAGE_TYPE_SCP)
+      {
+        // try to init scp-storage first with sftp
+        storageSpecifier.type = STORAGE_TYPE_SFTP;
+        error = Storage_init(&storageInfo,
+                             NULL,  // masterIO
+                             &storageSpecifier,
+                             NULL,  // jobOptions
+                             &globalOptions.indexDatabaseMaxBandWidthList,
+                             SERVER_CONNECTION_PRIORITY_HIGH,
+                             STORAGE_FLAGS_NONE,
+                             CALLBACK_(NULL,NULL),  // updateStatusInfo
+                             CALLBACK_(NULL,NULL),  // getNamePassword
+                             CALLBACK_(NULL,NULL),  // requestVolume
+                             CALLBACK_(NULL,NULL),  // isPause
+                             CALLBACK_(NULL,NULL),  // isAborted
+                             NULL  // logHandle
+                            );
+        if (error != ERROR_NONE)
+        {
+          // init scp-storage
+          storageSpecifier.type = STORAGE_TYPE_SCP;
+          error = Storage_init(&storageInfo,
+                               NULL,  // masterIO
+                               &storageSpecifier,
+                               NULL,  // jobOptions
+                               &globalOptions.indexDatabaseMaxBandWidthList,
+                               SERVER_CONNECTION_PRIORITY_HIGH,
+                               STORAGE_FLAGS_NONE,
+                               CALLBACK_(NULL,NULL),  // updateStatusInfo
+                               CALLBACK_(NULL,NULL),  // getNamePassword
+                               CALLBACK_(NULL,NULL),  // requestVolume
+                               CALLBACK_(NULL,NULL),  // isPause
+                               CALLBACK_(NULL,NULL),  // isAborted
+                               NULL  // logHandle
+                              );
+        }
+      }
+      else
+      {
+        // init other storage types
+        error = Storage_init(&storageInfo,
+                             NULL,  // masterIO
+                             &storageSpecifier,
+                             NULL,  // jobOptions
+                             &globalOptions.indexDatabaseMaxBandWidthList,
+                             SERVER_CONNECTION_PRIORITY_HIGH,
+                             STORAGE_FLAGS_NONE,
+                             CALLBACK_(NULL,NULL),  // updateStatusInfo
+                             CALLBACK_(NULL,NULL),  // getNamePassword
+                             CALLBACK_(NULL,NULL),  // requestVolume
+                             CALLBACK_(NULL,NULL),  // isPause
+                             CALLBACK_(NULL,NULL),  // isAborted
+                             NULL  // logHandle
+                            );
+      }
+      if (error == ERROR_NONE)
+      {
+        if (Storage_exists(&storageInfo,
+                           NULL  // archiveName
+                          )
+           )
+        {
+          // delete storage
+          error = Storage_delete(&storageInfo,
+                                 NULL  // archiveName
+                                );
+        }
+
+        // prune empty directories
+        Storage_pruneDirectories(&storageInfo,
+                                 NULL  // archiveName
+                                );
+
+        // close storage
+        Storage_done(&storageInfo);
+      }
+    }
+    Storage_doneSpecifier(&storageSpecifier);
+  }
+
+  // delete index
+  if (error == ERROR_NONE)
+  {
+    error = Index_deleteStorage(indexHandle,storageId);
+  }
+
+  // free resources
+  String_delete(storageName);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : deleteEntity
+* Purpose: delete entity index and all attached storage files
+* Input  : indexHandle - index handle
+*          entityId    - index id of entity
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors deleteEntity(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         )
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          storageId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // delete all storages of entity
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 entityId,
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
+                                 NULL,  // indexIds
+                                 0,  // indexIdCount
+                                 INDEX_TYPE_SET_ALL,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
+                                 NULL,  // userName
+                                 NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  while (   (error == ERROR_NONE)
+         && Index_getNextStorage(&indexQueryHandle,
+                                 NULL,  // uuidId
+                                 NULL,  // jobUUID
+                                 NULL,  // entityId
+                                 NULL,  // scheduleUUID
+                                 NULL,  // hostName
+                                 NULL,  // userName
+                                 NULL,  // comment
+                                 NULL,  // createdDateTime
+                                 NULL,  // archiveType
+                                 &storageId,
+                                 NULL,  // storageName
+                                 NULL,  // createdDateTime
+                                 NULL,  // size
+                                 NULL,  // indexState
+                                 NULL,  // indexMode
+                                 NULL,  // lastCheckedDateTime
+                                 NULL,  // errorMessage
+                                 NULL,  // totalEntryCount
+                                 NULL  // totalEntrySize
+                                )
+        )
+  {
+    error = deleteStorage(indexHandle,storageId);
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // delete entity index
+  if (error == ERROR_NONE)
+  {
+    error = Index_deleteEntity(indexHandle,entityId);
+  }
+
+  // free resources
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : purgeStorageIndex
 * Purpose: purge storage index and delete entity, uuid if empty and not
 *          locked
@@ -5005,6 +5244,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (isAborted(createInfo) || (createInfo->failError != ERROR_NONE))
         {
           (void)Storage_close(&storageHandle);
+          (void)Storage_delete(&createInfo->storageInfo,storageMsg.archiveName);
           break;
         }
 
@@ -5012,8 +5252,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         error = Storage_transfer(&storageHandle,&fileHandle);
         if (error != ERROR_NONE)
         {
-          Storage_close(&storageHandle);
-          Storage_delete(&createInfo->storageInfo,storageMsg.archiveName);
+          (void)Storage_close(&storageHandle);
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(storageMsg.archiveName));
+          (void)Storage_delete(&createInfo->storageInfo,storageMsg.archiveName);
 
           if (retryCount < MAX_RETRIES)
           {
@@ -5033,6 +5275,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (isAborted(createInfo) || (createInfo->failError != ERROR_NONE))
         {
           (void)Storage_close(&storageHandle);
+          (void)Storage_delete(&createInfo->storageInfo,storageMsg.archiveName);
           break;
         }
 
@@ -7971,7 +8214,7 @@ Errors Command_create(ServerIO                     *masterIO,
                             hostName,
                             userName,
                             archiveType,
-                            0LL, // createdDateTime
+                            createdDateTime,
                             TRUE,  // locked
                             &entityId
                            );
@@ -7985,8 +8228,12 @@ Errors Command_create(ServerIO                     *masterIO,
       return error;
     }
     assert(!INDEX_ID_IS_NONE(entityId));
-    DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-    AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
+    DEBUG_TESTCODE() { (void)deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+    AUTOFREE_ADD(&autoFreeList,&entityId,{ (void)deleteEntity(indexHandle,entityId); });
+
+//TODO
+    // purge expired entities
+
   }
 
   // create new archive
@@ -8147,17 +8394,30 @@ Errors Command_create(ServerIO                     *masterIO,
     // unlock entity
     (void)Index_unlockEntity(indexHandle,entityId);
 
-    // delete entity if nothing created
-    error = Index_pruneEntity(indexHandle,entityId);
-    if (error != ERROR_NONE)
+    if (   (createInfo.failError == ERROR_NONE)
+        && !createInfo.storageFlags.dryRun
+        && !isAborted(&createInfo)
+       )
     {
-      printError("Cannot create index for '%s' (error: %s)!",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+      // delete entity if nothing created
+      error = Index_pruneEntity(indexHandle,entityId);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot create index for '%s' (error: %s)!",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
     }
+    else
+    {
+      // delete entity on error/abort
+      (void)deleteEntity(indexHandle,entityId);
+    }
+
+    AUTOFREE_REMOVE(&autoFreeList,&entityId);
   }
 
   // write incremental list
@@ -8220,6 +8480,10 @@ Errors Command_create(ServerIO                     *masterIO,
     logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'",String_cString(incrementalListFileName));
   }
 
+  // done storage
+  AUTOFREE_REMOVE(&autoFreeList,&createInfo.storageInfo);
+  Storage_done(&createInfo.storageInfo);
+
   // unmount devices
   error = unmountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
@@ -8281,7 +8545,6 @@ Errors Command_create(ServerIO                     *masterIO,
     String_delete(incrementalListFileName);
     Dictionary_done(&createInfo.namesDictionary);
   }
-  Storage_done(&createInfo.storageInfo);
   doneCreateInfo(&createInfo);
   Index_close(indexHandle);
   Storage_doneSpecifier(&storageSpecifier);
