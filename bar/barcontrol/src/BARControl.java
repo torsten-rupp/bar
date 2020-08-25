@@ -2554,7 +2554,7 @@ if (false) {
           Widgets.layout(label,0,0,TableLayoutData.W,0,0,10);
 
           label = Widgets.newLabel(composite,
-                                   String.format("A newer version %s of BARControl is available. You\ncan download it from the BARControl homepage:\n\n%s\n\nChangeLog:",
+                                   String.format("A newer version %s of BARControl is available. You\ncan download it from the BAR homepage:\n\n%s\n\nChangeLog:",
                                                  version,
                                                  URL
                                                 ),
