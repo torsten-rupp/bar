@@ -487,7 +487,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     else
     {
-      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
+      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
     }
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
@@ -854,7 +854,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
+      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),blockCount*(uint64)deviceInfo.blockSize);
     }
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
@@ -1484,7 +1484,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
+          stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
@@ -1512,7 +1512,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+          stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fileInfo.size);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
