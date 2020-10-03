@@ -1884,8 +1884,11 @@ LOCAL bool parseString(const char *string,
                 }
               }
             }
-            if (i <= 0) return FALSE;
-            if (value.s != NULL) value.s[i] = NUL;
+            if (value.s != NULL)
+            {
+              if (i <= 0) return FALSE;
+              value.s[i] = NUL;
+            }
             break;
           case 'p':
           case 'n':
@@ -2901,6 +2904,7 @@ String String_vformat(String string, const char *format, va_list arguments)
   return string;
 }
 
+//TODO: remove, use String_appendFormat
 String String_formatAppend(String string, const char *format, ...)
 {
   va_list arguments;

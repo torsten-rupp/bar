@@ -424,6 +424,7 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 
 String String_format(String string, const char *format, ...);
 String String_vformat(String string, const char *format, va_list arguments);
+//TODO: remove, use String_appendFormat
 String String_formatAppend(String string, const char *format, ...);
 String String_vformatAppend(String string, const char *format, va_list arguments);
 
@@ -781,7 +782,7 @@ int String_compare(ConstString           string1,
 
 INLINE bool String_equals(ConstString string1, ConstString string2);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
-bool String_equals(ConstString string1, ConstString string2)
+INLINE bool String_equals(ConstString string1, ConstString string2)
 {
   bool equalFlag;
 
@@ -929,36 +930,36 @@ String String_iterate(String                string,
 *          in string
 \***********************************************************************/
 
-INLINE void *String_iterateBegin(String string);
+INLINE StringIterator String_iterateBegin(String string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
-INLINE void *String_iterateBegin(String string)
+INLINE StringIterator String_iterateBegin(String string)
 {
   STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
-    return &string->data[0];
+    return 0;
   }
   else
   {
-    return NULL;
+    return 0;
   }
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
-INLINE void *String_iterateEnd(String string);
+INLINE StringIterator String_iterateEnd(String string);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
-INLINE void *String_iterateEnd(String string)
+INLINE StringIterator String_iterateEnd(String string)
 {
   STRING_CHECK_VALID(string);
 
   if (string != NULL)
   {
-    return &string->data[string->length];
+    return string->length;
   }
   else
   {
-    return NULL;
+    return 0;
   }
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
@@ -973,9 +974,9 @@ INLINE void *String_iterateEnd(String string)
 * Notes  : -
 \***********************************************************************/
 
-INLINE char String_iterateNext(String string, void **stringIterator);
+INLINE char String_iterateNext(String string, StringIterator *stringIterator);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
-INLINE char String_iterateNext(String string, void **stringIterator)
+INLINE char String_iterateNext(String string, StringIterator *stringIterator)
 {
   char ch;
 
@@ -984,8 +985,8 @@ INLINE char String_iterateNext(String string, void **stringIterator)
 
   if ((string != NULL) && ((*stringIterator) < String_iterateEnd(string)))
   {
-    ch = (*((char*)(*stringIterator)));
-    (*stringIterator) = (byte*)(*stringIterator)+1;
+    ch = string->data[*stringIterator];
+    (*stringIterator)++;
   }
   else
   {
@@ -996,11 +997,11 @@ INLINE char String_iterateNext(String string, void **stringIterator)
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
-INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator);
+INLINE Codepoint String_iterateNextUTF8(String string, StringIterator *stringIterator);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
-INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator)
+INLINE Codepoint String_iterateNextUTF8(String string, StringIterator *stringIterator)
 {
-  ulong     index,nextIndex;
+  ulong     nextIndex;
   Codepoint codepoint;
 
   STRING_CHECK_VALID(string);
@@ -1008,9 +1009,8 @@ INLINE Codepoint String_iterateNextUTF8(String string, void **stringIterator)
 
   if ((string != NULL) && ((*stringIterator) < String_iterateEnd(string)))
   {
-    index = (byte*)(*stringIterator)-(byte*)&string->data[0];
-    codepoint = stringAtUTF8(string->data,index,&nextIndex);
-    (*stringIterator) = (byte*)(*stringIterator)+(nextIndex-index);
+    codepoint = stringAtUTF8(string->data,*stringIterator,&nextIndex);
+    (*stringIterator) = nextIndex;
   }
   else
   {
@@ -1092,10 +1092,10 @@ String String_unescape(String     string,
 /***********************************************************************\
 * Name   : String_quote, String_unquote
 * Purpose: quote/unquote string
-* Input  : string     - string
-*          quoteChar  - quote character to add
-*          forceFlag  - force quote
-*          quoteChars - quote characters to remove
+* Input  : string          - string
+*          quoteChar       - quote character to add
+*          forceQuoteChars - characters to force quote
+*          quoteChars      - quote characters
 * Output : -
 * Return : quoted/unquoted string
 * Notes  : add quote character and escape enclosed quote characters if
@@ -1244,7 +1244,7 @@ bool String_matchCString(ConstString string, ulong index, const char *pattern, l
 * Name   : String_toInteger, String_toInteger64, String_toDouble,
 *          String_toBoolean
 * Purpose: convert string into integer, integer64, double, boolean or
-*          string (string without enclosing quotes ' or ")
+*          string (string without enclosing quotes ' or ") and add
 * Input  : string                   - string variable (for string)
 *          convertString            - string to convert
 *          index                    - start index in convertString
