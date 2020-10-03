@@ -51,14 +51,6 @@
 #define DATABASE_SUPPORT_INTERRUPT
 #define DATABASE_USE_ATOMIC_INCREMENT
 
-// switch on for debugging only!
-#warning remove/revert
-#define DATABASE_DEBUG_LOCK
-#define _DATABASE_DEBUG_LOCK_PRINT
-#define _DATABASE_DEBUG_TIMEOUT
-#define _DATABASE_DEBUG_COPY_TABLE
-#define _DATABASE_DEBUG_LOG SQLITE_TRACE_STMT
-
 // TODO: temporary work-around for lost wait triggers
 #define DATABASE_WAIT_TRIGGER_WORK_AROUND
 #define DATABASE_WAIT_TRIGGER_WORK_AROUND_TIME 5
@@ -1124,6 +1116,8 @@ LOCAL_INLINE bool isReadLock(DatabaseHandle *databaseHandle)
   return (databaseHandle->databaseNode->readCount > 0);
 }
 
+//TODO: not used, remove?
+#if 0
 /***********************************************************************\
 * Name   : isPendingReadWriteLock
 * Purpose: check if pending read/write lock
@@ -1144,6 +1138,7 @@ LOCAL_INLINE bool isPendingReadWriteLock(DatabaseHandle *databaseHandle)
 
   return (databaseHandle->databaseNode->pendingReadWriteCount > 0);
 }
+#endif
 
 /***********************************************************************\
 * Name   : isReadWriteLock
@@ -3502,23 +3497,26 @@ void Database_doneAll(void)
       databaseNode->pendingReadCount        = 0;
       databaseNode->readCount               = 0;
       pthread_cond_init(&databaseNode->readTrigger,NULL);
-memClear(databaseNode->readLPWIds,sizeof(databaseNode->readLPWIds));
 
       databaseNode->pendingReadWriteCount   = 0;
       databaseNode->readWriteCount          = 0;
       pthread_cond_init(&databaseNode->readWriteTrigger,NULL);
-memClear(databaseNode->readWriteLPWIds,sizeof(databaseNode->readWriteLPWIds));
 
       databaseNode->pendingTransactionCount = 0;
       databaseNode->transactionCount        = 0;
       pthread_cond_init(&databaseNode->transactionTrigger,NULL);
-databaseNode->transactionLPWId = 0;
 
       List_init(&databaseNode->busyHandlerList);
       Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
 
       List_init(&databaseNode->progressHandlerList);
       Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
+
+      #ifdef DATABASE_DEBUG_LOCK
+        memClear(databaseNode->readLPWIds,sizeof(databaseNode->readLPWIds));
+        memClear(databaseNode->readWriteLPWIds,sizeof(databaseNode->readWriteLPWIds));
+        databaseNode->transactionLPWId = 0;
+      #endif /* DATABASE_DEBUG_LOCK */
 
       #ifndef NDEBUG
         for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
@@ -3961,7 +3959,7 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
               do
               {
                 t = MIN(Misc_getRestTimeout(&timeoutInfo),DT);
-fprintf(stderr,"%s, %d: a %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
+//fprintf(stderr,"%s, %d: a %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
               }
@@ -4096,7 +4094,7 @@ fprintf(stderr,"%s, %d: a %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTi
               do
               {
                 t = MIN(Misc_getRestTimeout(&timeoutInfo),DT);
-fprintf(stderr,"%s, %d: b %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
+//fprintf(stderr,"%s, %d: b %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
 
                 waitTriggerRead(databaseHandle,t);
               }
@@ -4153,7 +4151,7 @@ fprintf(stderr,"%s, %d: b %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTi
               do
               {
                 t = MIN(Misc_getRestTimeout(&timeoutInfo),DT);
-fprintf(stderr,"%s, %d: c %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
+//fprintf(stderr,"%s, %d: c %ld %lu %u\n",__FILE__,__LINE__,timeout,Misc_getRestTimeout(&timeoutInfo),t);
 
                 waitTriggerReadWrite(databaseHandle,t);
               }
@@ -6057,7 +6055,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     {
       assert(databaseHandle->databaseNode->transactionCount == 0);
       databaseHandle->databaseNode->transactionCount++;
-databaseHandle->databaseNode->transactionLPWId = Thread_getCurrentLWPId();
+      #ifdef DATABASE_DEBUG_LOCK
+        databaseHandle->databaseNode->transactionLPWId = Thread_getCurrentLWPId();
+      #endif /* DATABASE_DEBUG_LOCK */
     });
 
     #ifndef NDEBUG
@@ -6126,7 +6126,9 @@ databaseHandle->databaseNode->transactionLPWId = Thread_getCurrentLWPId();
       databaseHandle->databaseNode->transactionCount--;
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
-databaseHandle->databaseNode->transactionLPWId = 0;
+        #ifdef DATABASE_DEBUG_LOCK
+          databaseHandle->databaseNode->transactionLPWId = 0;
+        #endif /* DATABASE_DEBUG_LOCK */
         triggerUnlockTransaction(databaseHandle);
 //TODO
 #if 0
@@ -6239,7 +6241,9 @@ databaseHandle->databaseNode->transactionLPWId = 0;
       databaseHandle->databaseNode->transactionCount--;
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
-databaseHandle->databaseNode->transactionLPWId = 0;
+        #ifdef DATABASE_DEBUG_LOCK
+          databaseHandle->databaseNode->transactionLPWId = 0;
+        #endif /* DATABASE_DEBUG_LOCK */
 //fprintf(stderr,"%s, %d: trigger transaction %p %d %p\n",__FILE__,__LINE__,databaseHandle->databaseNode,databaseHandle->databaseNode->transactionCount,&databaseHandle->databaseNode->transactionTrigger);
         triggerUnlockTransaction(databaseHandle);
 #if 0
@@ -8016,6 +8020,36 @@ DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
 
   return databaseId;
 }
+
+#ifdef DATABASE_DEBUG_LOCK
+void Database_debugPrintSimpleLockInfo(void)
+{
+  const DatabaseNode *databaseNode;
+  uint  i;
+
+  // Note: debug only, no locking
+  LIST_ITERATE(&databaseList,databaseNode)
+  {
+    printf("Database: %s\n",String_cString(databaseNode->fileName));
+
+    printf("  Read locks:");
+    for (i = 0; i < SIZE_OF_ARRAY(databaseNode->readLPWIds); i++)
+    {
+      if (databaseNode->readLPWIds[i] != 0) printf(" %u",databaseNode->readLPWIds[i]);
+    }
+    printf("\n");
+    printf("  Read/write locks:");
+    for (i = 0; i < SIZE_OF_ARRAY(databaseNode->readWriteLPWIds); i++)
+    {
+      if (databaseNode->readWriteLPWIds[i] != 0) printf(" %u",databaseNode->readWriteLPWIds[i]);
+    }
+    printf("\n");
+    printf("  Transaction lock:");
+    if (databaseNode->transactionLPWId != 0) printf(" %u",databaseNode->transactionLPWId);
+    printf("\n");
+  }
+}
+#endif /* DATABASE_DEBUG_LOCK */
 
 #ifndef NDEBUG
 

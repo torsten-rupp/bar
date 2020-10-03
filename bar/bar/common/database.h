@@ -32,6 +32,14 @@
 /****************** Conditional compilation switches *******************/
 #define _DATABASE_LOCK_PER_INSTANCE   // if defined use lock per database instance, otherwise a global lock for all database is used
 
+// switch on for debugging only!
+#warning remove/revert
+#define DATABASE_DEBUG_LOCK
+#define _DATABASE_DEBUG_LOCK_PRINT
+#define _DATABASE_DEBUG_TIMEOUT
+#define _DATABASE_DEBUG_COPY_TABLE
+#define _DATABASE_DEBUG_LOG SQLITE_TRACE_STMT
+
 /***************************** Constants *******************************/
 
 // database open mask
@@ -190,9 +198,7 @@ typedef struct
       uint       stackTraceSize;
     #endif /* HAVE_BACKTRACE */
   } DatabaseThreadInfo;
-#endif /* not NDEBUG */
 
-#ifndef NDEBUG
   typedef struct
   {
     ThreadId                       threadId;
@@ -222,21 +228,26 @@ typedef struct DatabaseNode
   uint                        pendingReadCount;
   uint                        readCount;
   pthread_cond_t              readTrigger;
-ThreadLWPId readLPWIds[32];
 
   uint                        pendingReadWriteCount;
   uint                        readWriteCount;
   pthread_cond_t              readWriteTrigger;
-ThreadLWPId readWriteLPWIds[32];
 
   uint                        pendingTransactionCount;
   uint                        transactionCount;
   pthread_cond_t              transactionTrigger;
-ThreadLWPId transactionLPWId;
 
   DatabaseBusyHandlerList     busyHandlerList;
   DatabaseProgressHandlerList progressHandlerList;
 
+  // simple locking information: LWP ids only
+  #ifdef DATABASE_DEBUG_LOCK
+    ThreadLWPId readLPWIds[32];
+    ThreadLWPId readWriteLPWIds[32];
+    ThreadLWPId transactionLPWId;
+  #endif /* DATABASE_DEBUG_LOCK */
+
+  // full locking information
   #ifndef NDEBUG
     struct
     {
@@ -1478,6 +1489,19 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle);
+
+#ifdef DATABASE_DEBUG_LOCK
+/***********************************************************************\
+* Name   : Database_debugPrintSimpleLockInfo
+* Purpose: print debug simple lock info
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_debugPrintSimpleLockInfo(void);
+#endif /* DATABASE_DEBUG_LOCK */
 
 #ifndef NDEBUG
 
