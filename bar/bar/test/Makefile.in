@@ -4201,7 +4201,30 @@ test_index_operations_base: \
            --verbose=2 \
            $(LOG) \
         )
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest") # no entries
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no file/image/hardlink entries
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN directoryEntries ON directoryEntries.entryId=directoryEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no directory entries
+	$(call functionIndexQueryEmpty,"SELECT linkEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN linkEntries ON entryFragments.entryId=linkEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no link entries
+	$(call functionIndexQueryEmpty,"SELECT specialEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no special entries
 	@# newest entries in index
 	$(TEST_BAR_SQLITE3) intermediate/index.db --create --force $(LOG)
 	($(CD) $(UP_DIR); \
@@ -4215,7 +4238,34 @@ test_index_operations_base: \
            --verbose=2 \
            $(LOG) \
         )
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId!=1") # only entries with entity 1
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId!=1 \
+                                       ") # only file/image/hardlink entries with entity != 1
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN directoryEntries ON directoryEntries.entryId=directoryEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId!=1 \
+                                       ") # only directory entries with entity != 1
+	$(call functionIndexQueryEmpty,"SELECT linkEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN linkEntries ON entryFragments.entryId=linkEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId!=1 \
+                                       ") # only link entries with entity != 1
+	$(call functionIndexQueryEmpty,"SELECT specialEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId!=1 \
+                                       ") # only special entries with entity != 1
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
@@ -4238,7 +4288,34 @@ test_index_operations_base: \
            --verbose=2 \
            $(LOG) \
         )
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId=1") # no entries with entity 1
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId=1 \
+                                       ") # only file/image/hardlink entries with entity 1
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN directoryEntries ON directoryEntries.entryId=directoryEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId=1 \
+                                       ") # only directory entries with entity 1
+	$(call functionIndexQueryEmpty,"SELECT linkEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN linkEntries ON entryFragments.entryId=linkEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId=1 \
+                                       ") # only link entries with entity 1
+	$(call functionIndexQueryEmpty,"SELECT specialEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                        WHERE     storages.deletedFlag!=1 \
+                                              AND entityId=1 \
+                                       ") # only special entries with entity 1
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(T\EST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
@@ -4249,7 +4326,30 @@ test_index_operations_base: \
            --verbose=2 \
            $(LOG) \
         )
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest") # no entries
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no file/image/hardlink entries
+	$(call functionIndexQueryEmpty,"SELECT entriesNewest.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN directoryEntries ON directoryEntries.entryId=directoryEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no directory entries
+	$(call functionIndexQueryEmpty,"SELECT linkEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN linkEntries ON entryFragments.entryId=linkEntries.entryId \
+                                          LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no link entries
+	$(call functionIndexQueryEmpty,"SELECT specialEntries.entityId \
+                                        FROM entriesNewest \
+                                          LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.entryId \
+                                          LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                        WHERE storages.deletedFlag!=1 \
+                                       ") # no special entries
 	@$(RMF) intermediate/test0.bar intermediate/test1.bar
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
