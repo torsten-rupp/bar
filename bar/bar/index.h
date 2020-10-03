@@ -32,6 +32,15 @@
 /****************** Conditional compilation switches *******************/
 //#define __INDEX_ID_TYPE_SAFE
 
+// switch on for debugging only!
+#define _INDEX_DEBUG_LOCK
+#define _INDEX_DEBUG_IMPORT_OLD_DATABASE
+
+#ifndef NDEBUG
+  #define _INDEX_DEBUG_LIST_INFO  // enable to output list info
+  #define _INDEX_DEBUG_PURGE      // enable to output purge info
+#endif
+
 /***************************** Constants *******************************/
 // index version
 #define INDEX_VERSION INDEX_CONST_VERSION
@@ -2917,8 +2926,7 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
                                 IndexId     entryId
                                );
 
-#ifndef NDEBUG
-
+#ifdef INDEX_DEBUG_LOCK
 /***********************************************************************\
 * Name   : Index_debugPrintInUseInfo
 * Purpose: print debug in-use info
@@ -2929,8 +2937,7 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
 \***********************************************************************/
 
 void Index_debugPrintInUseInfo(void);
-
-#endif /* not NDEBUG */
+#endif /* INDEX_DEBUG_LOCK */
 
 #ifdef __cplusplus
   }
