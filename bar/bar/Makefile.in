@@ -579,6 +579,7 @@ BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
                               common/lists.c \
                               common/strings.c \
                               common/stringlists.c \
+                              common/dictionaries.c \
                               common/files.c \
                               common/devices.c \
                               common/database.c \
@@ -1188,7 +1189,7 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
-          --log-file=/tmp/bar2.log --log=all --server-debug \
+          --log-file=/tmp/bar2.log --log=all --debug-server \
           $(OPTIONS)
 
 rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1230,7 +1231,7 @@ rundevgcov: bar-gcov@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
-          --log-file=/tmp/bar.log --log=all --server-debug \
+          --log-file=/tmp/bar.log --log=all --debug-server \
           $(OPTIONS)
 
 rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1244,7 +1245,7 @@ rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
-          --log-file=/tmp/bar.log --log=all --server-debug \
+          --log-file=/tmp/bar.log --log=all --debug-server \
           $(OPTIONS)
 
 rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1258,7 +1259,7 @@ rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-ce
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
-          --log-file=/tmp/bar.log --log=all --server-debug \
+          --log-file=/tmp/bar.log --log=all --debug-server \
           $(OPTIONS)
 
 rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1272,7 +1273,7 @@ rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-c
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
-          --log-file=/tmp/bar.log --log=all --server-debug \
+          --log-file=/tmp/bar.log --log=all --debug-server \
           $(OPTIONS)
 
 rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1336,7 +1337,7 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
-          --log-file=/tmp/bar-slave.log --log=all --server-debug \
+          --log-file=/tmp/bar-slave.log --log=all --debug-server \
           $(OPTIONS)
 
 rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1866,7 +1867,7 @@ memcheck8: \
             --server-key-file=bar-server-key.pem \
             --server-port=$(TEST_SERVER_PORT) \
             --server-tls-port=$(TEST_SERVER_SSL_PORT) \
-            --server-debug &
+            --debug-server &
 	$(SLEEP) 30
 	$(ECHO) '1 VERSION' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
 	$(ECHO) '1 JOB_LIST' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
