@@ -1253,169 +1253,6 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   }
 }
 
-/*---------------------------------------------------------------------*/
-
-/***********************************************************************\
-* Name   : getCryptPasswordFromConfig
-* Purpose: get crypt password from config call-back
-* Input  : name          - name variable (not used)
-*          password      - crypt password variable
-*          passwordType  - password type (not used)
-*          text          - text (not used)
-*          validateFlag  - TRUE to validate input, FALSE otherwise (not
-*                          used)
-*          weakCheckFlag - TRUE for weak password checking, FALSE
-*                          otherwise (print warning if password seems to
-*                          be a weak password) (not used)
-*          userData      - user data: job node
-* Output : password - crypt password
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors getCryptPasswordFromConfig(String        name,
-                                        Password      *password,
-                                        PasswordTypes passwordType,
-                                        const char    *text,
-                                        bool          validateFlag,
-                                        bool          weakCheckFlag,
-                                        void          *userData
-                                       )
-{
-  JobNode *jobNode = (JobNode*)userData;
-
-  assert(jobNode != NULL);
-
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(passwordType);
-  UNUSED_VARIABLE(text);
-  UNUSED_VARIABLE(validateFlag);
-  UNUSED_VARIABLE(weakCheckFlag);
-
-  if (Password_isEmpty(&jobNode->job.options.cryptPassword))
-  {
-    Password_set(password,&jobNode->job.options.cryptPassword);
-    return ERROR_NONE;
-  }
-  else
-  {
-    return ERROR_NO_CRYPT_PASSWORD;
-  }
-}
-
-/***********************************************************************\
-* Name   : updateStatusInfo
-* Purpose: update status info
-* Input  : error      - error code
-*          statusInfo - status info data
-*          userData   - user data: job node
-* Output : -
-* Return :
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void updateStatusInfo(Errors           error,
-                            const StatusInfo *statusInfo,
-                            void             *userData
-                           )
-{
-  JobNode *jobNode = (JobNode*)userData;
-  double  entriesPerSecondAverage,bytesPerSecondAverage,storageBytesPerSecondAverage;
-  ulong   restFiles;
-  uint64  restBytes;
-  uint64  restStorageBytes;
-  ulong   estimatedRestTime;
-
-  assert(jobNode != NULL);
-  assert(statusInfo != NULL);
-  assert(statusInfo->entry.name != NULL);
-  assert(statusInfo->storage.name != NULL);
-
-  UNUSED_VARIABLE(error);
-
-  // Note: only try for 2s
-  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
-  {
-    // store status
-    setStatusInfo(&jobNode->statusInfo,statusInfo);
-
-    // calculate statics values
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->done.size);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storage.doneSize);
-    entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
-    bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
-    storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
-
-    // rest rest values
-    restFiles         = (statusInfo->total.count       > statusInfo->done.count      ) ? statusInfo->total.count      -statusInfo->done.count       : 0L;
-    restBytes         = (statusInfo->total.size        > statusInfo->done.size       ) ? statusInfo->total.size       -statusInfo->done.size        : 0LL;
-    restStorageBytes  = (statusInfo->storage.totalSize > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize-statusInfo->storage.doneSize : 0LL;
-
-    // calculate estimated rest time
-    estimatedRestTime = 0L;
-    if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
-    if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
-    if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
-
-    // calulcate performance values
-    jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
-    jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
-    jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
-    jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
-  }
-}
-
-/***********************************************************************\
-* Name   : restoreUpdateStatusInfo
-* Purpose: update restore status info
-* Input  : statusInfo - status info data
-*          userData   - user data: job node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
-                                   void             *userData
-                                  )
-{
-  JobNode *jobNode = (JobNode*)userData;
-//NYI:  double        entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
-
-  assert(jobNode != NULL);
-  assert(statusInfo != NULL);
-  assert(statusInfo->storage.name != NULL);
-  assert(statusInfo->entry.name != NULL);
-
-  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
-  {
-    // calculate estimated rest time
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->done.size);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storage.doneSize);
-
-    jobNode->statusInfo.done.count         = statusInfo->done.count;
-    jobNode->statusInfo.done.size          = statusInfo->done.size;
-    jobNode->statusInfo.skipped.count      = statusInfo->skipped.count;
-    jobNode->statusInfo.skipped.size       = statusInfo->skipped.size;
-    jobNode->statusInfo.error.count        = statusInfo->error.count;
-    jobNode->statusInfo.error.size         = statusInfo->error.size;
-    jobNode->statusInfo.archiveSize        = 0LL;
-    jobNode->statusInfo.compressionRatio   = 0.0;
-    String_set(jobNode->statusInfo.entry.name,statusInfo->entry.name);
-    jobNode->statusInfo.entry.doneSize     = statusInfo->entry.doneSize;
-    jobNode->statusInfo.entry.totalSize    = statusInfo->entry.totalSize;
-    String_set(jobNode->statusInfo.storage.name,statusInfo->storage.name);
-    jobNode->statusInfo.storage.doneSize   = statusInfo->storage.doneSize;
-    jobNode->statusInfo.storage.totalSize  = statusInfo->storage.totalSize;
-    jobNode->statusInfo.volume.number      = 0;
-    jobNode->statusInfo.volume.progress    = 0.0;
-
-    jobNode->runningInfo.estimatedRestTime = 0;
-  }
-}
-
 /***********************************************************************\
 * Name   : delayThread
 * Purpose: delay thread and check quit flag
@@ -1454,832 +1291,6 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
       n += 5;
     }
   }
-}
-
-/***********************************************************************\
-* Name   : isPauseCreate
-* Purpose: check if pause create
-* Input  : userData - user data (not used)
-* Output : -
-* Return : TRUE iff pause
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isPauseCreate(void *userData)
-{
-  UNUSED_VARIABLE(userData);
-
-  return pauseFlags.create;
-}
-
-/***********************************************************************\
-* Name   : isPauseStorage
-* Purpose: check if pause storage
-* Input  : userData - user data (not used)
-* Output : -
-* Return : TRUE iff pause storage
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isPauseStorage(void *userData)
-{
-  UNUSED_VARIABLE(userData);
-
-  return pauseFlags.storage;
-}
-
-/***********************************************************************\
-* Name   : isAborted
-* Purpose: check if job is aborted
-* Input  : userData - job node
-* Output : -
-* Return : TRUE iff aborted
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isAborted(void *userData)
-{
-  const JobNode *jobNode = (const JobNode*)userData;
-
-  assert(jobNode != NULL);
-
-  return jobNode->requestedAbortFlag;
-}
-
-/***********************************************************************\
-* Name   : jobThreadCode
-* Purpose: job execution (create/restore) thread
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void jobThreadCode(void)
-{
-  StorageSpecifier storageSpecifier;
-  String           jobName;
-  String           storageName;
-  String           directory;
-  EntryList        includeEntryList;
-  PatternList      excludePatternList;
-  String           scheduleCustomText;
-  String           byName;
-  ConnectorInfo    *connectorInfo;
-  AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
-  StringMap        resultMap;
-  JobNode          *jobNode;
-  ArchiveTypes     archiveType;
-  StorageFlags     storageFlags;
-  uint64           startDateTime;
-  JobOptions       jobOptions;
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  LogHandle        logHandle;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexHandle      *indexHandle;
-  uint64           executeStartDateTime,executeEndDateTime;
-  StringList       storageNameList;
-  TextMacros       (textMacros,9);
-  StaticString     (s,64);
-  uint             n;
-  Errors           error;
-  ScheduleNode     *scheduleNode;
-
-  // initialize variables
-  Storage_initSpecifier(&storageSpecifier);
-  jobName            = String_new();
-  storageName        = String_new();
-  directory          = String_new();
-  EntryList_init(&includeEntryList);
-  PatternList_init(&excludePatternList);
-  scheduleCustomText = String_new();
-  byName             = String_new();
-  connectorInfo      = NULL;
-  initAggregateInfo(&jobAggregateInfo);
-  initAggregateInfo(&scheduleAggregateInfo);
-  resultMap          = StringMap_new();
-  if (resultMap == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  jobNode       = NULL;
-  archiveType   = ARCHIVE_ENTRY_TYPE_UNKNOWN;
-  storageFlags  = STORAGE_FLAGS_NONE;
-  startDateTime = 0LL;
-  while (!quitFlag)
-  {
-    // wait and get next job to run
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-    {
-      // wait and get next job to execute
-      do
-      {
-        // first check for a continuous job to run
-//TODO: use LIST_FIND?
-        jobNode = jobList.head;
-        while (   !quitFlag
-               && (jobNode != NULL)
-               && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                   || !Job_isWaiting(jobNode->jobState)
-                   || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
-                  )
-              )
-        {
-          jobNode = jobNode->next;
-        }
-
-        if (jobNode == NULL)
-        {
-          // next check for other job types to run
-//TODO: use LIST_FIND?
-          jobNode = jobList.head;
-          while (   !quitFlag
-                 && (jobNode != NULL)
-                 && (   !Job_isWaiting(jobNode->jobState)
-                     || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
-                    )
-                )
-          {
-            jobNode = jobNode->next;
-          }
-        }
-
-        // if no job to execute -> wait
-        if (!quitFlag && (jobNode == NULL)) Job_listWaitModifed(LOCK_TIMEOUT);
-      }
-      while (!quitFlag && (jobNode == NULL));
-      if (quitFlag)
-      {
-        Job_listUnlock();
-        break;
-      }
-      assert(jobNode != NULL);
-
-      // get copy of mandatory job data
-      String_set(jobName,jobNode->name);
-      String_set(storageName,jobNode->job.storageName);
-      String_set(jobUUID,jobNode->job.uuid);
-      EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
-      PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
-      Job_duplicateOptions(&jobOptions,&jobNode->job.options);
-      String_set(scheduleCustomText,jobNode->scheduleCustomText);
-      archiveType   = jobNode->archiveType;
-      startDateTime = jobNode->startDateTime;
-      storageFlags  = jobNode->storageFlags;
-      String_set(byName,jobNode->byName);
-
-      // get and lock connector (if remote job)
-      connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
-
-      // start job
-      Job_start(jobNode);
-    }
-    if (jobNode == NULL)
-    {
-      break;
-    }
-
-    // Note: job is now protected by running state from being deleted
-
-    // get new schedule UUID
-    Misc_getUUID(scheduleUUID);
-
-    // init log
-    initLog(&logHandle);
-
-    // get info string
-    String_clear(s);
-    if (Job_isRemote(jobNode))
-    {
-      String_appendFormat(s," on '%S'",jobNode->job.slaveHost.name);
-    }
-    if (storageFlags.noStorage || storageFlags.dryRun)
-    {
-      String_appendCString(s," (");
-      n = 0;
-      if (storageFlags.noStorage)
-      {
-        if (n > 0) String_appendCString(s,", ");
-        String_appendCString(s,"no-storage");
-        n++;
-      }
-      if (storageFlags.dryRun)
-      {
-        if (n > 0) String_appendCString(s,", ");
-        String_appendCString(s,"dry-run");
-        n++;
-      }
-      String_appendCString(s,")");
-    }
-
-    // log
-    switch (jobNode->jobType)
-    {
-      case JOB_TYPE_NONE:
-        break;
-      case JOB_TYPE_CREATE:
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Start job '%s'%s %s%s%s",
-                   String_cString(jobName),
-                   !String_isEmpty(s) ? String_cString(s) : "",
-                   Archive_archiveTypeToString(archiveType),
-                   !String_isEmpty(byName) ? " by " : "",
-                   String_cString(byName)
-                  );
-        break;
-      case JOB_TYPE_RESTORE:
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Start restore%s%s%s",
-                   !String_isEmpty(s) ? String_cString(s) : "",
-                   !String_isEmpty(byName) ? " by " : "",
-                   String_cString(byName)
-                  );
-        break;
-    }
-
-    // open index
-    indexHandle = NULL;
-    if (Index_isAvailable())
-    {
-      while (!quitFlag && (indexHandle == NULL))
-      {
-        indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
-      }
-    }
-
-    // get start date/time
-    executeStartDateTime = Misc_getCurrentDateTime();
-
-    // pre-process command
-    if (!String_isEmpty(jobNode->job.options.preProcessScript))
-    {
-      TEXT_MACROS_INIT(textMacros)
-      {
-        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
-        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
-        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
-      }
-      error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
-                              executeStartDateTime,
-                              textMacros.data,
-                              textMacros.count
-                             );
-      if (error == ERROR_NONE)
-      {
-        logMessage(&logHandle,
-                   LOG_TYPE_INFO,
-                   "Executed pre-command for '%s'",
-                   String_cString(jobName)
-                  );
-      }
-      else
-      {
-        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': pre-command fail (error: %s)",
-                   String_cString(jobName),
-                   Error_getText(jobNode->runningInfo.error)
-                  );
-      }
-    }
-
-    // execute create/restore operation
-    Index_beginInUse();
-    {
-      if      (!Job_isRemote(jobNode))
-      {
-        // local job -> run on this machine
-
-        // parse storage name
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
-          if (jobNode->runningInfo.error != ERROR_NONE)
-          {
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Aborted job '%s': invalid storage '%s' (error: %s)",
-                       String_cString(jobName),
-                       String_cString(storageName),
-                       Error_getText(jobNode->runningInfo.error)
-                      );
-          }
-        }
-
-        // get include/excluded entries from commands
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (!String_isEmpty(jobNode->job.options.includeFileCommand))
-          {
-            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileCommand));
-          }
-        }
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (!String_isEmpty(jobNode->job.options.includeImageCommand))
-          {
-            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageCommand));
-          }
-        }
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (!String_isEmpty(jobNode->job.options.excludeCommand))
-          {
-            jobNode->runningInfo.error = addExcludeListFromCommand(&excludePatternList,String_cString(jobNode->job.options.excludeCommand));
-          }
-        }
-
-        // get include/excluded entries from file
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (!String_isEmpty(jobNode->job.options.includeFileListFileName))
-          {
-            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileListFileName));
-          }
-        }
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (!String_isEmpty(jobNode->job.options.includeImageListFileName))
-          {
-            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageListFileName));
-          }
-        }
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (!String_isEmpty(jobNode->job.options.excludeListFileName))
-          {
-            jobNode->runningInfo.error = addExcludeListFromFile(&excludePatternList,String_cString(jobNode->job.options.excludeListFileName));
-          }
-        }
-
-        // create/restore operaton
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          #ifdef SIMULATOR
-            {
-              int z;
-
-              jobNode->runningInfo.estimatedRestTime=120;
-
-              jobNode->runningInfo.totalEntryCount += 60;
-              jobNode->runningInfo.totalEntrySize += 6000;
-
-              for (z=0;z<120;z++)
-              {
-                extern void sleep(int);
-                if (jobNode->requestedAbortFlag) break;
-
-                sleep(1);
-
-                if (z==40) {
-                  jobNode->runningInfo.totalEntryCount += 80;
-                  jobNode->runningInfo.totalEntrySize += 8000;
-                }
-
-                jobNode->runningInfo.doneCount++;
-                jobNode->runningInfo.doneSize += 100;
-//                jobNode->runningInfo.totalEntryCount += 3;
-//                jobNode->runningInfo.totalEntrySize += 181;
-                jobNode->runningInfo.estimatedRestTime=120-z;
-                String_format(jobNode->runningInfo.fileName,"file %d",z);
-                String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
-              }
-            }
-          #else
-            switch (jobNode->jobType)
-            {
-              case JOB_TYPE_NONE:
-                break;
-              case JOB_TYPE_CREATE:
-                // create archive
-                jobNode->runningInfo.error = Command_create(jobNode->masterIO,
-                                                            jobUUID,
-                                                            scheduleUUID,
-//TODO:
-NULL,//                                                        scheduleTitle,
-                                                            scheduleCustomText,
-                                                            storageName,
-                                                            &includeEntryList,
-                                                            &excludePatternList,
-                                                            &jobOptions,
-                                                            archiveType,
-                                                            startDateTime,
-                                                            storageFlags,
-                                                            CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                            CALLBACK_(updateStatusInfo,jobNode),
-                                                            CALLBACK_(storageRequestVolume,jobNode),
-                                                            CALLBACK_(isPauseCreate,NULL),
-                                                            CALLBACK_(isPauseStorage,NULL),
-//TODO access jobNode?
-                                                            CALLBACK_(isAborted,jobNode),
-                                                            &logHandle
-                                                           );
-                break;
-              case JOB_TYPE_RESTORE:
-                // restore archive
-                StringList_init(&storageNameList);
-                StringList_append(&storageNameList,storageName);
-                jobNode->runningInfo.error = Command_restore(&storageNameList,
-                                                             &includeEntryList,
-                                                             &excludePatternList,
-                                                             &jobOptions,
-                                                             storageFlags,
-                                                             CALLBACK_(restoreUpdateStatusInfo,jobNode),
-                                                             CALLBACK_(NULL,NULL),  // restoreHandleError
-                                                             CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
-                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
-                                                             &logHandle
-                                                            );
-                StringList_done(&storageNameList);
-                break;
-              #ifndef NDEBUG
-                default:
-                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  break;
-              #endif /* NDEBUG */
-            }
-          #endif /* SIMULATOR */
-        }
-      }
-      else
-      {
-        // slave job -> send to slave and run on slave machine
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (connectorInfo == NULL)
-          {
-            jobNode->runningInfo.error = ERROR_SLAVE_DISCONNECTED;
-          }
-        }
-
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          if (!Connector_isAuthorized(connectorInfo))
-          {
-            jobNode->runningInfo.error = ERROR_NOT_PAIRED;
-          }
-        }
-
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          // init storage
-          jobNode->runningInfo.error = Connector_initStorage(connectorInfo,
-                                                             jobNode->job.storageName,
-                                                             &jobNode->job.options,
-                                                             storageFlags
-                                                            );
-          if (jobNode->runningInfo.error == ERROR_NONE)
-          {
-            // run create job
-            jobNode->runningInfo.error = Connector_create(connectorInfo,
-                                                          jobName,
-                                                          jobUUID,
-                                                          scheduleUUID,
-                                                          storageName,
-                                                          &includeEntryList,
-                                                          &excludePatternList,
-                                                          &jobOptions,
-                                                          archiveType,
-                                                          NULL,  // scheduleTitle,
-                                                          NULL,  // scheduleCustomText,
-                                                          storageFlags,
-                                                          CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                          CALLBACK_(updateStatusInfo,jobNode),
-                                                          CALLBACK_(storageRequestVolume,jobNode)
-                                                         );
-
-            // done storage
-            Connector_doneStorage(connectorInfo);
-          }
-        }
-      }
-    }
-    Index_endInUse();
-
-    // get end date/time
-    executeEndDateTime = Misc_getCurrentDateTime();
-
-    // store last executed date/time, last error message
-    jobNode->runningInfo.lastExecutedDateTime = executeEndDateTime;
-    String_setCString(jobNode->runningInfo.lastErrorMessage,Error_getText(jobNode->runningInfo.error));
-
-    // add index history information
-    switch (jobNode->jobType)
-    {
-      case JOB_TYPE_NONE:
-        break;
-      case JOB_TYPE_CREATE:
-        if (jobNode->requestedAbortFlag)
-        {
-          if (indexHandle != NULL)
-          {
-            error = Index_newHistory(indexHandle,
-                                     jobUUID,
-                                     scheduleUUID,
-                                     hostName,
-                                     NULL,  // userName
-                                     archiveType,
-                                     Misc_getCurrentDateTime(),
-                                     "aborted",
-                                     executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.total.count,
-                                     jobNode->statusInfo.total.size,
-                                     jobNode->statusInfo.skipped.count,
-                                     jobNode->statusInfo.skipped.size,
-                                     jobNode->statusInfo.error.count,
-                                     jobNode->statusInfo.error.size,
-                                     NULL  // historyId
-                                    );
-            if (error != ERROR_NONE)
-            {
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Cannot insert history information for '%s' (error: %s)",
-                         String_cString(jobName),
-                         Error_getText(error)
-                        );
-            }
-          }
-        }
-        else if (jobNode->runningInfo.error != ERROR_NONE)
-        {
-          if (indexHandle != NULL)
-          {
-            error = Index_newHistory(indexHandle,
-                                     jobUUID,
-                                     scheduleUUID,
-                                     hostName,
-                                     NULL,  // userName
-                                     archiveType,
-                                     Misc_getCurrentDateTime(),
-                                     Error_getText(jobNode->runningInfo.error),
-                                     executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.total.count,
-                                     jobNode->statusInfo.total.size,
-                                     jobNode->statusInfo.skipped.count,
-                                     jobNode->statusInfo.skipped.size,
-                                     jobNode->statusInfo.error.count,
-                                     jobNode->statusInfo.error.size,
-                                     NULL  // historyId
-                                    );
-            if (error != ERROR_NONE)
-            {
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Cannot insert history information for '%s' (error: %s)",
-                         String_cString(jobName),
-                         Error_getText(error)
-                        );
-            }
-          }
-        }
-        else
-        {
-          if (indexHandle != NULL)
-          {
-            error = Index_newHistory(indexHandle,
-                                     jobUUID,
-                                     scheduleUUID,
-                                     hostName,
-                                     NULL,  // userName
-                                     archiveType,
-                                     Misc_getCurrentDateTime(),
-                                     NULL,  // errorMessage
-                                     executeEndDateTime-executeStartDateTime,
-                                     jobNode->statusInfo.total.count,
-                                     jobNode->statusInfo.total.size,
-                                     jobNode->statusInfo.skipped.count,
-                                     jobNode->statusInfo.skipped.size,
-                                     jobNode->statusInfo.error.count,
-                                     jobNode->statusInfo.error.size,
-                                     NULL  // historyId
-                                    );
-            if (error != ERROR_NONE)
-            {
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Warning: cannot insert history information for '%s' (error: %s)",
-                         String_cString(jobName),
-                         Error_getText(error)
-                        );
-            }
-          }
-        }
-        break;
-      case JOB_TYPE_RESTORE:
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-
-    // log
-    switch (jobNode->jobType)
-    {
-      case JOB_TYPE_NONE:
-        break;
-      case JOB_TYPE_CREATE:
-        if      (jobNode->requestedAbortFlag)
-        {
-          // aborted
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Aborted job '%s'%s%s",
-                     String_cString(jobName),
-                     !String_isEmpty(jobNode->abortedByInfo) ? " by " : "",
-                     String_cString(jobNode->abortedByInfo)
-                    );
-        }
-        else if (jobNode->runningInfo.error != ERROR_NONE)
-        {
-          // error
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Done job '%s' (error: %s)",
-                     String_cString(jobName),
-                     Error_getText(jobNode->runningInfo.error)
-                    );
-        }
-        else
-        {
-          // success
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)",
-                     String_cString(jobName),
-                     (executeEndDateTime-executeStartDateTime) / (60LL*60LL),
-                     (uint)((executeEndDateTime-executeStartDateTime) / 60LL) % 60LL,
-                     (uint)((executeEndDateTime-executeStartDateTime) % 60LL)
-                    );
-        }
-        break;
-      case JOB_TYPE_RESTORE:
-        if (jobNode->runningInfo.error != ERROR_NONE)
-        {
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Done restore archive (error: %s)",
-                     Error_getText(jobNode->runningInfo.error)
-                    );
-        }
-        else
-        {
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Done restore archive"
-                    );
-        }
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-
-    // post-process command
-    if (!String_isEmpty(jobNode->job.options.postProcessScript))
-    {
-      TEXT_MACROS_INIT(textMacros)
-      {
-        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
-        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
-        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
-        TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
-        TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
-        TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
-      }
-      error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
-                              executeStartDateTime,
-                              textMacros.data,
-                              textMacros.count
-                             );
-      if (error == ERROR_NONE)
-      {
-        logMessage(&logHandle,
-                   LOG_TYPE_INFO,
-                   "Executed post-command for '%s'",
-                   String_cString(jobName)
-                  );
-      }
-      else
-      {
-        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': post-command fail (error: %s)",
-                   String_cString(jobName),
-                   Error_getText(jobNode->runningInfo.error)
-                  );
-      }
-    }
-
-    // close index
-    if (Index_isAvailable())
-    {
-      Index_close(indexHandle);
-    }
-
-    // done log
-    if      (!Job_isRemote(jobNode))
-    {
-        logPostProcess(&logHandle,
-                       &jobNode->job.options,
-                       archiveType,
-                       scheduleCustomText,
-                       jobName,
-                       jobNode->jobState,
-                       jobNode->storageFlags,
-                       jobNode->statusInfo.message
-                      );
-    }
-    doneLog(&logHandle);
-
-    // get statistics data
-    getAggregateInfo(&jobAggregateInfo,
-                     jobNode->job.uuid,
-                     NULL  // scheduleUUID
-                    );
-    getAggregateInfo(&scheduleAggregateInfo,
-                     jobNode->job.uuid,
-                     scheduleUUID
-                    );
-
-    // done job
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-    {
-      // end job
-      Job_end(jobNode);
-
-      // update statistics data
-      jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
-      jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
-      jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
-      jobNode->executionCount.differential  = jobAggregateInfo.executionCount.differential;
-      jobNode->executionCount.continuous    = jobAggregateInfo.executionCount.continuous;
-      jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
-      jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
-      jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
-      jobNode->averageDuration.differential = jobAggregateInfo.averageDuration.differential;
-      jobNode->averageDuration.continuous   = jobAggregateInfo.averageDuration.continuous;
-      jobNode->totalEntityCount             = jobAggregateInfo.totalEntityCount;
-      jobNode->totalStorageCount            = jobAggregateInfo.totalStorageCount;
-      jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
-      jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
-      jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
-
-      scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
-      if (scheduleNode != NULL)
-      {
-        scheduleNode->lastExecutedDateTime = executeEndDateTime;
-        scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
-        scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
-        scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
-        scheduleNode->totalEntryCount      = scheduleAggregateInfo.totalEntryCount;
-        scheduleNode->totalEntrySize       = scheduleAggregateInfo.totalEntrySize;
-      }
-
-      // free resources
-      if (connectorInfo != NULL)
-      {
-        Job_connectorUnlock(connectorInfo);
-      }
-      Job_doneOptions(&jobOptions);
-      PatternList_clear(&excludePatternList);
-      EntryList_clear(&includeEntryList);
-
-      if (!storageFlags.dryRun)
-      {
-        // store schedule info
-        Job_writeScheduleInfo(jobNode,archiveType,executeEndDateTime);
-      }
-    }
-  }
-
-  // free resources
-  StringMap_delete(resultMap);
-  doneAggregateInfo(&scheduleAggregateInfo);
-  doneAggregateInfo(&jobAggregateInfo);
-  String_delete(byName);
-  String_delete(scheduleCustomText);
-  PatternList_done(&excludePatternList);
-  EntryList_done(&includeEntryList);
-  String_delete(directory);
-  String_delete(storageName);
-  String_delete(jobName);
-  Storage_doneSpecifier(&storageSpecifier);
 }
 
 /*---------------------------------------------------------------------*/
@@ -2983,7 +1994,7 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
       }
     }
   }
-fprintf(stderr,"%s, %d: isMaintenanceTime %d %llu %llu -> %d\n",__FILE__,__LINE__,pauseFlags.indexMaintenance,dateTime,intermediateMaintenanceDateTime,maintenanceTimeFlag);
+//fprintf(stderr,"%s, %d: isMaintenanceTime %d %llu %llu -> %d\n",__FILE__,__LINE__,pauseFlags.indexMaintenance,dateTime,intermediateMaintenanceDateTime,maintenanceTimeFlag);
 
   return maintenanceTimeFlag;
 
@@ -3809,20 +2820,26 @@ LOCAL bool isInTransit(const ExpirationEntityNode *expirationEntityNode)
 }
 
 /***********************************************************************\
-* Name   : purgeExpiredEntitiesThreadCode
-* Purpose: purge expired entities thread
-* Input  : -
+* Name   : purgeExpiredEntities
+* Purpose: purge expired entities
+* Input  : indexHandle    - index handle
+*          jobUUID        - job UUID or NULL
+*          newArchiveType - new archive type which will be created for
+*                           job or ARCHIVE_TYPE_NONE
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : if new created archive is given it is respected in expiration
+*          of job entities
 \***********************************************************************/
 
-LOCAL void purgeExpiredEntitiesThreadCode(void)
+LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
+                                  ConstString  jobUUID,
+                                  ArchiveTypes newArchiveType
+                                 )
 {
   Array                      entityIdArray;
   String                     expiredJobName;
   String                     string;
-  IndexHandle                *indexHandle;
   ExpirationEntityList       expirationEntityList;
   IndexId                    expiredEntityId;
   ArchiveTypes               expiredArchiveType;
@@ -3844,6 +2861,195 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   string         = String_new();
   List_init(&expirationEntityList);
 
+  Array_clear(&entityIdArray);
+  error = ERROR_NONE;
+  do
+  {
+    // get expiration entity list
+    getExpirationEntityList(&expirationEntityList,
+                            indexHandle
+                           );
+
+    // init variables
+    expiredEntityId        = INDEX_ID_NONE;
+    expiredArchiveType     = ARCHIVE_TYPE_NONE;
+    expiredCreatedDateTime = 0LL;
+    expiredTotalEntryCount = 0;
+    expiredTotalEntrySize  = 0LL;
+    List_init(&mountList);
+
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      // find expired/surpluse entity
+      JOB_LIST_ITERATEX(jobNode,INDEX_ID_IS_NONE(expiredEntityId))
+      {
+        // get expiration entity list for job
+        getJobExpirationEntityList(&jobExpirationEntityList,
+                                   &expirationEntityList,
+                                   jobNode->job.uuid,
+                                   &jobNode->job.options.persistenceList
+                                  );
+
+        if (   (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))  // wait 10s after change expiration setting before purge
+                || (newArchiveType != ARCHIVE_TYPE_NONE)  // if new entity is created: purge immediately
+               )
+            && !List_isEmpty(&jobExpirationEntityList)  // only expire if persistence list is not empty
+           )
+        {
+//LIST_ITERATE(&jobExpirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalEntrySize); }
+          // find expired entity
+          LIST_ITERATEX(&jobExpirationEntityList,jobExpirationEntityNode,INDEX_ID_IS_NONE(expiredEntityId))
+          {
+            totalEntityCount = 0;
+            totalEntitySize  = 0LL;
+            inTransit        = FALSE;
+
+            if (jobExpirationEntityNode->persistenceNode != NULL)
+            {
+              // calculate number/total size of entities in persistence periode
+              LIST_ITERATE(&jobExpirationEntityList,otherJobExpirationEntityNode)
+              {
+                if (otherJobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->persistenceNode)
+                {
+                  totalEntityCount++;
+                  totalEntitySize += otherJobExpirationEntityNode->size;
+                }
+              }
+
+              // if new entity for job UUID: increment number of total entities
+              if (   String_equals(jobNode->job.uuid,jobUUID)
+                  && (jobExpirationEntityNode->archiveType == newArchiveType)
+                 )
+              {
+                totalEntityCount++;
+              }
+
+              // check if "in-transit"
+              inTransit = isInTransit(jobExpirationEntityNode);
+            }
+//fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
+
+            // check if expired, keep one "in-transit" entity
+            if (   !inTransit
+                && hasPersistence(jobNode,jobExpirationEntityNode->archiveType)
+                && (   (jobExpirationEntityNode->persistenceNode == NULL)
+                    || ((   (jobExpirationEntityNode->persistenceNode->maxKeep > 0)
+                         && (jobExpirationEntityNode->persistenceNode->maxKeep >= jobExpirationEntityNode->persistenceNode->minKeep)
+                         && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->maxKeep)
+                        )
+                       )
+                   )
+               )
+            {
+              // find oldest entry
+              while (   (jobExpirationEntityNode->next != NULL)
+                     && (jobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->next->persistenceNode)
+                    )
+              {
+                jobExpirationEntityNode = jobExpirationEntityNode->next;
+              }
+
+              if (!Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId,CALLBACK_(NULL,NULL)))
+              {
+                // get expired entity
+                expiredEntityId        = jobExpirationEntityNode->entityId;
+                String_set(expiredJobName,jobNode->name);
+                expiredArchiveType     = jobExpirationEntityNode->archiveType;
+                expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
+                expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
+                expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
+
+                // get mount list
+                List_copy(&mountList,
+                          NULL,
+                          &jobNode->job.options.mountList,
+                          NULL,
+                          NULL,
+                          (ListNodeDuplicateFunction)duplicateMountNode,
+                          NULL
+                         );
+              }
+            }
+          }
+        }
+
+        List_done(&jobExpirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+      }
+    } // jobList
+
+    // delete expired entity
+    if (!INDEX_ID_IS_NONE(expiredEntityId))
+    {
+      Array_append(&entityIdArray,&expiredEntityId);
+
+      // mount devices
+      error = mountAll(&mountList);
+      if (error == ERROR_NONE)
+      {
+        // delete expired entity
+        #ifndef SIMULATE_PURGE
+          error = deleteEntity(indexHandle,expiredEntityId);
+        #else /* not SIMULATE_PURGE */
+          Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
+          error = ERROR_NONE;
+        #endif /* SIMULATE_PURGE */
+
+        // unmount devices
+        (void)unmountAll(&mountList);
+      }
+      if (error == ERROR_NONE)
+      {
+        plogMessage(NULL,  // logHandle,
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    #ifdef SIMULATE_PURGE
+                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)",
+                    #else /* not SIMULATE_PURGE */
+                      "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)",
+                    #endif /* SIMULATE_PURGE */
+                    String_cString(expiredJobName),
+                    Archive_archiveTypeToString(expiredArchiveType),
+                    String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
+                    expiredTotalEntryCount,
+                    BYTES_SHORT(expiredTotalEntrySize),
+                    BYTES_UNIT(expiredTotalEntrySize),
+                    expiredTotalEntrySize
+                   );
+      }
+    }
+
+    // free resources
+    List_done(&mountList,(ListNodeFreeFunction)freeMountNode,NULL);
+    List_done(&expirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
+  }
+  while (   !INDEX_ID_IS_NONE(expiredEntityId)
+ //TODO: remove
+ //               && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
+         && !quitFlag
+        );
+
+  // free resources
+  String_delete(string);
+  String_delete(expiredJobName);
+  Array_done(&entityIdArray);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : purgeExpiredEntitiesThreadCode
+* Purpose: purge expired entities thread
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void purgeExpiredEntitiesThreadCode(void)
+{
+  IndexHandle *indexHandle;
+  Errors      error;
+
   // open index
   indexHandle = NULL;
   if (Index_isAvailable())
@@ -3858,182 +3064,33 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   {
     while (!quitFlag)
     {
-      error = ERROR_NONE;
-
       if (   Index_isInitialized()
-          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
+//TODO: remove
+//          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
          )
       {
-        // get expiration entity list
-        getExpirationEntityList(&expirationEntityList,
-                                indexHandle
-                               );
+        // purge expired entities
+        error = purgeExpiredEntities(indexHandle,NULL,ARCHIVE_TYPE_NONE);
 
-        Array_clear(&entityIdArray);
-        do
+        // purge expired mounts
+        purgeMounts();
+
+        // sleep
+        if (error == ERROR_NONE)
         {
-          // init variables
-          expiredEntityId        = INDEX_ID_NONE;
-          expiredArchiveType     = ARCHIVE_TYPE_NONE;
-          expiredCreatedDateTime = 0LL;
-          expiredTotalEntryCount = 0;
-          expiredTotalEntrySize  = 0LL;
-          List_init(&mountList);
-
-          JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-          {
-            // find expired/surpluse entity
-            JOB_LIST_ITERATEX(jobNode,INDEX_ID_IS_NONE(expiredEntityId))
-            {
-              getJobExpirationEntityList(&jobExpirationEntityList,
-                                         &expirationEntityList,
-                                         jobNode->job.uuid,
-                                         &jobNode->job.options.persistenceList
-                                        );
-
-              if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))
-                  && !List_isEmpty(&jobExpirationEntityList)  // only expire if persistence list is not empty
-                 )
-              {
-//LIST_ITERATE(&jobExpirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalEntrySize); }
-                // find expired entity
-                LIST_ITERATEX(&jobExpirationEntityList,jobExpirationEntityNode,INDEX_ID_IS_NONE(expiredEntityId))
-                {
-                  totalEntityCount = 0;
-                  totalEntitySize  = 0LL;
-                  inTransit        = FALSE;
-
-                  if (jobExpirationEntityNode->persistenceNode != NULL)
-                  {
-                    // calculate number/total size of entities in persistence periode
-                    LIST_ITERATE(&jobExpirationEntityList,otherJobExpirationEntityNode)
-                    {
-                      if (otherJobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->persistenceNode)
-                      {
-                        totalEntityCount++;
-                        totalEntitySize += otherJobExpirationEntityNode->size;
-                      }
-                    }
-
-                    // check if "in-transit"
-                    inTransit = isInTransit(jobExpirationEntityNode);
-                  }
-//fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
-
-                  // check if expired, keep one "in-transit" entity
-                  if (   !inTransit
-                      && hasPersistence(jobNode,jobExpirationEntityNode->archiveType)
-                      && (   (jobExpirationEntityNode->persistenceNode == NULL)
-                          || ((   (jobExpirationEntityNode->persistenceNode->maxKeep > 0)
-                               && (jobExpirationEntityNode->persistenceNode->maxKeep >= jobExpirationEntityNode->persistenceNode->minKeep)
-                               && (totalEntityCount > (uint)jobExpirationEntityNode->persistenceNode->maxKeep)
-                              )
-                             )
-                         )
-                     )
-                  {
-                    // find oldest entry
-                    while (   (jobExpirationEntityNode->next != NULL)
-                           && (jobExpirationEntityNode->persistenceNode == jobExpirationEntityNode->next->persistenceNode)
-                          )
-                    {
-                      jobExpirationEntityNode = jobExpirationEntityNode->next;
-                    }
-
-                    if (!Array_contains(&entityIdArray,&jobExpirationEntityNode->entityId,CALLBACK_(NULL,NULL)))
-                    {
-                      // get expired entity
-                      expiredEntityId        = jobExpirationEntityNode->entityId;
-                      String_set(expiredJobName,jobNode->name);
-                      expiredArchiveType     = jobExpirationEntityNode->archiveType;
-                      expiredCreatedDateTime = jobExpirationEntityNode->createdDateTime;
-                      expiredTotalEntryCount = jobExpirationEntityNode->totalEntryCount;
-                      expiredTotalEntrySize  = jobExpirationEntityNode->totalEntrySize;
-
-                      // get mount list
-                      List_copy(&mountList,
-                                NULL,
-                                &jobNode->job.options.mountList,
-                                NULL,
-                                NULL,
-                                (ListNodeDuplicateFunction)duplicateMountNode,
-                                NULL
-                               );
-                    }
-                  }
-                }
-              }
-
-              List_done(&jobExpirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
-            }
-          } // jobList
-
-          // delete expired entity
-          if (!INDEX_ID_IS_NONE(expiredEntityId))
-          {
-            Array_append(&entityIdArray,&expiredEntityId);
-
-            // mount devices
-            error = mountAll(&mountList);
-            if (error == ERROR_NONE)
-            {
-              // delete expired entity
-              #ifndef SIMULATE_PURGE
-                error = deleteEntity(indexHandle,expiredEntityId);
-              #else /* not SIMULATE_PURGE */
-                Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
-                error = ERROR_NONE;
-              #endif /* SIMULATE_PURGE */
-
-              // unmount devices
-              (void)unmountAll(&mountList);
-            }
-            if (error == ERROR_NONE)
-            {
-              plogMessage(NULL,  // logHandle,
-                          LOG_TYPE_INDEX,
-                          "INDEX",
-                          #ifdef SIMULATE_PURGE
-                            "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)",
-                          #else /* not SIMULATE_PURGE */
-                            "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)",
-                          #endif /* SIMULATE_PURGE */
-                          String_cString(expiredJobName),
-                          Archive_archiveTypeToString(expiredArchiveType),
-                          String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
-                          expiredTotalEntryCount,
-                          BYTES_SHORT(expiredTotalEntrySize),
-                          BYTES_UNIT(expiredTotalEntrySize),
-                          expiredTotalEntrySize
-                         );
-            }
-          }
-
-          // free resources
-          List_done(&mountList,(ListNodeFreeFunction)freeMountNode,NULL);
+          // sleep and check quit flag
+          delayThread(SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD,NULL);
         }
-        while (   !INDEX_ID_IS_NONE(expiredEntityId)
-               && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
-               && !quitFlag
-              );
-
-        // free resources
-        List_done(&expirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
-      }
-
-      // purge expired mounts
-      purgeMounts();
-
-      // sleep
-      if (error == ERROR_NONE)
-      {
-        // sleep and check quit flag
-        delayThread(SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD,NULL);
+        else
+        {
+          // wait a short time and try again
+          Misc_udelay(30*US_PER_SECOND);
+        }
       }
       else
       {
-        // wait a short time and try again
-        Misc_udelay(30*US_PER_SECOND);
+        // sleep and check quit flag
+        delayThread(SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD,NULL);
       }
     }
 
@@ -4053,9 +3110,6 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   }
 
   // free resources
-  String_delete(string);
-  String_delete(expiredJobName);
-  Array_done(&entityIdArray);
 }
 
 /*---------------------------------------------------------------------*/
@@ -4839,6 +3893,993 @@ LOCAL void autoIndexThreadCode(void)
   String_delete(baseName);
   Storage_doneSpecifier(&storageSpecifier);
   StringList_done(&storageDirectoryList);
+}
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : getCryptPasswordFromConfig
+* Purpose: get crypt password from config call-back
+* Input  : name          - name variable (not used)
+*          password      - crypt password variable
+*          passwordType  - password type (not used)
+*          text          - text (not used)
+*          validateFlag  - TRUE to validate input, FALSE otherwise (not
+*                          used)
+*          weakCheckFlag - TRUE for weak password checking, FALSE
+*                          otherwise (print warning if password seems to
+*                          be a weak password) (not used)
+*          userData      - user data: job node
+* Output : password - crypt password
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getCryptPasswordFromConfig(String        name,
+                                        Password      *password,
+                                        PasswordTypes passwordType,
+                                        const char    *text,
+                                        bool          validateFlag,
+                                        bool          weakCheckFlag,
+                                        void          *userData
+                                       )
+{
+  JobNode *jobNode = (JobNode*)userData;
+
+  assert(jobNode != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(passwordType);
+  UNUSED_VARIABLE(text);
+  UNUSED_VARIABLE(validateFlag);
+  UNUSED_VARIABLE(weakCheckFlag);
+
+  if (Password_isEmpty(&jobNode->job.options.cryptPassword))
+  {
+    Password_set(password,&jobNode->job.options.cryptPassword);
+    return ERROR_NONE;
+  }
+  else
+  {
+    return ERROR_NO_CRYPT_PASSWORD;
+  }
+}
+
+/***********************************************************************\
+* Name   : updateStatusInfo
+* Purpose: update status info
+* Input  : error      - error code
+*          statusInfo - status info data
+*          userData   - user data: job node
+* Output : -
+* Return :
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateStatusInfo(Errors           error,
+                            const StatusInfo *statusInfo,
+                            void             *userData
+                           )
+{
+  JobNode *jobNode = (JobNode*)userData;
+  double  entriesPerSecondAverage,bytesPerSecondAverage,storageBytesPerSecondAverage;
+  ulong   restFiles;
+  uint64  restBytes;
+  uint64  restStorageBytes;
+  ulong   estimatedRestTime;
+
+  assert(jobNode != NULL);
+  assert(statusInfo != NULL);
+  assert(statusInfo->entry.name != NULL);
+  assert(statusInfo->storage.name != NULL);
+
+  UNUSED_VARIABLE(error);
+
+  // Note: only try for 2s
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  {
+    // store status
+    setStatusInfo(&jobNode->statusInfo,statusInfo);
+
+    // calculate statics values
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->done.size);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storage.doneSize);
+    entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
+    bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
+    storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
+
+    // rest rest values
+    restFiles         = (statusInfo->total.count       > statusInfo->done.count      ) ? statusInfo->total.count      -statusInfo->done.count       : 0L;
+    restBytes         = (statusInfo->total.size        > statusInfo->done.size       ) ? statusInfo->total.size       -statusInfo->done.size        : 0LL;
+    restStorageBytes  = (statusInfo->storage.totalSize > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize-statusInfo->storage.doneSize : 0LL;
+
+    // calculate estimated rest time
+    estimatedRestTime = 0L;
+    if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
+    if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
+    if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
+
+    // calulcate performance values
+    jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
+    jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
+    jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
+    jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
+  }
+}
+
+/***********************************************************************\
+* Name   : restoreUpdateStatusInfo
+* Purpose: update restore status info
+* Input  : statusInfo - status info data
+*          userData   - user data: job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
+                                   void             *userData
+                                  )
+{
+  JobNode *jobNode = (JobNode*)userData;
+//NYI:  double        entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
+
+  assert(jobNode != NULL);
+  assert(statusInfo != NULL);
+  assert(statusInfo->storage.name != NULL);
+  assert(statusInfo->entry.name != NULL);
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  {
+    // calculate estimated rest time
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->done.size);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,statusInfo->storage.doneSize);
+
+    jobNode->statusInfo.done.count         = statusInfo->done.count;
+    jobNode->statusInfo.done.size          = statusInfo->done.size;
+    jobNode->statusInfo.skipped.count      = statusInfo->skipped.count;
+    jobNode->statusInfo.skipped.size       = statusInfo->skipped.size;
+    jobNode->statusInfo.error.count        = statusInfo->error.count;
+    jobNode->statusInfo.error.size         = statusInfo->error.size;
+    jobNode->statusInfo.archiveSize        = 0LL;
+    jobNode->statusInfo.compressionRatio   = 0.0;
+    String_set(jobNode->statusInfo.entry.name,statusInfo->entry.name);
+    jobNode->statusInfo.entry.doneSize     = statusInfo->entry.doneSize;
+    jobNode->statusInfo.entry.totalSize    = statusInfo->entry.totalSize;
+    String_set(jobNode->statusInfo.storage.name,statusInfo->storage.name);
+    jobNode->statusInfo.storage.doneSize   = statusInfo->storage.doneSize;
+    jobNode->statusInfo.storage.totalSize  = statusInfo->storage.totalSize;
+    jobNode->statusInfo.volume.number      = 0;
+    jobNode->statusInfo.volume.progress    = 0.0;
+
+    jobNode->runningInfo.estimatedRestTime = 0;
+  }
+}
+
+/***********************************************************************\
+* Name   : isPauseCreate
+* Purpose: check if pause create
+* Input  : userData - user data (not used)
+* Output : -
+* Return : TRUE iff pause
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isPauseCreate(void *userData)
+{
+  UNUSED_VARIABLE(userData);
+
+  return pauseFlags.create;
+}
+
+/***********************************************************************\
+* Name   : isPauseStorage
+* Purpose: check if pause storage
+* Input  : userData - user data (not used)
+* Output : -
+* Return : TRUE iff pause storage
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isPauseStorage(void *userData)
+{
+  UNUSED_VARIABLE(userData);
+
+  return pauseFlags.storage;
+}
+
+/***********************************************************************\
+* Name   : isAborted
+* Purpose: check if job is aborted
+* Input  : userData - job node
+* Output : -
+* Return : TRUE iff aborted
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isAborted(void *userData)
+{
+  const JobNode *jobNode = (const JobNode*)userData;
+
+  assert(jobNode != NULL);
+
+  return jobNode->requestedAbortFlag;
+}
+
+/***********************************************************************\
+* Name   : jobThreadCode
+* Purpose: job execution (create/restore) thread
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void jobThreadCode(void)
+{
+  StorageSpecifier storageSpecifier;
+  String           jobName;
+  String           storageName;
+  String           directory;
+  EntryList        includeEntryList;
+  PatternList      excludePatternList;
+  String           scheduleCustomText;
+  String           byName;
+  ConnectorInfo    *connectorInfo;
+  AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
+  StringMap        resultMap;
+  JobNode          *jobNode;
+  ArchiveTypes     archiveType;
+  StorageFlags     storageFlags;
+  uint64           startDateTime;
+  JobOptions       jobOptions;
+  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  LogHandle        logHandle;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64           executeStartDateTime,executeEndDateTime;
+  StringList       storageNameList;
+  TextMacros       (textMacros,9);
+  StaticString     (s,64);
+  IndexHandle      *indexHandle;
+  uint             n;
+  Errors           error;
+  ScheduleNode     *scheduleNode;
+
+  // initialize variables
+  Storage_initSpecifier(&storageSpecifier);
+  jobName            = String_new();
+  storageName        = String_new();
+  directory          = String_new();
+  EntryList_init(&includeEntryList);
+  PatternList_init(&excludePatternList);
+  scheduleCustomText = String_new();
+  byName             = String_new();
+  connectorInfo      = NULL;
+  initAggregateInfo(&jobAggregateInfo);
+  initAggregateInfo(&scheduleAggregateInfo);
+  resultMap          = StringMap_new();
+  if (resultMap == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  jobNode       = NULL;
+  archiveType   = ARCHIVE_ENTRY_TYPE_UNKNOWN;
+  storageFlags  = STORAGE_FLAGS_NONE;
+  startDateTime = 0LL;
+
+  while (!quitFlag)
+  {
+    // wait and get next job to run
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      // wait and get next job to execute
+      do
+      {
+        // first check for a continuous job to run
+        jobNode = jobList.head;
+        while (   !quitFlag
+               && (jobNode != NULL)
+               && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+                   || !Job_isWaiting(jobNode->jobState)
+                   || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
+                  )
+              )
+        {
+          jobNode = jobNode->next;
+        }
+
+        if (jobNode == NULL)
+        {
+          // next check for other job types to run
+          jobNode = jobList.head;
+          while (   !quitFlag
+                 && (jobNode != NULL)
+                 && (   !Job_isWaiting(jobNode->jobState)
+                     || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
+                    )
+                )
+          {
+            jobNode = jobNode->next;
+          }
+        }
+
+        // if no job to execute -> wait
+        if (!quitFlag && (jobNode == NULL)) Job_listWaitModifed(LOCK_TIMEOUT);
+      }
+      while (!quitFlag && (jobNode == NULL));
+      if (quitFlag)
+      {
+        Job_listUnlock();
+        break;
+      }
+      assert(jobNode != NULL);
+
+      // get copy of mandatory job data
+      String_set(jobName,jobNode->name);
+      String_set(storageName,jobNode->job.storageName);
+      String_set(jobUUID,jobNode->job.uuid);
+      EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
+      PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
+      Job_duplicateOptions(&jobOptions,&jobNode->job.options);
+      String_set(scheduleCustomText,jobNode->scheduleCustomText);
+      archiveType   = jobNode->archiveType;
+      startDateTime = jobNode->startDateTime;
+      storageFlags  = jobNode->storageFlags;
+      String_set(byName,jobNode->byName);
+
+      // get and lock connector (if remote job)
+      connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
+
+      // start job
+      Job_start(jobNode);
+    }
+    if (jobNode == NULL)
+    {
+      break;
+    }
+
+    // Note: job is now protected by running state from being deleted
+
+    // get new schedule UUID
+    Misc_getUUID(scheduleUUID);
+
+    // init log
+    initLog(&logHandle);
+
+    // get info string
+    String_clear(s);
+    if (Job_isRemote(jobNode))
+    {
+      String_appendFormat(s," on '%S'",jobNode->job.slaveHost.name);
+    }
+    if (storageFlags.noStorage || storageFlags.dryRun)
+    {
+      String_appendCString(s," (");
+      n = 0;
+      if (storageFlags.noStorage)
+      {
+        if (n > 0) String_appendCString(s,", ");
+        String_appendCString(s,"no-storage");
+        n++;
+      }
+      if (storageFlags.dryRun)
+      {
+        if (n > 0) String_appendCString(s,", ");
+        String_appendCString(s,"dry-run");
+        n++;
+      }
+      String_appendCString(s,")");
+    }
+
+    // log
+    switch (jobNode->jobType)
+    {
+      case JOB_TYPE_NONE:
+        break;
+      case JOB_TYPE_CREATE:
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Start job '%s'%s %s%s%s",
+                   String_cString(jobName),
+                   !String_isEmpty(s) ? String_cString(s) : "",
+                   Archive_archiveTypeToString(archiveType),
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
+                  );
+        break;
+      case JOB_TYPE_RESTORE:
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Start restore%s%s%s",
+                   !String_isEmpty(s) ? String_cString(s) : "",
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
+                  );
+        break;
+    }
+
+    // open index (depending on local/remote job)
+    indexHandle = NULL;
+    if (Index_isAvailable())
+    {
+      while (!quitFlag && (indexHandle == NULL))
+      {
+        indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
+      }
+    }
+
+    // job pre-process command
+    if (!String_isEmpty(jobNode->job.options.preProcessScript))
+    {
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
+        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
+        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
+        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+      }
+      error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
+                              startDateTime,
+                              textMacros.data,
+                              textMacros.count
+                             );
+      if (error == ERROR_NONE)
+      {
+        logMessage(&logHandle,
+                   LOG_TYPE_INFO,
+                   "Executed pre-command for '%s'",
+                   String_cString(jobName)
+                  );
+      }
+      else
+      {
+        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Aborted job '%s': pre-command fail (error: %s)",
+                   String_cString(jobName),
+                   Error_getText(jobNode->runningInfo.error)
+                  );
+      }
+    }
+
+    // get start date/time
+    executeStartDateTime = Misc_getCurrentDateTime();
+
+    if      (!Job_isRemote(jobNode))
+    {
+      // local job -> run on this machine
+
+      // parse storage name
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
+        if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Aborted job '%s': invalid storage '%s' (error: %s)",
+                     String_cString(jobName),
+                     String_cString(storageName),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
+      }
+
+      // get include/excluded entries from commands
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!String_isEmpty(jobNode->job.options.includeFileCommand))
+        {
+          jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileCommand));
+        }
+      }
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!String_isEmpty(jobNode->job.options.includeImageCommand))
+        {
+          jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageCommand));
+        }
+      }
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!String_isEmpty(jobNode->job.options.excludeCommand))
+        {
+          jobNode->runningInfo.error = addExcludeListFromCommand(&excludePatternList,String_cString(jobNode->job.options.excludeCommand));
+        }
+      }
+
+      // get include/excluded entries from file
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!String_isEmpty(jobNode->job.options.includeFileListFileName))
+        {
+          jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileListFileName));
+        }
+      }
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!String_isEmpty(jobNode->job.options.includeImageListFileName))
+        {
+          jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageListFileName));
+        }
+      }
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!String_isEmpty(jobNode->job.options.excludeListFileName))
+        {
+          jobNode->runningInfo.error = addExcludeListFromFile(&excludePatternList,String_cString(jobNode->job.options.excludeListFileName));
+        }
+      }
+
+      // create/restore operaton
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        #ifdef SIMULATOR
+          {
+            int z;
+
+            jobNode->runningInfo.estimatedRestTime=120;
+
+            jobNode->runningInfo.totalEntryCount += 60;
+            jobNode->runningInfo.totalEntrySize += 6000;
+
+            for (z=0;z<120;z++)
+            {
+              extern void sleep(int);
+              if (jobNode->requestedAbortFlag) break;
+
+              sleep(1);
+
+              if (z==40) {
+                jobNode->runningInfo.totalEntryCount += 80;
+                jobNode->runningInfo.totalEntrySize += 8000;
+              }
+
+              jobNode->runningInfo.doneCount++;
+              jobNode->runningInfo.doneSize += 100;
+//                jobNode->runningInfo.totalEntryCount += 3;
+//                jobNode->runningInfo.totalEntrySize += 181;
+              jobNode->runningInfo.estimatedRestTime=120-z;
+              String_format(jobNode->runningInfo.fileName,"file %d",z);
+              String_format(jobNode->runningInfo.storageName,"storage %d%d",z,z);
+            }
+          }
+        #else
+          switch (jobNode->jobType)
+          {
+            case JOB_TYPE_NONE:
+              break;
+            case JOB_TYPE_CREATE:
+              // purge expired entities
+//TODO: work-around: delete oldest entity if number of entities+1 > max. entities
+              (void)purgeExpiredEntities(indexHandle,jobUUID,archiveType);
+
+              // create archive
+              jobNode->runningInfo.error = Command_create(jobNode->masterIO,
+                                                          jobUUID,
+                                                          scheduleUUID,
+//TODO:
+NULL,//                                                        scheduleTitle,
+                                                          scheduleCustomText,
+                                                          storageName,
+                                                          &includeEntryList,
+                                                          &excludePatternList,
+                                                          &jobOptions,
+                                                          archiveType,
+                                                          startDateTime,
+                                                          storageFlags,
+                                                          CALLBACK_(getCryptPasswordFromConfig,jobNode),
+                                                          CALLBACK_(updateStatusInfo,jobNode),
+                                                          CALLBACK_(storageRequestVolume,jobNode),
+                                                          CALLBACK_(isPauseCreate,NULL),
+                                                          CALLBACK_(isPauseStorage,NULL),
+//TODO access jobNode?
+                                                          CALLBACK_(isAborted,jobNode),
+                                                          &logHandle
+                                                         );
+              break;
+            case JOB_TYPE_RESTORE:
+              // restore archive
+              StringList_init(&storageNameList);
+              StringList_append(&storageNameList,storageName);
+              jobNode->runningInfo.error = Command_restore(&storageNameList,
+                                                           &includeEntryList,
+                                                           &excludePatternList,
+                                                           &jobOptions,
+                                                           storageFlags,
+                                                           CALLBACK_(restoreUpdateStatusInfo,jobNode),
+                                                           CALLBACK_(NULL,NULL),  // restoreHandleError
+                                                           CALLBACK_(getCryptPasswordFromConfig,jobNode),
+                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
+                                                           &logHandle
+                                                          );
+              StringList_done(&storageNameList);
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break;
+            #endif /* NDEBUG */
+          }
+        #endif /* SIMULATOR */
+      }
+    }
+    else
+    {
+      // slave job -> send to slave and run on slave machine
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (connectorInfo == NULL)
+        {
+          jobNode->runningInfo.error = ERROR_SLAVE_DISCONNECTED;
+        }
+      }
+
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!Connector_isAuthorized(connectorInfo))
+        {
+          jobNode->runningInfo.error = ERROR_NOT_PAIRED;
+        }
+      }
+
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        // init storage
+        jobNode->runningInfo.error = Connector_initStorage(connectorInfo,
+                                                           jobNode->job.storageName,
+                                                           &jobNode->job.options,
+                                                           storageFlags
+                                                          );
+        if (jobNode->runningInfo.error == ERROR_NONE)
+        {
+          // run create job
+          jobNode->runningInfo.error = Connector_create(connectorInfo,
+                                                        jobName,
+                                                        jobUUID,
+                                                        scheduleUUID,
+                                                        storageName,
+                                                        &includeEntryList,
+                                                        &excludePatternList,
+                                                        &jobOptions,
+                                                        archiveType,
+                                                        NULL,  // scheduleTitle,
+                                                        NULL,  // scheduleCustomText,
+                                                        storageFlags,
+                                                        CALLBACK_(getCryptPasswordFromConfig,jobNode),
+                                                        CALLBACK_(updateStatusInfo,jobNode),
+                                                        CALLBACK_(storageRequestVolume,jobNode)
+                                                       );
+
+          // done storage
+          Connector_doneStorage(connectorInfo);
+        }
+      }
+    }
+
+    // get end date/time
+    executeEndDateTime = Misc_getCurrentDateTime();
+
+    // store last executed date/time, last error message
+    jobNode->runningInfo.lastExecutedDateTime = executeEndDateTime;
+    String_setCString(jobNode->runningInfo.lastErrorMessage,Error_getText(jobNode->runningInfo.error));
+
+    // log job result
+    switch (jobNode->jobType)
+    {
+      case JOB_TYPE_NONE:
+        break;
+      case JOB_TYPE_CREATE:
+        if      (jobNode->requestedAbortFlag)
+        {
+          // aborted
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Aborted job '%s'%s%s",
+                     String_cString(jobName),
+                     !String_isEmpty(jobNode->abortedByInfo) ? " by " : "",
+                     String_cString(jobNode->abortedByInfo)
+                    );
+        }
+        else if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          // error
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done job '%s' (error: %s)",
+                     String_cString(jobName),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
+        else
+        {
+          // success
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)",
+                     String_cString(jobName),
+                     (executeEndDateTime-executeStartDateTime) / (60LL*60LL),
+                     (uint)((executeEndDateTime-executeStartDateTime) / 60LL) % 60LL,
+                     (uint)((executeEndDateTime-executeStartDateTime) % 60LL)
+                    );
+        }
+        break;
+      case JOB_TYPE_RESTORE:
+        if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done restore archive (error: %s)",
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
+        else
+        {
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Done restore archive"
+                    );
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    // job post-process command
+    if (!String_isEmpty(jobNode->job.options.postProcessScript))
+    {
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
+        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
+        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
+        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+        TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
+        TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
+        TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
+      }
+      error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
+                              executeStartDateTime,
+                              textMacros.data,
+                              textMacros.count
+                             );
+      if (error == ERROR_NONE)
+      {
+        logMessage(&logHandle,
+                   LOG_TYPE_INFO,
+                   "Executed post-command for '%s'",
+                   String_cString(jobName)
+                  );
+      }
+      else
+      {
+        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Aborted job '%s': post-command fail (error: %s)",
+                   String_cString(jobName),
+                   Error_getText(jobNode->runningInfo.error)
+                  );
+      }
+    }
+
+    // add index history information
+    switch (jobNode->jobType)
+    {
+      case JOB_TYPE_NONE:
+        break;
+      case JOB_TYPE_CREATE:
+        if (jobNode->requestedAbortFlag)
+        {
+          if (indexHandle != NULL)
+          {
+            error = Index_newHistory(indexHandle,
+                                     jobUUID,
+                                     scheduleUUID,
+                                     hostName,
+                                     NULL,  // userName
+                                     archiveType,
+                                     Misc_getCurrentDateTime(),
+                                     "aborted",
+                                     executeEndDateTime-executeStartDateTime,
+                                     jobNode->statusInfo.total.count,
+                                     jobNode->statusInfo.total.size,
+                                     jobNode->statusInfo.skipped.count,
+                                     jobNode->statusInfo.skipped.size,
+                                     jobNode->statusInfo.error.count,
+                                     jobNode->statusInfo.error.size,
+                                     NULL  // historyId
+                                    );
+            if (error != ERROR_NONE)
+            {
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Cannot insert history information for '%s' (error: %s)",
+                         String_cString(jobName),
+                         Error_getText(error)
+                        );
+            }
+          }
+        }
+        else if (jobNode->runningInfo.error != ERROR_NONE)
+        {
+          if (indexHandle != NULL)
+          {
+            error = Index_newHistory(indexHandle,
+                                     jobUUID,
+                                     scheduleUUID,
+                                     hostName,
+                                     NULL,  // userName
+                                     archiveType,
+                                     Misc_getCurrentDateTime(),
+                                     Error_getText(jobNode->runningInfo.error),
+                                     executeEndDateTime-executeStartDateTime,
+                                     jobNode->statusInfo.total.count,
+                                     jobNode->statusInfo.total.size,
+                                     jobNode->statusInfo.skipped.count,
+                                     jobNode->statusInfo.skipped.size,
+                                     jobNode->statusInfo.error.count,
+                                     jobNode->statusInfo.error.size,
+                                     NULL  // historyId
+                                    );
+            if (error != ERROR_NONE)
+            {
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Cannot insert history information for '%s' (error: %s)",
+                         String_cString(jobName),
+                         Error_getText(error)
+                        );
+            }
+          }
+        }
+        else
+        {
+          if (indexHandle != NULL)
+          {
+            error = Index_newHistory(indexHandle,
+                                     jobUUID,
+                                     scheduleUUID,
+                                     hostName,
+                                     NULL,  // userName
+                                     archiveType,
+                                     Misc_getCurrentDateTime(),
+                                     NULL,  // errorMessage
+                                     executeEndDateTime-executeStartDateTime,
+                                     jobNode->statusInfo.total.count,
+                                     jobNode->statusInfo.total.size,
+                                     jobNode->statusInfo.skipped.count,
+                                     jobNode->statusInfo.skipped.size,
+                                     jobNode->statusInfo.error.count,
+                                     jobNode->statusInfo.error.size,
+                                     NULL  // historyId
+                                    );
+            if (error != ERROR_NONE)
+            {
+              logMessage(&logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Warning: cannot insert history information for '%s' (error: %s)",
+                         String_cString(jobName),
+                         Error_getText(error)
+                        );
+            }
+          }
+        }
+        break;
+      case JOB_TYPE_RESTORE:
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+
+    // close index
+    if (Index_isAvailable())
+    {
+      Index_close(indexHandle);
+    }
+
+    // done log
+    if      (!Job_isRemote(jobNode))
+    {
+        logPostProcess(&logHandle,
+                       &jobNode->job.options,
+                       archiveType,
+                       scheduleCustomText,
+                       jobName,
+                       jobNode->jobState,
+                       jobNode->storageFlags,
+                       jobNode->statusInfo.message
+                      );
+    }
+    doneLog(&logHandle);
+
+    // get statistics data
+    getAggregateInfo(&jobAggregateInfo,
+                     jobNode->job.uuid,
+                     NULL  // scheduleUUID
+                    );
+    getAggregateInfo(&scheduleAggregateInfo,
+                     jobNode->job.uuid,
+                     scheduleUUID
+                    );
+
+    // done job
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    {
+      // end job
+      Job_end(jobNode);
+
+      // update statistics data
+      jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
+      jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
+      jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
+      jobNode->executionCount.differential  = jobAggregateInfo.executionCount.differential;
+      jobNode->executionCount.continuous    = jobAggregateInfo.executionCount.continuous;
+      jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
+      jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
+      jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
+      jobNode->averageDuration.differential = jobAggregateInfo.averageDuration.differential;
+      jobNode->averageDuration.continuous   = jobAggregateInfo.averageDuration.continuous;
+      jobNode->totalEntityCount             = jobAggregateInfo.totalEntityCount;
+      jobNode->totalStorageCount            = jobAggregateInfo.totalStorageCount;
+      jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
+      jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
+      jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
+
+      scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+      if (scheduleNode != NULL)
+      {
+        scheduleNode->lastExecutedDateTime = executeEndDateTime;
+        scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
+        scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
+        scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
+        scheduleNode->totalEntryCount      = scheduleAggregateInfo.totalEntryCount;
+        scheduleNode->totalEntrySize       = scheduleAggregateInfo.totalEntrySize;
+      }
+
+      // free resources
+      if (connectorInfo != NULL)
+      {
+        Job_connectorUnlock(connectorInfo);
+      }
+      Job_doneOptions(&jobOptions);
+      PatternList_clear(&excludePatternList);
+      EntryList_clear(&includeEntryList);
+
+      if (!storageFlags.dryRun)
+      {
+        // store schedule info
+        Job_writeScheduleInfo(jobNode,archiveType,executeEndDateTime);
+      }
+    }
+  }
+
+  // free resources
+  StringMap_delete(resultMap);
+  doneAggregateInfo(&scheduleAggregateInfo);
+  doneAggregateInfo(&jobAggregateInfo);
+  String_delete(byName);
+  String_delete(scheduleCustomText);
+  PatternList_done(&excludePatternList);
+  EntryList_done(&includeEntryList);
+  String_delete(directory);
+  String_delete(storageName);
+  String_delete(jobName);
+  Storage_doneSpecifier(&storageSpecifier);
 }
 
 /*---------------------------------------------------------------------*/
@@ -7510,7 +7551,6 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   // get job UUID
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
 
-//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
