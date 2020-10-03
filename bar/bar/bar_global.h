@@ -809,6 +809,7 @@ typedef struct
   struct
   {
     uint                      serverLevel;                    // server debug level (for debug only)
+    bool                      serverFixedIdsFlag;             // always generate id=1
     bool                      indexWaitOperationsFlag;        // TRUE to wait for index operation
     bool                      indexPurgeDeletedStoragesFlag;  // TRUE to purge deleted storages
     String                    indexAddStorage;                // add storage to index
