@@ -199,9 +199,7 @@ CREATE TABLE IF NOT EXISTS storages(
   totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
 
   // Note: redundancy for faster access
-  uuidId                    INTEGER DEFAULT 0,
-
-  CONSTRAINT fileEntries UNIQUE (entityId,name)
+  uuidId                    INTEGER DEFAULT 0
 );
 CREATE INDEX ON storages (uuidId,entityId,name,created,state);
 CREATE INDEX ON storages (entityId,name,created,state);
@@ -221,23 +219,6 @@ CREATE VIRTUAL TABLE FTS_storages USING FTS5(
 //  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
   tokenize=unicode61
 );
-
-// insert/delete/update triggeres
-//xxxCREATE TRIGGER AFTER INSERT ON storages
-//xxx  BEGIN
-//xxx// insert into log values('trigger storages: INSERT size='||NEW.size);
-//xxx    INSERT INTO FTS_storages VALUES (NEW.id,NEW.name);
-//xxx  END;
-//xxx CREATE TRIGGER BEFORE DELETE ON storages
-//xxx   BEGIN
-//xxx     DELETE FROM FTS_storages WHERE storageId MATCH OLD.id;
-//xxx   END;
-
-//xxx CREATE TRIGGER AFTER UPDATE OF name ON storages
-//xxx   BEGIN
-//xxx     DELETE FROM FTS_storages WHERE storageId MATCH OLD.id;
-//xxx     INSERT INTO FTS_storages VALUES (NEW.id,NEW.name);
-//xxx   END;
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
@@ -305,39 +286,6 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS5(
   tokenize=unicode61
 );
 
-// insert/delete/update triggers
-//xxxCREATE TRIGGER AFTER INSERT ON entries
-//xxx  BEGIN
-//xxx// insert into log values('trigger entries: INSERT ON entries='||NEW.id||' '||NEW.entityId||' '||NEW.name);
-//xxx    // insert newest if not exists
-//xxx    INSERT OR IGNORE INTO entriesNewest
-//xxx        (
-//xxx         entryId,
-//xxx         uuidId,
-//xxx         entityId,
-//xxx         type,
-//xxx         name,
-//xxx         timeLastChanged,
-//xxx         userId,
-//xxx         groupId,
-//xxx         permission,
-//xxx         size
-//xxx        )
-//xxx      VALUES
-//xxx        (
-//xxx         NEW.id,
-//xxx         NEW.uuidId,
-//xxx         NEW.entityId,
-//xxx         NEW.type,
-//xxx         NEW.name,
-//xxx         NEW.timeLastChanged,
-//xxx         NEW.userId,
-//xxx         NEW.groupId,
-//xxx         NEW.permission,
-//xxx         NEW.size
-//xxx        );
-//xxx  END;
-
 CREATE TRIGGER AFTER UPDATE OF uuidId ON entries
   BEGIN
     // update newest entries
@@ -381,23 +329,6 @@ CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
             AND NEW.timeLastChanged>timeLastChanged;
   END;
 
-//xxxCREATE TRIGGER BEFORE DELETE ON entries
-//xxx  BEGIN
-//xxx    // delete/update newest info
-//xxx    DELETE FROM entriesNewest WHERE entryId=OLD.id;
-//xxx    INSERT OR IGNORE INTO entriesNewest
-//xxx        (entryId,uuidId,entityId,name,type,timeLastChanged,userId,groupId,permission,size)
-//xxx      SELECT id,uuidId,entityId,name,type,MAX(timeLastChanged),userId,groupId,permission,size
-//xxx        FROM entries
-//xxx        WHERE     id!=OLD.id
-//xxx              AND name=OLD.name
-//xxx        ORDER BY timeLastChanged DESC
-//xxx        LIMIT 1;
-//xxx
-//xxx     // delete FTS
-//xxx     DELETE FROM FTS_entries WHERE entryId=OLD.id;
-//xxx  END;
-
 //TODO
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
@@ -420,7 +351,7 @@ CREATE TABLE IF NOT EXISTS entryFragments(
   offset    INTEGER,
   size      INTEGER,
 
-  CONSTRAINT entriesNewest UNIQUE (entryId,offset)
+  CONSTRAINT entryFragments UNIQUE (entryId,offset)
 );
 CREATE INDEX ON entryFragments (entryId);
 CREATE INDEX ON entryFragments (storageId);
@@ -436,24 +367,6 @@ CREATE TABLE IF NOT EXISTS fileEntries(
 );
 CREATE INDEX ON fileEntries (entryId);
 
-//xxx // insert/delete/update triggeres
-//xxx CREATE TRIGGER AFTER INSERT ON fileEntries
-//xxx   BEGIN
-//xxx     // update offset/size in entry (Note: will trigger insert/update newest!)
-//xxx     UPDATE entries
-//xxx       SET size=NEW.size
-//xxx       WHERE id=NEW.entryId;
-//xxx   END;
-
-// insert/delete/update triggeres
-//CREATE TRIGGER AFTER INSERT ON fileEntryFragments
-//  BEGIN
-//    // update size in entry
-//    UPDATE fileEntries
-//      SET size=NEW.size
-//      WHERE id=NEW.fileEntryId;
-//  END;
-
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
   id             INTEGER PRIMARY KEY,
@@ -466,15 +379,6 @@ CREATE TABLE IF NOT EXISTS imageEntries(
   CONSTRAINT imageEntries UNIQUE (entryId)
 );
 CREATE INDEX ON imageEntries (entryId);
-
-//xxx // insert/delete/update triggeres
-//xxx CREATE TRIGGER AFTER INSERT ON imageEntries
-//xxx   BEGIN
-//xxx     // update offset/size in entry (Note: will trigger insert/update newest!)
-//xxx     UPDATE entries
-//xxx       SET size=NEW.size
-//xxx       WHERE id=NEW.entryId;
-//xxx   END;
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
@@ -498,15 +402,6 @@ CREATE INDEX ON directoryEntries (entryId);
 CREATE INDEX ON directoryEntries (storageId,name);
 CREATE INDEX ON directoryEntries (name);
 
-//xxx // insert/delete/update triggeres
-//xxx CREATE TRIGGER AFTER INSERT ON directoryEntries
-//xxx   BEGIN
-//xxx     // update offset/size in entry (Note: will trigger insert/update newest!)
-//xxx     UPDATE entries
-//xxx       SET size=0
-//xxx       WHERE id=NEW.entryId;
-//xxx   END;
-
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
   id              INTEGER PRIMARY KEY,
@@ -520,15 +415,6 @@ CREATE TABLE IF NOT EXISTS linkEntries(
 CREATE INDEX ON linkEntries (entryId);
 CREATE INDEX ON linkEntries (storageId);
 
-//xxx // insert/delete/update triggeres
-//xxx CREATE TRIGGER AFTER INSERT ON linkEntries
-//xxx   BEGIN
-//xxx     // update offset/size in entry (Note: will trigger insert/update newest!)
-//xxx     UPDATE entries
-//xxx       SET size=0
-//xxx       WHERE id=NEW.entryId;
-//xxx   END;
-
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
   id      INTEGER PRIMARY KEY,
@@ -539,15 +425,6 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
   CONSTRAINT hardlinkEntries UNIQUE (entryId)
 );
 CREATE INDEX ON hardlinkEntries (entryId);
-
-//xxx // insert/delete/update triggeres
-//xxx CREATE TRIGGER AFTER INSERT ON hardlinkEntries
-//xxx   BEGIN
-//xxx     // update offset/size in entry (Note: will trigger insert/update newest!)
-//xxx     UPDATE entries
-//xxx       SET size=NEW.size
-//xxx       WHERE id=NEW.entryId;
-//xxx   END;
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
@@ -563,15 +440,6 @@ CREATE TABLE IF NOT EXISTS specialEntries(
 );
 CREATE INDEX ON specialEntries (entryId);
 CREATE INDEX ON specialEntries (storageId);
-
-//xxx // insert/delete/update triggeres
-//xxx CREATE TRIGGER AFTER INSERT ON specialEntries
-//xxx   BEGIN
-//xxx     // update offset/size in entry (Note: will trigger insert/update newest!)
-//xxx     UPDATE entries
-//xxx       SET size=0
-//xxx       WHERE id=NEW.entryId;
-//xxx   END;
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
