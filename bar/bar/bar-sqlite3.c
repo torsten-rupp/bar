@@ -4126,6 +4126,25 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("%lu\n",n);
   total += n;
 
+  // clean storages with invalid state
+  printInfo("  storages with invalid state...");
+  n = 0L;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    (void)Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           &n,
+                           "DELETE FROM storages \
+                            WHERE (state<%u) OR (state>%u); \
+                           ",
+                           INDEX_CONST_STATE_OK,
+                           INDEX_CONST_STATE_ERROR
+                          );
+  }
+  (void)Database_flush(databaseHandle);
+  printInfo("%lu\n",n);
+  total += n;
+
   // clean FTS entries without entry
   printInfo("  FTS entries without entry...");
   n = 0L;
