@@ -625,7 +625,7 @@ Errors Network_connect(SocketHandle *socketHandle,
             if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
               flags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,flags = O_NONBLOCK);
+              fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
             }
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
@@ -981,7 +981,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
             if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
             {
               flags = fcntl(socketHandle->handle,F_GETFL,0);
-              fcntl(socketHandle->handle,F_SETFL,flags = O_NONBLOCK);
+              fcntl(socketHandle->handle,F_SETFL,flags | O_NONBLOCK);
             }
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
