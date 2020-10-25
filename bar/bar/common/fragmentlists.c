@@ -541,6 +541,13 @@ void FragmentList_print(FILE               *outputHandle,
       printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes\n",offset0,offset1,offset1-offset0+1);
     }
   }
+  if ((lastOffset+1) < fragmentNode->size)
+  {
+    if (printMissingFlag)
+    {
+      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",lastOffset+1,fragmentNode->size-1,fragmentNode->size-1-lastOffset);
+    }
+  }
 }
 
 #ifndef NDEBUG
