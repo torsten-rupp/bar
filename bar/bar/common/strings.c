@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <float.h>
 #include <stdarg.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -2156,21 +2157,23 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
                           long             *nextIndex
                          )
 {
-  uint  z;
+  uint  i;
   ulong factor;
 
   assert(stringUnits != NULL);
   assert(string != NULL);
   assert(unitString != NULL);
 
-  z = 0;
-  while ((z < stringUnitCount) && !stringEquals(unitString,stringUnits[z].name))
+  i = 0;
+  while (   (i < stringUnitCount)
+         && !stringEquals(unitString,stringUnits[i].name)
+        )
   {
-    z++;
+    i++;
   }
-  if (z < stringUnitCount)
+  if (i < stringUnitCount)
   {
-    factor = stringUnits[z].factor;
+    factor = stringUnits[i].factor;
     if (nextIndex != NULL) (*nextIndex) = STRING_END;
   }
   else
@@ -5311,6 +5314,90 @@ int64 String_toInteger64(ConstString convertString, ulong index, long *nextIndex
   }
 
   return n;
+}
+
+StringUnit String_getMatchingUnit(int n, const StringUnit units[], uint unitCount)
+{
+  static const StringUnit NO_UNIT = {"",1LL};
+
+  StringUnit stringUnit;
+  uint i;
+
+  if (n != 0)
+  {
+    i = 0;
+    while (   (i < unitCount)
+           && (   ((uint64)abs(n) < units[i].factor)
+               || (((uint64)abs(n) % units[i].factor) != 0LL)
+              )
+          )
+    {
+      i++;
+    }
+    stringUnit = (i < unitCount) ? units[i] : NO_UNIT;
+  }
+  else
+  {
+    stringUnit = NO_UNIT;
+  }
+
+  return stringUnit;
+}
+
+StringUnit String_getMatchingUnit64(int64 n, const StringUnit units[], uint unitCount)
+{
+  static const StringUnit NO_UNIT = {"",1LL};
+
+  StringUnit stringUnit;
+  uint i;
+
+  if (n != 0)
+  {
+    i = 0;
+    while (   (i < unitCount)
+           && (   ((uint64)llabs(n) < units[i].factor)
+               || (((uint64)llabs(n) % units[i].factor) != 0LL)
+              )
+          )
+    {
+      i++;
+    }
+    stringUnit = (i < unitCount) ? units[i] : NO_UNIT;
+  }
+  else
+  {
+    stringUnit = NO_UNIT;
+  }
+
+  return stringUnit;
+}
+
+StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint unitCount)
+{
+  static const StringUnit NO_UNIT = {"",1LL};
+
+  StringUnit stringUnit;
+  uint i;
+
+  if (fabs(n) > DBL_EPSILON)
+  {
+    i = 0;
+    while (   (i < unitCount)
+           && (   (fabs(n) < (double)units[i].factor)
+               || (fmod(fabs(n),(double)units[i].factor) > DBL_EPSILON)
+              )
+          )
+    {
+      i++;
+    }
+    stringUnit = (i < unitCount) ? units[i] : NO_UNIT;
+  }
+  else
+  {
+    stringUnit = NO_UNIT;
+  }
+
+  return stringUnit;
 }
 
 double String_toDouble(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)

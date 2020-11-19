@@ -94,8 +94,8 @@ typedef const char*(*StringIterateFunction)(char ch, void *userData);
 // number unit
 typedef struct
 {
-  const char         *name;
-  unsigned long long factor;
+  const char *name;
+  uint64     factor;
 } StringUnit;
 
 // debug info function
@@ -1094,7 +1094,7 @@ String String_unescape(String     string,
 * Purpose: quote/unquote string
 * Input  : string          - string
 *          quoteChar       - quote character to add
-*          forceQuoteChars - characters to force quote
+*          forceQuoteChars - characters to force quote or NULL
 *          quoteChars      - quote characters
 * Output : -
 * Return : quoted/unquoted string
@@ -1267,6 +1267,21 @@ int64 String_toInteger64(ConstString string, ulong index, long *nextIndex, const
 double String_toDouble(ConstString convertString, ulong index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount);
 bool String_toBoolean(ConstString convertString, ulong index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount);
 String String_toString(String string, ConstString convertString, ulong index, long *nextIndex, const char *stringQuotes);
+
+/***********************************************************************\
+* Name   : String_getMatchingUnit
+* Purpose: get matching unit for number
+* Input  : n               - number
+*          stringUnits     - string units (for integer, double)
+*          stringUnitCount - number of string units (for
+* Output : -
+* Return : string unit or NULL
+* Notes  : -
+\***********************************************************************/
+
+StringUnit String_getMatchingUnit(int n, const StringUnit units[], uint unitCount);
+StringUnit String_getMatchingUnit64(int64 n, const StringUnit units[], uint unitCount);
+StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint unitCount);
 
 /***********************************************************************\
 * Name   : String_toCString
