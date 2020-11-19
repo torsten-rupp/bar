@@ -25,6 +25,7 @@
 /********************** Conditional compilation ***********************/
 
 /**************************** Constants *******************************/
+#define SEPARATOR "----------------------------------------------------------------------"
 
 /***************************** Datatypes ******************************/
 
@@ -87,8 +88,8 @@ LOCAL void reportMessage(ConfigReportFunction reportFunction,
 }
 
 /***********************************************************************\
-* Name   : findUnit
-* Purpose: find unit by name
+* Name   : findUnitByName
+* Purpose: find unit
 * Input  : units    - units array
 *          unitName - unit name
 * Output : -
@@ -96,7 +97,7 @@ LOCAL void reportMessage(ConfigReportFunction reportFunction,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const ConfigValueUnit *findUnit(const ConfigValueUnit *units, const char *unitName)
+LOCAL const ConfigValueUnit *findUnitByName(const ConfigValueUnit *units, const char *unitName)
 {
   const ConfigValueUnit *unit;
 
@@ -105,6 +106,105 @@ LOCAL const ConfigValueUnit *findUnit(const ConfigValueUnit *units, const char *
     unit = units;
     while (   (unit->name != NULL)
            && !stringEquals(unit->name,unitName)
+          )
+    {
+      unit++;
+    }
+    return (unit->name != NULL) ? unit : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findMatchingUnit
+* Purpose: find matching unit
+* Input  : units - units array
+*          value - value
+* Output : -
+* Return : unit or NULL if no matching unit found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueUnit *findMatchingUnit(const ConfigValueUnit *units, int value)
+{
+  const ConfigValueUnit *unit;
+
+  if (units != NULL)
+  {
+    unit = units;
+    while (   (unit->name != NULL)
+           && (   ((uint)abs(value) < unit->factor)
+               || ((value % unit->factor) != 0)
+              )
+          )
+    {
+      unit++;
+    }
+    return (unit->name != NULL) ? unit : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findMatchingUnit64
+* Purpose: find matching unit
+* Input  : units - units array
+*          value - value
+* Output : -
+* Return : unit or NULL if no matching unit found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueUnit *findMatchingUnit64(const ConfigValueUnit *units, int64 value)
+{
+  const ConfigValueUnit *unit;
+
+  if (units != NULL)
+  {
+    unit = units;
+    while (   (unit->name != NULL)
+           && (   ((uint64)llabs(value) < unit->factor)
+               || ((value % unit->factor) != 0)
+              )
+          )
+    {
+      unit++;
+    }
+    return (unit->name != NULL) ? unit : NULL;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : findMatchingUnitDouble
+* Purpose: find matching unit
+* Input  : units - units array
+*          value - value
+* Output : -
+* Return : unit or NULL if no matching unit found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const ConfigValueUnit *findMatchingUnitDouble(const ConfigValueUnit *units, double value)
+{
+  const ConfigValueUnit *unit;
+
+  if (units != NULL)
+  {
+    unit = units;
+    while (   (unit->name != NULL)
+           && (   (fabs(value) < unit->factor)
+               || (fabs(fmod(value,unit->factor)) > 0.0)
+              )
           )
     {
       unit++;
@@ -218,7 +318,7 @@ LOCAL const ConfigValueUnit *findDoubleUnitByValue(const ConfigValueUnit *units,
 #pragma GCC pop_options
 
 /***********************************************************************\
-* Name   : findSelect
+* Name   : findSelectByName
 * Purpose: find select by name
 * Input  : selects    - selects array
 *          selectName - select name
@@ -227,7 +327,7 @@ LOCAL const ConfigValueUnit *findDoubleUnitByValue(const ConfigValueUnit *units,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const ConfigValueSelect *findSelect(const ConfigValueSelect *selects, const char *selectName)
+LOCAL const ConfigValueSelect *findSelectByName(const ConfigValueSelect *selects, const char *selectName)
 {
   const ConfigValueSelect *select;
 
@@ -392,7 +492,7 @@ LOCAL bool getIntegerValue(int                   *value,
   {
     if (units != NULL)
     {
-      unit = findUnit(units,unitName);
+      unit = findUnitByName(units,unitName);
       if (unit == NULL)
       {
         stringClear(buffer);
@@ -479,7 +579,7 @@ LOCAL bool getInteger64Value(int64                 *value,
   {
     if (units != NULL)
     {
-      unit = findUnit(units,unitName);
+      unit = findUnitByName(units,unitName);
       if (unit == NULL)
       {
         stringClear(buffer);
@@ -714,7 +814,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
         {
           if (configValue->doubleValue.units != NULL)
           {
-            unit = findUnit(configValue->doubleValue.units,unitName);
+            unit = findUnitByName(configValue->doubleValue.units,unitName);
             if (unit == NULL)
             {
               stringClear(buffer);
@@ -878,7 +978,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
         const ConfigValueSelect *select;
 
         // find select
-        select = findSelect(configValue->selectValue.selects,value);
+        select = findSelectByName(configValue->selectValue.selects,value);
         if (select == NULL)
         {
           reportMessage(errorReportFunction,
@@ -1377,7 +1477,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
         }
         else
         {
-          assert(configValue->variable.deprecated != NULL);
+          assert((configValue->variable.deprecated != NULL) || (configValue->deprecatedValue.parse == NULL));
 
           if (configValue->deprecatedValue.parse != NULL)
           {
@@ -1475,6 +1575,8 @@ LOCAL bool processValue(const ConfigValue    *configValue,
     case CONFIG_VALUE_TYPE_END_SECTION:
       // nothing to do
       break;
+    case CONFIG_VALUE_TYPE_SEPARATOR:
+    case CONFIG_VALUE_TYPE_SPACE:
     case CONFIG_VALUE_TYPE_COMMENT:
       // nothing to do
       break;
@@ -1489,6 +1591,559 @@ LOCAL bool processValue(const ConfigValue    *configValue,
   }
 
   return TRUE;
+}
+
+LOCAL Errors writeValue(FileHandle           *fileHandle,
+                        const ConfigValue    *configValue,
+                        void                 *variable
+                       )
+{
+  Errors error;
+  union
+  {
+    void        *pointer;
+    void        **reference;
+    int         *i;
+    int64       *l;
+    double      *d;
+    bool        *b;
+    uint        *enumeration;
+    uint        *select;
+    ulong       *set;
+    const char  **cString;
+    ConstString *string;
+    void        *special;
+    const char  *newName;
+  }          configVariable;
+
+  assert(fileHandle != NULL);
+  assert(configValue != NULL);
+
+  error = ERROR_NONE;
+  switch (configValue->type)
+  {
+    case CONFIG_VALUE_TYPE_NONE:
+      break;
+    case CONFIG_VALUE_TYPE_INTEGER:
+      {
+        int                   value;
+        const ConfigValueUnit *unit;
+
+        // get value
+        value = 0;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.i = (int*)((byte*)variable+configValue->offset);
+            value = *configVariable.i;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.i = ((int*)((byte*)(*configValue->variable.reference)+configValue->offset));
+              value = *configVariable.i;
+            }
+          }
+        }
+        else if (configValue->variable.i != NULL)
+        {
+          value = *configValue->variable.i;
+        }
+
+        // get unit
+        unit = findMatchingUnit(configValue->integerValue.units,value);
+        if (unit != NULL)
+        {
+          value = value/unit->factor;
+        }
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %d%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+      }
+      break;
+    case CONFIG_VALUE_TYPE_INTEGER64:
+      {
+        int64                 value;
+        const ConfigValueUnit *unit;
+
+        // get value
+        value = 0;
+        if        (configValue->offset >= 0)
+        {
+          if (variable != NULL)
+          {
+            configVariable.l = ((int64*)((byte*)variable+configValue->offset));
+            value = *configVariable.l;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.l = ((int64*)((byte*)(*configValue->variable.reference)+configValue->offset));
+              value = *configVariable.l;
+            }
+          }
+        }
+        else if (configValue->variable.l != NULL)
+        {
+          value = *configValue->variable.l;
+        }
+
+        // get unit
+        unit = findMatchingUnit64(configValue->integer64Value.units,value);
+        if (unit != NULL)
+        {
+          value = value/unit->factor;
+        }
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %"PRIi64"%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+      }
+      break;
+    case CONFIG_VALUE_TYPE_DOUBLE:
+      {
+        double                value;
+        const ConfigValueUnit *unit;
+
+        // get value
+        value = 0.0;
+        if (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.d = ((double*)((byte*)variable+configValue->offset));
+            value = *configVariable.d;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.d = ((double*)((byte*)(*configValue->variable.reference)+configValue->offset));
+              value = *configVariable.d;
+            }
+          }
+        }
+        else if (configValue->variable.d != NULL)
+        {
+          value = *configValue->variable.d;
+        }
+
+        // get unit
+        unit = findMatchingUnitDouble(configValue->integer64Value.units,value);
+        if (unit != NULL)
+        {
+          value = value/unit->factor;
+        }
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %"PRIi64"%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+      }
+      break;
+    case CONFIG_VALUE_TYPE_BOOLEAN:
+      {
+        bool value;
+
+        // get value
+        value = FALSE;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.b = (bool*)((byte*)variable+configValue->offset);
+            value = (*configVariable.b);
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.b = (bool*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              value = (*configVariable.b);
+            }
+          }
+        }
+        else if (configValue->variable.b != NULL)
+        {
+          value = (*configValue->variable.b);
+        }
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,value ? "yes" : "no");
+      }
+      break;
+    case CONFIG_VALUE_TYPE_ENUM:
+#if 0
+      {
+        uint                    value;
+
+        // get value
+        value = 0;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.enumeration = (uint*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
+            value = *configVariable.enumeration;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            configVariable.enumeration = (uint*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
+            value = *configVariable.enumeration;
+          }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValue->variable.enumeration != NULL)
+        {
+          configVariable.enumeration = configValueFormat->configValue->variable.enumeration;
+          value = *configVariable.enumeration;
+        }
+        else
+        {
+          return FALSE;
+        }
+
+        // find select
+        select = findSelectByValue(configValue->selectValue.selects,value);
+        if (select == NULL)
+        {
+          return FALSE;
+        }
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,select->name);
+      }
+#endif
+      break;
+    case CONFIG_VALUE_TYPE_SELECT:
+      {
+        uint                    value;
+        const ConfigValueSelect *select;
+
+        // get value
+        value = 0;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.select = (uint*)((byte*)variable+configValue->offset);
+            value = *configVariable.select;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.select = (uint*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              value = *configVariable.select;
+            }
+          }
+        }
+        else if (configValue->variable.select != NULL)
+        {
+          value = *configValue->variable.select;
+        }
+
+        // find select
+        select = findSelectByValue(configValue->selectValue.selects,value);
+        if (select == NULL)
+        {
+          return FALSE;
+        }
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,select->name);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_SET:
+      {
+        ulong                value;
+        String               s;
+        const ConfigValueSet *configValueSet;
+
+        // get value
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.set = (ulong*)((byte*)variable+configValue->offset);
+            value = *configVariable.set;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.set = (ulong*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              value = *configVariable.set;
+            }
+          }
+        }
+        else if (configValue->variable.set != NULL)
+        {
+          value = *configValue->variable.set;
+        }
+        else
+        {
+          return FALSE;
+        }
+
+        // format
+        s = String_new();
+        ITERATE_SET(configValueSet,configValue->setValue.sets)
+        {
+          if ((value & configValueSet->value) == configValueSet->value)
+          {
+            if (String_length(s) > 0L) String_appendChar(s,',');
+            String_appendCString(s,configValueSet->name);
+          }
+        }
+        ITERATE_SET(configValueSet,configValue->setValue.sets)
+        {
+          if (value == configValueSet->value)
+          {
+            String_setCString(s,configValueSet->name);
+          }
+        }
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,String_cString(s));
+
+        // free resources
+        String_delete(s);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_CSTRING:
+      {
+        String value;
+
+        // init variables
+        value = String_new();
+
+        // get value
+        if     (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.cString = (const char**)((const byte*)variable+configValue->offset);
+            String_setCString(value,*configVariable.cString);
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.cString = (const char**)((const byte*)(*configValue->variable.reference)+configValue->offset);
+              String_setCString(value,*configVariable.cString);
+            }
+          }
+        }
+        else if (configValue->variable.cString != NULL)
+        {
+          String_setCString(value,*configValue->variable.cString);
+        }
+        String_escape(value,
+                      STRING_ESCAPE_CHARACTER,
+                      NULL,  // chars
+                      STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                      STRING_ESCAPE_CHARACTERS_MAP_TO,
+                      STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                    );
+        String_quote(value,STRING_QUOTE,NULL);
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %S",configValue->name,value);
+
+        // free resources
+        String_delete(value);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_STRING:
+      {
+        String value;
+
+        // init variables
+        value = String_new();
+
+        // get value
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.string = (ConstString*)((const byte*)variable+configValue->offset);
+            String_set(value,*configVariable.string);
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.string = (ConstString*)((const byte*)(*configValue->variable.reference)+configValue->offset);
+              String_set(value,*configVariable.string);
+            }
+          }
+        }
+        else if (configValue->variable.string != NULL)
+        {
+          String_set(value,*configValue->variable.string);
+        }
+        String_escape(value,
+                      STRING_ESCAPE_CHARACTER,
+                      NULL,  // chars
+                      STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                      STRING_ESCAPE_CHARACTERS_MAP_TO,
+                      STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                    );
+        String_quote(value,STRING_QUOTE,NULL);
+
+        // write
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %S",configValue->name,value);
+
+        // free resources
+        String_delete(value);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_SPECIAL:
+      {
+        String            line;
+        ConfigValueFormat configValueFormat;
+
+        // init variables
+        line = String_new();
+
+        // format init
+        ConfigValue_formatInit(&configValueFormat,
+                               configValue,
+                               CONFIG_VALUE_FORMAT_MODE_LINE,
+                               variable
+                              );
+
+        // format string
+        while (ConfigValue_format(&configValueFormat,line))
+        {
+          // write
+          if (error == ERROR_NONE) error = File_writeLine(fileHandle,line);
+        }
+
+        // format done
+        ConfigValue_formatDone(&configValueFormat);
+
+        // free resources
+        String_delete(line);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_IGNORE:
+      break;
+    case CONFIG_VALUE_TYPE_DEPRECATED:
+#if 0
+      // store value
+      if (configValue->offset >= 0)
+      {
+        if (variable != NULL)
+        {
+          if (configValue->deprecatedValue.parse != NULL)
+          {
+            if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
+                                                    (byte*)variable+configValue->offset,
+                                                    configValue->name,
+                                                    value,
+                                                    errorMessage,
+                                                    sizeof(errorMessage)
+                                                   )
+               )
+            {
+              return FALSE;
+            }
+          }
+        }
+        else
+        {
+          if (configValue->variable.reference != NULL)
+          {
+            if (configValue->deprecatedValue.parse != NULL)
+            {
+              if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
+                                                      (byte*)(configValue->variable.reference)+configValue->offset,
+                                                      configValue->name,
+                                                      value,
+                                                      errorMessage,
+                                                      sizeof(errorMessage)
+                                                     )
+                 )
+              {
+                return FALSE;
+              }
+            }
+          }
+        }
+      }
+      else
+      {
+        if (variable != NULL)
+        {
+          if (configValue->deprecatedValue.parse != NULL)
+          {
+            if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
+                                                    variable,
+                                                    configValue->name,
+                                                    value,
+                                                    errorMessage,
+                                                    sizeof(errorMessage)
+                                                   )
+               )
+            {
+              return FALSE;
+            }
+          }
+        }
+        else
+        {
+          assert(configValue->variable.deprecated != NULL);
+
+          if (configValue->deprecatedValue.parse != NULL)
+          {
+            if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
+                                                    configValue->variable.deprecated,
+                                                    configValue->name,
+                                                    value,
+                                                    errorMessage,
+                                                    sizeof(errorMessage)
+                                                   )
+               )
+            {
+              return FALSE;
+            }
+          }
+        }
+      }
+#endif
+      break;
+    case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+    case CONFIG_VALUE_TYPE_END_SECTION:
+      // nothing to do
+      break;
+    case CONFIG_VALUE_TYPE_SEPARATOR:
+      if (error == ERROR_NONE) error = File_printLine(fileHandle,"# %s",SEPARATOR);
+      break;
+    case CONFIG_VALUE_TYPE_SPACE:
+      if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
+      break;
+    case CONFIG_VALUE_TYPE_COMMENT:
+      if (!stringIsEmpty(configValue->comment.text))
+      {
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"# %s",configValue->comment.text);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_END:
+      // nothing to do
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+
+  return error;
 }
 
 // ----------------------------------------------------------------------
@@ -1561,7 +2216,7 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
         skipFlag = TRUE;
         switch (configValues[index].type)
         {
-          case  CONFIG_VALUE_TYPE_BEGIN_SECTION:
+          case CONFIG_VALUE_TYPE_BEGIN_SECTION:
             do
             {
               index++;
@@ -1578,10 +2233,12 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
               index++;
             }
             break;
-          case  CONFIG_VALUE_TYPE_COMMENT:
+          case CONFIG_VALUE_TYPE_SEPARATOR:
+          case CONFIG_VALUE_TYPE_SPACE:
+          case CONFIG_VALUE_TYPE_COMMENT:
             index++;
             break;
-          case  CONFIG_VALUE_TYPE_END:
+          case CONFIG_VALUE_TYPE_END:
             skipFlag = FALSE;
             break;
           default:
@@ -1619,6 +2276,8 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
             index++;
           }
           break;
+        case CONFIG_VALUE_TYPE_SEPARATOR:
+        case CONFIG_VALUE_TYPE_SPACE:
         case CONFIG_VALUE_TYPE_COMMENT:
           index++;
           break;
@@ -1675,6 +2334,8 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
               index++;
             }
             break;
+          case CONFIG_VALUE_TYPE_SEPARATOR:
+          case CONFIG_VALUE_TYPE_SPACE:
           case CONFIG_VALUE_TYPE_COMMENT:
             index++;
             break;
@@ -1725,6 +2386,8 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
               index++;
             }
             break;
+          case CONFIG_VALUE_TYPE_SEPARATOR:
+          case CONFIG_VALUE_TYPE_SPACE:
           case CONFIG_VALUE_TYPE_COMMENT:
             index++;
             break;
@@ -1764,6 +2427,8 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
             }
             skipFlag = FALSE;
             break;
+          case CONFIG_VALUE_TYPE_SEPARATOR:
+          case CONFIG_VALUE_TYPE_SPACE:
           case CONFIG_VALUE_TYPE_COMMENT:
             index--;
             break;
@@ -1815,6 +2480,8 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
             skipFlag = FALSE;
           }
           break;
+        case CONFIG_VALUE_TYPE_SEPARATOR:
+        case CONFIG_VALUE_TYPE_SPACE:
         case CONFIG_VALUE_TYPE_COMMENT:
           index++;
           break;
@@ -2041,20 +2708,53 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
       configValueFormat->variable = variable;
       break;
     case CONFIG_VALUE_TYPE_SPECIAL:
+if (configValue->specialValue.format2 != NULL)
+{
+        if      (configValueFormat->configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configValue->specialValue.format2(&configValueFormat->formatUserData,
+                                             CONFIG_VALUE_FORMAT_OPERATION_INIT,
+                                             (byte*)variable+configValueFormat->configValue->offset,
+                                             configValue->specialValue.userData
+                                            );
+          }
+          else if (configValueFormat->configValue->variable.reference != NULL)
+          {
+            if ((*configValueFormat->configValue->variable.reference) != NULL)
+            {
+              configValue->specialValue.format2(&configValueFormat->formatUserData,
+                                               CONFIG_VALUE_FORMAT_OPERATION_INIT,
+                                               (byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset,
+                                               configValue->specialValue.userData
+                                              );
+            }
+          }
+        }
+        else if (configValueFormat->configValue->variable.special != NULL)
+        {
+          configValue->specialValue.format2(&configValueFormat->formatUserData,
+                                           CONFIG_VALUE_FORMAT_OPERATION_INIT,
+                                           configValueFormat->configValue->variable.special,
+                                           configValue->specialValue.userData
+                                          );
+        }
+}
+else
       if (configValue->specialValue.formatInit != NULL)
       {
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (variable != NULL)
+          if      (variable != NULL)
           {
             configValue->specialValue.formatInit(&configValueFormat->formatUserData,
                                                  configValue->specialValue.userData,
                                                  (byte*)variable+configValueFormat->configValue->offset
                                                 );
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             if ((*configValueFormat->configValue->variable.reference) != NULL)
             {
               configValue->specialValue.formatInit(&configValueFormat->formatUserData,
@@ -2064,9 +2764,8 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
             }
           }
         }
-        else
+        else if (configValueFormat->configValue->variable.special != NULL)
         {
-          assert(configValueFormat->configValue->variable.special != NULL);
           configValue->specialValue.formatInit(&configValueFormat->formatUserData,
                                                configValue->specialValue.userData,
                                                configValueFormat->configValue->variable.special
@@ -2075,24 +2774,22 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
       }
       else
       {
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (variable != NULL)
+          if      (variable != NULL)
           {
             configValueFormat->formatUserData = (byte*)variable+configValueFormat->configValue->offset;
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             if ((*configValueFormat->configValue->variable.reference) != NULL)
             {
               configValueFormat->formatUserData = (byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset;
             }
           }
         }
-        else
+        else if (configValueFormat->configValue->variable.special != NULL)
         {
-          assert(configValueFormat->configValue->variable.special != NULL);
           configValueFormat->formatUserData = configValueFormat->configValue->variable.special;
         }
       }
@@ -2107,6 +2804,8 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
     case CONFIG_VALUE_TYPE_END_SECTION:
       // nothing to do
       break;
+    case CONFIG_VALUE_TYPE_SEPARATOR:
+    case CONFIG_VALUE_TYPE_SPACE:
     case CONFIG_VALUE_TYPE_COMMENT:
 //TODO
       break;
@@ -2140,6 +2839,14 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
     case CONFIG_VALUE_TYPE_CSTRING:
     case CONFIG_VALUE_TYPE_STRING:
     case CONFIG_VALUE_TYPE_SPECIAL:
+if (configValueFormat->configValue->specialValue.format2 != NULL)
+{
+        configValueFormat->configValue->specialValue.format2(&configValueFormat->formatUserData,
+        CONFIG_VALUE_FORMAT_OPERATION_DONE,
+        configValueFormat->configValue->variable.special,
+                                                                configValueFormat->configValue->specialValue.userData
+                                                               );
+} else
       if (configValueFormat->configValue->specialValue.formatDone != NULL)
       {
         configValueFormat->configValue->specialValue.formatDone(&configValueFormat->formatUserData,
@@ -2157,6 +2864,8 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
     case CONFIG_VALUE_TYPE_END_SECTION:
       // nothing to do
       break;
+    case CONFIG_VALUE_TYPE_SEPARATOR:
+    case CONFIG_VALUE_TYPE_SPACE:
     case CONFIG_VALUE_TYPE_COMMENT:
 //TODO
       break;
@@ -2229,22 +2938,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_INTEGER:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.i = (int*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.i = (int*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValueFormat->configValue->variable.i != NULL)
+        {
+          configVariable.i = configValueFormat->configValue->variable.i;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.i != NULL);
-          configVariable.i = configValueFormat->configValue->variable.i;
+          return FALSE;
         }
 
         // find usable unit
@@ -2281,22 +2996,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_INTEGER64:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.l = (int64*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.l = (int64*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValueFormat->configValue->variable.l != NULL)
+        {
+          configVariable.l = configValueFormat->configValue->variable.l;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.l != NULL);
-          configVariable.l = configValueFormat->configValue->variable.l;
+          return FALSE;
         }
 
         // find usable unit
@@ -2333,22 +3054,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_DOUBLE:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.d = (double*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.d = (double*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+        else
+        {
+          return FALSE;
+        }
+        }
+        else if (configValueFormat->configValue->variable.d != NULL)
+        {
+          configVariable.d = configValueFormat->configValue->variable.d;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.d != NULL);
-          configVariable.d = configValueFormat->configValue->variable.d;
+          return FALSE;
         }
 
         // find usable unit
@@ -2385,22 +3112,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_BOOLEAN:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.b = (bool*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.b = (bool*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValueFormat->configValue->variable.b != NULL)
+        {
+          configVariable.b = configValueFormat->configValue->variable.b;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.b != NULL);
-          configVariable.b = configValueFormat->configValue->variable.b;
+          return FALSE;
         }
 
         // format value
@@ -2410,22 +3143,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_ENUM:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.enumeration = (uint*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.enumeration = (uint*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValueFormat->configValue->variable.enumeration != NULL)
+        {
+          configVariable.enumeration = configValueFormat->configValue->variable.enumeration;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.enumeration != NULL);
-          configVariable.enumeration = configValueFormat->configValue->variable.enumeration;
+          return FALSE;
         }
 
         // format value
@@ -2435,22 +3174,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_SELECT:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.select = (uint*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.select = (uint*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+        else
+        {
+          return FALSE;
+        }
+        }
+        else if (configValueFormat->configValue->variable.select != NULL)
+        {
+          configVariable.select = configValueFormat->configValue->variable.select;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.select != NULL);
-          configVariable.select = configValueFormat->configValue->variable.select;
+          return FALSE;
         }
         select = findSelectByValue(configValueFormat->configValue->selectValue.selects,*configVariable.select);
 
@@ -2461,22 +3206,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_SET:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.set = (ulong*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.set = (ulong*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValueFormat->configValue->variable.set != NULL)
+        {
+          configVariable.set = configValueFormat->configValue->variable.set;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.set != NULL);
-          configVariable.set = configValueFormat->configValue->variable.set;
+          return FALSE;
         }
         s = String_new();
         ITERATE_SET(set,configValueFormat->configValue->setValue.sets)
@@ -2505,22 +3256,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_CSTRING:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.cString = (char**)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.cString = (char**)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValueFormat->configValue->variable.cString != NULL)
+        {
+          configVariable.cString = configValueFormat->configValue->variable.cString;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.cString != NULL);
-          configVariable.cString = configValueFormat->configValue->variable.cString;
+          return FALSE;
         }
 
         // format value
@@ -2537,22 +3294,28 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         break;
       case CONFIG_VALUE_TYPE_STRING:
         // get value
-        if (configValueFormat->configValue->offset >= 0)
+        if      (configValueFormat->configValue->offset >= 0)
         {
-          if (configValueFormat->variable != NULL)
+          if      (configValueFormat->variable != NULL)
           {
             configVariable.string = (String*)((byte*)configValueFormat->variable+configValueFormat->configValue->offset);
           }
-          else
+          else if (configValueFormat->configValue->variable.reference != NULL)
           {
-            assert(configValueFormat->configValue->variable.reference != NULL);
             configVariable.string = (String*)((byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset);
           }
+          else
+          {
+            return FALSE;
+          }
+        }
+        else if (configValueFormat->configValue->variable.string != NULL)
+        {
+          configVariable.string = configValueFormat->configValue->variable.string;
         }
         else
         {
-          assert(configValueFormat->configValue->variable.string != NULL);
-          configVariable.string = configValueFormat->configValue->variable.string;
+          return FALSE;
         }
 
         // format value
@@ -2561,49 +3324,14 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_SPECIAL:
-#if 0
-        if (configValueFormat->configValue->specialValue.format != NULL)
-        {
-          if (configValueFormat->configValue->offset >= 0)
-          {
-            if (configValueFormat->variable != NULL)
-            {
-              configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
-                                                                                                      configValueFormat->configValue->specialValue.userData,
-                                                                                                      line
-                                                                                                     );
-            }
-            else
-            {
-              assert(configValueFormat->configValue->variable.reference != NULL);
-              if ((*configValueFormat->configValue->variable.reference) != NULL)
-              {
-                configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
-                                                                                                        configValueFormat->configValue->specialValue.userData,
-                                                                                                        line
-                                                                                                       );
-              }
-              else
-              {
-                configValueFormat->endOfDataFlag = TRUE;
-              }
-            }
-          }
-          else
-          {
-            assert(configValueFormat->configValue->variable.special != NULL);
-            configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
-                                                                                                    configValueFormat->configValue->specialValue.userData,
-                                                                                                    line
-                                                                                                   );
-          }
-        }
-        else
-        {
-          configValueFormat->endOfDataFlag = TRUE;
-        }
-        if (configValueFormat->endOfDataFlag) return FALSE;
-#endif /* 0 */
+if (configValueFormat->configValue->specialValue.format2 != NULL)
+{
+          configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format2(&configValueFormat->formatUserData,
+          CONFIG_VALUE_FORMAT_OPERATION,
+                                                                                                  line,
+                                                                                                  configValueFormat->configValue->specialValue.userData
+                                                                                                 );
+} else
         if (configValueFormat->configValue->specialValue.format != NULL)
         {
           configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
@@ -2630,6 +3358,8 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         // nothing to do
         return FALSE;
         break;
+      case CONFIG_VALUE_TYPE_SEPARATOR:
+      case CONFIG_VALUE_TYPE_SPACE:
       case CONFIG_VALUE_TYPE_COMMENT:
 //TODO
         break;
@@ -2957,57 +3687,173 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
   return error;
 }
 
-//TODO: NYI
-Errors ConfigValue_updateConfigFile(ConstString       configFileName,
-                                    const ConfigValue configValues[],
-                                    ConstString       configTemplate
-                                   )
+Errors ConfigValue_writeConfigFile(ConstString       configFileName,
+                                   const ConfigValue configValues[]
+                                  )
 {
-  StringList configLinesList;
-  String     line;
+  FileHandle fileHandle;
   Errors     error;
-
-UNUSED_VARIABLE(configValues);
-UNUSED_VARIABLE(configTemplate);
+  uint       i;
 
   // init variables
-  StringList_init(&configLinesList);
-  line = String_new();
 
-  // generate new config
-
-  // read config file lines
-  error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
+  // open file
+  error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
-    StringList_done(&configLinesList);
-    String_delete(line);
     return error;
   }
 
-  // merge comments from old config
-
-  // write config file lines
-  error = ConfigValue_writeConfigFileLines(configFileName,&configLinesList);
-  if (error != ERROR_NONE)
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+  i     = 0;
+  error = ERROR_NONE;
+  while (   (configValues[i].type != CONFIG_VALUE_TYPE_END)
+         && (error == ERROR_NONE)
+        )
   {
-    String_delete(line);
-    StringList_done(&configLinesList);
-    return error;
+//fprintf(stderr,"%s, %d: %d: %s\n",__FILE__,__LINE__,configValues[i].type,configValues[i].name);
+    switch (configValues[i].type)
+    {
+      case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+        {
+          uint sectionStartIndex,sectionCount;
+          void *sectionIterator;
+          void *data;
+          uint j;
+
+          // find section
+          sectionStartIndex = i+1;
+          sectionCount  = 0;
+          while (   (configValues[sectionStartIndex+sectionCount].type != CONFIG_VALUE_TYPE_END_SECTION)
+                 && (configValues[sectionStartIndex+sectionCount].type != CONFIG_VALUE_TYPE_END)
+                )
+          {
+            sectionCount++;
+          }
+
+          // init iterator
+          if (configValues[i].section.sectionIteratorInit != NULL)
+          {
+            configValues[i].section.sectionIteratorInit(&sectionIterator,configValues[i].variable.pointer,configValues[i].section.userData);
+          }
+
+          if (configValues[i].section.sectionIteratorNext != NULL)
+          {
+            // iterate
+            do
+            {
+              data = configValues[i].section.sectionIteratorNext(&sectionIterator,configValues[i].section.userData);
+              if (data != NULL)
+              {
+//if (!String_isEmpty(line))
+                if (error == ERROR_NONE) error = File_printLine(&fileHandle,"");
+                if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[%s]",configValues[i].name);
+
+                // write section
+                for (j = 0; j < sectionCount; j++)
+                {
+                  error = writeValue(&fileHandle,
+                                     &configValues[sectionStartIndex+j],
+                                     data // variable,
+                                    );
+                }
+
+                if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[end]");
+//                String_clear(line);
+              }
+            }
+            while ((data != NULL) && (error == ERROR_NONE));
+          }
+          else
+          {
+//if (!String_isEmpty(line))
+            if (error == ERROR_NONE) error = File_printLine(&fileHandle,"");
+            if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[%s]",configValues[i].name);
+
+            // write section
+            for (j = 0; j < sectionCount; j++)
+            {
+              error = writeValue(&fileHandle,
+                                 &configValues[sectionStartIndex+j],
+                                 NULL // variable,
+                                );
+            }
+
+            if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[end]");
+//            String_clear(line);
+          }
+
+          // done iterator
+          if (configValues[i].section.sectionIteratorDone != NULL)
+          {
+            configValues[i].section.sectionIteratorDone(&sectionIterator,configValues[i].section.userData);
+          }
+
+          // done section
+          i = sectionStartIndex+sectionCount;
+        }
+        break;
+      case CONFIG_VALUE_TYPE_END_SECTION:
+        // nothing to do
+        break;
+      default:
+        error = writeValue(&fileHandle,
+                           &configValues[i],
+                           NULL // variable
+                          );
+        break;
+    }
+
+    i++;
   }
+
+  // close file
+  File_close(&fileHandle);
+
+  // set permissions
   error = File_setPermission(configFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
   if (error != ERROR_NONE)
   {
-    String_delete(line);
-    StringList_done(&configLinesList);
+//    String_delete(line);
     return error;
   }
 
   // free resources
-  String_delete(line);
-  StringList_done(&configLinesList);
 
   return ERROR_NONE;
+}
+
+void ConfigValue_listSectionDataIteratorInit(ConfigValueSectionDataIterator *sectionDataIterator, void *variable, void *userData)
+{
+  assert(sectionDataIterator != NULL);
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*sectionDataIterator) = List_first((List*)variable);
+}
+
+void ConfigValue_listSectionDataIteratorDone(ConfigValueSectionDataIterator *sectionDataIterator, void *userData)
+{
+  assert(sectionDataIterator != NULL);
+
+  UNUSED_VARIABLE(userData);
+}
+
+void *ConfigValue_listSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData)
+{
+  Node *node = (Node*)(*sectionDataIterator);
+
+  assert(sectionDataIterator != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if (node != NULL)
+  {
+    (*sectionDataIterator) = node->next;
+  }
+
+  return node;
 }
 
 #ifdef __GNUC__

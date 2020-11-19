@@ -87,16 +87,68 @@ typedef void(*ConfigFormatDoneFunction)(void **formatData, void *userData);
 * Input  : formatData - format data
 *          userData   - user data
 * Output : line - line
-* Return : TRUE to format next line, FALSE otherwise
+* Return : TRUE if next/formated line, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 typedef bool(*ConfigFormatFunction)(void **formatData, void *userData, String line);
 
+typedef enum
+{
+  CONFIG_VALUE_FORMAT_OPERATION_INIT,
+  CONFIG_VALUE_FORMAT_OPERATION_DONE,
+  CONFIG_VALUE_FORMAT_OPERATION
+} ConfigValueFormatOperations;
+
+typedef bool(*ConfigFormatFunctionXXX)(void **formatData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
+
+// section data iterator
+typedef void* ConfigValueSectionDataIterator;
+
+/***********************************************************************\
+* Name   : ConfigSectionIteratorInitFunction
+* Purpose: section iterator initialize
+* Input  : sectionIterator - section iterator variable
+*          userData        - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*ConfigSectionIteratorInitFunction)(ConfigValueSectionDataIterator *sectionIterator, void *variable, void *userData);
+
+/***********************************************************************\
+* Name   : ConfigSectionIteratorDoneFunction
+* Purpose: section iterator done
+* Input  : sectionIterator - section iterator variable
+*          userData        - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*ConfigSectionIteratorDoneFunction)(ConfigValueSectionDataIterator *sectionIterator, void *userData);
+
+/***********************************************************************\
+* Name   : ConfigSectionIteratorNextFunction
+* Purpose: section iterator next
+* Input  : sectionData - section iterator variable
+*          userData    - user data
+* Output : -
+* Return : TRUE to format next line, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+typedef void*(*ConfigSectionIteratorNextFunction)(ConfigValueSectionDataIterator *sectionIterator, void *userData);
+
 // config value data types
 typedef enum
 {
   CONFIG_VALUE_TYPE_NONE,
+
+  CONFIG_VALUE_TYPE_SEPARATOR,
+  CONFIG_VALUE_TYPE_SPACE,
+  CONFIG_VALUE_TYPE_COMMENT,
 
   CONFIG_VALUE_TYPE_INTEGER,
   CONFIG_VALUE_TYPE_INTEGER64,
@@ -114,8 +166,6 @@ typedef enum
 
   CONFIG_VALUE_TYPE_BEGIN_SECTION,
   CONFIG_VALUE_TYPE_END_SECTION,
-
-  CONFIG_VALUE_TYPE_COMMENT,
 
   CONFIG_VALUE_TYPE_END
 } ConfigValueTypes;
@@ -206,6 +256,7 @@ typedef struct
     ConfigFormatDoneFunction formatDone;          // format done
     ConfigFormatFunction     format;              // format line
     void *userData;                               // user data for parse special
+    ConfigFormatFunctionXXX     format2;              // format line
   } specialValue;
   struct
   {
@@ -221,7 +272,15 @@ typedef struct
   } ignoreValue;
   struct
   {
+    ConfigSectionIteratorInitFunction sectionIteratorInit;  // section iterator init
+    ConfigSectionIteratorDoneFunction sectionIteratorDone;  // section iterator done
+    ConfigSectionIteratorNextFunction sectionIteratorNext;  // section iterator next
+    void *userData;                               // user data for parse special
+  } section;
+  struct
+  {
     const char *text;
+    const char *defaultText;
   } comment;
 } ConfigValue;
 
@@ -239,7 +298,10 @@ CONFIG_VALUE_CSTRING        (<name>,<variable>,<offset>|-1,                     
 CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1,                                                     )
 CONFIG_VALUE_SPECIAL        (<name>,<function>,<offset>|-1,<parse>,<formatInit>,<formatDone>,<format>,<userData>)
 CONFIG_VALUE_DEPRECATED     (<name>,<function>,<offset>|-1,<parse>,<userData>,<newName>,warningFlag>            )
+
+CONFIG_VALUE_SEPARATOR      (                                                                                   )
 CONFIG_VALUE_COMMENT        (<comment>                                                                          )
+CONFIG_VALUE_SPACE          (                                                                                   )
 
 const ConfigValueUnit COMMAND_LINE_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
@@ -262,6 +324,7 @@ const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                      ),
 
+  CONFIG_VALUE_BOOLEAN      ("bool",    &boolValue,    NULL,-1,      FALSE,                             ),
   CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,                             ),
 
   CONFIG_VALUE_SELECT       ("type",    &selectValue,  NULL,-1,      CONFIG_VALUE_SELECT_TYPES          ),
@@ -280,7 +343,9 @@ const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_DEPRECATED   ("foo",     &foo,               -1,      configValueParseFoo,NULL,"new",TRUE),
 
-  CONFIG_VALUE_COMMENT      ("comment"                                                                  ),
+  CONFIG_VALUE_SEPARATOR    (                                                                           ),
+  CONFIG_VALUE_COMMENT      ("foo"                                                                      ),
+  CONFIG_VALUE_SPACE        (                                                                           ),
 };
 
 const ConfigValue CONFIG_STRUCT_VALUES[] =
@@ -397,10 +462,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   } \
 }; \
 
@@ -430,10 +496,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }, \
   __VA_ARGS__ \
   { \
@@ -450,10 +517,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 
 /***********************************************************************\
@@ -486,10 +554,11 @@ typedef struct
     {NULL},\
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units)
@@ -524,10 +593,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
   CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units)
@@ -562,10 +632,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units) \
   CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units)
@@ -598,10 +669,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member) \
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member))
@@ -619,7 +691,8 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
+#warning obsolete
+#define xxxCONFIG_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
   { \
     CONFIG_VALUE_TYPE_BOOLEAN,\
     name,\
@@ -634,17 +707,18 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
-  CONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
+#define xxxCONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
+  xxxCONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_ENUM, CONFIG_STRUCT_VALUE_ENUM
-* Purpose: define an enum-value
+* Purpose: define a single enum-value
 * Input  : name            - name
 *          variablePointer - pointer to variable or NULL
 *          offset          - offset in structure or -1
@@ -656,7 +730,8 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_ENUM(name,variablePointer,offset,value) \
+#warning obsolete
+#define xxxCONFIG_VALUE_ENUM(name,variablePointer,offset,value) \
   { \
     CONFIG_VALUE_TYPE_ENUM,\
     name,\
@@ -671,17 +746,18 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
-  CONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
+#define xxxCONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
+  xxxCONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_SELECT, CONFIG_STRUCT_VALUE_SELECT
-* Purpose: define an enum-value as selection
+* Purpose: define a selection from a set of enum-values
 * Input  : name            - name
 *          variablePointer - pointer to variable or NULL
 *          offset          - offset in structure or -1
@@ -708,10 +784,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects) \
   CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects)
@@ -745,10 +822,11 @@ typedef struct
     {set},\
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SET(name,type,member,set) \
   CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set)
@@ -781,10 +859,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_CSTRING(name,type,member) \
   CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member))
@@ -817,10 +896,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_STRING(name,type,member) \
   CONFIG_VALUE_STRING(name,NULL,offsetof(type,member))
@@ -843,7 +923,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_SPECIAL(name,variablePointer,offset,parse,formatInit,formatDone,format,userData) \
+#define CONFIG_VALUE_SPECIALXXX(name,variablePointer,offset,parse,formatInit,formatDone,format,userData) \
   { \
     CONFIG_VALUE_TYPE_SPECIAL,\
     name,\
@@ -858,13 +938,38 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {parse,formatInit,formatDone,format,userData},\
+    {parse,formatInit,formatDone,format,userData,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,formatInit,formatDone,format,userData) \
-  CONFIG_VALUE_SPECIAL(name,NULL,offsetof(type,member),parse,formatInit,formatDone,format,userData)
+#define CONFIG_STRUCT_VALUE_SPECIALXXX(name,type,member,parse,formatInit,formatDone,format,userData) \
+  CONFIG_VALUE_SPECIALXXX(name,NULL,offsetof(type,member),parse,formatInit,formatDone,format,userData)
+
+#define CONFIG_VALUE_SPECIAL(name,variablePointer,offset,parse,format,userData) \
+  { \
+    CONFIG_VALUE_TYPE_SPECIAL,\
+    name,\
+    {variablePointer},\
+    offset,\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
+    {},\
+    {0},\
+    {NULL},\
+    {NULL}, \
+    {},\
+    {},\
+    {parse,NULL,NULL,NULL,userData,format},\
+    {NULL,NULL,NULL,FALSE},\
+    {NULL,FALSE},\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
+  }
+#define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,format,userData) \
+  CONFIG_VALUE_SPECIAL(name,NULL,offsetof(type,member),parse,format,userData)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_IGNORE, CONFIG_STRUCT_VALUE_IGNORE
@@ -890,10 +995,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {newName,warningFlag},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_IGNORE(name,newName,warningFlag) \
   CONFIG_VALUE_IGNORE(name,newName,warningFlag)
@@ -929,10 +1035,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {parse,userData,newName,warningFlag},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName,warningFlag) \
   CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName,warningFlag)
@@ -947,11 +1054,11 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_BEGIN_SECTION(name,offset) \
+#define CONFIG_VALUE_BEGIN_SECTION(name,variablePointer,offset,sectionIteratorInit,sectionIteratorDone,sectionIteratorNext,userData) \
   { \
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     name,\
-    {NULL},\
+    {variablePointer},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -962,10 +1069,11 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {sectionIteratorInit,sectionIteratorDone,sectionIteratorNext,userData},\
+    {NULL,NULL}\
   }
 
 #define CONFIG_VALUE_END_SECTION() \
@@ -983,10 +1091,42 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL}\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
+  }
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_SEPARATOR
+* Purpose: separator comment
+* Input  : text - comment text
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_SEPARATOR(text) \
+  { \
+    CONFIG_VALUE_TYPE_SEPARATOR,\
+    NULL,\
+    {NULL},\
+    -1,\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
+    {},\
+    {0},\
+    {NULL},\
+    {NULL}, \
+    {},\
+    {},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
+    {NULL,FALSE},\
+    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL}\
   }
 
 /***********************************************************************\
@@ -1013,10 +1153,42 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {text}\
+    {NULL,NULL,NULL,NULL},\
+    {text,NULL}\
+  }
+
+/***********************************************************************\
+* Name   : CONFIG_VALUE_SPACE
+* Purpose: empty line
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CONFIG_VALUE_SPACE() \
+  { \
+    CONFIG_VALUE_TYPE_SPACE,\
+    NULL,\
+    {NULL},\
+    -1,\
+    {0,0,NULL},\
+    {0LL,0LL,NULL},\
+    {0.0,0.0,NULL},\
+    {},\
+    {0},\
+    {NULL},\
+    {NULL}, \
+    {},\
+    {},\
+    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL,FALSE},\
+    {NULL,FALSE},\
+    {NULL,NULL,NULL,NULL},\
+    {"",NULL}\
   }
 
 /***********************************************************************\
@@ -1502,10 +1674,46 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
 * Notes  : -
 \***********************************************************************/
 
-Errors ConfigValue_updateConfigFile(ConstString       configFileName,
-                                    const ConfigValue configValues[],
-                                    ConstString       configTemplate
-                                   );
+Errors ConfigValue_writeConfigFile(ConstString       configFileName,
+                                   const ConfigValue configValues[]
+                                  );
+
+/***********************************************************************\
+* Name   : ConfigValue_listSectionDataIteratorInit
+* Purpose: init section iterator
+* Input  : sectionDataIterator - section data iterator variable
+*          variable            - variable
+*          userData            - user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+void ConfigValue_listSectionDataIteratorInit(ConfigValueSectionDataIterator *sectionDataIterator, void *variable, void *userData);
+
+/***********************************************************************\
+* Name   : ConfigValue_listSectionIteratorDone
+* Purpose: done section iterator
+* Input  : sectionDataIterator - section data iterator variable
+*          userData            - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ConfigValue_listSectionDataIteratorDone(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
+
+/***********************************************************************\
+* Name   : ConfigValue_updateConfigFile
+* Purpose: get next section iterator value
+* Input  : sectionDataIterator - section data iterator variable
+*          userData            - user data
+* Output : -
+* Return : next data element or NULL
+* Notes  : -
+\***********************************************************************/
+
+void *ConfigValue_listSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
 
 #ifdef __GNUG__
 }
