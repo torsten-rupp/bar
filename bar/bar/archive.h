@@ -1530,7 +1530,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 
 /***********************************************************************\
 * Name   : Archive_verifySignatureEntry
-* Purpose: verify signatures of archive
+* Purpose: read signature entry and verify signature of archive
 * Input  : archiveHandle - archive handle
 *          offset        - data start offset
 *          cryptSignatureState - signature state; see

@@ -1316,15 +1316,15 @@ Errors getCryptPasswordFromConsole(String        name,
 bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet);
 
 /***********************************************************************\
-* Name   : parseDateTimeNumber
-* Purpose: parse date/time number (year, day, month, hour, minute)
+* Name   : parseDateNumber
+* Purpose: parse date/time number (year, day, month)
 * Input  : s - string to parse
 * Output : n - number variable
 * Return : TRUE iff number parsed
 * Notes  : -
 \***********************************************************************/
 
-bool parseDateTimeNumber(ConstString s, int *n);
+bool parseDateNumber(ConstString s, int *n);
 
 /***********************************************************************\
 * Name   : parseDateMonth
@@ -1337,10 +1337,21 @@ bool parseDateTimeNumber(ConstString s, int *n);
 
 bool parseDateMonth(ConstString s, int *month);
 
+/***********************************************************************\
+* Name   : parseTimeNumber
+* Purpose: parse time number (hour, minute)
+* Input  : s - string to parse
+* Output : n - number variable
+* Return : TRUE iff number parsed
+* Notes  : -
+\***********************************************************************/
+
+bool parseTimeNumber(ConstString s, int *n);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : configValueParsePassword
+* Name   : configValuePasswordParse
 * Purpose: config value option call back for parsing password
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1353,51 +1364,25 @@ bool parseDateMonth(ConstString s, int *month);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitPassord
-* Purpose: init format config password
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitPassord(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDonePassword
-* Purpose: done format of config password setting
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDonePassword(void **formatUserData, void *userData);
+bool configValuePasswordParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatCryptAlgorithms
 * Purpose: format crypt algorithms config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatPassword(void **formatUserData, void *userData, String line);
+bool configValuePasswordFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseCryptAlgorithms
+* Name   : configValueCryptAlgorithmsParse
 * Purpose: config value option call back for parsing crypt algorithms
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1410,51 +1395,25 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitCryptAlgorithms
-* Purpose: init format config crypt algorithms
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitCryptAlgorithms(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneCryptAlgorithms
-* Purpose: done format of config crypt algorithms setting
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneCryptAlgorithms(void **formatUserData, void *userData);
+bool configValueCryptAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatCryptAlgorithms
 * Purpose: format crypt algorithms config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, String line);
+bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseBandWidth
+* Name   : configValueBandWidthParse
 * Purpose: config value call back for parsing band width setting
 *          patterns
 * Input  : userData              - user data
@@ -1468,49 +1427,24 @@ bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, Str
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseBandWidth(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitBandWidth
-* Purpose: init format of config band width settings
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitBandWidth(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneBandWidth
-* Purpose: done format of config band width setting
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneBandWidth(void **formatUserData, void *userData);
+bool configValueBandWidthParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatBandWidth
 * Purpose: format next config band width setting
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatBandWidth(void **formatUserData, void *userData, String line);
+bool configValueBandWidthFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseOwner
+* Name   : configValueOwnerParse
 * Purpose: config value call back for parsing owner patterns
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1523,49 +1457,24 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+bool configValueOwnerParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
-* Name   : configValueFormatInitOwner
-* Purpose: init format of config owner statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitOwner(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneOwner
-* Purpose: done format of config owner statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneOwner(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatOwner
+* Name   : configValueOwnerFormat
 * Purpose: format next config owner statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatOwner(void **formatUserData, void *userData, String line);
+bool configValueOwnerFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParsePermissions
+* Name   : configValuePermissionsParse
 * Purpose: config value call back for parsing permissions
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1578,50 +1487,25 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParsePermissions(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+bool configValuePermissionsParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
-* Name   : configValueFormatInitPermissions
-* Purpose: init format of config owner statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitPermissions(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneOwner
-* Purpose: done format of config owner statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDonePermissions(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatPermissions
+* Name   : configValuePermissionsFormat
 * Purpose: format next config owner statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatPermissions(void **formatUserData, void *userData, String line);
+bool configValuePermissionsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseFileEntryPattern,
-*          configValueParseImageEntryPattern
+* Name   : configValueFileEntryPatternParse
+*          configValueImageEntryPatternParse
 * Purpose: config value option call back for parsing file/image entry
 *          patterns
 * Input  : userData              - user data
@@ -1635,51 +1519,27 @@ bool configValueFormatPermissions(void **formatUserData, void *userData, String 
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseFileEntryPattern(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-bool configValueParseImageEntryPattern(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitEntryPattern
-* Purpose: init format of config include statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitEntryPattern(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneEntryPattern
-* Purpose: done format of config include statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneEntryPattern(void **formatUserData, void *userData);
+bool configValueFileEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+bool configValueImageEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatFileEntryPattern,
 *          configValueFormatImageEntryPattern
 * Purpose: format next config include statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatFileEntryPattern(void **formatUserData, void *userData, String line);
-bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, String line);
+bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
+bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParsePattern
+* Name   : configValuePatternParse
 * Purpose: config value option call back for parsing pattern
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1692,49 +1552,24 @@ bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, S
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitPattern
-* Purpose: init format of config pattern statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitPattern(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDonePattern
-* Purpose: done format of config pattern statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDonePattern(void **formatUserData, void *userData);
+bool configValuePatternParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatPattern
 * Purpose: format next config pattern statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatPattern(void **formatUserData, void *userData, String line);
+bool configValuePatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseMount
+* Name   : configValueMountParse
 * Purpose: config value option call back for parsing mounts
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1747,49 +1582,24 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseMount(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitMount
-* Purpose: init format of config mount statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitMount(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneMount
-* Purpose: done format of config mount statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneMount(void **formatUserData, void *userData);
+bool configValueMountParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : configValueFormatMount
 * Purpose: format next config mount statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatMount(void **formatUserData, void *userData, String line);
+bool configValueMountFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseDeltaSource
+* Name   : configValueDeltaSourceParse
 * Purpose: config value option call back for parsing delta source
 *          pattern
 * Input  : userData              - user data
@@ -1803,49 +1613,24 @@ bool configValueFormatMount(void **formatUserData, void *userData, String line);
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseDeltaSource(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitDeltaSource
-* Purpose: init format of config delta source pattern statements
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitDeltaSource(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneDeltaSource
-* Purpose: done format of config delta source pattern statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneDeltaSource(void **formatUserData, void *userData);
+bool configValueDeltaSourceParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
 * Name   : configValueFormatDeltaSource
 * Purpose: format next config delta source pattern statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatDeltaSource(void **formatUserData, void *userData, String line);
+bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseString
+* Name   : configValueStringParse
 * Purpose: config value option call back for parsing string
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1859,10 +1644,10 @@ bool configValueFormatDeltaSource(void **formatUserData, void *userData, String 
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseString(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+bool configValueStringParse(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
 
 /***********************************************************************\
-* Name   : configValueParseDeltaCompressAlgorithm
+* Name   : configValueDeltaCompressAlgorithmParse
 * Purpose: config value option call back for parsing delta compress
 *          algorithm
 * Input  : userData - user data
@@ -1875,7 +1660,7 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseDeltaCompressAlgorithm(void *userData, void *variable, const char *name, const char *value);
+bool configValueDeltaCompressAlgorithmParse(void *userData, void *variable, const char *name, const char *value);
 
 /***********************************************************************\
 * Name   : configValueFormatInitDeltaCompressAlgorithm
@@ -1888,7 +1673,7 @@ bool configValueParseDeltaCompressAlgorithm(void *userData, void *variable, cons
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitDeltaCompressAlgorithm(void **formatUserData, void *userData, void *variable);
+void configValueInitDeltaCompressAlgorithmFormat(void **formatUserData, void *userData, void *variable);
 
 /***********************************************************************\
 * Name   : configValueFormatDoneDeltaCompressAlgorithm
@@ -1901,7 +1686,7 @@ void configValueFormatInitDeltaCompressAlgorithm(void **formatUserData, void *us
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneDeltaCompressAlgorithm(void **formatUserData, void *userData);
+void configValueDoneDeltaCompressAlgorithmFormat(void **formatUserData, void *userData);
 
 /***********************************************************************\
 * Name   : configValueFormatDeltaCompressAlgorithm
@@ -1916,10 +1701,10 @@ void configValueFormatDoneDeltaCompressAlgorithm(void **formatUserData, void *us
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatDeltaCompressAlgorithm(void **formatUserData, void *userData, String line);
+bool configValueDeltaCompressAlgorithmFormat(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseByteCompressAlgorithm
+* Name   : configValueByteCompressAlgorithmParse
 * Purpose: config value option call back for parsing byte compress
 *          algorithm
 * Input  : userData - user data
@@ -1932,7 +1717,7 @@ bool configValueFormatDeltaCompressAlgorithm(void **formatUserData, void *userDa
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseByteCompressAlgorithm(void *userData, void *variable, const char *name, const char *value);
+bool configValueByteCompressAlgorithmParse(void *userData, void *variable, const char *name, const char *value);
 
 /***********************************************************************\
 * Name   : configValueFormatInitByteCompressAlgorithms
@@ -1945,7 +1730,7 @@ bool configValueParseByteCompressAlgorithm(void *userData, void *variable, const
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatInitByteCompressAlgorithm(void **formatUserData, void *userData, void *variable);
+void configValueInitByteCompressAlgorithmFormat(void **formatUserData, void *userData, void *variable);
 
 /***********************************************************************\
 * Name   : configValueFormatDoneByteCompressAlgorithm
@@ -1958,7 +1743,7 @@ void configValueFormatInitByteCompressAlgorithm(void **formatUserData, void *use
 * Notes  : -
 \***********************************************************************/
 
-void configValueFormatDoneByteCompressAlgorithm(void **formatUserData, void *userData);
+void configValueDoneByteCompressAlgorithmFormat(void **formatUserData, void *userData);
 
 /***********************************************************************\
 * Name   : configValueFormatByteCompressAlgorithm
@@ -1973,10 +1758,10 @@ void configValueFormatDoneByteCompressAlgorithm(void **formatUserData, void *use
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userData, String line);
+bool configValueByteCompressAlgorithmFormat(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseCompressAlgorithms
+* Name   : configValueCompressAlgorithmsParse
 * Purpose: config value option call back for parsing compress algorithm
 * Input  : userData - user data
 *          variable - config variable
@@ -1988,51 +1773,25 @@ bool configValueFormatByteCompressAlgorithm(void **formatUserData, void *userDat
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueCompressAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
-* Name   : configValueFormatInitCompressAlgorithms
-* Purpose: init format config compress algorithm
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitCompressAlgorithms(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneCompressAlgorithms
-* Purpose: done format of config compress algorithm
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneCompressAlgorithms(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatCompressAlgorithms
+* Name   : configValueCompressAlgorithmsFormat
 * Purpose: format compress algorithm config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, String line);
+bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseCrypyAlgorithms
+* Name   : configValueCryptAlgorithmsParse
 * Purpose: config value option call back for parsing crypt algorithm
 * Input  : userData - user data
 *          variable - config variable
@@ -2044,51 +1803,25 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseCrypyAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitCrypyAlgorithms
-* Purpose: init format config crypt algorithm
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitCrypyAlgorithms(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneCrypyAlgorithms
-* Purpose: done format of config crypt algorithm
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneCrypyAlgorithms(void **formatUserData, void *userData);
+bool configValueCryptAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : configValueFormatCrypyAlgorithms
 * Purpose: format crypt algorithm config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatCrypyAlgorithms(void **formatUserData, void *userData, String line);
+bool configValueCrypyAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseCertificate
+* Name   : configValueCertificateParse
 * Purpose: config value option call back for parsing certificate
 * Input  : userData - user data
 *          variable - config variable
@@ -2100,11 +1833,26 @@ bool configValueFormatCrypyAlgorithms(void **formatUserData, void *userData, Str
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-bool configValueParseCertificate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueCertificateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
-* Name   : configValueParseKeyData
-* Purpose: config value option call back for parsing key data
+* Name   : configValueCertificateFormat
+* Purpose: format server certificate config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+bool configValueCertificateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
+
+/***********************************************************************\
+* Name   : configValueKeyParse
+* Purpose: config value option call back for parsing key
 * Input  : userData - user data
 *          variable - config variable
 *          name     - config name
@@ -2115,52 +1863,26 @@ bool configValueParseCertificate(void *userData, void *variable, const char *nam
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-bool configValueParseKeyData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-bool configValueParsePublicPrivateKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValuePublicPrivateKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
-* Name   : configValueFormatInitKeyData
-* Purpose: init format config key data
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitKeyData(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneKeyData
-* Purpose: done format of config key data
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneKeyData(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatKeyData
-* Purpose: format key data config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Name   : configValueKeyFormat
+* Purpose: format key config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatKeyData(void **formatUserData, void *userData, String line);
+bool configValueKeyFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
-* Name   : configValueParseHashData
+* Name   : configValueHashDataParse
 * Purpose: config value option call back for parsing hash data
 * Input  : userData - user data
 *          variable - config variable
@@ -2172,48 +1894,22 @@ bool configValueFormatKeyData(void **formatUserData, void *userData, String line
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-bool configValueParseHashData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-/***********************************************************************\
-* Name   : configValueFormatInitHashData
-* Purpose: init format config hash data
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitHashData(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneHashData
-* Purpose: done format of config hash data
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneHashData(void **formatUserData, void *userData);
+bool configValueHashDataParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : configValueFormatHashData
 * Purpose: format hash data config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool configValueFormatHashData(void **formatUserData, void *userData, String line);
+bool configValueHashDataFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
 * Name   : initFilePattern

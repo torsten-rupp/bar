@@ -2171,7 +2171,7 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
 }
 
 Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
-                                      const String        fileName,
+                                      const char          *fileName,
                                       CryptMode           cryptMode,
                                       CryptKeyDeriveTypes cryptKeyDeriveType,
                                       const CryptSalt     *cryptSalt,
@@ -2187,14 +2187,14 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
   assert(fileName != NULL);
 
   // check if read is available
-  if (!File_exists(fileName))
+  if (!File_existsCString(fileName))
   {
-    return ERRORX_(KEY_NOT_FOUND,0,"%s",String_cString(fileName));
+    return ERRORX_(KEY_NOT_FOUND,0,"%s",fileName);
   }
 
   // read file contents
   string = String_new();
-  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     String_delete(string);
@@ -2231,7 +2231,7 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
 }
 
 Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
-                                       const String        fileName,
+                                       const char          *fileName,
                                        CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const CryptSalt     *cryptSalt,
@@ -2263,7 +2263,7 @@ Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
   }
 
   // write file
-  error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
     freeSecure(data);

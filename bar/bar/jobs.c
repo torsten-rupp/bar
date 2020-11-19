@@ -99,44 +99,44 @@
 /***************************** Datatypes *******************************/
 
 // parse special options
-LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData);
-LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData);
-LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData);
-LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line);
+LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueInitScheduleDateFormat(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueDoneScheduleDateFormat(void **formatUserData, void *userData);
+LOCAL bool configValueScheduleDateFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueInitScheduleWeekDaySetFormat(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueDoneScheduleWeekDaySetFormat(void **formatUserData, void *userData);
+LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueInitScheduleTimeFormat(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueDoneScheduleTimeFormat(void **formatUserData, void *userData);
+LOCAL bool configValueScheduleTimeFormat(void **formatUserData, void *userData, String line);
 
-LOCAL bool configValueParsePersistenceMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitPersistenceMinKeep(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDonePersistenceMinKeep(void **formatUserData, void *userData);
-LOCAL bool configValueFormatPersistenceMinKeep(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParsePersistenceMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitPersistenceMaxKeep(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDonePersistenceMaxKeep(void **formatUserData, void *userData);
-LOCAL bool configValueFormatPersistenceMaxKeep(void **formatUserData, void *userData, String line);
-LOCAL bool configValueParsePersistenceMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueFormatInitPersistenceMaxAge(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueFormatDonePersistenceMaxAge(void **formatUserData, void *userData);
-LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userData, String line);
+LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueInitPersistenceMinKeepFormat(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueDonePersistenceMinKeepFormat(void **formatUserData, void *userData);
+LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueInitPersistenceMaxKeepFormat(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueDonePersistenceMaxKeepFormat(void **formatUserData, void *userData);
+LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueInitPersistenceMaxAgeFormat(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueDonePersistenceMaxAgeFormat(void **formatUserData, void *userData);
+LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, void *userData, String line);
 
 // handle shortcuts
 
 // handle deprecated configuration values
-LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedRemotePortParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedMountDeviceParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedScheduleMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
@@ -153,18 +153,18 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",           JobNode,job.options.directoryStripCount,         -1,MAX_INT,NULL),
   CONFIG_STRUCT_VALUE_STRING      ("destination",               JobNode,job.options.destination                  ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                     JobNode,job.options.owner,                       configValueParseOwner,configValueFormatInitOwner,NULL,configValueFormatOwner,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                     JobNode,job.options.owner,                       configValueOwnerParse,configValueOwnerFormat,NULL),
 
   CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",              JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",        JobNode,job.options.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.options.compressExcludePatternList,  configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",        JobNode,job.options.compressAlgorithms,          configValueCompressAlgorithmsParse,configValueCompressAlgorithmsFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.options.compressExcludePatternList,  configValuePatternParse,configValuePatternFormat,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",           JobNode,job.options.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",           JobNode,job.options.cryptAlgorithms,             configValueCryptAlgorithmsParse,configValueCryptAlgorithmsFormat,NULL),
   CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",                JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
   CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",       JobNode,job.options.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",            JobNode,job.options.cryptPassword,               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",          JobNode,job.options.cryptPublicKey,              configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",            JobNode,job.options.cryptPassword,               configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",          JobNode,job.options.cryptPublicKey,              configValueKeyParse,configValueKeyFormat,NULL),
 
   CONFIG_STRUCT_VALUE_STRING      ("pre-command",               JobNode,job.options.preProcessScript             ),
   CONFIG_STRUCT_VALUE_STRING      ("post-command",              JobNode,job.options.postProcessScript            ),
@@ -174,27 +174,27 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("storage-on-master",         JobNode,job.options.storageOnMaster              ),
 
   CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",            JobNode,job.options.ftpServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL),
   CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueKeyParse,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueKeyDataParse,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueKeyParse,NULL,NULL,NULL,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueKeyDataParse,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueFileEntryPatternParse,configValueFileEntryPatternFormat,NULL),
   CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.options.includeFileListFileName      ),
   CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.options.includeFileCommand           ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                    configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                    configValueImageEntryPatternParse,configValueImageEntryPatternFormat,NULL),
   CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.options.includeImageListFileName     ),
   CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.options.includeImageCommand          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                  configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                  configValuePatternParse,configValuePatternFormat,NULL),
   CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.options.excludeListFileName          ),
   CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.options.excludeCommand               ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.options.deltaSourceList,             configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.options.mountList,                   configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.options.deltaSourceList,             configValueDeltaSourceParse,configValueDeltaSourceFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.options.mountList,                   configValueMountParse,configValueMountFormat,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
@@ -211,12 +211,12 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag            ),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag   ),
 
-  CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
+  CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL,NULL,NULL),
     CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ),
     CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                               configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
+    CONFIG_STRUCT_VALUE_SPECIALXXX   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueInitScheduleDateFormat,configValueDoneScheduleDateFormat,configValueScheduleDateFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIALXXX   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueScheduleWeekDaySetParse,configValueInitScheduleWeekDaySetFormat,configValueDoneScheduleWeekDaySetFormat,configValueScheduleWeekDaySetFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIALXXX   ("time",                      ScheduleNode,time,                               configValueScheduleTimeParse,configValueInitScheduleTimeFormat,configValueDoneScheduleTimeFormat,configValueScheduleTimeFormat,NULL),
     CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                        CONFIG_VALUE_ARCHIVE_TYPES),
     CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL),
     CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ),
@@ -224,30 +224,30 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled                             ),
 
     // deprecated
-    CONFIG_VALUE_DEPRECATED       ("min-keep",                  NULL,-1,                                         configValueParseDeprecatedScheduleMinKeep,NULL,NULL,FALSE),
-    CONFIG_VALUE_DEPRECATED       ("max-keep",                  NULL,-1,                                         configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,FALSE),
-    CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueParseDeprecatedScheduleMaxAge,NULL,NULL,FALSE),
+    CONFIG_VALUE_DEPRECATED       ("min-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMinKeepParse,NULL,NULL,FALSE),
+    CONFIG_VALUE_DEPRECATED       ("max-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMaxKeepParse,NULL,NULL,FALSE),
+    CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueDeprecatedScheduleMaxAgeParse,NULL,NULL,FALSE),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
+  CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_SPECIALXXX   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValueInitPersistenceMinKeepFormat,configValueDonePersistenceMinKeepFormat,configValuePersistenceMinKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIALXXX   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValueInitPersistenceMaxKeepFormat,configValueDonePersistenceMaxKeepFormat,configValuePersistenceMaxKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIALXXX   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValueInitPersistenceMaxAgeFormat,configValueDonePersistenceMaxAgeFormat,configValuePersistenceMaxAgeFormat,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueParseDeprecatedRemoteHost,NULL,"slave-host-name",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueParseDeprecatedRemotePort,NULL,"slave-host-port",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueDeprecatedRemoteHostParse,NULL,"slave-host-name",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueDeprecatedRemotePortParse,NULL,"slave-host-port",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
   // Note: archive-file-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-archive-files",   JobNode,job.options.archiveFileMode,             configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-archive-files",   JobNode,job.options.archiveFileMode,             configValueDeprecatedArchiveFileModeOverwriteParse,NULL,"archive-file-mode",TRUE),
   // Note: restore-entry-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueParseDeprecatedMountDevice,NULL,"mount",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueDeprecatedRestoreEntryModeOverwriteParse,NULL,"restore-entry-mode=overwrite",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueDeprecatedMountDeviceParse,NULL,"mount",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueDeprecatedStopOnErrorParse,NULL,"no-stop-on-error",TRUE),
 
   // ignored
   CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
@@ -1271,7 +1271,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   bool         errorFlag;
   String       s0,s1,s2;
@@ -1290,9 +1290,9 @@ LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const ch
   s2 = String_new();
   if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (!parseDateTimeNumber(s0,&date.year )) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&date.day  )) errorFlag = TRUE;
+    if (!parseDateNumber(s0,&date.year )) errorFlag = TRUE;
+    if (!parseDateMonth (s1,&date.month)) errorFlag = TRUE;
+    if (!parseDateNumber(s2,&date.day  )) errorFlag = TRUE;
   }
   else
   {
@@ -1324,7 +1324,7 @@ LOCAL bool configValueParseScheduleDate(void *userData, void *variable, const ch
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueInitScheduleDateFormat(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -1344,7 +1344,7 @@ LOCAL void configValueFormatInitScheduleDate(void **formatUserData, void *userDa
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userData)
+LOCAL void configValueDoneScheduleDateFormat(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1365,7 +1365,7 @@ LOCAL void configValueFormatDoneScheduleDate(void **formatUserData, void *userDa
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, String line)
+LOCAL bool configValueScheduleDateFormat(void **formatUserData, void *userData, String line)
 {
   const ScheduleDate *scheduleDate;
 
@@ -1428,7 +1428,7 @@ LOCAL bool configValueFormatScheduleDate(void **formatUserData, void *userData, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseScheduleWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   WeekDaySet weekDaySet;
 
@@ -1462,7 +1462,7 @@ LOCAL bool configValueParseScheduleWeekDaySet(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueInitScheduleWeekDaySetFormat(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -1482,7 +1482,7 @@ LOCAL void configValueFormatInitScheduleWeekDaySet(void **formatUserData, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *userData)
+LOCAL void configValueDoneScheduleWeekDaySetFormat(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1503,7 +1503,7 @@ LOCAL void configValueFormatDoneScheduleWeekDaySet(void **formatUserData, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *userData, String line)
+LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, void *userData, String line)
 {
   const ScheduleWeekDaySet *scheduleWeekDaySet;
   String                   names;
@@ -1561,7 +1561,7 @@ LOCAL bool configValueFormatScheduleWeekDaySet(void **formatUserData, void *user
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   bool         errorFlag;
   String       s0,s1;
@@ -1579,8 +1579,8 @@ LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const ch
   s1 = String_new();
   if (String_parseCString(value,"%S:%S",NULL,s0,s1))
   {
-    if (!parseDateTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&time.minute)) errorFlag = TRUE;
+    if (!parseTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
+    if (!parseTimeNumber(s1,&time.minute)) errorFlag = TRUE;
   }
   String_delete(s1);
   String_delete(s0);
@@ -1607,7 +1607,7 @@ LOCAL bool configValueParseScheduleTime(void *userData, void *variable, const ch
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueInitScheduleTimeFormat(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -1627,7 +1627,7 @@ LOCAL void configValueFormatInitScheduleTime(void **formatUserData, void *userDa
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userData)
+LOCAL void configValueDoneScheduleTimeFormat(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1648,7 +1648,7 @@ LOCAL void configValueFormatDoneScheduleTime(void **formatUserData, void *userDa
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, String line)
+LOCAL bool configValueScheduleTimeFormat(void **formatUserData, void *userData, String line)
 {
   const ScheduleTime *scheduleTime;
 
@@ -1701,7 +1701,7 @@ LOCAL bool configValueFormatScheduleTime(void **formatUserData, void *userData, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParsePersistenceMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   int minKeep;
 
@@ -1742,7 +1742,7 @@ LOCAL bool configValueParsePersistenceMinKeep(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatInitPersistenceMinKeep(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueInitPersistenceMinKeepFormat(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -1762,7 +1762,7 @@ LOCAL void configValueFormatInitPersistenceMinKeep(void **formatUserData, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatDonePersistenceMinKeep(void **formatUserData, void *userData)
+LOCAL void configValueDonePersistenceMinKeepFormat(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1783,7 +1783,7 @@ LOCAL void configValueFormatDonePersistenceMinKeep(void **formatUserData, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFormatPersistenceMinKeep(void **formatUserData, void *userData, String line)
+LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, void *userData, String line)
 {
   const int *minKeep;
 
@@ -1827,7 +1827,7 @@ LOCAL bool configValueFormatPersistenceMinKeep(void **formatUserData, void *user
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParsePersistenceMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   int maxKeep;
 
@@ -1868,7 +1868,7 @@ LOCAL bool configValueParsePersistenceMaxKeep(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatInitPersistenceMaxKeep(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueInitPersistenceMaxKeepFormat(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -1888,7 +1888,7 @@ LOCAL void configValueFormatInitPersistenceMaxKeep(void **formatUserData, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatDonePersistenceMaxKeep(void **formatUserData, void *userData)
+LOCAL void configValueDonePersistenceMaxKeepFormat(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -1909,7 +1909,7 @@ LOCAL void configValueFormatDonePersistenceMaxKeep(void **formatUserData, void *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFormatPersistenceMaxKeep(void **formatUserData, void *userData, String line)
+LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, void *userData, String line)
 {
   const int *maxKeep;
 
@@ -1953,7 +1953,7 @@ LOCAL bool configValueFormatPersistenceMaxKeep(void **formatUserData, void *user
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParsePersistenceMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   int maxAge;
 
@@ -1994,7 +1994,7 @@ LOCAL bool configValueParsePersistenceMaxAge(void *userData, void *variable, con
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatInitPersistenceMaxAge(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueInitPersistenceMaxAgeFormat(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -2014,7 +2014,7 @@ LOCAL void configValueFormatInitPersistenceMaxAge(void **formatUserData, void *u
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void configValueFormatDonePersistenceMaxAge(void **formatUserData, void *userData)
+LOCAL void configValueDonePersistenceMaxAgeFormat(void **formatUserData, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -2035,7 +2035,7 @@ LOCAL void configValueFormatDonePersistenceMaxAge(void **formatUserData, void *u
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userData, String line)
+LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, void *userData, String line)
 {
   const int *maxAge;
 
@@ -2066,7 +2066,7 @@ LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userD
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedRemoteHost
+* Name   : configValueDeprecatedRemoteHostParse
 * Purpose: config value option call back for deprecated remote host
 * Input  : userData              - user data
 *          variable              - config variable
@@ -2079,7 +2079,7 @@ LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userD
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   String string;
 
@@ -2110,7 +2110,7 @@ bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const 
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedRemotePort
+* Name   : configValueDeprecatedRemotePortParse
 * Purpose: config value option call back for deprecated remote port
 * Input  : userData              - user data
 *          variable              - config variable
@@ -2123,7 +2123,7 @@ bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const 
 * Notes  : -
 \***********************************************************************/
 
-bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+bool configValueDeprecatedRemotePortParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   uint n;
 
@@ -2144,7 +2144,7 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedArchiveFileModeOverwrite
+* Name   : configValueDeprecatedArchiveFileModeOverwriteParse
 * Purpose: config value option call back for deprecated overwrite-files
 * Input  : userData              - user data
 *          variable              - config variable
@@ -2157,7 +2157,7 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -2174,7 +2174,7 @@ LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, vo
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedRestoreEntryModeOverwrite
+* Name   : configValueDeprecatedRestoreEntryModeOverwriteParse
 * Purpose: config value option call back for deprecated overwrite-files
 * Input  : userData              - user data
 *          variable              - config variable
@@ -2187,7 +2187,7 @@ LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, vo
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -2204,7 +2204,7 @@ LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, v
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedMountDevice
+* Name   : configValueDeprecatedMountDeviceParse
 * Purpose: config value option call back for deprecated mount-device
 * Input  : userData              - user data
 *          variable              - config variable
@@ -2217,7 +2217,7 @@ LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, v
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedMountDeviceParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   String    string;
   MountNode *mountNode;
@@ -2260,7 +2260,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMinKeep
+* Name   : configValueDeprecatedScheduleMinKeepParse
 * Purpose: config value option call back for deprecated min. keep of
 *          schedule
 * Input  : userData              - user data
@@ -2274,7 +2274,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedScheduleMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -2291,7 +2291,7 @@ LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *varia
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMaxKeep
+* Name   : configValueDeprecatedScheduleMaxKeepParse
 * Purpose: config value option call back for deprecated max. keep of
 *          schedule
 * Input  : userData              - user data
@@ -2305,7 +2305,7 @@ LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *varia
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -2322,7 +2322,7 @@ LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *varia
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMaxAge
+* Name   : configValueDeprecatedScheduleMaxAgeParse
 * Purpose: config value option call back for deprecated max. age of
 *          schedule
 * Input  : userData              - user data
@@ -2336,7 +2336,7 @@ LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *varia
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -2353,7 +2353,7 @@ LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variab
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedStopOnError
+* Name   : configValueDeprecatedStopOnErrorParse
 * Purpose: config value option call back for deprecated stop-on-error
 * Input  : userData              - user data
 *          variable              - config variable
@@ -2366,7 +2366,7 @@ LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variab
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);

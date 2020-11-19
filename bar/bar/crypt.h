@@ -1128,7 +1128,7 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
 \***********************************************************************/
 
 Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
-                                      const String        fileName,
+                                      const char          *fileName,
                                       CryptMode           cryptMode,
                                       CryptKeyDeriveTypes cryptKeyDeriveType,
                                       const CryptSalt     *cryptSalt,
@@ -1150,7 +1150,7 @@ Errors Crypt_readPublicPrivateKeyFile(CryptKey            *cryptKey,
 \***********************************************************************/
 
 Errors Crypt_writePublicPrivateKeyFile(CryptKey            *cryptKey,
-                                       const String        fileName,
+                                       const char          *fileName,
                                        CryptMode           cryptMode,
                                        CryptKeyDeriveTypes cryptKeyDeriveType,
                                        const CryptSalt     *cryptSalt,

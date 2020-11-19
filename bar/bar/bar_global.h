@@ -286,6 +286,14 @@ typedef Set WeekDaySet;
 // certificate data
 typedef struct
 {
+  enum
+  {
+    CERTIFICATE_TYPE_NONE,
+    CERTIFICATE_TYPE_FILE,
+    CERTIFICATE_TYPE_CONFIG
+  }      type;
+  String fileName;
+
   void *data;                                                 // data
   uint length;                                                // length of data
 } Certificate;
@@ -293,6 +301,14 @@ typedef struct
 // private/public key data
 typedef struct
 {
+  enum
+  {
+    KEY_TYPE_NONE,
+    KEY_TYPE_FILE,
+    KEY_TYPE_CONFIG
+  }      type;
+  String fileName;
+
   void *data;                                                 // data
   uint length;                                                // length of data
 } Key;
@@ -460,9 +476,12 @@ typedef enum
   SERVER_TYPE_WEBDAV
 } ServerTypes;
 
-// server
-typedef struct
+// server node
+typedef struct ServerNode
 {
+  LIST_NODE_HEADER(struct ServerNode);
+
+  uint        id;                                             // unique server id
   String      name;                                           // server file name or URL
   ServerTypes type;                                           // server type
   union
@@ -476,21 +495,13 @@ typedef struct
   uint64      maxStorageSize;                                 // max. number of bytes to store on server
   String      writePreProcessCommand;                         // command to execute before writing
   String      writePostProcessCommand;                        // command to execute after writing
-} Server;
 
-// server node
-typedef struct ServerNode
-{
-  LIST_NODE_HEADER(struct ServerNode);
-
-  uint   id;                                                  // unique server id
-  Server server;
   struct
   {
     uint lowPriorityRequestCount;                             // number of waiting low priority connection requests
     uint highPriorityRequestCount;                            // number of waiting high priority connection requests
     uint count;                                               // number of current connections
-  }      connection;
+  }           connection;
 } ServerNode;
 
 // server list
@@ -500,6 +511,9 @@ typedef struct
 
   Semaphore lock;
 } ServerList;
+
+// server (alias)
+typedef ServerNode Server;
 
 // file settings
 typedef struct
@@ -579,6 +593,7 @@ typedef struct
   String writeCommand;                                        // command to write volume
 } Device;
 
+// device node
 typedef struct DeviceNode
 {
   LIST_NODE_HEADER(struct DeviceNode);
@@ -587,12 +602,17 @@ typedef struct DeviceNode
   Device device;
 } DeviceNode;
 
+// device list
 typedef struct
 {
   LIST_HEADER(DeviceNode);
 
   Semaphore lock;
 } DeviceList;
+
+// device (alias)
+//TOOD: add
+//typedef struct DeviceNode Device;
 
 // comment
 typedef struct
@@ -765,9 +785,13 @@ typedef struct
   Key                         cryptPublicKey;                 // crypt public key
   Key                         cryptPrivateKey;                // crypt private key (possible encryped with pass phrase, thus no CryptKey here)
 
+#if 0
   CryptKey                    signaturePublicKey;             // signature public key (not encrypted)
   CryptKey                    signaturePrivateKey;            // signature private key (not encrypted)
-
+#else
+  Key                         signaturePublicKey;             // signature public key (not encrypted)
+  Key                         signaturePrivateKey;            // signature private key (not encrypted)
+#endif
   Server                      *fileServer;                    // current selected file server
   Server                      *defaultFileServer;             // default file server
 
