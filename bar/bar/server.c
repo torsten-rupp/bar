@@ -416,9 +416,9 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   // parse date
   if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (   !parseDateTimeNumber(s0,&maintenanceNode->date.year )
-        || !parseDateMonth     (s1,&maintenanceNode->date.month)
-        || !parseDateTimeNumber(s2,&maintenanceNode->date.day  )
+    if (   !parseDateNumber(s0,&maintenanceNode->date.year )
+        || !parseDateMonth (s1,&maintenanceNode->date.month)
+        || !parseDateNumber(s2,&maintenanceNode->date.day  )
        )
     {
       error = ERROR_PARSE_DATE;
@@ -438,8 +438,8 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   // parse begin/end time
   if (String_parse(beginTime,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (   !parseDateTimeNumber(s0,&maintenanceNode->beginTime.hour  )
-        || !parseDateTimeNumber(s1,&maintenanceNode->beginTime.minute)
+    if (   !parseTimeNumber(s0,&maintenanceNode->beginTime.hour  )
+        || !parseTimeNumber(s1,&maintenanceNode->beginTime.minute)
        )
     {
       error = ERROR_PARSE_TIME;
@@ -451,8 +451,8 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   }
   if (String_parse(endTime,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (   !parseDateTimeNumber(s0,&maintenanceNode->endTime.hour  )
-        || !parseDateTimeNumber(s1,&maintenanceNode->endTime.minute)
+    if (   !parseTimeNumber(s0,&maintenanceNode->endTime.hour  )
+        || !parseTimeNumber(s1,&maintenanceNode->endTime.minute)
        )
     {
       error = ERROR_PARSE_TIME;
@@ -631,9 +631,9 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
   // parse date
   if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (   !parseDateTimeNumber(s0,&scheduleNode->date.year )
-        || !parseDateMonth     (s1,&scheduleNode->date.month)
-        || !parseDateTimeNumber(s2,&scheduleNode->date.day  )
+    if (   !parseDateNumber(s0,&scheduleNode->date.year )
+        || !parseDateMonth (s1,&scheduleNode->date.month)
+        || !parseDateNumber(s2,&scheduleNode->date.day  )
        )
     {
       error = ERROR_PARSE_DATE;
@@ -653,8 +653,8 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
   // parse time
   if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (   !parseDateTimeNumber(s0,&scheduleNode->time.hour  )
-        || !parseDateTimeNumber(s1,&scheduleNode->time.minute)
+    if (   !parseTimeNumber(s0,&scheduleNode->time.hour  )
+        || !parseTimeNumber(s1,&scheduleNode->time.minute)
        )
     {
       error = ERROR_PARSE_TIME;
@@ -6516,7 +6516,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
-      switch (serverNode->server.type)
+      switch (serverNode->type)
       {
         case SERVER_TYPE_NONE:
           break;
@@ -6524,43 +6524,43 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s maxStorageSize=%"PRIu64,
                               serverNode->id,
-                              serverNode->server.name,
+                              serverNode->name,
                               "FILE",
-                              serverNode->server.maxStorageSize
+                              serverNode->maxStorageSize
                              );
           break;
         case SERVER_TYPE_FTP:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->id,
-                              serverNode->server.name,
+                              serverNode->name,
                               "FTP",
-                              serverNode->server.ftp.loginName,
-                              serverNode->server.maxConnectionCount,
-                              serverNode->server.maxStorageSize
+                              serverNode->ftp.loginName,
+                              serverNode->maxConnectionCount,
+                              serverNode->maxStorageSize
                              );
           break;
         case SERVER_TYPE_SSH:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s port=%d loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->id,
-                              serverNode->server.name,
+                              serverNode->name,
                               "SSH",
-                              serverNode->server.ssh.port,
-                              serverNode->server.ssh.loginName,
-                              serverNode->server.maxConnectionCount,
-                              serverNode->server.maxStorageSize
+                              serverNode->ssh.port,
+                              serverNode->ssh.loginName,
+                              serverNode->maxConnectionCount,
+                              serverNode->maxStorageSize
                              );
           break;
         case SERVER_TYPE_WEBDAV:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->id,
-                              serverNode->server.name,
+                              serverNode->name,
                               "WEBDAV",
-                              serverNode->server.webDAV.loginName,
-                              serverNode->server.maxConnectionCount,
-                              serverNode->server.maxStorageSize
+                              serverNode->webDAV.loginName,
+                              serverNode->maxConnectionCount,
+                              serverNode->maxStorageSize
                              );
           break;
         #ifndef NDEBUG
@@ -6707,34 +6707,34 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
-      String_set(serverNode->server.ftp.loginName,loginName);
+      String_set(serverNode->ftp.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        Password_setString(&serverNode->server.ftp.password,password);
+        Password_setString(&serverNode->ftp.password,password);
       }
       break;
     case SERVER_TYPE_SSH:
-      serverNode->server.ssh.port = port;
-      String_set(serverNode->server.ssh.loginName,loginName);
+      serverNode->ssh.port = port;
+      String_set(serverNode->ssh.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        Password_setString(&serverNode->server.ssh.password,password);
+        Password_setString(&serverNode->ssh.password,password);
       }
-      setKeyString(&serverNode->server.ssh.publicKey,publicKey);
-      setKeyString(&serverNode->server.ssh.privateKey,privateKey);
+      setKeyString(&serverNode->ssh.publicKey,publicKey);
+      setKeyString(&serverNode->ssh.privateKey,privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
-      String_set(serverNode->server.webDAV.loginName,loginName);
+      String_set(serverNode->webDAV.loginName,loginName);
       if (!String_isEmpty(password))
       {
-        Password_setString(&serverNode->server.webDAV.password,password);
+        Password_setString(&serverNode->webDAV.password,password);
       }
-      setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
-      setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
+      setKeyString(&serverNode->webDAV.publicKey,publicKey);
+      setKeyString(&serverNode->webDAV.privateKey,privateKey);
       break;
   }
-  serverNode->server.maxConnectionCount = maxConnectionCount;
-  serverNode->server.maxStorageSize     = maxStorageSize;
+  serverNode->maxConnectionCount = maxConnectionCount;
+  serverNode->maxStorageSize     = maxStorageSize;
 
   // add to server list
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -6909,7 +6909,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // update storage server settings
-    String_set(serverNode->server.name,name);
+    String_set(serverNode->name,name);
     switch (serverType)
     {
       case SERVER_TYPE_NONE:
@@ -6917,34 +6917,34 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
       case SERVER_TYPE_FILE:
         break;
       case SERVER_TYPE_FTP:
-        String_set(serverNode->server.ftp.loginName,loginName);
+        String_set(serverNode->ftp.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          Password_setString(&serverNode->server.ftp.password,password);
+          Password_setString(&serverNode->ftp.password,password);
         }
         break;
       case SERVER_TYPE_SSH:
-        serverNode->server.ssh.port = port;
-        String_set(serverNode->server.ssh.loginName,loginName);
+        serverNode->ssh.port = port;
+        String_set(serverNode->ssh.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          Password_setString(&serverNode->server.ssh.password,password);
+          Password_setString(&serverNode->ssh.password,password);
         }
-        setKeyString(&serverNode->server.ssh.publicKey,publicKey);
-        setKeyString(&serverNode->server.ssh.privateKey,privateKey);
+        setKeyString(&serverNode->ssh.publicKey,publicKey);
+        setKeyString(&serverNode->ssh.privateKey,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
-        String_set(serverNode->server.webDAV.loginName,loginName);
+        String_set(serverNode->webDAV.loginName,loginName);
         if (!String_isEmpty(password))
         {
-          Password_setString(&serverNode->server.webDAV.password,password);
+          Password_setString(&serverNode->webDAV.password,password);
         }
-        setKeyString(&serverNode->server.webDAV.publicKey,publicKey);
-        setKeyString(&serverNode->server.webDAV.privateKey,privateKey);
+        setKeyString(&serverNode->webDAV.publicKey,publicKey);
+        setKeyString(&serverNode->webDAV.privateKey,privateKey);
         break;
     }
-    serverNode->server.maxConnectionCount = maxConnectionCount;
-    serverNode->server.maxStorageSize     = maxStorageSize;
+    serverNode->maxConnectionCount = maxConnectionCount;
+    serverNode->maxStorageSize     = maxStorageSize;
 
     // update config file
     error = updateConfig();
