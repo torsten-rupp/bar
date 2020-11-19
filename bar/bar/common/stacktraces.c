@@ -22,6 +22,9 @@
 #include <string.h>
 #include <limits.h>
 #include <inttypes.h>
+#ifdef HAVE_EXECINFO_H
+  #include <execinfo.h>
+#endif
 #ifdef HAVE_BFD_H
   #include <bfd.h>
 #endif
