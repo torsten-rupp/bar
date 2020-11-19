@@ -412,7 +412,7 @@ help_output:
 	@$(ECHO) "  test2[$(HELP_SUFFIXES)], test_compress[$(HELP_SUFFIXES)], test_delta_compress[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test3[$(HELP_SUFFIXES)], test_crypt[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test4[$(HELP_SUFFIXES)], test_asymmetric_crypt[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test5[$(HELP_SUFFIXES)], test_signatures[-$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test5[$(HELP_SUFFIXES)], test_signatures[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test6[$(HELP_SUFFIXES)], test_split[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test7[$(HELP_SUFFIXES)], test_convert[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test8[$(HELP_SUFFIXES)], test_image[$(HELP_SUFFIXES)]"
@@ -427,6 +427,7 @@ help_output:
 	@$(ECHO) "  test15_slave[$(HELP_SUFFIXES)], test_slave[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_combined[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_arguments[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test_config[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_misc[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_all[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_data"
@@ -852,6 +853,7 @@ TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foregroun
 .PHONY: $(addsuffix _slave, $(call functionTestNames,test15))
 .PHONY: $(call functionTestNames,test_combined)
 .PHONY: $(call functionTestNames,test_arguments)
+.PHONY: $(call functionTestNames,test_config)
 .PHONY: $(call functionTestNames,test_misc)
 .PHONY: $(call functionTestNames,test_all)
 .PHONY: test_keys test_keys_clean test_keys_distclean
@@ -870,6 +872,7 @@ test:
           test_server \
           test_combined \
           test_arguments \
+          test_config \
           test_misc
 
 test-debug: \
@@ -1857,6 +1860,7 @@ test_all:
           test_optical \
           test_combined \
           test_arguments \
+          test_config \
           test_misc
 
 test_arguments: \
@@ -2198,8 +2202,48 @@ test_arguments-valgrind: \
   $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_arguments
 
+test_config: \
+  $(TEST_BAR) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS)
+	$(call functionInfoBegin,Test configurations)
+	$(call functionCleanTestFiles)
+	@#
+	# format configuration file
+	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config test.cfg --config $(TEST_CONFIG) $(LOG)
+	@#
+	# test configuration data
+	( \
+          echo "crypt-public-key = $(TEST_KEY_CRYPT_PUBLIC)"; \
+          echo "crypt-private-key = $(TEST_KEY_CRYPT_PRIVATE)"; \
+        ) > $(TEST_CONFIG)
+	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
+	( \
+          echo "signature-public-key = $(TEST_KEY_SIGNATURE_PUBLIC)"; \
+          echo "signature-private-key = $(TEST_KEY_SIGNATURE_PRIVATE)"; \
+        ) > $(TEST_CONFIG)
+	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
+	$(call functionDoneTestFiles)
+	$(call functionInfoEnd,OK)
+
+test_config-debug: \
+  $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_config
+
+test_config-gcov: \
+  $(TEST_BAR_GCOV)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_config
+
+test_config-gprof: \
+  $(TEST_BAR_GPROF)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_config
+
+test_config-valgrind: \
+  $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_config
+
 test_misc:
-	@$(ECHO_NO_LF) "Test miscellaneous..."
+	@$(call functionInfoBegin,Test miscellaneous)
 	@$(call functionCleanTestFiles)
 	@#
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
@@ -2224,6 +2268,7 @@ test_misc:
 	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoEnd,OK)
 
 test_misc-debug: \
   $(TEST_BAR_DEBUG)
