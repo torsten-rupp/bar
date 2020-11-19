@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-04-11 10:31+0200\n"
+"POT-Creation-Date: 2020-11-01 18:21+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -333,7 +333,7 @@ msgstr ""
 msgid "end of compressed file"
 msgstr ""
 
-#: errors.def:287 errors.def:861
+#: errors.def:287 errors.def:878
 msgid "delta source not found"
 msgstr ""
 
@@ -774,126 +774,134 @@ msgid "parsing weekdays fail"
 msgstr ""
 
 #: errors.def:745
-msgid "parsing schedule fail"
+msgid "parsing maintenance fail"
 msgstr ""
 
 #: errors.def:752
-msgid "unknown command"
+msgid "parsing schedule fail"
 msgstr ""
 
 #: errors.def:759
+msgid "unknown command"
+msgstr ""
+
+#: errors.def:766
 msgid "expected parameter"
 msgstr ""
 
-#: errors.def:772
+#: errors.def:779
 msgid "unknown value"
 msgstr ""
 
-#: errors.def:776
+#: errors.def:783
 msgid "invalid value"
 msgstr ""
 
-#: errors.def:783
+#: errors.def:790
 msgid "deprecated or ignored value"
 msgstr ""
 
-#: errors.def:787
+#: errors.def:794
 msgid "authorization fail"
 msgstr ""
 
-#: errors.def:791
+#: errors.def:798
 msgid "job not found"
 msgstr ""
 
-#: errors.def:798
+#: errors.def:805
 msgid "schedule not found"
 msgstr ""
 
-#: errors.def:811
+#: errors.def:818
 msgid "persistence not found"
 msgstr ""
 
-#: errors.def:821
+#: errors.def:828
+msgid "maintenance not found"
+msgstr ""
+
+#: errors.def:838
 msgid "server not found"
 msgstr ""
 
-#: errors.def:831
+#: errors.def:848
 msgid "entry not found"
 msgstr ""
 
-#: errors.def:841
+#: errors.def:858
 msgid "pattern not found"
 msgstr ""
 
-#: errors.def:851
+#: errors.def:868
 msgid "mount not found"
 msgstr ""
 
-#: errors.def:866
+#: errors.def:883
 msgid "database"
 msgstr ""
 
-#: errors.def:870
+#: errors.def:887
 msgid "database already exists"
 msgstr ""
 
-#: errors.def:871
+#: errors.def:888
 msgid "unknown version on index"
 msgstr ""
 
-#: errors.def:875
+#: errors.def:892
 msgid "missing table"
 msgstr ""
 
-#: errors.def:882
+#: errors.def:899
 msgid "missing column"
 msgstr ""
 
-#: errors.def:889
+#: errors.def:906
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:896
+#: errors.def:913
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:903
+#: errors.def:920
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:907
+#: errors.def:924
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:908
+#: errors.def:925
 msgid "index not found"
 msgstr ""
 
-#: errors.def:909
+#: errors.def:926
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:913
+#: errors.def:930
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:920
+#: errors.def:937
 msgid "parse index id fail"
 msgstr ""
 
-#: errors.def:924
+#: errors.def:941
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:927
+#: errors.def:944
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:928
+#: errors.def:945
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:929
+#: errors.def:946
 msgid "slave is not paired"
 msgstr ""
 
