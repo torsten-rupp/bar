@@ -110,7 +110,7 @@ typedef enum
 
 typedef struct
 {
-  char              token[16];
+  char              token[32];
   unsigned int      length;
   bool              alternateFlag;
   bool              zeroPaddingFlag;
@@ -118,6 +118,7 @@ typedef struct
   bool              blankFlag;
   bool              signFlag;
   unsigned int      width;
+  bool              widthArgument;
   unsigned int      precision;
   FormatLengthTypes lengthType;
   char              quoteChar;
@@ -720,6 +721,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   formatToken->blankFlag        = FALSE;
   formatToken->signFlag         = FALSE;
   formatToken->width            = 0;
+  formatToken->widthArgument    = FALSE;
   formatToken->precision        = 0;
   formatToken->lengthType       = FORMAT_LENGTH_TYPE_INTEGER;
   formatToken->quoteChar        = NUL;
@@ -788,6 +790,15 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       formatToken->precision=formatToken->precision*10+((*nextFormat)-'0');
       nextFormat++;
     }
+  }
+  if (   ((*nextFormat) != NUL)
+      && ((*nextFormat) == '*')
+     )
+  {
+    ADD_CHAR(formatToken,(*nextFormat));
+
+    formatToken->widthArgument = TRUE;
+    nextFormat++;
   }
 
   // quoting character
@@ -955,7 +966,7 @@ LOCAL void formatString(struct __String *string,
   char          buffer[64];
   int           length;
   const char    *s;
-  ulong         i;
+  uint          i;
   char          ch;
   uint          j;
 
@@ -1173,6 +1184,11 @@ LOCAL void formatString(struct __String *string,
           break;
         case 's':
           data.s = va_arg(arguments,const char*);
+          i = formatToken.width;
+          if (formatToken.widthArgument)
+          {
+            i = (ulong)va_arg(arguments,int);
+          }
 
           if (formatToken.quoteChar != NUL)
           {
@@ -1181,7 +1197,8 @@ LOCAL void formatString(struct __String *string,
             if (data.s != NULL)
             {
               s = data.s;
-              while ((ch = (*s)) != NUL)
+              j = 0;
+              while (((ch = (*s)) != NUL) && ((i == 0) || (j < i)))
               {
                 if (ch == formatToken.quoteChar)
                 {
@@ -1218,6 +1235,7 @@ LOCAL void formatString(struct __String *string,
                   }
                 }
                 s++;
+                j++;
               }
             }
             String_appendChar(string,formatToken.quoteChar);
@@ -1227,7 +1245,9 @@ LOCAL void formatString(struct __String *string,
             // non quoted string
             if (data.s != NULL)
             {
-              length = snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
+              length = (formatToken.widthArgument)
+                         ? snprintf(buffer,sizeof(buffer),formatToken.token,i,data.s)
+                         : snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
               assert(length >= 0);
               if ((uint)length < sizeof(buffer))
               {
@@ -1236,7 +1256,9 @@ LOCAL void formatString(struct __String *string,
               else
               {
                 ensureStringLength(string,string->length+length);
-                snprintf(&string->data[string->length],length+1,formatToken.token,data.s);
+                length = (formatToken.widthArgument)
+                           ? snprintf(&string->data[string->length],length+1,formatToken.token,i,data.s)
+                           : snprintf(&string->data[string->length],length+1,formatToken.token,data.s);
                 string->length += length;
                 STRING_UPDATE_VALID(string);
               }
