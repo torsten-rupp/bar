@@ -514,7 +514,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("owner",                             0,  0,2,&globalOptions.owner,                             0,cmdOptionParseOwner,NULL,1,                                  "user and group of restored files","user:group"                            ),
   CMD_OPTION_SPECIAL      ("permissions",                       0,  0,2,&globalOptions.permissions,                       0,cmdOptionParsePermissions,NULL,1,                            "permissions of restored files","<owner>:<group>:<world>|<number>"         ),
 
-  CMD_OPTION_STRING       ("comment",                           0,  1,1,globalOptions.comment,                            GLOBAL_OPTION_SET_COMMENT,                                        "comment","text"                                                           ),
+  CMD_OPTION_STRING       ("comment",                           0,  1,1,globalOptions.comment,                            GLOBAL_OPTION_SET_COMMENT,                                     "comment","text"                                                           ),
 
   CMD_OPTION_CSTRING      ("directory",                         'C',1,0,changeToDirectory,                                0,                                                             "change to directory","path"                                               ),
 
@@ -918,54 +918,79 @@ const ConfigValueSelect CONFIG_VALUE_SERVER_MODES[] = CONFIG_VALUE_SELECT_ARRAY
 ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_VALUE_SEPARATOR(),
-  CONFIG_VALUE_COMMENT("BAR config"),
+  CONFIG_VALUE_COMMENT("BAR configuration"),
   CONFIG_VALUE_SEPARATOR(),
   CONFIG_VALUE_SPACE(),
 
   // general settings
-  CONFIG_VALUE_STRING            ("UUID",                             &uuid,-1                                                       ),
+  CONFIG_VALUE_STRING            ("UUID",                             &uuid,-1                                                       ,"<uuid>"),
 
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_COMMENT("additional configuration files"),
   CONFIG_VALUE_SPECIAL           ("config",                           &configFileList,-1,                                            configValueConfigFileParse,configValueConfigFileFormat,NULL),
 
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_COMMENT("master settings"),
   CONFIG_VALUE_BEGIN_SECTION     ("master",NULL,-1,NULL,NULL,NULL,NULL),
 //TODO
-    CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1                              ),
+    CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1                              ,"<name>"),
     CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueHashDataParse,configValueHashDataFormat,NULL),
 //TODO: required to save?
     CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_END_SECTION(),
+  CONFIG_VALUE_COMMENT           ("pairing master trigger/clear file"),
+  CONFIG_VALUE_CSTRING           ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1,                  "<file name>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("tmp-directory",                    &globalOptions.tmpDirectory,-1                                 ),
-  CONFIG_VALUE_INTEGER64         ("max-tmp-size",                     &globalOptions.maxTmpSize,-1,                                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_COMMENT("temporary directory"),
+  CONFIG_VALUE_STRING            ("tmp-directory",                    &globalOptions.tmpDirectory,-1                                 ,"<directory>"),
+  CONFIG_VALUE_COMMENT("max. temporary space to use"),
+  CONFIG_VALUE_INTEGER64         ("max-tmp-size",                     &globalOptions.maxTmpSize,-1,                                  0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS,"<size>"),
 
-  CONFIG_VALUE_INTEGER           ("nice-level",                       &globalOptions.niceLevel,-1,                                   0,19,NULL),
-  CONFIG_VALUE_INTEGER           ("max-threads",                      &globalOptions.maxThreads,-1,                                  0,65535,NULL),
+  CONFIG_VALUE_SPACE(),
 
+  CONFIG_VALUE_COMMENT("worker thread nice level"),
+  CONFIG_VALUE_INTEGER           ("nice-level",                       &globalOptions.niceLevel,-1,                                   0,19,NULL,"<level>"),
+  CONFIG_VALUE_COMMENT("max. number of worker threads"),
+  CONFIG_VALUE_INTEGER           ("max-threads",                      &globalOptions.maxThreads,-1,                                  0,65535,NULL,"<n>"),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_COMMENT("max. network band width to use"),
   CONFIG_VALUE_SPECIAL           ("max-band-width",                   &globalOptions.maxBandWidthList,-1,                            configValueBandWidthParse,configValueBandWidthFormat,NULL),
 
-  CONFIG_VALUE_INTEGER           ("compress-min-size",                &globalOptions.compressMinFileSize,-1,                         0,MAX_INT,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_SPECIAL           ("compress-exclude",                 &globalOptions.compressExcludePatternList,-1,                  configValuePatternParse,configValuePatternFormat,NULL),
+  CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("jobs-directory",                   &globalOptions.jobsDirectory,-1                                ),
-  CONFIG_VALUE_STRING            ("incremental-data-directory",       &globalOptions.incrementalDataDirectory,-1                     ),
+  CONFIG_VALUE_COMMENT("jobs directory"),
+  CONFIG_VALUE_STRING            ("jobs-directory",                   &globalOptions.jobsDirectory,-1                                ,"<directory>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT("index database"),
-  CONFIG_VALUE_CSTRING           ("index-database",                   &indexDatabaseFileName,-1                                      ),
-  CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1                      ),
-  CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1                  ),
+  CONFIG_VALUE_COMMENT("incremental data directory"),
+  CONFIG_VALUE_STRING            ("incremental-data-directory",       &globalOptions.incrementalDataDirectory,-1                     ,"<directory>"),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_SEPARATOR("index database"),
+  CONFIG_VALUE_CSTRING           ("index-database",                   &indexDatabaseFileName,-1,                                     "<file name>"),
+  CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1,                     "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1,                 "yes|no"),
   CONFIG_VALUE_SPECIAL           ("index-database-max-band-width",    &globalOptions.indexDatabaseMaxBandWidthList,-1,               configValueBandWidthParse,configValueBandWidthFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("index-database-keep-time",         &globalOptions.indexDatabaseKeepTime,-1,                       0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
+  CONFIG_VALUE_INTEGER           ("index-database-keep-time",         &globalOptions.indexDatabaseKeepTime,-1,                       0,MAX_INT,CONFIG_VALUE_TIME_UNITS,"<n>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_CSTRING           ("continuous-database",              &continuousDatabaseFileName,-1                                 ),
-  CONFIG_VALUE_INTEGER64         ("continuous-max-size",              &globalOptions.continuousMaxSize,-1,                           0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_INTEGER           ("continuous-min-time-delta",        &globalOptions.continuousMinTimeDelta,-1,                      0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
+  CONFIG_VALUE_SEPARATOR("continous meta database"),
+  CONFIG_VALUE_CSTRING           ("continuous-database",              &continuousDatabaseFileName,-1,                                "<file name>"),
+  CONFIG_VALUE_INTEGER64         ("continuous-max-size",              &globalOptions.continuousMaxSize,-1,                           0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_INTEGER           ("continuous-min-time-delta",        &globalOptions.continuousMinTimeDelta,-1,                      0,MAX_INT,CONFIG_VALUE_TIME_UNITS,"<n>"),
 
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_SEPARATOR("maintenance"),
   CONFIG_VALUE_BEGIN_SECTION     ("maintenance",&globalOptions.maintenanceList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,ConfigValue_listSectionDataIteratorNext,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL  ("date",                             MaintenanceNode,date,                                          configValueMaintenanceDateParse,configValueMaintenanceDateFormat,&globalOptions.maintenanceList),
     CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                         MaintenanceNode,weekDaySet,                                    configValueMaintenanceWeekDaySetParse,configValueMaintenanceWeekDaySetFormat,&globalOptions.maintenanceList),
@@ -973,95 +998,104 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_SPECIAL  ("end",                              MaintenanceNode,endTime,                                       configValueMaintenanceTimeParse,configValueMaintenanceTimeFormat,&globalOptions.maintenanceList),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_VALUE_SPACE(),
-
   // global job settings
+  CONFIG_VALUE_COMMENT("archive"),
   CONFIG_VALUE_IGNORE            ("host-name",                                                                                       NULL,FALSE),
   CONFIG_VALUE_IGNORE            ("host-port",                                                                                       NULL,FALSE),
-  CONFIG_VALUE_STRING            ("archive-name",                     &storageName,-1                                                ),
-  CONFIG_VALUE_SELECT            ("archive-type",                     &globalOptions.archiveType,-1,                                 CONFIG_VALUE_ARCHIVE_TYPES),
+  CONFIG_VALUE_STRING            ("archive-name",                     &storageName,-1                                                ,"<file name>"),
+  CONFIG_VALUE_SELECT            ("archive-type",                     &globalOptions.archiveType,-1,                                 CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
 
-  CONFIG_VALUE_STRING            ("incremental-list-file",            &globalOptions.incrementalListFileName,-1                      ),
+  CONFIG_VALUE_COMMENT("incremental list file"),
+  CONFIG_VALUE_STRING            ("incremental-list-file",            &globalOptions.incrementalListFileName,-1                      ,"<file name>"),
 
-  CONFIG_VALUE_INTEGER64         ("archive-part-size",                &globalOptions.archivePartSize,-1,                             0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
+  CONFIG_VALUE_COMMENT("archive part size"),
+  CONFIG_VALUE_INTEGER64         ("archive-part-size",                &globalOptions.archivePartSize,-1,                             0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS,"<size>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_INTEGER           ("directory-strip",                  &globalOptions.directoryStripCount,-1,                         -1,MAX_INT,NULL),
-  CONFIG_VALUE_STRING            ("destination",                      &globalOptions.destination,-1                                  ),
+  CONFIG_VALUE_COMMENT("directory count to strip on restore"),
+  CONFIG_VALUE_INTEGER           ("directory-strip",                  &globalOptions.directoryStripCount,-1,                         -1,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_COMMENT("destination diretory for restore"),
+  CONFIG_VALUE_STRING            ("destination",                      &globalOptions.destination,-1                                  ,"<directory>"),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_COMMENT("owner/permission for restore"),
   CONFIG_VALUE_SPECIAL           ("owner",                            &globalOptions.owner,-1,                                       configValueOwnerParse,configValueOwnerFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("permissions",                      &globalOptions.permissions,-1,                                 configValuePermissionsParse,configValuePermissionsFormat,NULL),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_SELECT            ("pattern-type",                     &globalOptions.patternType,-1,                                 CONFIG_VALUE_PATTERN_TYPES),
+  CONFIG_VALUE_SELECT            ("pattern-type",                     &globalOptions.patternType,-1,                                 CONFIG_VALUE_PATTERN_TYPES,"<type>"),
 
   CONFIG_VALUE_SPACE(),
 
+  CONFIG_VALUE_COMMENT("compress algorithm"),
   CONFIG_VALUE_SPECIAL           ("compress-algorithm",               &globalOptions.compressAlgorithms,-1,                          configValueCompressAlgorithmsParse,configValueCompressAlgorithmsFormat,NULL),
+  CONFIG_VALUE_INTEGER           ("compress-min-size",                &globalOptions.compressMinFileSize,-1,                         0,MAX_INT,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_SPECIAL           ("compress-exclude",                 &globalOptions.compressExcludePatternList,-1,                  configValuePatternParse,configValuePatternFormat,NULL),
 
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_COMMENT("crypt"),
   CONFIG_VALUE_SPECIAL           ("crypt-algorithm",                  &globalOptions.cryptAlgorithms,-1,                             configValueCryptAlgorithmsParse,configValueCryptAlgorithmsFormat,NULL),
-  CONFIG_VALUE_SELECT            ("crypt-type",                       &globalOptions.cryptType,-1,                                   CONFIG_VALUE_CRYPT_TYPES),
-  CONFIG_VALUE_SELECT            ("crypt-password-mode",              &globalOptions.cryptPasswordMode,-1,                           CONFIG_VALUE_PASSWORD_MODES),
+  CONFIG_VALUE_SELECT            ("crypt-type",                       &globalOptions.cryptType,-1,                                   CONFIG_VALUE_CRYPT_TYPES,"<type>"),
+  CONFIG_VALUE_SELECT            ("crypt-password-mode",              &globalOptions.cryptPasswordMode,-1,                           CONFIG_VALUE_PASSWORD_MODES,"<mode>"),
   CONFIG_VALUE_SPECIAL           ("crypt-password",                   &globalOptions.cryptPassword,-1,                               configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-public-key",                 &globalOptions.cryptPublicKey,-1,                              configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-private-key",                &globalOptions.cryptPrivateKey,-1,                             configValueKeyParse,configValueKeyFormat,NULL),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_COMMENT("signature keys"),
   CONFIG_VALUE_SPECIAL           ("signature-public-key",             &globalOptions.signaturePublicKey,-1,                          configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("signature-private-key",            &globalOptions.signaturePrivateKey,-1,                         configValueKeyParse,configValueKeyFormat,NULL),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT("includes/excludes"),
+  CONFIG_VALUE_COMMENT("includes"),
   CONFIG_VALUE_SPECIAL           ("include-file",                     &includeEntryList,-1,                                          configValueFileEntryPatternParse,configValueFileEntryPatternFormat,&globalOptions.patternType),
-  CONFIG_VALUE_STRING            ("include-file-list",                &globalOptions.includeFileListFileName,-1                      ),
-  CONFIG_VALUE_STRING            ("include-file-command",             &globalOptions.includeFileCommand,-1                           ),
+  CONFIG_VALUE_STRING            ("include-file-list",                &globalOptions.includeFileListFileName,-1                      ,"<file name>"),
+  CONFIG_VALUE_STRING            ("include-file-command",             &globalOptions.includeFileCommand,-1                           ,"<command>"),
   CONFIG_VALUE_SPECIAL           ("include-image",                    &includeEntryList,-1,                                          configValueImageEntryPatternParse,configValueImageEntryPatternFormat,&globalOptions.patternType),
-  CONFIG_VALUE_STRING            ("include-image-list",               &globalOptions.includeImageListFileName,-1                     ),
-  CONFIG_VALUE_STRING            ("include-image-command",            &globalOptions.includeImageCommand,-1                          ),
+  CONFIG_VALUE_STRING            ("include-image-list",               &globalOptions.includeImageListFileName,-1                     ,"<file name>"),
+  CONFIG_VALUE_STRING            ("include-image-command",            &globalOptions.includeImageCommand,-1                          ,"<command>"),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_COMMENT("excludes"),
   CONFIG_VALUE_SPECIAL           ("exclude",                          &excludePatternList,-1,                                        configValuePatternParse,configValuePatternFormat,&globalOptions.patternType),
-  CONFIG_VALUE_STRING            ("exclude-list",                     &globalOptions.excludeListFileName,-1                          ),
-  CONFIG_VALUE_STRING            ("exclude-command",                  &globalOptions.excludeCommand,-1                               ),
+  CONFIG_VALUE_STRING            ("exclude-list",                     &globalOptions.excludeListFileName,-1                          ,"<file name>"),
+  CONFIG_VALUE_STRING            ("exclude-command",                  &globalOptions.excludeCommand,-1                               ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_COMMENT("mount"),
   CONFIG_VALUE_SPECIAL           ("mount",                            &globalOptions.mountList,-1,                                   configValueMountParse,configValueMountFormat,NULL),
-  CONFIG_VALUE_STRING            ("mount-command",                    &globalOptions.mountCommand,-1                                 ),
-  CONFIG_VALUE_STRING            ("mount-device-command",             &globalOptions.mountDeviceCommand,-1                           ),
-  CONFIG_VALUE_STRING            ("unmount-command",                  &globalOptions.unmountCommand,-1                               ),
+  CONFIG_VALUE_STRING            ("mount-command",                    &globalOptions.mountCommand,-1                                 ,"<command>"),
+  CONFIG_VALUE_STRING            ("mount-device-command",             &globalOptions.mountDeviceCommand,-1                           ,"<command>"),
+  CONFIG_VALUE_STRING            ("unmount-command",                  &globalOptions.unmountCommand,-1                               ,"<command>"),
 
-  CONFIG_VALUE_STRING            ("comment",                          &globalOptions.comment,-1                                      ),
+  CONFIG_VALUE_COMMENT("comment to add into archives"),
+  CONFIG_VALUE_STRING            ("comment",                          &globalOptions.comment,-1                                      ,"<text>"),
 
   CONFIG_VALUE_SPECIAL           ("delta-source",                     &globalOptions.deltaSourceList,-1,                             configValueDeltaSourceParse,configValueDeltaSourceFormat,NULL),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_INTEGER64         ("max-storage-size",                 &globalOptions.maxStorageSize,-1,                              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_INTEGER64         ("volume-size",                      &globalOptions.volumeSize,-1,                                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_BOOLEAN           ("ecc",                              &globalOptions.errorCorrectionCodesFlag,-1                     ),
-  CONFIG_VALUE_BOOLEAN           ("always-create-image",              &globalOptions.alwaysCreateImageFlag,-1                        ),
-  CONFIG_VALUE_BOOLEAN           ("blank",                            &globalOptions.blankFlag,-1                                    ),
+  CONFIG_VALUE_INTEGER64         ("max-storage-size",                 &globalOptions.maxStorageSize,-1,                              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_COMMENT("size of CV/DVD/BD volume"),
+  CONFIG_VALUE_INTEGER64         ("volume-size",                      &globalOptions.volumeSize,-1,                                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_COMMENT("enable error correction codes on CV/DVD/BD"),
+  CONFIG_VALUE_BOOLEAN           ("ecc",                              &globalOptions.errorCorrectionCodesFlag,-1,                    "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("always-create-image",              &globalOptions.alwaysCreateImageFlag,-1,                       "yes|no"),
+  CONFIG_VALUE_COMMENT("blank CV/DVD/BD before write"),
+  CONFIG_VALUE_BOOLEAN           ("blank",                            &globalOptions.blankFlag,-1,                                   "yes|no"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_BOOLEAN           ("skip-unreadable",                  &globalOptions.skipUnreadableFlag,-1                           ),
-  CONFIG_VALUE_BOOLEAN           ("raw-images",                       &globalOptions.rawImagesFlag,-1                                ),
-  CONFIG_VALUE_BOOLEAN           ("no-fragments-check",               &globalOptions.noFragmentsCheckFlag,-1                         ),
-  CONFIG_VALUE_SELECT            ("archive-file-mode",                &globalOptions.archiveFileMode,-1,                             CONFIG_VALUE_ARCHIVE_FILE_MODES),
-  CONFIG_VALUE_SELECT            ("restore-entry-mode",               &globalOptions.restoreEntryMode,-1,                            CONFIG_VALUE_RESTORE_ENTRY_MODES),
-  CONFIG_VALUE_BOOLEAN           ("wait-first-volume",                &globalOptions.waitFirstVolumeFlag,-1                          ),
-  CONFIG_VALUE_BOOLEAN           ("no-signature",                     &globalOptions.noSignatureFlag,-1                              ),
-  CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",           &globalOptions.skipVerifySignaturesFlag,-1                     ),
-  CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",                 &globalOptions.noBAROnMediumFlag,-1                            ),
-  CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",                 &globalOptions.noStopOnErrorFlag,-1                            ),
-  CONFIG_VALUE_BOOLEAN           ("no-stop-on-attribute-error",       &globalOptions.noStopOnAttributeErrorFlag,-1                   ),
-  CONFIG_VALUE_BOOLEAN           ("quiet",                            &globalOptions.quietFlag,-1                                    ),
-  CONFIG_VALUE_INTEGER           ("verbose",                          &globalOptions.verboseLevel,-1,                                0,6,NULL),
-
   // ignored schedule settings (server only)
+  CONFIG_VALUE_SEPARATOR("schedule"),
   CONFIG_VALUE_BEGIN_SECTION     ("schedule",NULL,-1,NULL,NULL,NULL,NULL),
     CONFIG_VALUE_IGNORE          ("UUID",                                                                                            NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("parentUUID",                                                                                      NULL,FALSE),
@@ -1077,9 +1111,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_IGNORE          ("enabled",                                                                                         NULL,FALSE),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_VALUE_SPACE(),
-
   // ignored persitence settings (server only)
+  CONFIG_VALUE_SEPARATOR("persistence"),
   CONFIG_VALUE_BEGIN_SECTION     ("persistence",NULL,-1,NULL,NULL,NULL,NULL),
     CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
@@ -1087,200 +1120,195 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_END_SECTION(),
 
   // commands
-  CONFIG_VALUE_COMMENT("commands"),
+  CONFIG_VALUE_SEPARATOR("commands"),
 
-  CONFIG_VALUE_STRING            ("pre-command",                      &globalOptions.preProcessScript,-1                             ),
-  CONFIG_VALUE_STRING            ("post-command",                     &globalOptions.postProcessScript,-1                            ),
-
-  CONFIG_VALUE_SPACE(),
-
-  CONFIG_VALUE_STRING            ("file-write-pre-command",           &globalOptions.file.writePreProcessCommand,-1                  ),
-  CONFIG_VALUE_STRING            ("file-write-post-command",          &globalOptions.file.writePostProcessCommand,-1                 ),
+  CONFIG_VALUE_STRING            ("pre-command",                      &globalOptions.preProcessScript,-1                             ,"<command>"),
+  CONFIG_VALUE_STRING            ("post-command",                     &globalOptions.postProcessScript,-1                            ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("ftp-write-pre-command",            &globalOptions.ftp.writePreProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("ftp-write-post-command",           &globalOptions.ftp.writePostProcessCommand,-1                  ),
+  CONFIG_VALUE_STRING            ("file-write-pre-command",           &globalOptions.file.writePreProcessCommand,-1                  ,"<command>"),
+  CONFIG_VALUE_STRING            ("file-write-post-command",          &globalOptions.file.writePostProcessCommand,-1                 ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("scp-write-pre-command",            &globalOptions.scp.writePreProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("scp-write-post-command",           &globalOptions.scp.writePostProcessCommand,-1                  ),
+  CONFIG_VALUE_STRING            ("ftp-write-pre-command",            &globalOptions.ftp.writePreProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("ftp-write-post-command",           &globalOptions.ftp.writePostProcessCommand,-1                  ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("sftp-write-pre-command",           &globalOptions.sftp.writePreProcessCommand,-1                  ),
-  CONFIG_VALUE_STRING            ("sftp-write-post-command",          &globalOptions.sftp.writePostProcessCommand,-1                 ),
+  CONFIG_VALUE_STRING            ("scp-write-pre-command",            &globalOptions.scp.writePreProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("scp-write-post-command",           &globalOptions.scp.writePostProcessCommand,-1                  ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("webdav-write-pre-command",         &globalOptions.webdav.writePreProcessCommand,-1                ),
-  CONFIG_VALUE_STRING            ("webdav-write-post-command",        &globalOptions.webdav.writePostProcessCommand,-1               ),
+  CONFIG_VALUE_STRING            ("sftp-write-pre-command",           &globalOptions.sftp.writePreProcessCommand,-1                  ,"<command>"),
+  CONFIG_VALUE_STRING            ("sftp-write-post-command",          &globalOptions.sftp.writePostProcessCommand,-1                 ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("cd-device",                        &globalOptions.cd.deviceName,-1                                ),
-  CONFIG_VALUE_STRING            ("cd-request-volume-command",        &globalOptions.cd.requestVolumeCommand,-1                      ),
-  CONFIG_VALUE_STRING            ("cd-unload-volume-command",         &globalOptions.cd.unloadVolumeCommand,-1                       ),
-  CONFIG_VALUE_STRING            ("cd-load-volume-command",           &globalOptions.cd.loadVolumeCommand,-1                         ),
-  CONFIG_VALUE_INTEGER64         ("cd-volume-size",                   &globalOptions.cd.volumeSize,-1,                               0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING            ("cd-image-pre-command",             &globalOptions.cd.imagePreProcessCommand,-1                    ),
-  CONFIG_VALUE_STRING            ("cd-image-post-command",            &globalOptions.cd.imagePostProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("cd-image-command",                 &globalOptions.cd.imageCommand,-1                              ),
-  CONFIG_VALUE_STRING            ("cd-ecc-pre-command",               &globalOptions.cd.eccPreProcessCommand,-1                      ),
-  CONFIG_VALUE_STRING            ("cd-ecc-post-command",              &globalOptions.cd.eccPostProcessCommand,-1                     ),
-  CONFIG_VALUE_STRING            ("cd-ecc-command",                   &globalOptions.cd.eccCommand,-1                                ),
-  CONFIG_VALUE_STRING            ("cd-blank-command",                 &globalOptions.cd.blankCommand,-1                              ),
-  CONFIG_VALUE_STRING            ("cd-write-pre-command",             &globalOptions.cd.writePreProcessCommand,-1                    ),
-  CONFIG_VALUE_STRING            ("cd-write-post-command",            &globalOptions.cd.writePostProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("cd-write-command",                 &globalOptions.cd.writeCommand,-1                              ),
-  CONFIG_VALUE_STRING            ("cd-write-image-command",           &globalOptions.cd.writeImageCommand,-1                         ),
+  CONFIG_VALUE_STRING            ("webdav-write-pre-command",         &globalOptions.webdav.writePreProcessCommand,-1                ,"<command>"),
+  CONFIG_VALUE_STRING            ("webdav-write-post-command",        &globalOptions.webdav.writePostProcessCommand,-1               ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("dvd-device",                       &globalOptions.dvd.deviceName,-1                               ),
-  CONFIG_VALUE_STRING            ("dvd-request-volume-command",       &globalOptions.dvd.requestVolumeCommand,-1                     ),
-  CONFIG_VALUE_STRING            ("dvd-unload-volume-command",        &globalOptions.dvd.unloadVolumeCommand,-1                      ),
-  CONFIG_VALUE_STRING            ("dvd-load-volume-command",          &globalOptions.dvd.loadVolumeCommand,-1                        ),
-  CONFIG_VALUE_INTEGER64         ("dvd-volume-size",                  &globalOptions.dvd.volumeSize,-1,                              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING            ("dvd-image-pre-command",            &globalOptions.dvd.imagePreProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("dvd-image-post-command",           &globalOptions.dvd.imagePostProcessCommand,-1                  ),
-  CONFIG_VALUE_STRING            ("dvd-image-command",                &globalOptions.dvd.imageCommand,-1                             ),
-  CONFIG_VALUE_STRING            ("dvd-ecc-pre-command",              &globalOptions.dvd.eccPreProcessCommand,-1                     ),
-  CONFIG_VALUE_STRING            ("dvd-ecc-post-command",             &globalOptions.dvd.eccPostProcessCommand,-1                    ),
-  CONFIG_VALUE_STRING            ("dvd-ecc-command",                  &globalOptions.dvd.eccCommand,-1                               ),
-  CONFIG_VALUE_STRING            ("dvd-blank-command",                &globalOptions.dvd.blankCommand,-1                             ),
-  CONFIG_VALUE_STRING            ("dvd-write-pre-command",            &globalOptions.dvd.writePreProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("dvd-write-post-command",           &globalOptions.dvd.writePostProcessCommand,-1                  ),
-  CONFIG_VALUE_STRING            ("dvd-write-command",                &globalOptions.dvd.writeCommand,-1                             ),
-  CONFIG_VALUE_STRING            ("dvd-write-image-command",          &globalOptions.dvd.writeImageCommand,-1                        ),
+  CONFIG_VALUE_STRING            ("cd-device",                        &globalOptions.cd.deviceName,-1                                ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-request-volume-command",        &globalOptions.cd.requestVolumeCommand,-1                      ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-unload-volume-command",         &globalOptions.cd.unloadVolumeCommand,-1                       ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-load-volume-command",           &globalOptions.cd.loadVolumeCommand,-1                         ,"<command>"),
+  CONFIG_VALUE_INTEGER64         ("cd-volume-size",                   &globalOptions.cd.volumeSize,-1,                               0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_STRING            ("cd-image-pre-command",             &globalOptions.cd.imagePreProcessCommand,-1                    ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-image-post-command",            &globalOptions.cd.imagePostProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-image-command",                 &globalOptions.cd.imageCommand,-1                              ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-ecc-pre-command",               &globalOptions.cd.eccPreProcessCommand,-1                      ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-ecc-post-command",              &globalOptions.cd.eccPostProcessCommand,-1                     ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-ecc-command",                   &globalOptions.cd.eccCommand,-1                                ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-blank-command",                 &globalOptions.cd.blankCommand,-1                              ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-write-pre-command",             &globalOptions.cd.writePreProcessCommand,-1                    ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-write-post-command",            &globalOptions.cd.writePostProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-write-command",                 &globalOptions.cd.writeCommand,-1                              ,"<command>"),
+  CONFIG_VALUE_STRING            ("cd-write-image-command",           &globalOptions.cd.writeImageCommand,-1                         ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_STRING            ("bd-device",                        &globalOptions.bd.deviceName,-1                                ),
-  CONFIG_VALUE_STRING            ("bd-request-volume-command",        &globalOptions.bd.requestVolumeCommand,-1                      ),
-  CONFIG_VALUE_STRING            ("bd-unload-volume-command",         &globalOptions.bd.unloadVolumeCommand,-1                       ),
-  CONFIG_VALUE_STRING            ("bd-load-volume-command",           &globalOptions.bd.loadVolumeCommand,-1                         ),
-  CONFIG_VALUE_INTEGER64         ("bd-volume-size",                   &globalOptions.bd.volumeSize,-1,                               0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING            ("bd-image-pre-command",             &globalOptions.bd.imagePreProcessCommand,-1                    ),
-  CONFIG_VALUE_STRING            ("bd-image-post-command",            &globalOptions.bd.imagePostProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("bd-image-command",                 &globalOptions.bd.imageCommand,-1                              ),
-  CONFIG_VALUE_STRING            ("bd-ecc-pre-command",               &globalOptions.bd.eccPreProcessCommand,-1                      ),
-  CONFIG_VALUE_STRING            ("bd-ecc-post-command",              &globalOptions.bd.eccPostProcessCommand,-1                     ),
-  CONFIG_VALUE_STRING            ("bd-ecc-command",                   &globalOptions.bd.eccCommand,-1                                ),
-  CONFIG_VALUE_STRING            ("bd-blank-command",                 &globalOptions.bd.blankCommand,-1                              ),
-  CONFIG_VALUE_STRING            ("bd-write-pre-command",             &globalOptions.bd.writePreProcessCommand,-1                    ),
-  CONFIG_VALUE_STRING            ("bd-write-post-command",            &globalOptions.bd.writePostProcessCommand,-1                   ),
-  CONFIG_VALUE_STRING            ("bd-write-command",                 &globalOptions.bd.writeCommand,-1                              ),
-  CONFIG_VALUE_STRING            ("bd-write-image-command",           &globalOptions.bd.writeImageCommand,-1                         ),
+  CONFIG_VALUE_STRING            ("dvd-device",                       &globalOptions.dvd.deviceName,-1                               ,"<path>"),
+  CONFIG_VALUE_STRING            ("dvd-request-volume-command",       &globalOptions.dvd.requestVolumeCommand,-1                     ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-unload-volume-command",        &globalOptions.dvd.unloadVolumeCommand,-1                      ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-load-volume-command",          &globalOptions.dvd.loadVolumeCommand,-1                        ,"<command>"),
+  CONFIG_VALUE_INTEGER64         ("dvd-volume-size",                  &globalOptions.dvd.volumeSize,-1,                              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_STRING            ("dvd-image-pre-command",            &globalOptions.dvd.imagePreProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-image-post-command",           &globalOptions.dvd.imagePostProcessCommand,-1                  ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-image-command",                &globalOptions.dvd.imageCommand,-1                             ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-ecc-pre-command",              &globalOptions.dvd.eccPreProcessCommand,-1                     ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-ecc-post-command",             &globalOptions.dvd.eccPostProcessCommand,-1                    ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-ecc-command",                  &globalOptions.dvd.eccCommand,-1                               ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-blank-command",                &globalOptions.dvd.blankCommand,-1                             ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-write-pre-command",            &globalOptions.dvd.writePreProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-write-post-command",           &globalOptions.dvd.writePostProcessCommand,-1                  ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-write-command",                &globalOptions.dvd.writeCommand,-1                             ,"<command>"),
+  CONFIG_VALUE_STRING            ("dvd-write-image-command",          &globalOptions.dvd.writeImageCommand,-1                        ,"<command>"),
 
   CONFIG_VALUE_SPACE(),
 
-//  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",            &defaultFileServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_STRING            ("bd-device",                        &globalOptions.bd.deviceName,-1                                ,"<path>"),
+  CONFIG_VALUE_STRING            ("bd-request-volume-command",        &globalOptions.bd.requestVolumeCommand,-1                      ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-unload-volume-command",         &globalOptions.bd.unloadVolumeCommand,-1                       ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-load-volume-command",           &globalOptions.bd.loadVolumeCommand,-1                         ,"<command>"),
+  CONFIG_VALUE_INTEGER64         ("bd-volume-size",                   &globalOptions.bd.volumeSize,-1,                               0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_STRING            ("bd-image-pre-command",             &globalOptions.bd.imagePreProcessCommand,-1                    ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-image-post-command",            &globalOptions.bd.imagePostProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-image-command",                 &globalOptions.bd.imageCommand,-1                              ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-ecc-pre-command",               &globalOptions.bd.eccPreProcessCommand,-1                      ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-ecc-post-command",              &globalOptions.bd.eccPostProcessCommand,-1                     ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-ecc-command",                   &globalOptions.bd.eccCommand,-1                                ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-blank-command",                 &globalOptions.bd.blankCommand,-1                              ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-write-pre-command",             &globalOptions.bd.writePreProcessCommand,-1                    ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-write-post-command",            &globalOptions.bd.writePostProcessCommand,-1                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-write-command",                 &globalOptions.bd.writeCommand,-1                              ,"<command>"),
+  CONFIG_VALUE_STRING            ("bd-write-image-command",           &globalOptions.bd.writeImageCommand,-1                         ,"<command>"),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_SEPARATOR(),
+//  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",            &defaultFileServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_BEGIN_SECTION     ("file-server",NULL,-1,NULL,NULL,NULL,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",            Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("file-write-pre-command",           Server,writePreProcessCommand                                  ),
-    CONFIG_STRUCT_VALUE_STRING   ("file-write-post-command",          Server,writePostProcessCommand                                 ),
+    CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",            Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("file-write-pre-command",           Server,writePreProcessCommand                                  ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("file-write-post-command",          Server,writePostProcessCommand                                 ,"<command>"),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_VALUE_SPACE(),
-
-  CONFIG_VALUE_COMMENT("ftp"),
-  CONFIG_VALUE_STRING            ("ftp-login-name",                   &defaultFTPServer.ftp.loginName,-1                             ),
+  CONFIG_VALUE_SEPARATOR("ftp settings"),
+  CONFIG_VALUE_STRING            ("ftp-login-name",                   &defaultFTPServer.ftp.loginName,-1                             ,"<name>"),
   CONFIG_VALUE_SPECIAL           ("ftp-password",                     &defaultFTPServer.ftp.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("ftp-max-connections",              &defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",             &defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER           ("ftp-max-connections",              &defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",             &defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_BEGIN_SECTION     ("ftp-server",&globalOptions.serverList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,configValueServerFTPSectionDataIteratorNext,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",                   Server,ftp.loginName                                           ),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",                   Server,ftp.loginName                                           ,"<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                     Server,ftp.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",              Server,maxConnectionCount,                                     0,MAX_INT,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",             Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-pre-command",            Server,writePreProcessCommand                                  ),
-    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-post-command",           Server,writePostProcessCommand                                 ),
+    CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",              Server,maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",             Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-pre-command",            Server,writePreProcessCommand                                  ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-post-command",           Server,writePostProcessCommand                                 ,"<command>"),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_VALUE_SPACE(),
-
-  CONFIG_VALUE_COMMENT("ssh"),
-  CONFIG_VALUE_INTEGER           ("ssh-port",                         &defaultSSHServer.ssh.port,-1,                                 0,65535,NULL),
-  CONFIG_VALUE_STRING            ("ssh-login-name",                   &defaultSSHServer.ssh.loginName,-1                             ),
+  CONFIG_VALUE_SEPARATOR("ssh settings"),
+  CONFIG_VALUE_INTEGER           ("ssh-port",                         &defaultSSHServer.ssh.port,-1,                                 0,65535,NULL,"<n>"),
+  CONFIG_VALUE_STRING            ("ssh-login-name",                   &defaultSSHServer.ssh.loginName,-1                             ,"<name>"),
   CONFIG_VALUE_SPECIAL           ("ssh-password",                     &defaultSSHServer.ssh.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("ssh-public-key",                   &defaultSSHServer.ssh.publicKey,-1,                            configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("ssh-private-key",                  &defaultSSHServer.ssh.privateKey,-1,                           configValueKeyParse,configValueKeyFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_BEGIN_SECTION     ("ssh-server",&globalOptions.serverList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,configValueServerSSHSectionDataIteratorNext,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         Server,ssh.port,                                               0,65535,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   Server,ssh.loginName                                           ),
+    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         Server,ssh.port,                                               0,65535,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   Server,ssh.loginName                                           ,"<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                     Server,ssh.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",                   Server,ssh.publicKey,                                          configValueKeyParse,configValueKeyFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",                  Server,ssh.privateKey,                                         configValueKeyParse,configValueKeyFormat,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",              Server,maxConnectionCount,                                     0,MAX_INT,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",             Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",            Server,writePreProcessCommand                                  ),
-    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-post-command",           Server,writePostProcessCommand                                 ),
+    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",              Server,maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",             Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",            Server,writePreProcessCommand                                  ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-post-command",           Server,writePostProcessCommand                                 ,"<command>"),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_VALUE_SPACE(),
-
-  CONFIG_VALUE_COMMENT("webDAV"),
-//  CONFIG_VALUE_INTEGER           ("webdav-port",                      &defaultWebDAVServer.webDAV.port,-1,                           0,65535,NULL,NULL),
-  CONFIG_VALUE_STRING            ("webdav-login-name",                &defaultWebDAVServer.webDAV.loginName,-1                       ),
+  CONFIG_VALUE_SEPARATOR("webDAV settings"),
+//  CONFIG_VALUE_INTEGER           ("webdav-port",                      &defaultWebDAVServer.webDAV.port,-1,                           0,65535,NULL,NULL,"<n>),
+  CONFIG_VALUE_STRING            ("webdav-login-name",                &defaultWebDAVServer.webDAV.loginName,-1                       ,"<name>"),
   CONFIG_VALUE_SPECIAL           ("webdav-password",                  &defaultWebDAVServer.webDAV.password,-1,                       configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("webdav-max-connections",           &defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL),
-  CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",          &defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL),
+  CONFIG_VALUE_INTEGER           ("webdav-max-connections",           &defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",          &defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_BEGIN_SECTION     ("webdav-server",&globalOptions.serverList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,configValueServerWebDAVSectionDataIteratorNext,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",                Server,webDAV.loginName                                        ),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",                Server,webDAV.loginName                                        ,"<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",                  Server,webDAV.password,                                        configValuePasswordParse,configValuePasswordFormat,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",           Server,maxConnectionCount,                                     0,MAX_INT,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",          Server,maxStorageSize,                                         0LL,MAX_INT64,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-pre-command",         Server,writePreProcessCommand                                  ),
-    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-post-command",        Server,writePostProcessCommand                                 ),
+    CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",           Server,maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",          Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-pre-command",         Server,writePreProcessCommand                                  ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-post-command",        Server,writePostProcessCommand                                 ,"<command>"),
   CONFIG_VALUE_END_SECTION(),
 
+  CONFIG_VALUE_SEPARATOR("device settings"),
+  CONFIG_VALUE_STRING            ("device",                           &defaultDevice.name,-1                                         ,"<name>"),
+  CONFIG_VALUE_STRING            ("device-request-volume-command",    &defaultDevice.requestVolumeCommand,-1                         ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-unload-volume-command",     &defaultDevice.unloadVolumeCommand,-1                          ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-load-volume-command",       &defaultDevice.loadVolumeCommand,-1                            ,"<command>"),
+  CONFIG_VALUE_INTEGER64         ("device-volume-size",               &defaultDevice.volumeSize,-1,                                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_STRING            ("device-image-pre-command",         &defaultDevice.imagePreProcessCommand,-1                       ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-image-post-command",        &defaultDevice.imagePostProcessCommand,-1                      ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-image-command",             &defaultDevice.imageCommand,-1                                 ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-ecc-pre-command",           &defaultDevice.eccPreProcessCommand,-1                         ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-ecc-post-command",          &defaultDevice.eccPostProcessCommand,-1                        ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-ecc-command",               &defaultDevice.eccCommand,-1                                   ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-blank-command",             &defaultDevice.blankCommand,-1                                 ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-write-pre-command",         &defaultDevice.writePreProcessCommand,-1                       ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-write-post-command",        &defaultDevice.writePostProcessCommand,-1                      ,"<command>"),
+  CONFIG_VALUE_STRING            ("device-write-command",             &defaultDevice.writeCommand,-1                                 ,"<command>"),
   CONFIG_VALUE_SPACE(),
-
-  CONFIG_VALUE_COMMENT("device"),
-  CONFIG_VALUE_STRING            ("device",                           &defaultDevice.name,-1                                         ),
-  CONFIG_VALUE_STRING            ("device-request-volume-command",    &defaultDevice.requestVolumeCommand,-1                         ),
-  CONFIG_VALUE_STRING            ("device-unload-volume-command",     &defaultDevice.unloadVolumeCommand,-1                          ),
-  CONFIG_VALUE_STRING            ("device-load-volume-command",       &defaultDevice.loadVolumeCommand,-1                            ),
-  CONFIG_VALUE_INTEGER64         ("device-volume-size",               &defaultDevice.volumeSize,-1,                                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-  CONFIG_VALUE_STRING            ("device-image-pre-command",         &defaultDevice.imagePreProcessCommand,-1                       ),
-  CONFIG_VALUE_STRING            ("device-image-post-command",        &defaultDevice.imagePostProcessCommand,-1                      ),
-  CONFIG_VALUE_STRING            ("device-image-command",             &defaultDevice.imageCommand,-1                                 ),
-  CONFIG_VALUE_STRING            ("device-ecc-pre-command",           &defaultDevice.eccPreProcessCommand,-1                         ),
-  CONFIG_VALUE_STRING            ("device-ecc-post-command",          &defaultDevice.eccPostProcessCommand,-1                        ),
-  CONFIG_VALUE_STRING            ("device-ecc-command",               &defaultDevice.eccCommand,-1                                   ),
-  CONFIG_VALUE_STRING            ("device-blank-command",             &defaultDevice.blankCommand,-1                                 ),
-  CONFIG_VALUE_STRING            ("device-write-pre-command",         &defaultDevice.writePreProcessCommand,-1                       ),
-  CONFIG_VALUE_STRING            ("device-write-post-command",        &defaultDevice.writePostProcessCommand,-1                      ),
-  CONFIG_VALUE_STRING            ("device-write-command",             &defaultDevice.writeCommand,-1                                 ),
   CONFIG_VALUE_SECTION_ARRAY("device",-1,
-    CONFIG_STRUCT_VALUE_STRING   ("device-name",                      Device,name                                                    ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-request-volume-command",    Device,requestVolumeCommand                                    ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-unload-volume-command",     Device,unloadVolumeCommand                                     ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-load-volume-command",       Device,loadVolumeCommand                                       ),
-    CONFIG_STRUCT_VALUE_INTEGER64("device-volume-size",               Device,volumeSize,                                             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
-    CONFIG_STRUCT_VALUE_STRING   ("device-image-pre-command",         Device,imagePreProcessCommand                                  ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-image-post-command",        Device,imagePostProcessCommand                                 ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-image-command",             Device,imageCommand                                            ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-pre-command",           Device,eccPreProcessCommand                                    ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-post-command",          Device,eccPostProcessCommand                                   ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-command",               Device,eccCommand                                              ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-blank-command",             Device,blankCommand                                            ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-write-pre-command",         Device,writePreProcessCommand                                  ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-write-post-command",        Device,writePostProcessCommand                                 ),
-    CONFIG_STRUCT_VALUE_STRING   ("device-write-command",             Device,writeCommand                                            ),
+    CONFIG_STRUCT_VALUE_STRING   ("device-name",                      Device,name                                                    ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-request-volume-command",    Device,requestVolumeCommand                                    ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-unload-volume-command",     Device,unloadVolumeCommand                                     ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-load-volume-command",       Device,loadVolumeCommand                                       ,"<command>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("device-volume-size",               Device,volumeSize,                                             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-image-pre-command",         Device,imagePreProcessCommand                                  ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-image-post-command",        Device,imagePostProcessCommand                                 ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-image-command",             Device,imageCommand                                            ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-pre-command",           Device,eccPreProcessCommand                                    ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-post-command",          Device,eccPostProcessCommand                                   ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-command",               Device,eccCommand                                              ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-blank-command",             Device,blankCommand                                            ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-write-pre-command",         Device,writePreProcessCommand                                  ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-write-post-command",        Device,writePostProcessCommand                                 ,"<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("device-write-command",             Device,writeCommand                                            ,"<command>"),
   ),
 
-  CONFIG_VALUE_SPACE(),
-
   // server settings
-  CONFIG_VALUE_COMMENT("server"),
-  CONFIG_VALUE_SELECT            ("server-mode",                      &serverMode,-1,                                                CONFIG_VALUE_SERVER_MODES),
-  CONFIG_VALUE_INTEGER           ("server-port",                      &serverPort,-1,                                                0,65535,NULL),
-  CONFIG_VALUE_INTEGER           ("server-tls-port",                  &serverTLSPort,-1,                                             0,65535,NULL),
+  CONFIG_VALUE_SEPARATOR("server"),
+  CONFIG_VALUE_SELECT            ("server-mode",                      &serverMode,-1,                                                CONFIG_VALUE_SERVER_MODES,"<mode>"),
+  CONFIG_VALUE_INTEGER           ("server-port",                      &serverPort,-1,                                                0,65535,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER           ("server-tls-port",                  &serverTLSPort,-1,                                             0,65535,NULL,"<n>"),
 //TODO: deprecated, use server-ca
   CONFIG_VALUE_SPECIAL           ("server-ca-file",                   &serverCA,-1,                                                  configValueCertificateParse,configValueCertificateFormat,NULL),
 //TODO: deprecated, use server-cert
@@ -1288,23 +1316,42 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 //TODO: deprecated, use server-key
   CONFIG_VALUE_SPECIAL           ("server-key-file",                  &serverKey,-1,                                                 configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("server-password",                  &serverPasswordHash,-1,                                        configValueHashDataParse,configValueHashDataFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("server-max-connections",           &serverMaxConnections,-1,                                      0,65535,NULL),
-
-  CONFIG_VALUE_STRING            ("remote-bar-executable",            &globalOptions.remoteBARExecutable,-1                          ),
+  CONFIG_VALUE_INTEGER           ("server-max-connections",           &serverMaxConnections,-1,                                      0,65535,NULL,"<n>"),
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT("log"),
-  CONFIG_VALUE_SET               ("log",                              &logTypes,-1,                                                  CONFIG_VALUE_LOG_TYPES),
-  CONFIG_VALUE_CSTRING           ("log-file",                         &logFileName,-1                                                ),
-  CONFIG_VALUE_CSTRING           ("log-format",                       &logFormat,-1                                                  ),
-  CONFIG_VALUE_CSTRING           ("log-post-command",                 &logPostCommand,-1                                             ),
+  CONFIG_VALUE_SEPARATOR("log"),
+  CONFIG_VALUE_SET               ("log",                              &logTypes,-1,                                                  CONFIG_VALUE_LOG_TYPES,"<type,...>"),
+  CONFIG_VALUE_CSTRING           ("log-file",                         &logFileName,-1,                                               "<file name>"),
+  CONFIG_VALUE_CSTRING           ("log-format",                       &logFormat,-1,                                                 "<file name>"),
+  CONFIG_VALUE_CSTRING           ("log-post-command",                 &logPostCommand,-1,                                            "<command>"),
 
-  CONFIG_VALUE_COMMENT           ("process id file"),
-  CONFIG_VALUE_CSTRING           ("pid-file",                         &pidFileName,-1                                                ),
+  CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT           ("pairing master enable file"),
-  CONFIG_VALUE_CSTRING           ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1                   ),
+  CONFIG_VALUE_SEPARATOR("miscellaneous"),
+  CONFIG_VALUE_BOOLEAN           ("skip-unreadable",                  &globalOptions.skipUnreadableFlag,-1,                          "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("raw-images",                       &globalOptions.rawImagesFlag,-1,                               "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("no-fragments-check",               &globalOptions.noFragmentsCheckFlag,-1,                        "yes|no"),
+  CONFIG_VALUE_SELECT            ("archive-file-mode",                &globalOptions.archiveFileMode,-1,                             CONFIG_VALUE_ARCHIVE_FILE_MODES,"<mode>"),
+  CONFIG_VALUE_SELECT            ("restore-entry-mode",               &globalOptions.restoreEntryMode,-1,                            CONFIG_VALUE_RESTORE_ENTRY_MODES,"<mode>"),
+  CONFIG_VALUE_BOOLEAN           ("wait-first-volume",                &globalOptions.waitFirstVolumeFlag,-1,                         "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("no-signature",                     &globalOptions.noSignatureFlag,-1,                             "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",           &globalOptions.skipVerifySignaturesFlag,-1,                    "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("no-bar-on-medium",                 &globalOptions.noBAROnMediumFlag,-1,                           "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("no-stop-on-error",                 &globalOptions.noStopOnErrorFlag,-1,                           "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("no-stop-on-attribute-error",       &globalOptions.noStopOnAttributeErrorFlag,-1,                  "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("quiet",                            &globalOptions.quietFlag,-1,                                   "yes|no"),
+  CONFIG_VALUE_COMMENT           ("verbose level [0..6]"),
+  CONFIG_VALUE_INTEGER           ("verbose",                          &globalOptions.verboseLevel,-1,                                0,6,NULL,"<n>"),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_COMMENT           ("BAR process id file"),
+  CONFIG_VALUE_CSTRING           ("pid-file",                         &pidFileName,-1,                                               "<file name>"),
+  CONFIG_VALUE_COMMENT("remote BAR executable"),
+  CONFIG_VALUE_STRING            ("remote-bar-executable",            &globalOptions.remoteBARExecutable,-1                          ,"<executable>"),
+
+  CONFIG_VALUE_SPACE(),
 
   // deprecated
   CONFIG_VALUE_DEPRECATED        ("server-jobs-directory",            &globalOptions.jobsDirectory,-1,                               ConfigValue_parseDeprecatedString,NULL,"jobs-directory",TRUE),
@@ -3824,6 +3871,12 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueFormatO
       (*formatUserData) = ((ConfigFileList*)data)->head;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<file name>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -8568,6 +8621,12 @@ bool configValueBandWidthFormat(void **formatUserData, ConfigValueFormatOperatio
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
       break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<band width>[K|M])|<file name> <date> [<weekday>] <time>");
+      }
+      break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
         const BandWidthNode *bandWidthNode = (BandWidthNode*)(*formatUserData);
@@ -8695,8 +8754,6 @@ bool configValueOwnerParse(void *userData, void *variable, const char *name, con
 
 bool configValueOwnerFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
-  ;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -8707,6 +8764,12 @@ bool configValueOwnerFormat(void **formatUserData, ConfigValueFormatOperations f
       (*formatUserData) = (Owner*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<user>:<group>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -8812,6 +8875,12 @@ bool configValuePermissionsFormat(void **formatUserData, ConfigValueFormatOperat
       (*formatUserData) = (FilePermission*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<user>:<group>:<world>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -12277,7 +12346,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_INVALID_ARGUMENT;
   }
 
-#if 0
+#if 1
   String                configFileName;
 
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);

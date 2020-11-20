@@ -1659,8 +1659,17 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
           value = value/unit->factor;
         }
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %d%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+//TODO: compare with default
+        if (value!=0)
+        {
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %d%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
       }
       break;
     case CONFIG_VALUE_TYPE_INTEGER64:
@@ -1698,8 +1707,17 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
           value = value/unit->factor;
         }
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %"PRIi64"%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+//TODO: compare with default
+        if (value!=0)
+        {
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %"PRIi64"%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
       }
       break;
     case CONFIG_VALUE_TYPE_DOUBLE:
@@ -1737,8 +1755,17 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
           value = value/unit->factor;
         }
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %"PRIi64"%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+//TODO: compare with default
+        if (value!=0)
+        {
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %"PRIi64"%s",configValue->name,value,(unit != NULL) ? unit->name : "");
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
       }
       break;
     case CONFIG_VALUE_TYPE_BOOLEAN:
@@ -1768,8 +1795,17 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
           value = (*configValue->variable.b);
         }
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,value ? "yes" : "no");
+//TODO: compare with default
+        if (value)
+        {
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,value ? "yes" : "no");
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
       }
       break;
     case CONFIG_VALUE_TYPE_ENUM:
@@ -1813,8 +1849,17 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
           return FALSE;
         }
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,select->name);
+//TODO: compare with default
+        if (value!=0)
+        {
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,select->name);
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
       }
 #endif
       break;
@@ -1853,8 +1898,17 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
           return FALSE;
         }
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,select->name);
+//TODO: compare with default
+        if (value!=0)
+        {
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,select->name);
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
       }
       break;
     case CONFIG_VALUE_TYPE_SET:
@@ -1907,8 +1961,17 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
           }
         }
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,String_cString(s));
+//TODO: compare with default
+        if (!String_isEmpty(s))
+        {
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %s",configValue->name,String_cString(s));
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
 
         // free resources
         String_delete(s);
@@ -1942,17 +2005,27 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
         {
           String_setCString(value,*configValue->variable.cString);
         }
-        String_escape(value,
-                      STRING_ESCAPE_CHARACTER,
-                      NULL,  // chars
-                      STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                      STRING_ESCAPE_CHARACTERS_MAP_TO,
-                      STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                    );
-        String_quote(value,STRING_QUOTE,NULL);
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %S",configValue->name,value);
+//TODO: compare with default
+        if (!String_isEmpty(value))
+        {
+          String_escape(value,
+                        STRING_ESCAPE_CHARACTER,
+                        NULL,  // chars
+                        STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                        STRING_ESCAPE_CHARACTERS_MAP_TO,
+                        STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                      );
+          String_quote(value,STRING_QUOTE,NULL);
+
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %S",configValue->name,value);
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
 
         // free resources
         String_delete(value);
@@ -1986,17 +2059,27 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
         {
           String_set(value,*configValue->variable.string);
         }
-        String_escape(value,
-                      STRING_ESCAPE_CHARACTER,
-                      NULL,  // chars
-                      STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                      STRING_ESCAPE_CHARACTERS_MAP_TO,
-                      STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                    );
-        String_quote(value,STRING_QUOTE,NULL);
 
-        // write
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %S",configValue->name,value);
+//TODO: compare with default
+        if (!String_isEmpty(value))
+        {
+          String_escape(value,
+                        STRING_ESCAPE_CHARACTER,
+                        NULL,  // chars
+                        STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                        STRING_ESCAPE_CHARACTERS_MAP_TO,
+                        STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                      );
+          String_quote(value,STRING_QUOTE,NULL);
+
+          // write
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"%s = %S",configValue->name,value);
+        }
+        else
+        {
+          // write template comment
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%s = %s",configValue->name,configValue->templateText);
+        }
 
         // free resources
         String_delete(value);
@@ -2005,6 +2088,7 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
     case CONFIG_VALUE_TYPE_SPECIAL:
       {
         String            line;
+        bool              writtenFlag;
         ConfigValueFormat configValueFormat;
 
         // init variables
@@ -2018,14 +2102,29 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
                               );
 
         // format string
+        writtenFlag = FALSE;
         while (ConfigValue_format(&configValueFormat,line))
         {
           // write
           if (error == ERROR_NONE) error = File_writeLine(fileHandle,line);
+
+          writtenFlag = TRUE;
         }
 
         // format done
         ConfigValue_formatDone(&configValueFormat);
+
+        // write template comment if no values written
+        if (!writtenFlag && (configValue->specialValue.format != NULL))
+        {
+          String_format(line,"#%s = ",configValue->name);
+          configValue->specialValue.format(&configValueFormat.formatUserData,
+                                           CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE,
+                                           line,
+                                           configValue->specialValue.userData
+                                          );
+          if (error == ERROR_NONE) error = File_writeLine(fileHandle,line);
+        }
 
         // free resources
         String_delete(line);
@@ -2122,7 +2221,25 @@ LOCAL Errors writeValue(FileHandle           *fileHandle,
       // nothing to do
       break;
     case CONFIG_VALUE_TYPE_SEPARATOR:
-      if (error == ERROR_NONE) error = File_printLine(fileHandle,"# %s",SEPARATOR);
+      if (configValue->separator.text != NULL)
+      {
+      if (error == ERROR_NONE)
+      {
+        error = File_printLine(fileHandle,
+                               "# %-.3s %s %.*s",
+                               SEPARATOR,
+                               configValue->separator.text,
+                               SEPARATOR,
+                               (stringLength(SEPARATOR) > (3+1+stringLength(configValue->separator.text)+1))
+                                 ? stringLength(SEPARATOR)-(3+1+stringLength(configValue->separator.text)+1)
+                                 : 0
+                              );
+      }
+      }
+      else
+      {
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"# %s",SEPARATOR);
+      }
       break;
     case CONFIG_VALUE_TYPE_SPACE:
       if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
@@ -2233,11 +2350,6 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
               index++;
             }
             break;
-          case CONFIG_VALUE_TYPE_SEPARATOR:
-          case CONFIG_VALUE_TYPE_SPACE:
-          case CONFIG_VALUE_TYPE_COMMENT:
-            index++;
-            break;
           case CONFIG_VALUE_TYPE_END:
             skipFlag = FALSE;
             break;
@@ -2275,11 +2387,6 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
           {
             index++;
           }
-          break;
-        case CONFIG_VALUE_TYPE_SEPARATOR:
-        case CONFIG_VALUE_TYPE_SPACE:
-        case CONFIG_VALUE_TYPE_COMMENT:
-          index++;
           break;
         case CONFIG_VALUE_TYPE_END:
         default:
@@ -2334,11 +2441,6 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
               index++;
             }
             break;
-          case CONFIG_VALUE_TYPE_SEPARATOR:
-          case CONFIG_VALUE_TYPE_SPACE:
-          case CONFIG_VALUE_TYPE_COMMENT:
-            index++;
-            break;
           case CONFIG_VALUE_TYPE_END:
             skipFlag = FALSE;
             break;
@@ -2386,11 +2488,6 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
               index++;
             }
             break;
-          case CONFIG_VALUE_TYPE_SEPARATOR:
-          case CONFIG_VALUE_TYPE_SPACE:
-          case CONFIG_VALUE_TYPE_COMMENT:
-            index++;
-            break;
           case CONFIG_VALUE_TYPE_END:
           default:
             skipFlag = FALSE;
@@ -2426,11 +2523,6 @@ int ConfigValue_lastValueIndex(const ConfigValue configValues[],
               }
             }
             skipFlag = FALSE;
-            break;
-          case CONFIG_VALUE_TYPE_SEPARATOR:
-          case CONFIG_VALUE_TYPE_SPACE:
-          case CONFIG_VALUE_TYPE_COMMENT:
-            index--;
             break;
           case CONFIG_VALUE_TYPE_END:
           default:
@@ -2479,11 +2571,6 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
           {
             skipFlag = FALSE;
           }
-          break;
-        case CONFIG_VALUE_TYPE_SEPARATOR:
-        case CONFIG_VALUE_TYPE_SPACE:
-        case CONFIG_VALUE_TYPE_COMMENT:
-          index++;
           break;
         case CONFIG_VALUE_TYPE_END:
         default:
@@ -2708,13 +2795,13 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
       configValueFormat->variable = variable;
       break;
     case CONFIG_VALUE_TYPE_SPECIAL:
-if (configValue->specialValue.format2 != NULL)
-{
+      if (configValue->specialValue.format != NULL)
+      {
         if      (configValueFormat->configValue->offset >= 0)
         {
           if      (variable != NULL)
           {
-            configValue->specialValue.format2(&configValueFormat->formatUserData,
+            configValue->specialValue.format(&configValueFormat->formatUserData,
                                              CONFIG_VALUE_FORMAT_OPERATION_INIT,
                                              (byte*)variable+configValueFormat->configValue->offset,
                                              configValue->specialValue.userData
@@ -2724,7 +2811,7 @@ if (configValue->specialValue.format2 != NULL)
           {
             if ((*configValueFormat->configValue->variable.reference) != NULL)
             {
-              configValue->specialValue.format2(&configValueFormat->formatUserData,
+              configValue->specialValue.format(&configValueFormat->formatUserData,
                                                CONFIG_VALUE_FORMAT_OPERATION_INIT,
                                                (byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset,
                                                configValue->specialValue.userData
@@ -2734,42 +2821,11 @@ if (configValue->specialValue.format2 != NULL)
         }
         else if (configValueFormat->configValue->variable.special != NULL)
         {
-          configValue->specialValue.format2(&configValueFormat->formatUserData,
+          configValue->specialValue.format(&configValueFormat->formatUserData,
                                            CONFIG_VALUE_FORMAT_OPERATION_INIT,
                                            configValueFormat->configValue->variable.special,
                                            configValue->specialValue.userData
                                           );
-        }
-}
-else
-      if (configValue->specialValue.formatInit != NULL)
-      {
-        if      (configValueFormat->configValue->offset >= 0)
-        {
-          if      (variable != NULL)
-          {
-            configValue->specialValue.formatInit(&configValueFormat->formatUserData,
-                                                 configValue->specialValue.userData,
-                                                 (byte*)variable+configValueFormat->configValue->offset
-                                                );
-          }
-          else if (configValueFormat->configValue->variable.reference != NULL)
-          {
-            if ((*configValueFormat->configValue->variable.reference) != NULL)
-            {
-              configValue->specialValue.formatInit(&configValueFormat->formatUserData,
-                                                   configValue->specialValue.userData,
-                                                   (byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset
-                                                  );
-            }
-          }
-        }
-        else if (configValueFormat->configValue->variable.special != NULL)
-        {
-          configValue->specialValue.formatInit(&configValueFormat->formatUserData,
-                                               configValue->specialValue.userData,
-                                               configValueFormat->configValue->variable.special
-                                              );
         }
       }
       else
@@ -2839,19 +2895,13 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
     case CONFIG_VALUE_TYPE_CSTRING:
     case CONFIG_VALUE_TYPE_STRING:
     case CONFIG_VALUE_TYPE_SPECIAL:
-if (configValueFormat->configValue->specialValue.format2 != NULL)
-{
-        configValueFormat->configValue->specialValue.format2(&configValueFormat->formatUserData,
-        CONFIG_VALUE_FORMAT_OPERATION_DONE,
-        configValueFormat->configValue->variable.special,
-                                                                configValueFormat->configValue->specialValue.userData
-                                                               );
-} else
-      if (configValueFormat->configValue->specialValue.formatDone != NULL)
+      if (configValueFormat->configValue->specialValue.format != NULL)
       {
-        configValueFormat->configValue->specialValue.formatDone(&configValueFormat->formatUserData,
-                                                                configValueFormat->configValue->specialValue.userData
-                                                               );
+        configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
+                                                            CONFIG_VALUE_FORMAT_OPERATION_DONE,
+                                                            configValueFormat->configValue->variable.special,
+                                                            configValueFormat->configValue->specialValue.userData
+                                                           );
       }
       break;
     case CONFIG_VALUE_TYPE_IGNORE:
@@ -3324,19 +3374,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         configValueFormat->endOfDataFlag = TRUE;
         break;
       case CONFIG_VALUE_TYPE_SPECIAL:
-if (configValueFormat->configValue->specialValue.format2 != NULL)
-{
-          configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format2(&configValueFormat->formatUserData,
-          CONFIG_VALUE_FORMAT_OPERATION,
-                                                                                                  line,
-                                                                                                  configValueFormat->configValue->specialValue.userData
-                                                                                                 );
-} else
         if (configValueFormat->configValue->specialValue.format != NULL)
         {
           configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
-                                                                                                  configValueFormat->configValue->specialValue.userData,
-                                                                                                  line
+                                                                                                  CONFIG_VALUE_FORMAT_OPERATION,
+                                                                                                  line,
+                                                                                                  configValueFormat->configValue->specialValue.userData
                                                                                                  );
         }
         else
@@ -3745,8 +3788,6 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
               data = configValues[i].section.sectionIteratorNext(&sectionIterator,configValues[i].section.userData);
               if (data != NULL)
               {
-//if (!String_isEmpty(line))
-                if (error == ERROR_NONE) error = File_printLine(&fileHandle,"");
                 if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[%s]",configValues[i].name);
 
                 // write section
@@ -3759,15 +3800,13 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                 }
 
                 if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[end]");
-//                String_clear(line);
+                if (error == ERROR_NONE) error = File_printLine(&fileHandle,"");
               }
             }
             while ((data != NULL) && (error == ERROR_NONE));
           }
           else
           {
-//if (!String_isEmpty(line))
-            if (error == ERROR_NONE) error = File_printLine(&fileHandle,"");
             if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[%s]",configValues[i].name);
 
             // write section
@@ -3780,7 +3819,7 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
             }
 
             if (error == ERROR_NONE) error = File_printLine(&fileHandle,"[end]");
-//            String_clear(line);
+            if (error == ERROR_NONE) error = File_printLine(&fileHandle,"");
           }
 
           // done iterator

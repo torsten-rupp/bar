@@ -91,16 +91,17 @@ typedef void(*ConfigFormatDoneFunction)(void **formatData, void *userData);
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*ConfigFormatFunction)(void **formatData, void *userData, String line);
+typedef bool(*ConfigFormatFunctionXXX)(void **formatData, void *userData, String line);
 
 typedef enum
 {
   CONFIG_VALUE_FORMAT_OPERATION_INIT,
   CONFIG_VALUE_FORMAT_OPERATION_DONE,
+  CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE,
   CONFIG_VALUE_FORMAT_OPERATION
 } ConfigValueFormatOperations;
 
-typedef bool(*ConfigFormatFunctionXXX)(void **formatData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
+typedef bool(*ConfigFormatFunction)(void **formatData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 // section data iterator
 typedef void* ConfigValueSectionDataIterator;
@@ -252,12 +253,10 @@ typedef struct
   struct
   {
     ConfigParseFunction      parse;               // parse line
-    ConfigFormatInitFunction formatInit;          // format init
-    ConfigFormatDoneFunction formatDone;          // format done
     ConfigFormatFunction     format;              // format line
     void *userData;                               // user data for parse special
-    ConfigFormatFunctionXXX     format2;              // format line
   } specialValue;
+  const char *templateText;
   struct
   {
     bool(*parse)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -280,6 +279,10 @@ typedef struct
   struct
   {
     const char *text;
+  } separator;
+  struct
+  {
+    const char *text;
     const char *defaultText;
   } comment;
 } ConfigValue;
@@ -299,7 +302,7 @@ CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1,                     
 CONFIG_VALUE_SPECIAL        (<name>,<function>,<offset>|-1,<parse>,<formatInit>,<formatDone>,<format>,<userData>)
 CONFIG_VALUE_DEPRECATED     (<name>,<function>,<offset>|-1,<parse>,<userData>,<newName>,warningFlag>            )
 
-CONFIG_VALUE_SEPARATOR      (                                                                                   )
+CONFIG_VALUE_SEPARATOR      (<text>                                                                             )
 CONFIG_VALUE_COMMENT        (<comment>                                                                          )
 CONFIG_VALUE_SPACE          (                                                                                   )
 
@@ -343,7 +346,7 @@ const ConfigValue CONFIG_VALUES[] =
 
   CONFIG_VALUE_DEPRECATED   ("foo",     &foo,               -1,      configValueParseFoo,NULL,"new",TRUE),
 
-  CONFIG_VALUE_SEPARATOR    (                                                                           ),
+  CONFIG_VALUE_SEPARATOR    ("foo"                                                                      ),
   CONFIG_VALUE_COMMENT      ("foo"                                                                      ),
   CONFIG_VALUE_SPACE        (                                                                           ),
 };
@@ -462,10 +465,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   } \
 }; \
@@ -496,10 +501,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }, \
   __VA_ARGS__ \
@@ -517,10 +524,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
 
@@ -534,12 +543,13 @@ typedef struct
 *          member          - structure memory name
 *          min,max         - min./max. value
 *          units           - units definition array
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_INTEGER(name,variablePointer,offset,min,max,units) \
+#define CONFIG_VALUE_INTEGER(name,variablePointer,offset,min,max,units,templateText) \
   { \
     CONFIG_VALUE_TYPE_INTEGER,\
     name,\
@@ -554,14 +564,16 @@ typedef struct
     {NULL},\
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units) \
-  CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units)
+#define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units,templateText) \
+  CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units,templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_INTEGER64, CONFIG_STRUCT_VALUE_INTEGER64
@@ -573,12 +585,13 @@ typedef struct
 *          member          - structure memory name
 *          min,max         - min./max. value
 *          units           - units definition array
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_INTEGER64(name,variablePointer,offset,min,max,units) \
+#define CONFIG_VALUE_INTEGER64(name,variablePointer,offset,min,max,units,templateText) \
   { \
     CONFIG_VALUE_TYPE_INTEGER64,\
     name,\
@@ -593,14 +606,16 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units) \
-  CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units)
+#define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units,templateText) \
+  CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units,templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_DOUBLE, CONFIG_STRUCT_VALUE_DOUBLE
@@ -612,12 +627,13 @@ typedef struct
 *          member          - structure memory name
 *          min,max         - min./max. value
 *          units           - units definition array
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_DOUBLE(name,variablePointer,offset,min,max,units) \
+#define CONFIG_VALUE_DOUBLE(name,variablePointer,offset,min,max,units,templateText) \
   { \
     CONFIG_VALUE_TYPE_DOUBLE,\
     name,\
@@ -632,14 +648,16 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units) \
-  CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units)
+#define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units,templateText) \
+  CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units,templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_BOOLEAN, CONFIG_STRUCT_VALUE_BOOLEAN
@@ -649,12 +667,13 @@ typedef struct
 *          offset          - offset in structure or -1
 *          type            - structure type
 *          member          - structure memory name
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_BOOLEAN(name,variablePointer,offset) \
+#define CONFIG_VALUE_BOOLEAN(name,variablePointer,offset,templateText) \
   { \
     CONFIG_VALUE_TYPE_BOOLEAN,\
     name,\
@@ -669,14 +688,16 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member) \
-  CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member))
+#define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member,templateText) \
+  CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member),templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_BOOLEAN_YESNO, CONFIG_STRUCT_VALUE_BOOLEAN_YESNO
@@ -707,10 +728,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+"xxx2",\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
 #define xxxCONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
@@ -725,13 +748,14 @@ typedef struct
 *          type            - structure type
 *          member          - structure memory name
 *          value           - enum value
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #warning obsolete
-#define xxxCONFIG_VALUE_ENUM(name,variablePointer,offset,value) \
+#define xxxCONFIG_VALUE_ENUM(name,variablePointer,offset,value,templateText) \
   { \
     CONFIG_VALUE_TYPE_ENUM,\
     name,\
@@ -746,14 +770,16 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define xxxCONFIG_STRUCT_VALUE_ENUM(name,type,member,value) \
-  xxxCONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value)
+#define xxxCONFIG_STRUCT_VALUE_ENUM(name,type,member,value,templateText) \
+  xxxCONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value,templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_SELECT, CONFIG_STRUCT_VALUE_SELECT
@@ -764,12 +790,13 @@ typedef struct
 *          type            - structure type
 *          member          - structure memory name
 *          selects         - selects definition array
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_SELECT(name,variablePointer,offset,selects) \
+#define CONFIG_VALUE_SELECT(name,variablePointer,offset,selects,templateText) \
   { \
     CONFIG_VALUE_TYPE_SELECT,\
     name,\
@@ -784,14 +811,16 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects) \
-  CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects)
+#define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects,templateText) \
+  CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects,templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_SET, CONFIG_STRUCT_VALUE_SET
@@ -802,12 +831,13 @@ typedef struct
 *          type            - structure type
 *          member          - structure memory name
 *          set             - set definition array
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_SET(name,variablePointer,offset,set) \
+#define CONFIG_VALUE_SET(name,variablePointer,offset,set,templateText) \
   { \
     CONFIG_VALUE_TYPE_SET,\
     name,\
@@ -822,14 +852,16 @@ typedef struct
     {set},\
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_SET(name,type,member,set) \
-  CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set)
+#define CONFIG_STRUCT_VALUE_SET(name,type,member,set,templateText) \
+  CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set,templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_CSTRING, CONFIG_STRUCT_VALUE_CSTRING
@@ -839,12 +871,13 @@ typedef struct
 *          offset          - offset in structure or -1
 *          type            - structure type
 *          member          - structure memory name
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_CSTRING(name,variablePointer,offset) \
+#define CONFIG_VALUE_CSTRING(name,variablePointer,offset,templateText) \
   { \
     CONFIG_VALUE_TYPE_CSTRING,\
     name,\
@@ -859,14 +892,16 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_CSTRING(name,type,member) \
-  CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member))
+#define CONFIG_STRUCT_VALUE_CSTRING(name,type,member,templateText) \
+  CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member),templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_STRING, CONFIG_STRUCT_VALUE_STRING
@@ -876,12 +911,13 @@ typedef struct
 *          offset          - offset in structure or -1
 *          type            - structure type
 *          member          - structure memory name
+*          templateText    - template text for write
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_STRING(name,variablePointer,offset) \
+#define CONFIG_VALUE_STRING(name,variablePointer,offset,templateText) \
   { \
     CONFIG_VALUE_TYPE_STRING,\
     name,\
@@ -896,14 +932,16 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
-#define CONFIG_STRUCT_VALUE_STRING(name,type,member) \
-  CONFIG_VALUE_STRING(name,NULL,offsetof(type,member))
+#define CONFIG_STRUCT_VALUE_STRING(name,type,member,templateText) \
+  CONFIG_VALUE_STRING(name,NULL,offsetof(type,member),templateText)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_SPECIAL, CONFIG_STRUCT_VALUE_SPECIAL
@@ -938,10 +976,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {parse,formatInit,formatDone,format,userData,NULL},\
+    {parse,format,userData},\
+"xxx2",\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SPECIALXXX(name,type,member,parse,formatInit,formatDone,format,userData) \
@@ -962,10 +1002,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {parse,NULL,NULL,NULL,userData,format},\
+    {parse,format,userData},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,format,userData) \
@@ -995,10 +1037,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {newName,warningFlag},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_IGNORE(name,newName,warningFlag) \
@@ -1035,10 +1079,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {parse,userData,newName,warningFlag},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName,warningFlag) \
@@ -1069,10 +1115,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {sectionIteratorInit,sectionIteratorDone,sectionIteratorNext,userData},\
+    {NULL},\
     {NULL,NULL}\
   }
 
@@ -1091,10 +1139,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {NULL,NULL}\
   }
 
@@ -1122,10 +1172,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {text},\
     {NULL,NULL}\
   }
 
@@ -1153,10 +1205,12 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
+    {NULL},\
     {text,NULL}\
   }
 
@@ -1184,11 +1238,13 @@ typedef struct
     {NULL}, \
     {},\
     {},\
-    {NULL,NULL,NULL,NULL,NULL,NULL},\
+    {NULL,NULL,NULL},\
+    NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
-    {"",NULL}\
+    {NULL},\
+    {NULL,NULL}\
   }
 
 /***********************************************************************\
