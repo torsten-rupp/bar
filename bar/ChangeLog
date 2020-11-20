@@ -1,3 +1,70 @@
+2020-xx-xx 0.22
+  * fix reading cryption keys via config file
+
+2020-09-27 0.21f
+  * fixed auto-index of new archives
+  * BARControl: synchonous update of job data
+
+2020-08-28 0.21e
+  * fixed database constraint-error when storing
+    huge files in splitted archive mode
+
+2020-08-20 0.21d
+  * fixed entity create date/time
+  * fixed purge entities when creating new entity
+  * fixed delete partial created entity on error
+
+2020-08-11 0.21c
+  * added configuration mainetance time windows
+  * fixed duplicate special entries in archive
+  * fixed purge entity, storages
+  * fixed data aggregation in index database
+  * fixed/improved delete log messages
+  * fixed auto-import archives into index
+  * fixed delete expired archives: locking
+  * fixed hostname/username in index
+  * fixed aggregated index data for splitted archives
+  * fixed schedule UUID: use a new UUID for each
+    executed job
+  * fixed convert: set schedule UUID for all archives
+    in a convert operation, do not change create
+    date/time
+  * fixed convert: temporary file
+  * fixed output keys: avoid info on redirection of
+    stdout
+  * fixed storage of fragmented files which were
+    modified
+  * fixed restore single files
+  * fixed restore splitted file with rename mode
+  * fixed expansion of storage names with ':': escape with %:
+  * fixed storage create date/time: no seconds
+  * fixed storage create date/time on trigger via schedule:
+    use matching schedule date/time
+  * fixed possible dead-lock in index operations
+  * bar-sqlite3: fixed possible crash
+  * bar-sqlite3: added to-file name for vacuum
+  * bar-sqlite3: fixed clean
+  * BARControl: fixed version check
+  * BARControl: fixed update index
+  * BARControl: fixed not-assigned list
+  * BARControl: fixed add storages to index from directory
+  * BARControl: fixed sorting for options
+    --index-database-entities-list,
+    --index-database-storages-list
+  * BARControl: improved assign-to context menu
+  * BRRControl: fixed create date/time shown info info
+  * BARControl: added option --maintenance
+
+2020-04-29 0.21b
+  * fixed version string
+  * fixed missing systemd-support in Debian package
+
+2020-04-26 0.21a
+  * fixed restore single files
+  * fixed number of shown storages in delete
+  * improved assign-to context menu: caching
+  * fixed version number: patch level
+
 2020-04-12 0.21
   * parallel test, compare
   * fragmented and parallel processing of huge files.
