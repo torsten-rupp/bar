@@ -3950,6 +3950,7 @@ AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \
                  demangle.h \
+                 execinfo.h \
                  grp.h \
                  icu.h \
                  libintl.h \
