@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #if defined(HAVE_PCRE)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
@@ -286,6 +287,28 @@ void __StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, Strin
     insertString(stringList,String_newBuffer(buffer,bufferLength),NULL);
   #else /* not NDEBUG */
     insertString(__fileName__,__lineNb__,stringList,__String_newBuffer(__fileName__,__lineNb__,buffer,bufferLength),NULL);
+  #endif /* NDEBUG */
+}
+
+#ifdef NDEBUG
+void StringList_appendFormat(StringList *stringList, const char *format, ...)
+#else /* not NDEBUG */
+void __StringList_appendFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, ...)
+#endif /* NDEBUG */
+{
+  String  string;
+  va_list arguments;
+
+  string = String_new();
+
+  va_start(arguments,format);
+  String_vformat(string,format,arguments);
+  va_end(arguments);
+
+  #ifdef NDEBUG
+    insertString(stringList,string,NULL);
+  #else /* not NDEBUG */
+    insertString(__fileName__,__lineNb__,stringList,string,NULL);
   #endif /* NDEBUG */
 }
 
