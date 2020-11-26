@@ -2630,9 +2630,9 @@ uint ConfigValue_valueIndex(const ConfigValue configValues[],
            : CONFIG_VALUE_INDEX_NONE;
 }
 
-int ConfigValue_firstValueIndex(const ConfigValue configValues[],
-                                const char        *sectionName
-                               )
+uint ConfigValue_firstValueIndex(const ConfigValue configValues[],
+                                 const char        *sectionName
+                                )
 {
   uint index;
   bool skipFlag;
@@ -2721,9 +2721,9 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
 
-int ConfigValue_lastValueIndex(const ConfigValue configValues[],
-                               const char        *sectionName
-                              )
+uint ConfigValue_lastValueIndex(const ConfigValue configValues[],
+                                const char        *sectionName
+                               )
 {
   uint index;
   bool skipFlag;

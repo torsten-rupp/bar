@@ -976,33 +976,6 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_SPECIALXXX(name,variablePointer,offset,parse,formatInit,formatDone,format,userData) \
-  { \
-    CONFIG_VALUE_TYPE_SPECIAL,\
-    name,\
-    {variablePointer},\
-    offset,\
-    {0,0,NULL},\
-    {0LL,0LL,NULL},\
-    {0.0,0.0,NULL},\
-    {},\
-    {0},\
-    {NULL},\
-    {NULL}, \
-    {},\
-    {},\
-    {parse,format,userData},\
-"xxx2",\
-    {NULL,NULL,NULL,FALSE},\
-    {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
-    {NULL},\
-    {NULL,NULL},\
-    NULL\
-  }
-#define CONFIG_STRUCT_VALUE_SPECIALXXX(name,type,member,parse,formatInit,formatDone,format,userData) \
-  CONFIG_VALUE_SPECIALXXX(name,NULL,offsetof(type,member),parse,formatInit,formatDone,format,userData)
-
 #define CONFIG_VALUE_SPECIAL(name,variablePointer,offset,parse,format,userData) \
   { \
     CONFIG_VALUE_TYPE_SPECIAL,\
@@ -1233,7 +1206,8 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL,NULL,NULL},\
     {NULL},\
-    {text,NULL}\
+    {text,NULL},\
+    NULL\
   }
 
 /***********************************************************************\
@@ -1451,9 +1425,9 @@ uint ConfigValue_valueIndex(const ConfigValue configValues[],
 * Notes  : -
 \***********************************************************************/
 
-int ConfigValue_firstValueIndex(const ConfigValue configValues[],
-                                const char        *sectionName
-                               );
+uint ConfigValue_firstValueIndex(const ConfigValue configValues[],
+                                 const char        *sectionName
+                                );
 
 /***********************************************************************\
 * Name   : ConfigValue_lastValueIndex
@@ -1464,9 +1438,9 @@ int ConfigValue_firstValueIndex(const ConfigValue configValues[],
 * Notes  : -
 \***********************************************************************/
 
-int ConfigValue_lastValueIndex(const ConfigValue configValues[],
-                               const char        *sectionName
-                              );
+uint ConfigValue_lastValueIndex(const ConfigValue configValues[],
+                                const char        *sectionName
+                               );
 
 /***********************************************************************\
 * Name   : ConfigValue_nextValueIndex
