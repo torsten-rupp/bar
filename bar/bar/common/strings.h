@@ -420,6 +420,9 @@ String String_setBuffer(String string, const void *buffer, ulong bufferLength);
 *           %cS  String with quoting char c
 *           %b   binary value
 *           %y   bool value
+*           %nC  repeat char n times (n can be 0)
+*           %*C  repeat char * times (* is uint value preceding char
+*                argument, can be 0)
 \***********************************************************************/
 
 String String_format(String string, const char *format, ...);

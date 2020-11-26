@@ -111,15 +111,15 @@ typedef enum
 typedef struct
 {
   char              token[32];
-  unsigned int      length;
+  uint              length;
   bool              alternateFlag;
   bool              zeroPaddingFlag;
   bool              leftAdjustedFlag;
   bool              blankFlag;
   bool              signFlag;
-  unsigned int      width;
+  uint              width;
   bool              widthArgument;
-  unsigned int      precision;
+  uint              precision;
   FormatLengthTypes lengthType;
   char              quoteChar;
   char              conversionChar;
@@ -942,6 +942,7 @@ LOCAL void formatString(struct __String *string,
   FormatToken  formatToken;
   union
   {
+    int                ch;
     int                i;
     long               l;
     #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
@@ -986,8 +987,16 @@ LOCAL void formatString(struct __String *string,
       switch (formatToken.conversionChar)
       {
         case 'c':
-          data.i = va_arg(arguments,int);
-          length = snprintf(buffer,sizeof(buffer),formatToken.token,data.i);
+          i = formatToken.width;
+          if (formatToken.widthArgument)
+          {
+            i = (uint)va_arg(arguments,int);
+          }
+          data.ch = va_arg(arguments,int);
+
+          length = (formatToken.widthArgument)
+                     ? snprintf(buffer,sizeof(buffer),formatToken.token,i,data.ch)
+                     : snprintf(buffer,sizeof(buffer),formatToken.token,data.ch);
           assert(length >= 0);
           if ((uint)length < sizeof(buffer))
           {
@@ -996,9 +1005,37 @@ LOCAL void formatString(struct __String *string,
           else
           {
             ensureStringLength(string,string->length+length);
-            snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
+            length = (formatToken.widthArgument)
+                       ? snprintf(&string->data[string->length],length+1,formatToken.token,i,data.ch)
+                       : snprintf(&string->data[string->length],length+1,formatToken.token,data.ch);
             string->length += length;
             STRING_UPDATE_VALID(string);
+          }
+          break;
+        case 'C':
+          i = formatToken.width;
+          if (formatToken.widthArgument)
+          {
+            i = (uint)va_arg(arguments,int);
+          }
+          data.ch = va_arg(arguments,int);
+
+          while (i > 0)
+          {
+            length = snprintf(buffer,sizeof(buffer),"%c",data.ch);
+            assert(length >= 0);
+            if ((uint)length < sizeof(buffer))
+            {
+              String_appendCString(string,buffer);
+            }
+            else
+            {
+              ensureStringLength(string,string->length+length);
+              length = snprintf(&string->data[string->length],length+1,"%c",data.ch);
+              string->length += length;
+              STRING_UPDATE_VALID(string);
+            }
+            i--;
           }
           break;
         case 'i':
@@ -1017,7 +1054,7 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
+                  length = snprintf(&string->data[string->length],length+1,formatToken.token,data.i);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
                 }
@@ -1035,7 +1072,7 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],length+1,formatToken.token,data.l);
+                  length = snprintf(&string->data[string->length],length+1,formatToken.token,data.l);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
                 }
@@ -1054,7 +1091,7 @@ LOCAL void formatString(struct __String *string,
                   else
                   {
                     ensureStringLength(string,string->length+length);
-                    snprintf(&string->data[string->length],length+1,formatToken.token,data.ll);
+                    length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ll);
                     string->length += length;
                     STRING_UPDATE_VALID(string);
                   }
@@ -1088,7 +1125,7 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],length+1,formatToken.token,data.ui);
+                  length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ui);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
                 }
@@ -1106,7 +1143,7 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
+                  length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
                 }
@@ -1125,7 +1162,7 @@ LOCAL void formatString(struct __String *string,
                   else
                   {
                     ensureStringLength(string,string->length+length);
-                    snprintf(&string->data[string->length],length+1,formatToken.token,data.ull);
+                    length = snprintf(&string->data[string->length],length+1,formatToken.token,data.ull);
                     string->length += length;
                     STRING_UPDATE_VALID(string);
                   }
@@ -1164,7 +1201,7 @@ LOCAL void formatString(struct __String *string,
                 else
                 {
                   ensureStringLength(string,string->length+length);
-                  snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
+                  length = snprintf(&string->data[string->length],length+1,formatToken.token,data.d);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
                 }
@@ -1183,12 +1220,12 @@ LOCAL void formatString(struct __String *string,
           }
           break;
         case 's':
-          data.s = va_arg(arguments,const char*);
           i = formatToken.width;
           if (formatToken.widthArgument)
           {
-            i = (ulong)va_arg(arguments,int);
+            i = (uint)va_arg(arguments,int);
           }
+          data.s = va_arg(arguments,const char*);
 
           if (formatToken.quoteChar != NUL)
           {
@@ -1280,7 +1317,7 @@ LOCAL void formatString(struct __String *string,
             else
             {
               ensureStringLength(string,string->length+length);
-              snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
+              length = snprintf(&string->data[string->length],length+1,formatToken.token,data.p);
               string->length += length;
               STRING_UPDATE_VALID(string);
             }
@@ -1350,7 +1387,7 @@ LOCAL void formatString(struct __String *string,
             else
             {
               ensureStringLength(string,string->length+length);
-              snprintf(&string->data[string->length],length+1,formatToken.token,String_cString(data.string));
+              length = snprintf(&string->data[string->length],length+1,formatToken.token,String_cString(data.string));
               string->length += length;
               STRING_UPDATE_VALID(string);
             }
