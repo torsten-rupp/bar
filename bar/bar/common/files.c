@@ -2509,7 +2509,7 @@ bool File_getLine(FileHandle *fileHandle,
   String_clear(line);
 
   readFlag = FALSE;
-  while (!readFlag)
+  do
   {
     if (StringList_isEmpty(&fileHandle->lineBufferList))
     {
@@ -2531,11 +2531,12 @@ bool File_getLine(FileHandle *fileHandle,
     String_trim(line,STRING_WHITE_SPACES);
 
     // check if non-empty and non-comment
-    if (!String_isEmpty(line))
-    {
-      readFlag = (commentChars == NULL) || (strchr(commentChars,(int)String_index(line,STRING_BEGIN)) == NULL);
-    }
+    readFlag =    (commentChars == NULL)
+               || (   !String_isEmpty(line)
+                   && (stringFindChar(commentChars,String_index(line,STRING_BEGIN)) == -1L)
+                  );
   }
+  while (!readFlag);
 
   return readFlag;
 }
@@ -4721,7 +4722,7 @@ String File_getCurrentDirectory(String pathName)
     currentDirectory = get_current_dir_name();
     if (currentDirectory != NULL)
     {
-      String_setBuffer(pathName,currentDirectory,strlen(currentDirectory));
+      String_setBuffer(pathName,currentDirectory,stringLength(currentDirectory));
       free(currentDirectory);
     }
     else
@@ -4731,7 +4732,7 @@ String File_getCurrentDirectory(String pathName)
   #else
     if (getcwd(currentDirectory,sizeof(currentDirectory)) != NULL)
     {
-      String_setBuffer(pathName,currentDirectory,strlen(currentDirectory));
+      String_setBuffer(pathName,currentDirectory,stringLength(currentDirectory));
     }
     else
     {
