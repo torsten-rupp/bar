@@ -29,7 +29,7 @@
 #define MAX_CRYPT_ALGORITHMS 4
 
 /***************************** Constants *******************************/
-extern const ConfigValue JOB_CONFIG_VALUES[];
+extern ConfigValue JOB_CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 

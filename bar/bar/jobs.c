@@ -100,30 +100,18 @@
 
 // parse special options
 LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueInitScheduleDateFormat(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueDoneScheduleDateFormat(void **formatUserData, void *userData);
-LOCAL bool configValueScheduleDateFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueInitScheduleWeekDaySetFormat(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueDoneScheduleWeekDaySetFormat(void **formatUserData, void *userData);
-LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueInitScheduleTimeFormat(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueDoneScheduleTimeFormat(void **formatUserData, void *userData);
-LOCAL bool configValueScheduleTimeFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueInitPersistenceMinKeepFormat(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueDonePersistenceMinKeepFormat(void **formatUserData, void *userData);
-LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueInitPersistenceMaxKeepFormat(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueDonePersistenceMaxKeepFormat(void **formatUserData, void *userData);
-LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL void configValueInitPersistenceMaxAgeFormat(void **formatUserData, void *userData, void *variable);
-LOCAL void configValueDonePersistenceMaxAgeFormat(void **formatUserData, void *userData);
-LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, void *userData, String line);
+LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 // handle shortcuts
 
@@ -138,7 +126,7 @@ LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *userData, void *varia
 LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
-const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ,"<uuid>"),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
@@ -179,10 +167,10 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL,"<n>"),
   CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ,"<name>"),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueKeyParse,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueKeyDataParse,NULL,NULL,NULL,NULL),
-  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueKeyParse,NULL,NULL,NULL,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIALXXX     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueKeyDataParse,NULL,NULL,NULL,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueFileEntryPatternParse,configValueFileEntryPatternFormat,NULL),
   CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.options.includeFileListFileName      ,"<file name>"),
@@ -214,9 +202,9 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL,NULL,NULL),
     CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ,"<uuid>"),
     CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ,"<uuid>"),
-    CONFIG_STRUCT_VALUE_SPECIALXXX   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueInitScheduleDateFormat,configValueDoneScheduleDateFormat,configValueScheduleDateFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIALXXX   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueScheduleWeekDaySetParse,configValueInitScheduleWeekDaySetFormat,configValueDoneScheduleWeekDaySetFormat,configValueScheduleWeekDaySetFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIALXXX   ("time",                      ScheduleNode,time,                               configValueScheduleTimeParse,configValueInitScheduleTimeFormat,configValueDoneScheduleTimeFormat,configValueScheduleTimeFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueScheduleDateFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueScheduleWeekDaySetParse,configValueScheduleWeekDaySetFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                               configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
     CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                        CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
     CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ,"<text>"),
@@ -230,9 +218,9 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL,NULL,NULL),
-    CONFIG_STRUCT_VALUE_SPECIALXXX   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValueInitPersistenceMinKeepFormat,configValueDonePersistenceMinKeepFormat,configValuePersistenceMinKeepFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIALXXX   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValueInitPersistenceMaxKeepFormat,configValueDonePersistenceMaxKeepFormat,configValuePersistenceMaxKeepFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIALXXX   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValueInitPersistenceMaxAgeFormat,configValueDonePersistenceMaxAgeFormat,configValuePersistenceMaxAgeFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ,"<text>"),
@@ -1258,7 +1246,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
 }
 
 /***********************************************************************\
-* Name   : configValueParseScheduleDate
+* Name   : configValueScheduleDateParse
 * Purpose: config value option call back for parsing schedule date
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1314,107 +1302,88 @@ LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const ch
 }
 
 /***********************************************************************\
-* Name   : configValueFormatInitScheduleDate
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueInitScheduleDateFormat(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (ScheduleDate*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleDate
-* Purpose: done format of config schedule statements
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueDoneScheduleDateFormat(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleDate
+* Name   : configValueScheduleDateFormat
 * Purpose: format schedule config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleDateFormat(void **formatUserData, void *userData, String line)
+LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
-  const ScheduleDate *scheduleDate;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  scheduleDate = (const ScheduleDate*)(*formatUserData);
-  if (scheduleDate != NULL)
+  switch (formatOperation)
   {
-    if (scheduleDate->year != DATE_ANY)
-    {
-      String_appendFormat(line,"%4d",scheduleDate->year);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleDate->month != DATE_ANY)
-    {
-      String_appendFormat(line,"%02d",scheduleDate->month);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,'-');
-    if (scheduleDate->day != DATE_ANY)
-    {
-      String_appendFormat(line,"%02d",scheduleDate->day);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (ScheduleDate*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<yyyy>|*-<mm>|*-<dd>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
+        String             line          = (String)data;
 
-    (*formatUserData) = NULL;
+        if (scheduleDate != NULL)
+        {
+          if (scheduleDate->year != DATE_ANY)
+          {
+            String_appendFormat(line,"%4d",scheduleDate->year);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+          String_appendChar(line,'-');
+          if (scheduleDate->month != DATE_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleDate->month);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+          String_appendChar(line,'-');
+          if (scheduleDate->day != DATE_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleDate->day);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
 
-    return TRUE;
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return TRUE;
 }
 
 /***********************************************************************\
-* Name   : configValueParseScheduleWeekDaySet
+* Name   : configValueScheduleWeekDaySetParse
 * Purpose: config value option call back for parsing schedule week day
 *          set
 * Input  : userData              - user data
@@ -1452,103 +1421,84 @@ LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, co
 }
 
 /***********************************************************************\
-* Name   : configValueFormatInitScheduleWeekDaySet
-* Purpose: init format config schedule week day set
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueInitScheduleWeekDaySetFormat(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (WeekDaySet*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleWeekDays
-* Purpose: done format of config schedule week day set
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueDoneScheduleWeekDaySetFormat(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleWeekDaySet
+* Name   : configValueScheduleWeekDaySetFormat
 * Purpose: format schedule config week day set
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, void *userData, String line)
+LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
-  const ScheduleWeekDaySet *scheduleWeekDaySet;
-  String                   names;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  scheduleWeekDaySet = (ScheduleWeekDaySet*)(*formatUserData);
-  if (scheduleWeekDaySet != NULL)
+  switch (formatOperation)
   {
-    if ((*scheduleWeekDaySet) != WEEKDAY_SET_ANY)
-    {
-      names = String_new();
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (ScheduleWeekDaySet*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"Mon|Tue|Wed|Thu|Fri|Sat|Sun|*,...");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const ScheduleWeekDaySet *scheduleWeekDaySet = (const ScheduleWeekDaySet*)(*formatUserData);
+        String                   names;
+        String                   line                = (String)data;
 
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
-      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+        if (scheduleWeekDaySet != NULL)
+        {
+          if ((*scheduleWeekDaySet) != WEEKDAY_SET_ANY)
+          {
+            names = String_new();
 
-      String_append(line,names);
-      String_appendChar(line,' ');
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
 
-      String_delete(names);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
+            String_append(line,names);
+            String_appendChar(line,' ');
 
-    (*formatUserData) = NULL;
+            String_delete(names);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
 
-    return TRUE;
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return TRUE;
 }
 
 /***********************************************************************\
-* Name   : configValueParseScheduleTime
+* Name   : configValueScheduleTimeParse
 * Purpose: config value option call back for parsing schedule time
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1597,98 +1547,79 @@ LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const ch
 }
 
 /***********************************************************************\
-* Name   : configValueFormatInitScheduleTime
-* Purpose: init format config schedule
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueInitScheduleTimeFormat(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (ScheduleTime*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDoneScheduleTime
-* Purpose: done format of config schedule
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueDoneScheduleTimeFormat(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatScheduleTime
+* Name   : configValueScheduleTimeFormat
 * Purpose: format schedule config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleTimeFormat(void **formatUserData, void *userData, String line)
+LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
-  const ScheduleTime *scheduleTime;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  scheduleTime = (const ScheduleTime*)(*formatUserData);
-  if (scheduleTime != NULL)
+  switch (formatOperation)
   {
-    if (scheduleTime->hour != TIME_ANY)
-    {
-      String_appendFormat(line,"%02d",scheduleTime->hour);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
-    String_appendChar(line,':');
-    if (scheduleTime->minute != TIME_ANY)
-    {
-      String_appendFormat(line,"%02d",scheduleTime->minute);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (ScheduleTime*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<hh>|*:<mm>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const ScheduleTime *scheduleTime = (ScheduleTime*)(*formatUserData);
+        String             line          = (String)data;
 
-    (*formatUserData) = NULL;
+        if (scheduleTime != NULL)
+        {
+          if (scheduleTime->hour != TIME_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleTime->hour);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+          String_appendChar(line,':');
+          if (scheduleTime->minute != TIME_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleTime->minute);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
 
-    return TRUE;
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return TRUE;
 }
 
 /***********************************************************************\
-* Name   : configValueParsePersistenceMinKeep
+* Name   : configValuePersistenceMinKeepParse
 * Purpose: config value option call back for parsing min. keep
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1732,89 +1663,70 @@ LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, co
 }
 
 /***********************************************************************\
-* Name   : configValueFormatInitPersistenceMinKeep
-* Purpose: init format config min. keep
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueInitPersistenceMinKeepFormat(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (PersistenceNode*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDonePersistenceMinKeep
-* Purpose: done format of config min. keep
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueDonePersistenceMinKeepFormat(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatPersistenceMinKeep
+* Name   : configValuePersistenceMinKeepFormat
 * Purpose: format min. keep config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, void *userData, String line)
+LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
-  const int *minKeep;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  minKeep = *((int**)formatUserData);
-  if (minKeep != NULL)
+  switch (formatOperation)
   {
-    if ((*minKeep) != KEEP_ALL)
-    {
-      String_appendFormat(line,"%d",*minKeep);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (PersistenceNode*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<n>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
+        String                line             = (String)data;
 
-    (*formatUserData) = NULL;
+        if (persistenceNode != NULL)
+        {
+          if (persistenceNode->minKeep != KEEP_ALL)
+          {
+            String_appendFormat(line,"%d",persistenceNode->minKeep);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
 
-    return TRUE;
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return TRUE;
 }
 
 /***********************************************************************\
-* Name   : configValueParsePersistenceMaxKeep
+* Name   : configValuePersistenceMaxKeepParse
 * Purpose: config value option call back for parsing max. keep
 * Input  : userData              - user data
 *          variable              - config variable
@@ -1858,85 +1770,68 @@ LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, co
 }
 
 /***********************************************************************\
-* Name   : configValueFormatInitPersistenceMaxKeep
-* Purpose: init format config max. keep
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueInitPersistenceMaxKeepFormat(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (PersistenceNode*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDonePersistenceMaxKeep
-* Purpose: done format of config max. keep
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueDonePersistenceMaxKeepFormat(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatPersistenceMaxKeep
+* Name   : configValuePersistenceMaxKeepFormat
 * Purpose: format max. keep config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, void *userData, String line)
+LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
-  const int *maxKeep;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  maxKeep = *((int**)formatUserData);
-  if (maxKeep != NULL)
-  {
-    if ((*maxKeep) != KEEP_ALL)
-    {
-      String_appendFormat(line,"%d",*maxKeep);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
+  (*formatUserData) = (PersistenceNode*)data;
 
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
+  switch (formatOperation)
   {
-    return FALSE;
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (PersistenceNode*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<n>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
+        String                line             = (String)data;
+
+        if (persistenceNode != NULL)
+        {
+          if (persistenceNode->maxKeep != KEEP_ALL)
+          {
+            String_appendFormat(line,"%d",persistenceNode->maxKeep);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
   }
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -1984,85 +1879,66 @@ LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, con
 }
 
 /***********************************************************************\
-* Name   : configValueFormatInitPersistenceMaxAge
-* Purpose: init format config max. age
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueInitPersistenceMaxAgeFormat(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = (PersistenceNode*)variable;
-}
-
-/***********************************************************************\
-* Name   : configValueFormatDonePersistenceMaxAge
-* Purpose: done format of config max. age
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void configValueDonePersistenceMaxAgeFormat(void **formatUserData, void *userData)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : configValueFormatPersistenceMaxAge
+* Name   : configValuePersistenceMaxAgeFormat
 * Purpose: format max. age config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, void *userData, String line)
+LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
-  const int *maxAge;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  maxAge = *((int**)formatUserData);
-  if (maxAge != NULL)
+  switch (formatOperation)
   {
-    if ((*maxAge) != AGE_FOREVER)
-    {
-      String_appendFormat(line,"%d",*maxAge);
-    }
-    else
-    {
-      String_appendCString(line,"*");
-    }
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (PersistenceNode*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<n>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
+        String                line             = (String)data;
 
-    (*formatUserData) = NULL;
+        if (persistenceNode != NULL)
+        {
+          if (persistenceNode->maxAge != AGE_FOREVER)
+          {
+            String_appendFormat(line,"%d",persistenceNode->maxAge);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
 
-    return TRUE;
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -3206,7 +3082,8 @@ bool Job_read(JobNode *jobNode)
 
                               printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                             }),NULL,
-                            scheduleNode
+                            scheduleNode,
+NULL // commentLineList
                            );
         }
         else
@@ -3297,7 +3174,8 @@ bool Job_read(JobNode *jobNode)
 
                                 printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                               }),NULL,
-                              persistenceNode
+                              persistenceNode,
+NULL // commentLineList
                              );
           }
           else
@@ -3378,7 +3256,8 @@ bool Job_read(JobNode *jobNode)
 
                           printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                         }),NULL,
-                        jobNode
+                        jobNode,
+NULL // commentLineList
                        );
     }
     else

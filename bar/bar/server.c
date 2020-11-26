@@ -5788,7 +5788,8 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
                          NULL, // sectionName
                          CALLBACK_(NULL,NULL),  // errorFunction
                          CALLBACK_(NULL,NULL),  // warningFunction
-                         NULL  //variable
+                         NULL,
+NULL // commentLineList  //variable
                         )
      )
   {
@@ -9111,7 +9112,8 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
                           NULL, // sectionName
                           CALLBACK_(NULL,NULL),  // errorFunction
                           CALLBACK_(NULL,NULL),  // warningFunction
-                          jobNode
+                          jobNode,
+NULL // commentLineList
                          )
        )
     {
@@ -13002,7 +13004,8 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
                           "schedule",
                           CALLBACK_(NULL,NULL),  // errorFunction
                           CALLBACK_(NULL,NULL),  // warningFunction
-                          scheduleNode
+                          scheduleNode,
+NULL // commentLineList
                          )
        )
     {

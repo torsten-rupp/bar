@@ -938,6 +938,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1                              ,"<name>"),
     CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueHashDataParse,configValueHashDataFormat,NULL),
 //TODO: required to save?
+    CONFIG_VALUE_COMMENT("pubic key"),
     CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_END_SECTION(),
   CONFIG_VALUE_COMMENT           ("pairing master trigger/clear file"),
@@ -1834,6 +1835,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   uint       lineNb;
   String     line;
   String     name,value;
+  StringList commentLineList;
   long       nextIndex;
 
   assert(fileName != NULL);
@@ -1878,15 +1880,33 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   lineNb     = 0;
   name       = String_new();
   value      = String_new();
+  StringList_init(&commentLineList);
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
     while (   !failFlag
-           && File_getLine(&fileHandle,line,&lineNb,"#")
+           && File_getLine(&fileHandle,line,&lineNb,NULL)
           )
     {
       // parse line
-      if      (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
+      String_trim(line,STRING_WHITE_SPACES);
+      if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+      {
+        // discard comments if separator or empty line
+        StringList_clear(&commentLineList);
+      }
+      else if (String_startsWithCString(line,"# "))
+      {
+        // store comment
+        String_remove(line,STRING_BEGIN,2);
+        StringList_append(&commentLineList,line);
+      }
+      else if (String_startsWithChar(line,'#'))
+      {
+        // ignore commented values
+      }
+      else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
       {
         ServerNode *serverNode;
 
@@ -1907,11 +1927,26 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
         // parse section
         while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
         {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             (void)ConfigValue_parse(String_cString(name),
                                     String_cString(value),
@@ -1930,8 +1965,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"file-server",String_cString(fileName),lineNb);
                                     },NULL),
-                                    serverNode
+                                    serverNode,
+                                    &commentLineList
                                    );
+            assert(StringList_isEmpty(&commentLineList));
             if (failFlag) break;
           }
           else
@@ -1976,11 +2013,26 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
         // parse section
         while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
         {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             (void)ConfigValue_parse(String_cString(name),
                                     String_cString(value),
@@ -2001,8 +2053,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
                                     },NULL),
-                                    serverNode
+                                    serverNode,
+                                    &commentLineList
                                    );
+            assert(StringList_isEmpty(&commentLineList));
             if (failFlag) break;
           }
           else
@@ -2047,11 +2101,26 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
         // parse section
         while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
         {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             (void)ConfigValue_parse(String_cString(name),
                                     String_cString(value),
@@ -2072,8 +2141,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
                                     },NULL),
-                                    serverNode
+                                    serverNode,
+                                    &commentLineList
                                    );
+            assert(StringList_isEmpty(&commentLineList));
             if (failFlag) break;
           }
           else
@@ -2118,11 +2189,26 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
         // parse section
         while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
         {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             (void)ConfigValue_parse(String_cString(name),
                                     String_cString(value),
@@ -2143,8 +2229,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
                                     },NULL),
-                                    serverNode
+                                    serverNode,
+                                    &commentLineList
                                    );
+            assert(StringList_isEmpty(&commentLineList));
             if (failFlag) break;
           }
           else
@@ -2181,11 +2269,26 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         if (deviceNode == NULL) deviceNode = newDeviceNode(name);
 
         // parse section
-        while (   File_getLine(&fileHandle,line,&lineNb,"#")
+        while (   File_getLine(&fileHandle,line,&lineNb,NULL)
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
         {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             (void)ConfigValue_parse(String_cString(name),
                                     String_cString(value),
@@ -2206,8 +2309,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
                                     }),NULL,
-                                    &deviceNode->device
+                                    &deviceNode->device,
+                                    &commentLineList
                                    );
+            assert(StringList_isEmpty(&commentLineList));
             if (failFlag) break;
           }
           else
@@ -2232,13 +2337,29 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       }
       else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
       {
+StringList_clear(&commentLineList);
         // parse section
         while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
         {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             (void)ConfigValue_parse(String_cString(name),
                                     String_cString(value),
@@ -2259,8 +2380,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
                                     }),NULL,
-                                    &globalOptions.masterInfo
+                                    &globalOptions.masterInfo,
+                                    &commentLineList
                                    );
+            assert(StringList_isEmpty(&commentLineList));
             if (failFlag) break;
           }
           else
@@ -2286,11 +2409,26 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
         // parse section
         while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
               )
         {
-          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
             (void)ConfigValue_parse(String_cString(name),
                                     String_cString(value),
@@ -2309,8 +2447,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
 
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"maintenance",String_cString(fileName),lineNb);
                                     },NULL),
-                                    maintenanceNode
+                                    maintenanceNode,
+                                    &commentLineList
                                    );
+            assert(StringList_isEmpty(&commentLineList));
             if (failFlag) break;
           }
           else
@@ -2362,8 +2502,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                   if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                   printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
                                 }),NULL,
-                                NULL  // variable
+                                NULL,  // variable
+                                &commentLineList
                                );
+        assert(StringList_isEmpty(&commentLineList));
         if (failFlag) break;
       }
       else
@@ -2383,6 +2525,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       if (printInfoFlag) { printConsole(stdout,0,"OK\n"); }
     }
   }
+  StringList_done(&commentLineList);
 
   // free resources
   String_delete(value);
@@ -3834,7 +3977,7 @@ LOCAL bool configValueConfigFileParse(void *userData, void *variable, const char
                 );
 
   // add to config list
-  configFileNode = newConfigFileNode(CONFIG_FILE_TYPE_COMMAND_LINE,
+  configFileNode = newConfigFileNode(CONFIG_FILE_TYPE_CONFIG,
                                      String_cString(string)
                                     );
   assert(configFileNode != NULL);
@@ -3992,6 +4135,12 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueFo
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
       break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<yyyy>|*-<mm>|*-<dd>|*");
+      }
+      break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
         const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
@@ -4104,6 +4253,12 @@ LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigV
       (*formatUserData) = (WeekDaySet*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"Mon|Tue|Wed|Thu|Fri|Sat|Sun|*,...");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -4224,6 +4379,12 @@ LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueFo
       (*formatUserData) = (MaintenanceTime*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<hh>|*:<mm>|*");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -5247,6 +5408,10 @@ LOCAL void doneAll(void)
     struct sigaction signalAction;
   #endif /* HAVE_SIGACTION */
 
+  // deinitialize command line options and config values
+  CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
+  ConfigValue_done(CONFIG_VALUES);
+
   // deinitialize modules
   Server_doneAll();
   Job_doneAll();
@@ -5264,10 +5429,6 @@ LOCAL void doneAll(void)
   Compress_doneAll();
   Password_doneAll();
   Thread_doneAll();
-
-  // deinitialize command line options and config values
-  CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
-  ConfigValue_done(CONFIG_VALUES);
 
   // done server ca, cert, key
   doneKey(&serverKey);
@@ -5438,7 +5599,7 @@ Errors updateConfig(void)
   StringList            configLinesList;
   String                line;
   Errors                error;
-  int                   i;
+  uint                  i;
   StringNode            *nextStringNode;
   ConfigValueFormat     configValueFormat;
   const MaintenanceNode *maintenanceNode;
@@ -8362,6 +8523,12 @@ bool configValuePasswordFormat(void **formatUserData, ConfigValueFormatOperation
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
       break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<password>");
+      }
+      break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
         const Password *password = (Password*)(*formatUserData);
@@ -8538,6 +8705,12 @@ bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueFormatOp
       (*formatUserData) = (CryptAlgorithms*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<crypt algorithm>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -8988,6 +9161,12 @@ bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueFormatO
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
       break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"[r|x|g:]<pattern>");
+      }
+      break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
@@ -9047,6 +9226,12 @@ bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValueFormat
       (*formatUserData) = ((EntryList*)data)->head;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"[r|x|g:]<pattern>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -9147,6 +9332,12 @@ bool configValuePatternFormat(void **formatUserData, ConfigValueFormatOperations
       (*formatUserData) = ((PatternList*)data)->head;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"[r|x|g:]<pattern>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -9268,6 +9459,12 @@ bool configValueMountFormat(void **formatUserData, ConfigValueFormatOperations f
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
       break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<mount point>,<device name>");
+      }
+      break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
         const MountNode *mountNode = (MountNode*)(*formatUserData);
@@ -9351,6 +9548,12 @@ bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueFormatOperat
       (*formatUserData) = ((PatternList*)data)->head;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"[r|x|g:]<name|pattern>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -9529,6 +9732,12 @@ bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValueForma
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
       break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<delta compression>+<byte compression>|<delta compression>|<byte compression>");
+      }
+      break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
         CompressAlgorithmsDeltaByte *compressAlgorithmsDeltaByte = (CompressAlgorithmsDeltaByte*)(*formatUserData);
@@ -9662,6 +9871,12 @@ bool configValueCertificateFormat(void **formatUserData, ConfigValueFormatOperat
       (*formatUserData) = (CompressAlgorithmsDeltaByte*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<file name>|base64:<data>|<data>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -9801,6 +10016,12 @@ bool configValueKeyFormat(void **formatUserData, ConfigValueFormatOperations for
       (*formatUserData) = (Key*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<file name>|base64:<data>|<data>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -10068,6 +10289,12 @@ bool configValueHashDataFormat(void **formatUserData, ConfigValueFormatOperation
       (*formatUserData) = (Hash*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<file name>|base64:<data>|<data>");
+      }
       break;
     case CONFIG_VALUE_FORMAT_OPERATION:
       {
@@ -12524,6 +12751,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     String_debugDone();
     List_debugDone();
   #endif /* not NDEBUG */
+fprintf(stderr,"%s, %d: BBBBBBBBBBBBBBBBBBBBBB\n",__FILE__,__LINE__);
 
   return errorToExitcode(error);
 }
