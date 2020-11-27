@@ -397,6 +397,7 @@ common/%.o: common/%.cpp
 #--------------------------------- objects -----------------------------------
 
 BAR_SOURCES                 = bar.c \
+                              configuration.c \
                               commands_create.c \
                               commands_list.c \
                               commands_test.c \

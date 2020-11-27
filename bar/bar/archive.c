@@ -28,6 +28,7 @@
 #include "common/passwords.h"
 
 #include "errors.h"
+#include "configuration.h"
 #include "chunks.h"
 #include "compress.h"
 #include "crypt.h"

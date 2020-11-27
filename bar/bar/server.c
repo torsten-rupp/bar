@@ -39,6 +39,8 @@
 #include "common/patternlists.h"
 #include "common/passwords.h"
 
+#include "errors.h"
+#include "configuration.h"
 #include "entrylists.h"
 #include "crypt.h"
 #include "archive.h"
