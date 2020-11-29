@@ -259,6 +259,7 @@ typedef struct
 } ProgressInfo;
 
 /***************************** Variables *******************************/
+//TODO
 LOCAL const char                 *indexDatabaseFileName = NULL;
 LOCAL IndexIsMaintenanceTime     indexIsMaintenanceTimeFunction;
 LOCAL void                       *indexIsMaintenanceTimeUserData;

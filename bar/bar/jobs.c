@@ -618,7 +618,7 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
 LOCAL void initOptionsFileServer(FileServer *fileServer)
 {
   assert(fileServer != NULL);
-  assert(globalOptions.defaultFileServer != NULL);
+//  assert(globalOptions.defaultFileServer != NULL);
 
   UNUSED_VARIABLE(fileServer);
 }
@@ -686,10 +686,10 @@ LOCAL void doneOptionsFileServer(FileServer *fileServer)
 LOCAL void initOptionsFTPServer(FTPServer *ftpServer)
 {
   assert(ftpServer != NULL);
-  assert(globalOptions.defaultFTPServer != NULL);
+//  assert(globalOptions.defaultFTPServer != NULL);
 
   ftpServer->loginName = String_new();
-  Password_initDuplicate(&ftpServer->password,&globalOptions.defaultFTPServer->ftp.password);
+  Password_initDuplicate(&ftpServer->password,&globalOptions.defaultFTPServer.ftp.password);
 }
 
 /***********************************************************************\
@@ -757,13 +757,13 @@ LOCAL void doneOptionsFTPServer(FTPServer *ftpServer)
 LOCAL void initOptionsSSHServer(SSHServer *sshServer)
 {
   assert(sshServer != NULL);
-  assert(globalOptions.defaultSSHServer != NULL);
+//  assert(globalOptions.defaultSSHServer != NULL);
 
   sshServer->port      = 0;
   sshServer->loginName = String_new();
-  Password_initDuplicate(&sshServer->password,&globalOptions.defaultSSHServer->ssh.password);
-  duplicateKey(&sshServer->publicKey,&globalOptions.defaultSSHServer->ssh.publicKey);
-  duplicateKey(&sshServer->privateKey,&globalOptions.defaultSSHServer->ssh.privateKey);
+  Password_initDuplicate(&sshServer->password,&globalOptions.defaultSSHServer.ssh.password);
+  Configuration_duplicateKey(&sshServer->publicKey,&globalOptions.defaultSSHServer.ssh.publicKey);
+  Configuration_duplicateKey(&sshServer->privateKey,&globalOptions.defaultSSHServer.ssh.privateKey);
 }
 
 /***********************************************************************\
@@ -784,8 +784,8 @@ LOCAL void duplicateOptionsSSHServer(SSHServer *sshServer, const SSHServer *from
   sshServer->port      = fromSSHServer->port;
   sshServer->loginName = String_duplicate(fromSSHServer->loginName);
   Password_initDuplicate(&sshServer->password,&fromSSHServer->password);
-  duplicateKey(&sshServer->publicKey,&fromSSHServer->publicKey);
-  duplicateKey(&sshServer->privateKey,&fromSSHServer->privateKey);
+  Configuration_duplicateKey(&sshServer->publicKey,&fromSSHServer->publicKey);
+  Configuration_duplicateKey(&sshServer->privateKey,&fromSSHServer->privateKey);
 }
 
 /***********************************************************************\
@@ -804,8 +804,8 @@ LOCAL void clearOptionsSSHServer(SSHServer *sshServer)
   sshServer->port = 0;
   String_clear(sshServer->loginName);
   Password_clear(&sshServer->password);
-  clearKey(&sshServer->publicKey);
-  clearKey(&sshServer->privateKey);
+  Configuration_clearKey(&sshServer->publicKey);
+  Configuration_clearKey(&sshServer->privateKey);
 }
 
 /***********************************************************************\
@@ -821,8 +821,8 @@ LOCAL void doneOptionsSSHServer(SSHServer *sshServer)
 {
   assert(sshServer != NULL);
 
-  doneKey(&sshServer->privateKey);
-  doneKey(&sshServer->publicKey);
+  Configuration_doneKey(&sshServer->privateKey);
+  Configuration_doneKey(&sshServer->publicKey);
   Password_done(&sshServer->password);
   String_delete(sshServer->loginName);
 }
@@ -839,12 +839,12 @@ LOCAL void doneOptionsSSHServer(SSHServer *sshServer)
 LOCAL void initOptionsWebDAVServer(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
-  assert(globalOptions.defaultWebDAVServer != NULL);
+//  assert(globalOptions.defaultWebDAVServer != NULL);
 
   webDAVServer->loginName = String_new();
-  Password_initDuplicate(&webDAVServer->password,&globalOptions.defaultWebDAVServer->webDAV.password);
-  duplicateKey(&webDAVServer->publicKey,&globalOptions.defaultWebDAVServer->webDAV.publicKey);
-  duplicateKey(&webDAVServer->privateKey,&globalOptions.defaultWebDAVServer->webDAV.privateKey);
+  Password_initDuplicate(&webDAVServer->password,&globalOptions.defaultWebDAVServer.webDAV.password);
+  Configuration_duplicateKey(&webDAVServer->publicKey,&globalOptions.defaultWebDAVServer.webDAV.publicKey);
+  Configuration_duplicateKey(&webDAVServer->privateKey,&globalOptions.defaultWebDAVServer.webDAV.privateKey);
 }
 
 /***********************************************************************\
@@ -864,8 +864,8 @@ LOCAL void duplicateOptionsWebDAVServer(WebDAVServer *webDAVServer, const WebDAV
 
   webDAVServer->loginName = String_duplicate(fromWEBDAVServer->loginName);
   Password_initDuplicate(&webDAVServer->password,&fromWEBDAVServer->password);
-  duplicateKey(&webDAVServer->publicKey,&fromWEBDAVServer->publicKey);
-  duplicateKey(&webDAVServer->privateKey,&fromWEBDAVServer->privateKey);
+  Configuration_duplicateKey(&webDAVServer->publicKey,&fromWEBDAVServer->publicKey);
+  Configuration_duplicateKey(&webDAVServer->privateKey,&fromWEBDAVServer->privateKey);
 }
 
 /***********************************************************************\
@@ -883,8 +883,8 @@ LOCAL void clearOptionsWebDAVServer(WebDAVServer *webDAVServer)
 
   String_clear(webDAVServer->loginName);
   Password_clear(&webDAVServer->password);
-  clearKey(&webDAVServer->publicKey);
-  clearKey(&webDAVServer->privateKey);
+  Configuration_clearKey(&webDAVServer->publicKey);
+  Configuration_clearKey(&webDAVServer->privateKey);
 }
 
 /***********************************************************************\
@@ -900,8 +900,8 @@ LOCAL void doneOptionsWebDAVServer(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
 
-  doneKey(&webDAVServer->privateKey);
-  doneKey(&webDAVServer->publicKey);
+  Configuration_doneKey(&webDAVServer->privateKey);
+  Configuration_doneKey(&webDAVServer->publicKey);
   Password_done(&webDAVServer->password);
   String_delete(webDAVServer->loginName);
 }
@@ -1207,8 +1207,8 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   }
   jobOptions->cryptPasswordMode                 = PASSWORD_MODE_DEFAULT;
   Password_clear(&jobOptions->cryptPassword);
-  clearKey(&jobOptions->cryptPublicKey);
-  clearKey(&jobOptions->cryptPrivateKey);
+  Configuration_clearKey(&jobOptions->cryptPublicKey);
+  Configuration_clearKey(&jobOptions->cryptPrivateKey);
 
   String_clear(jobOptions->preProcessScript );
   String_clear(jobOptions->postProcessScript);
@@ -3807,8 +3807,8 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->cryptType                                 = globalOptions.cryptType;
   jobOptions->cryptPasswordMode                         = globalOptions.cryptPasswordMode;
   Password_initDuplicate(&jobOptions->cryptPassword,&globalOptions.cryptPassword);
-  duplicateKey(&jobOptions->cryptPublicKey,&globalOptions.cryptPublicKey);
-  duplicateKey(&jobOptions->cryptPrivateKey,&globalOptions.cryptPrivateKey);
+  Configuration_duplicateKey(&jobOptions->cryptPublicKey,&globalOptions.cryptPublicKey);
+  Configuration_duplicateKey(&jobOptions->cryptPrivateKey,&globalOptions.cryptPrivateKey);
 
   jobOptions->preProcessScript                          = String_new();
   jobOptions->postProcessScript                         = String_new();
@@ -3927,8 +3927,8 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode                         = fromJobOptions->cryptPasswordMode;
   Password_initDuplicate(&jobOptions->cryptPassword,&fromJobOptions->cryptPassword);
-  duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
-  duplicateKey(&jobOptions->cryptPrivateKey,&fromJobOptions->cryptPrivateKey);
+  Configuration_duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
+  Configuration_duplicateKey(&jobOptions->cryptPrivateKey,&fromJobOptions->cryptPrivateKey);
 
   jobOptions->preProcessScript                          = String_duplicate(fromJobOptions->preProcessScript);
   jobOptions->postProcessScript                         = String_duplicate(fromJobOptions->postProcessScript);
@@ -3994,8 +3994,8 @@ void Job_doneOptions(JobOptions *jobOptions)
   String_delete(jobOptions->postProcessScript);
   String_delete(jobOptions->preProcessScript);
 
-  doneKey(&jobOptions->cryptPrivateKey);
-  doneKey(&jobOptions->cryptPublicKey);
+  Configuration_doneKey(&jobOptions->cryptPrivateKey);
+  Configuration_doneKey(&jobOptions->cryptPublicKey);
   Password_done(&jobOptions->cryptPassword);
 
   String_delete(jobOptions->destination);

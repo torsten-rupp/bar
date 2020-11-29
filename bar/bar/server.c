@@ -318,15 +318,6 @@ typedef struct
 /***************************** Variables *******************************/
 LOCAL String                hostName;
 
-LOCAL ServerModes           serverMode;
-LOCAL uint                  serverPort;
-#ifdef HAVE_GNU_TLS
-LOCAL const Certificate     *serverCA;
-LOCAL const Certificate     *serverCert;
-LOCAL const Key             *serverKey;
-#endif /* HAVE_GNU_TLS */
-LOCAL const Hash            *serverPasswordHash;
-
 LOCAL ClientList            clientList;                  // list with clients
 LOCAL AuthorizationFailList authorizationFailList;       // list with failed client authorizations
 LOCAL Thread                jobThread;                   // thread executing jobs create/restore
@@ -975,7 +966,7 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
     if (!String_isEmpty(name))
     {
       String_set(globalOptions.masterInfo.name,name);
-      if (!setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
+      if (!Configuration_setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
       {
         Semaphore_unlock(&newMaster.lock);
         return ERROR_INSUFFICIENT_MEMORY;
@@ -989,7 +980,7 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
     else
     {
       String_clear(globalOptions.masterInfo.name);
-      clearHash(&globalOptions.masterInfo.uuidHash);
+      Configuration_clearHash(&globalOptions.masterInfo.uuidHash);
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Cleared paired master"
@@ -1068,7 +1059,7 @@ LOCAL Errors clearPairedMaster(void)
     if (!String_isEmpty(globalOptions.masterInfo.name))
     {
       String_clear(globalOptions.masterInfo.name);
-      clearHash(&globalOptions.masterInfo.uuidHash);
+      Configuration_clearHash(&globalOptions.masterInfo.uuidHash);
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Cleared paired master"
@@ -1351,7 +1342,7 @@ LOCAL void pairingThreadCode(void)
   line = String_new();
   while (!quitFlag)
   {
-    switch (serverMode)
+    switch (globalOptions.serverMode)
     {
       case SERVER_MODE_MASTER:
         // try pairing all slaves
@@ -1586,7 +1577,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
   }
   String_delete(line);
 
-  switch (serverMode)
+  switch (globalOptions.serverMode)
   {
     case SERVER_MODE_MASTER:
       // disconnect slaves
@@ -1870,7 +1861,7 @@ LOCAL void pauseThreadCode(void)
           pauseFlags.indexMaintenance = FALSE;
 
           // continue all slaves
-          if (serverMode == SERVER_MODE_MASTER)
+          if (globalOptions.serverMode == SERVER_MODE_MASTER)
           {
             JOB_SLAVE_LIST_ITERATE(slaveNode)
             {
@@ -3134,7 +3125,7 @@ LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordL
   if (!LIST_CONTAINS(indexCryptPasswordList,
                      indexCryptPasswordNode,
                         Password_equals(indexCryptPasswordNode->cryptPassword,cryptPassword)
-                     && keyEquals(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey)
+                     && Configuration_keyEquals(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey)
                     )
      )
   {
@@ -3145,7 +3136,7 @@ LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordL
     }
 
     indexCryptPasswordNode->cryptPassword = Password_duplicate(cryptPassword);
-    duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
+    Configuration_duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
 
     List_append(indexCryptPasswordList,indexCryptPasswordNode);
   }
@@ -3167,7 +3158,7 @@ LOCAL void freeIndexCryptPasswordNode(IndexCryptPasswordNode *indexCryptPassword
 
   UNUSED_VARIABLE(userData);
 
-  doneKey(&indexCryptPasswordNode->cryptPrivateKey);
+  Configuration_doneKey(&indexCryptPasswordNode->cryptPrivateKey);
   if (indexCryptPasswordNode->cryptPassword != NULL) Password_delete(indexCryptPasswordNode->cryptPassword);
 }
 
@@ -3375,7 +3366,7 @@ LOCAL void updateIndexThreadCode(void)
             {
               // set password/key
               Password_set(&jobOptions.cryptPassword,indexCryptPasswordNode->cryptPassword);
-              setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
+              Configuration_setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
 
               // index update
               startTimestamp = Misc_getTimestamp();
@@ -5206,17 +5197,17 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   #ifdef HAVE_GNU_TLS
-    if ((serverCA == NULL) || (serverCA->data == NULL) || (serverCA->length == 0))
+    if (Configuration_isCertificateAvailable(&globalOptions.serverCA))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CA,"no server certificate authority data");
       return;
     }
-    if ((serverCert == NULL) || (serverCert->data == NULL) || (serverCert->length == 0))
+    if (Configuration_isCertificateAvailable(&globalOptions.serverCert))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_CERTIFICATE,"no server certificate data");
       return;
     }
-    if ((serverKey == NULL) || (serverKey->data == NULL) || (serverKey->length == 0))
+    if (Configuration_isKeyAvailable(&globalOptions.serverKey))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NO_TLS_KEY,"no server key data");
       return;
@@ -5227,12 +5218,12 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
     SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       error = Network_startTLS(&clientInfo->io.network.socketHandle,
-                               serverCA->data,
-                               serverCA->length,
-                               serverCert->data,
-                               serverCert->length,
-                               serverKey->data,
-                               serverKey->length
+                               globalOptions.serverCA.data,
+                               globalOptions.serverCA.length,
+                               globalOptions.serverCert.data,
+                               globalOptions.serverCert.length,
+                               globalOptions.serverKey.data,
+                               globalOptions.serverKey.length
                               );
       if (error != ERROR_NONE)
       {
@@ -5319,7 +5310,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       if (ServerIO_verifyPassword(&clientInfo->io,
                                   encryptedPassword,
                                   encryptType,
-                                  serverPasswordHash
+                                  &globalOptions.serverPasswordHash
                                  )
          )
       {
@@ -5371,9 +5362,9 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
           // verify master UUID (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.uuidHash.length);
 //if (globalOptions.masterInfo.uuidHash.data != NULL) debugDumpMemory(globalOptions.masterInfo.uuidHash.data,globalOptions.masterInfo.uuidHash.length,0);
-          if (!equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
+          if (!Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
           {
-            error = ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
+            error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
                       ? ERROR_NOT_PAIRED
                       : ERROR_INVALID_PASSWORD_;
             logMessage(NULL,  // logHandle,
@@ -5485,7 +5476,7 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(argumentMap);
 
   s = NULL;
-  switch (serverMode)
+  switch (globalOptions.serverMode)
   {
     case SERVER_MODE_MASTER: s = "MASTER"; break;
     case SERVER_MODE_SLAVE:  s = "SLAVE";  break;
@@ -6723,8 +6714,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       {
         Password_setString(&serverNode->ssh.password,password);
       }
-      setKeyString(&serverNode->ssh.publicKey,publicKey);
-      setKeyString(&serverNode->ssh.privateKey,privateKey);
+      Configuration_setKeyString(&serverNode->ssh.publicKey,publicKey);
+      Configuration_setKeyString(&serverNode->ssh.privateKey,privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
       String_set(serverNode->webDAV.loginName,loginName);
@@ -6732,8 +6723,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       {
         Password_setString(&serverNode->webDAV.password,password);
       }
-      setKeyString(&serverNode->webDAV.publicKey,publicKey);
-      setKeyString(&serverNode->webDAV.privateKey,privateKey);
+      Configuration_setKeyString(&serverNode->webDAV.publicKey,publicKey);
+      Configuration_setKeyString(&serverNode->webDAV.privateKey,privateKey);
       break;
   }
   serverNode->maxConnectionCount = maxConnectionCount;
@@ -6933,8 +6924,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         {
           Password_setString(&serverNode->ssh.password,password);
         }
-        setKeyString(&serverNode->ssh.publicKey,publicKey);
-        setKeyString(&serverNode->ssh.privateKey,privateKey);
+        Configuration_setKeyString(&serverNode->ssh.publicKey,publicKey);
+        Configuration_setKeyString(&serverNode->ssh.privateKey,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
         String_set(serverNode->webDAV.loginName,loginName);
@@ -6942,8 +6933,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         {
           Password_setString(&serverNode->webDAV.password,password);
         }
-        setKeyString(&serverNode->webDAV.publicKey,publicKey);
-        setKeyString(&serverNode->webDAV.privateKey,privateKey);
+        Configuration_setKeyString(&serverNode->webDAV.publicKey,publicKey);
+        Configuration_setKeyString(&serverNode->webDAV.privateKey,privateKey);
         break;
     }
     serverNode->maxConnectionCount = maxConnectionCount;
@@ -7233,7 +7224,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     pauseEndDateTime = Misc_getCurrentDateTime()+(uint64)pauseTime;
 
     // suspend all slaves
-    if (serverMode == SERVER_MODE_MASTER)
+    if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
       error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
@@ -7357,7 +7348,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     }
 
     // suspend all slaves
-    if (serverMode == SERVER_MODE_MASTER)
+    if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
       error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
@@ -7434,7 +7425,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     pauseFlags.indexMaintenance = FALSE;
 
     // set running state on slaves
-    if (serverMode == SERVER_MODE_MASTER)
+    if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
       error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
@@ -9615,7 +9606,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   {
     jobNode = NULL;
 
-    if (serverMode == SERVER_MODE_MASTER)
+    if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
       // add new local job
 
@@ -19902,14 +19893,9 @@ Errors Server_run(ServerModes       mode,
   // initialize variables
   AutoFree_init(&autoFreeList);
   hostName                       = Network_getHostName(String_new());
-  serverMode                     = mode;
-  serverPort                     = port;
-  #ifdef HAVE_GNU_TLS
-    serverCA                     = ca;
-    serverCert                   = cert;
-    serverKey                    = key;
-  #endif /* HAVE_GNU_TLS */
-  serverPasswordHash             = passwordHash;
+//TODO: remove
+//  serverMode                     = mode;
+//  serverPort                     = port;
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
   List_init(&authorizationFailList);
@@ -19946,7 +19932,7 @@ Errors Server_run(ServerModes       mode,
              VERSION_MAJOR,
              VERSION_MINOR,
              VERSION_PATCH,
-             (serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
+             (globalOptions.serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
              String_cString(hostName),
              (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
             );
@@ -19954,7 +19940,7 @@ Errors Server_run(ServerModes       mode,
             VERSION_MAJOR,
             VERSION_MINOR,
             VERSION_PATCH,
-            (serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
+            (globalOptions.serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
             String_cString(hostName),
             (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
            );
@@ -20041,21 +20027,21 @@ Errors Server_run(ServerModes       mode,
   }
   if (tlsPort != 0)
   {
-    if (   isCertificateAvailable(ca)
-        && isCertificateAvailable(cert)
-        && isKeyAvailable(key)
+    if (   Configuration_isCertificateAvailable(ca)
+        && Configuration_isCertificateAvailable(cert)
+        && Configuration_isKeyAvailable(key)
        )
     {
       #ifdef HAVE_GNU_TLS
         error = Network_initServer(&serverTLSSocketHandle,
                                    tlsPort,
                                    SERVER_SOCKET_TYPE_TLS,
-                                   serverCA->data,
-                                   serverCA->length,
-                                   serverCert->data,
-                                   serverCert->length,
-                                   serverKey->data,
-                                   serverKey->length
+                                   globalOptions.serverCA.data,
+                                   globalOptions.serverCA.length,
+                                   globalOptions.serverCert.data,
+                                   globalOptions.serverCert.length,
+                                   globalOptions.serverKey.data,
+                                   globalOptions.serverKey.length
                                   );
         if (error != ERROR_NONE)
         {
@@ -20079,9 +20065,9 @@ Errors Server_run(ServerModes       mode,
     }
     else
     {
-      if (!isCertificateAvailable(ca)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started");
-      if (!isCertificateAvailable(cert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started");
-      if (!isKeyAvailable(key)) printWarning("No key data (bar-server-key.pem file) - TLS server not started");
+      if (!Configuration_isCertificateAvailable(ca)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started");
+      if (!Configuration_isCertificateAvailable(cert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started");
+      if (!Configuration_isKeyAvailable(key)) printWarning("No key data (bar-server-key.pem file) - TLS server not started");
     }
   }
   if (!serverFlag && !serverTLSFlag)
@@ -20097,7 +20083,7 @@ Errors Server_run(ServerModes       mode,
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
-  if (serverPasswordHash->data == NULL)
+  if (Configuration_isHashAvailable(&globalOptions.serverPasswordHash))
   {
     printWarning("No server password set!");
   }
@@ -20155,7 +20141,7 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
-  if (serverMode == SERVER_MODE_MASTER)
+  if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
     if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
     {
@@ -20196,7 +20182,7 @@ Errors Server_run(ServerModes       mode,
   }
 
   // auto-start pairing if unpaired slave or debug mode
-  if (serverMode == SERVER_MODE_SLAVE)
+  if (globalOptions.serverMode == SERVER_MODE_SLAVE)
   {
     if (   String_isEmpty(globalOptions.masterInfo.name)
         || (globalOptions.debug.serverLevel >= 1)
@@ -20305,7 +20291,7 @@ Errors Server_run(ServerModes       mode,
                                                                     );
 
             clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-            if (serverMode == SERVER_MODE_MASTER)
+            if (globalOptions.serverMode == SERVER_MODE_MASTER)
             {
               if (clientWaitRestTime > 0)
               {
@@ -20346,12 +20332,12 @@ Errors Server_run(ServerModes       mode,
           // start SSL
           #ifdef HAVE_GNU_TLS
             error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
-                                     serverCA->data,
-                                     serverCA->length,
-                                     serverCert->data,
-                                     serverCert->length,
-                                     serverKey->data,
-                                     serverKey->length
+                                     globalOptions.serverCA.data,
+                                     globalOptions.serverCA.length,
+                                     globalOptions.serverCert.data,
+                                     globalOptions.serverCert.length,
+                                     globalOptions.serverKey.data,
+                                     globalOptions.serverKey.length
                                     );
             if (error != ERROR_NONE)
             {
@@ -20464,7 +20450,7 @@ Errors Server_run(ServerModes       mode,
                       break;
                   }
 
-                  if (serverMode == SERVER_MODE_MASTER)
+                  if (globalOptions.serverMode == SERVER_MODE_MASTER)
                   {
                     printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
                   }
@@ -20495,7 +20481,7 @@ Errors Server_run(ServerModes       mode,
                     break;
                 }
 
-                if (serverMode == SERVER_MODE_MASTER)
+                if (globalOptions.serverMode == SERVER_MODE_MASTER)
                 {
                   printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
                 }
@@ -20525,7 +20511,7 @@ Errors Server_run(ServerModes       mode,
               // increment authorization failure
               incrementAuthorizationFail(disconnectClientNode);
 
-              if (serverMode == SERVER_MODE_MASTER)
+              if (globalOptions.serverMode == SERVER_MODE_MASTER)
               {
                 printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
               }
@@ -20600,7 +20586,7 @@ Errors Server_run(ServerModes       mode,
     }
 
     // auto pairing master
-    if (serverMode == SERVER_MODE_SLAVE)
+    if (globalOptions.serverMode == SERVER_MODE_SLAVE)
     {
       if (newMaster.pairingMode == PAIRING_MODE_AUTO)
       {
@@ -20633,7 +20619,7 @@ Errors Server_run(ServerModes       mode,
 
   // wait for thread exit
   Job_listSetEnd();
-  if (serverMode == SERVER_MODE_MASTER)
+  if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
     if (Index_isAvailable())
     {
@@ -20708,9 +20694,9 @@ Errors Server_run(ServerModes       mode,
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
              "Terminate BAR server%s",
-             (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
+             (globalOptions.serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
-  printInfo(1,"Terminate BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
+  printInfo(1,"Terminate BAR server%s\n",(globalOptions.serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
 
   return ERROR_NONE;
 }

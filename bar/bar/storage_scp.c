@@ -388,10 +388,10 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
     if (storageInfo->storageSpecifier.hostPort == 0) storageInfo->storageSpecifier.hostPort = sshServer.port;
-    duplicateKey(&storageInfo->scp.publicKey, &sshServer.publicKey );
-    duplicateKey(&storageInfo->scp.privateKey,&sshServer.privateKey);
-    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.publicKey,{ doneKey(&storageInfo->scp.publicKey); });
-    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.privateKey,{ doneKey(&storageInfo->scp.privateKey); });
+    Configuration_duplicateKey(&storageInfo->scp.publicKey, &sshServer.publicKey );
+    Configuration_duplicateKey(&storageInfo->scp.privateKey,&sshServer.privateKey);
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.publicKey,{ Configuration_doneKey(&storageInfo->scp.publicKey); });
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.privateKey,{ Configuration_doneKey(&storageInfo->scp.privateKey); });
     if (String_isEmpty(storageInfo->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
@@ -523,8 +523,8 @@ LOCAL Errors StorageSCP_done(StorageInfo *storageInfo)
 
   // free SSH server connection
   #ifdef HAVE_SSH2
-    doneKey(&storageInfo->scp.privateKey);
-    doneKey(&storageInfo->scp.publicKey);
+    Configuration_doneKey(&storageInfo->scp.privateKey);
+    Configuration_doneKey(&storageInfo->scp.publicKey);
     freeServer(storageInfo->scp.serverId);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);

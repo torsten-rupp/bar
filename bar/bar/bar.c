@@ -91,91 +91,37 @@
 
 /***************************** Datatypes *******************************/
 
+// mounted list
+typedef struct MountedNode
+{
+  LIST_NODE_HEADER(struct MountedNode);
+
+  String name;                                                // mount point
+  String device;                                              // mount device (optional)
+  uint   mountCount;                                          // mount count (unmount iff 0)
+  uint64 lastMountTimestamp;
+} MountedNode;
+
+typedef struct
+{
+  LIST_HEADER(MountedNode);
+
+  Semaphore lock;
+} MountedList;
+
 /***************************** Variables *******************************/
-GlobalOptions            globalOptions;
-GlobalOptionSet          globalOptionSet;
 String                   uuid;
-String                   tmpDirectory;
 Semaphore                consoleLock;
 #ifdef HAVE_NEWLOCALE
   locale_t               POSIXLocale;
 #endif /* HAVE_NEWLOCALE */
 
-
-#if 0
-LOCAL Commands           command;
-LOCAL String             jobUUIDName;
-
+#if 1
 LOCAL String             jobUUID;                          // UUID of job to execute/convert
-LOCAL String             storageName;
-LOCAL EntryList          includeEntryList;                 // included entries
-LOCAL PatternList        excludePatternList;               // excluded entry patterns
-
-LOCAL StorageFlags       storageFlags;
-
-LOCAL const char         *changeToDirectory;
-
-LOCAL uint               generateKeyBits;
-LOCAL uint               generateKeyMode;
-#endif
-
-#if 0
-// Note: initialized once only here
-LOCAL bool               daemonFlag       = FALSE;
-LOCAL bool               noDetachFlag     = FALSE;
-LOCAL bool               versionFlag      = FALSE;
-LOCAL bool               helpFlag         = FALSE;
-LOCAL bool               xhelpFlag        = FALSE;
-LOCAL bool               helpInternalFlag = FALSE;
-
 LOCAL MountedList        mountedList;                      // list of current mounts
-
-LOCAL Commands           command;
-LOCAL String             jobUUIDName;
-
-LOCAL String             jobUUID;                          // UUID of job to execute/convert
-LOCAL String             storageName;
-LOCAL EntryList          includeEntryList;                 // included entries
-LOCAL PatternList        excludePatternList;               // excluded entry patterns
-
-LOCAL StorageFlags       storageFlags;
-
-LOCAL const char         *changeToDirectory;
-
-LOCAL Server             defaultFileServer;
-LOCAL Server             defaultFTPServer;
-LOCAL Server             defaultSSHServer;
-LOCAL Server             defaultWebDAVServer;
-LOCAL Device             defaultDevice;
-LOCAL ServerModes        serverMode;
-LOCAL uint               serverPort;
-LOCAL uint               serverTLSPort;
-LOCAL Certificate        serverCA;
-LOCAL Certificate        serverCert;
-LOCAL Key                serverKey;
-LOCAL Hash               serverPasswordHash;
-LOCAL uint               serverMaxConnections;
-
-LOCAL const char         *continuousDatabaseFileName;
-LOCAL const char         *indexDatabaseFileName;
-
-LOCAL ulong              logTypes;
-LOCAL const char         *logFileName;
-LOCAL const char         *logFormat;
-LOCAL const char         *logPostCommand;
-
-LOCAL bool               batchFlag;
-
-LOCAL const char         *pidFileName;
-
-LOCAL uint               generateKeyBits;
-LOCAL uint               generateKeyMode;
 #endif
 
 /*---------------------------------------------------------------------*/
-
-LOCAL ConfigFileList     configFileList;      // list of configuration files to read
-LOCAL bool               configModified;
 
 LOCAL Semaphore          logLock;
 LOCAL FILE               *logFile = NULL;     // log file handle
@@ -211,10 +157,10 @@ LOCAL void openLog(void)
 {
   SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (logFileName != NULL)
+    if (globalOptions.logFileName != NULL)
     {
-      logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!",logFileName,strerror(errno));
+      logFile = fopen(globalOptions.logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
     }
   }
 }
@@ -253,11 +199,11 @@ LOCAL void reopenLog(void)
 {
   SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (logFileName != NULL)
+    if (globalOptions.logFileName != NULL)
     {
       fclose(logFile);
-      logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
+      logFile = fopen(globalOptions.logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
     }
   }
 }
@@ -327,9 +273,9 @@ LOCAL void signalHandler(int signalNumber)
   deletePIDFile();
 
   // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
-  if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
+  if (!String_isEmpty(globalOptions.tmpDirectory) && !String_equalsCString(globalOptions.tmpDirectory,"/"))
   {
-    (void)File_delete(tmpDirectory,TRUE);
+    (void)File_delete(globalOptions.tmpDirectory,TRUE);
   }
 
   // Note: do not free resources to avoid further errors
@@ -631,7 +577,6 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-//TODOL: move to configuration?
 LOCAL void freeMountedNode(MountedNode *mountedNode, void *userData)
 {
   assert(mountedNode != NULL);
@@ -696,6 +641,7 @@ LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
   String_delete(bandWidthNode->fileName);
 }
 
+#if 0
 /***********************************************************************\
 * Name   : initGlobalOptions
 * Purpose: initialize global option values
@@ -1050,9 +996,9 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.masterInfo.name);
   String_delete(globalOptions.incrementalDataDirectory);
   String_delete(globalOptions.jobsDirectory);
-  String_delete(globalOptions.tmpDirectory);
   String_delete(globalOptions.barExecutable);
 }
+#endif
 
 /***********************************************************************\
 * Name   : initAll
@@ -1122,10 +1068,8 @@ LOCAL Errors initAll(void)
   Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-  initGlobalOptions();
+  Configuration_initGlobalOptions();
   uuid                                   = String_new();
-
-  tmpDirectory                           = String_new();
 
   #ifdef HAVE_NEWLOCALE
     POSIXLocale                          = newlocale(LC_ALL,"POSIX",0);
@@ -1134,46 +1078,7 @@ LOCAL Errors initAll(void)
   Semaphore_init(&mountedList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&mountedList);
 
-  command                                = COMMAND_NONE;
-  jobUUIDName                            = String_new();
-
-  changeToDirectory                      = NULL;
-
   jobUUID                                = String_new();
-  storageName                            = String_new();
-  EntryList_init(&includeEntryList);
-  PatternList_init(&excludePatternList);
-  initServer(&defaultFileServer,NULL,SERVER_TYPE_FILE);
-  initServer(&defaultFTPServer,NULL,SERVER_TYPE_FTP);
-  initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
-  initServer(&defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
-  initDevice(&defaultDevice);
-  serverMode                             = SERVER_MODE_MASTER;
-  serverPort                             = DEFAULT_SERVER_PORT;
-  serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
-  initCertificate(&serverCA);
-  initCertificate(&serverCert);
-  initKey(&serverKey);
-  initHash(&serverPasswordHash);
-  serverMaxConnections                   = DEFAULT_MAX_SERVER_CONNECTIONS;
-
-  continuousDatabaseFileName             = NULL;
-  indexDatabaseFileName                  = NULL;
-
-  logTypes                               = LOG_TYPE_NONE;
-  logFileName                            = NULL;
-  logFormat                              = DEFAULT_LOG_FORMAT;
-  logPostCommand                         = NULL;
-
-  batchFlag                              = FALSE;
-
-  pidFileName                            = NULL;
-
-  generateKeyBits                        = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
-  generateKeyMode                        = CRYPT_KEY_MODE_NONE;
-
-  List_init(&configFileList);
-  configModified                         = FALSE;
 
   Semaphore_init(&logLock,SEMAPHORE_TYPE_BINARY);
   logFile                                = NULL;
@@ -1182,25 +1087,11 @@ LOCAL Errors initAll(void)
   lastOutputLine                         = NULL;
 
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
-  AUTOFREE_ADD(&autoFreeList,&globalOptions,{ doneGlobalOptions(); });
+  AUTOFREE_ADD(&autoFreeList,&globalOptions,{ Configuration_doneGlobalOptions(); });
   AUTOFREE_ADD(&autoFreeList,uuid,{ String_delete(uuid); });
-  AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
   AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
-  AUTOFREE_ADD(&autoFreeList,jobUUIDName,{ String_delete(jobUUIDName); });
   AUTOFREE_ADD(&autoFreeList,jobUUID,{ String_delete(jobUUID); });
-  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
-  AUTOFREE_ADD(&autoFreeList,&includeEntryList,{ EntryList_done(&includeEntryList); });
-  AUTOFREE_ADD(&autoFreeList,&excludePatternList,{ PatternList_done(&excludePatternList); });
-  AUTOFREE_ADD(&autoFreeList,&defaultFileServer,{ doneServer(&defaultFileServer); });
-  AUTOFREE_ADD(&autoFreeList,&defaultFTPServer,{ doneServer(&defaultFTPServer); });
-  AUTOFREE_ADD(&autoFreeList,&defaultSSHServer,{ doneServer(&defaultSSHServer); });
-  AUTOFREE_ADD(&autoFreeList,&defaultWebDAVServer,{ doneServer(&defaultWebDAVServer); });
-  AUTOFREE_ADD(&autoFreeList,&defaultDevice,{ doneDevice(&defaultDevice); });
-  AUTOFREE_ADD(&autoFreeList,&serverCert,{ doneCertificate(&serverCert); });
-  AUTOFREE_ADD(&autoFreeList,&serverKey,{ doneKey(&serverKey); });
-  AUTOFREE_ADD(&autoFreeList,&serverPasswordHash,{ doneHash(&serverPasswordHash); });
-  AUTOFREE_ADD(&autoFreeList,&configFileList,{ List_done(&configFileList,CALLBACK_((ListNodeFreeFunction)freeConfigFileNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&logLock,{ Semaphore_done(&logLock); });
   AUTOFREE_ADD(&autoFreeList,&outputLineHandle,{ Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL); });
 
@@ -1404,51 +1295,20 @@ LOCAL void doneAll(void)
   Password_doneAll();
   Thread_doneAll();
 
-  // done server ca, cert, key
-  doneKey(&serverKey);
-  doneCertificate(&serverCert);
-  doneCertificate(&serverCA);
-
   // deinitialize variables
   #ifdef HAVE_NEWLOCALE
     freelocale(POSIXLocale);
   #endif /* HAVE_NEWLOCALE */
   Semaphore_done(&logLock);
-  if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
-  if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
-  if (defaultDevice.writePreProcessCommand != NULL) String_delete(defaultDevice.writePreProcessCommand);
-  if (defaultDevice.eccCommand != NULL) String_delete(defaultDevice.eccCommand);
-  if (defaultDevice.blankCommand != NULL) String_delete(defaultDevice.blankCommand);
-  if (defaultDevice.eccPostProcessCommand != NULL) String_delete(defaultDevice.eccPostProcessCommand);
-  if (defaultDevice.eccPreProcessCommand != NULL) String_delete(defaultDevice.eccPreProcessCommand);
-  if (defaultDevice.imageCommand != NULL) String_delete(defaultDevice.imageCommand);
-  if (defaultDevice.imagePostProcessCommand != NULL) String_delete(defaultDevice.imagePostProcessCommand);
-  if (defaultDevice.imagePreProcessCommand != NULL) String_delete(defaultDevice.imagePreProcessCommand);
-  if (defaultDevice.unloadVolumeCommand != NULL) String_delete(defaultDevice.unloadVolumeCommand);
-  if (defaultDevice.loadVolumeCommand != NULL) String_delete(defaultDevice.loadVolumeCommand);
-  if (defaultDevice.requestVolumeCommand != NULL) String_delete(defaultDevice.requestVolumeCommand);
-  if (defaultDevice.name != NULL) String_delete(defaultDevice.name);
 
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
-  List_done(&configFileList,CALLBACK_((ListNodeFreeFunction)freeConfigFileNode,NULL));
-  doneHash(&serverPasswordHash);
-  doneServer(&defaultWebDAVServer);
-  doneServer(&defaultSSHServer);
-  doneServer(&defaultFTPServer);
-  doneServer(&defaultFileServer);
-  PatternList_done(&excludePatternList);
-  EntryList_done(&includeEntryList);
-  String_delete(storageName);
   String_delete(jobUUID);
-
-  String_delete(jobUUIDName);
 
   List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
   Semaphore_done(&mountedList.lock);
 
-  String_delete(tmpDirectory);
   String_delete(uuid);
-  doneGlobalOptions();
+  Configuration_doneGlobalOptions();
 
   Semaphore_done(&consoleLock);
 
@@ -1498,26 +1358,26 @@ LOCAL Errors readAllServerKeys(void)
 
   // init default servers
   fileName = String_new();
-  initKey(&key);
+  Configuration_initKey(&key);
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
   {
-    duplicateKey(&defaultSSHServer.ssh.publicKey,&key);
-    duplicateKey(&defaultWebDAVServer.webDAV.publicKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
   }
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
   if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
   {
-    duplicateKey(&defaultSSHServer.ssh.privateKey,&key);
-    duplicateKey(&defaultWebDAVServer.webDAV.privateKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
   }
-  doneKey(&key);
+  Configuration_doneKey(&key);
   String_delete(fileName);
 
   // read default server CA, certificate, key
-  (void)readCertificateFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)readCertificateFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-  (void)readKeyFile(&serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+  (void)readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
+  (void)readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+  (void)readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
 
   return ERROR_NONE;
 }
@@ -1844,9 +1704,9 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
   {
     if ((logHandle != NULL) || (logFile != NULL))
     {
-      if ((logType == LOG_TYPE_ALWAYS) || ((logTypes & logType) != 0))
+      if ((logType == LOG_TYPE_ALWAYS) || ((globalOptions.logTypes & logType) != 0))
       {
-        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),logFormat);
+        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),globalOptions.logFormat);
 
         // log to session log file
         if (logHandle != NULL)
@@ -1941,18 +1801,18 @@ void fatalLogMessage(const char *text, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  if (logFileName != NULL)
+  if (globalOptions.logFileName != NULL)
   {
     // try to open log file if not already open
     if (logFile == NULL)
     {
-      logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
+      logFile = fopen(globalOptions.logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
     }
 
     if (logFile != NULL)
     {
-      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),logFormat);
+      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),globalOptions.logFormat);
 
       // append to log file
       (void)fprintf(logFile,"%s> ",String_cString(dateTime));
@@ -2335,7 +2195,7 @@ void logPostProcess(LogHandle        *logHandle,
   assert(jobName != NULL);
   assert(jobOptions != NULL);
 
-  if (!stringIsEmpty(logPostCommand))
+  if (!stringIsEmpty(globalOptions.logPostCommand))
   {
     if (logHandle != NULL)
     {
@@ -2363,7 +2223,7 @@ void logPostProcess(LogHandle        *logHandle,
         }
 //TODO: macro expanded 2x!
         Misc_expandMacros(command,
-                          logPostCommand,
+                          globalOptions.logPostCommand,
                           EXPAND_MACRO_MODE_STRING,
                           textMacros.data,
                           textMacros.count,
@@ -2373,7 +2233,7 @@ void logPostProcess(LogHandle        *logHandle,
         assert(logHandle->logFileName != NULL);
 
         StringList_init(&stderrList);
-        error = Misc_executeCommand(logPostCommand,
+        error = Misc_executeCommand(globalOptions.logPostCommand,
                                     textMacros.data,
                                     textMacros.count,
                                     CALLBACK_(NULL,NULL),
@@ -2437,13 +2297,13 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
             maxConnectionCount = MAX_UINT;
             break;
           case SERVER_TYPE_FTP:
-            maxConnectionCount = defaultFTPServer.maxConnectionCount;
+            maxConnectionCount =globalOptions.defaultFTPServer.maxConnectionCount;
             break;
           case SERVER_TYPE_SSH:
-            maxConnectionCount = defaultSSHServer.maxConnectionCount;
+            maxConnectionCount = globalOptions.defaultSSHServer.maxConnectionCount;
             break;
           case SERVER_TYPE_WEBDAV:
-            maxConnectionCount = defaultWebDAVServer.maxConnectionCount;
+            maxConnectionCount = globalOptions.defaultWebDAVServer.maxConnectionCount;
             break;
           default:
             #ifndef NDEBUG
@@ -3522,14 +3382,14 @@ LOCAL Errors createPIDFile(void)
   Errors     error;
   FileHandle fileHandle;
 
-  if (!stringIsEmpty(pidFileName))
+  if (!stringIsEmpty(globalOptions.pidFileName))
   {
     fileName = String_new();
-    error = File_open(&fileHandle,File_setFileNameCString(fileName,pidFileName),FILE_OPEN_CREATE);
+    error = File_open(&fileHandle,File_setFileNameCString(fileName,globalOptions.pidFileName),FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      printError(_("Cannot create process id file '%s' (error: %s)"),pidFileName,Error_getText(error));
+      printError(_("Cannot create process id file '%s' (error: %s)"),globalOptions.pidFileName,Error_getText(error));
       return error;
     }
     File_printLine(&fileHandle,"%d",(int)getpid());
@@ -3551,9 +3411,9 @@ LOCAL Errors createPIDFile(void)
 
 LOCAL void deletePIDFile(void)
 {
-  if (pidFileName != NULL)
+  if (globalOptions.pidFileName != NULL)
   {
-    (void)File_deleteCString(pidFileName,FALSE);
+    (void)File_deleteCString(globalOptions.pidFileName,FALSE);
   }
 }
 
@@ -3665,7 +3525,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   if (Misc_isStdoutTerminal()) printInfo(1,"Generate keys (collecting entropie)...");
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,globalOptions.generateKeyBits,globalOptions.generateKeyMode);
   if (error != ERROR_NONE)
   {
     printError(_("Cannot create encryption key pair (error: %s)!"),Error_getText(error));
@@ -3864,7 +3724,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   if (Misc_isStdoutTerminal()) printInfo(1,"Generate signature keys (collecting entropie)...");
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
-  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
+  error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,globalOptions.generateKeyBits,globalOptions.generateKeyMode);
   if (error != ERROR_NONE)
   {
     printError(_("Cannot create signature key pair (error: %s)!"),Error_getText(error));
@@ -4042,7 +3902,7 @@ LOCAL Errors runDaemon(void)
   if (Continuous_isAvailable())
   {
       // init continuous
-      error = Continuous_init(continuousDatabaseFileName);
+      error = Continuous_init(globalOptions.continuousDatabaseFileName);
       if (error != ERROR_NONE)
       {
         printError(_("Cannot initialise continuous (error: %s)!"),
@@ -4058,15 +3918,15 @@ LOCAL Errors runDaemon(void)
   globalOptions.runMode = RUN_MODE_SERVER;
 
   // run server (not detached)
-  error = Server_run(serverMode,
-                     serverPort,
-                     serverTLSPort,
-                     &serverCA,
-                     &serverCert,
-                     &serverKey,
-                     &serverPasswordHash,
-                     serverMaxConnections,
-                     indexDatabaseFileName
+  error = Server_run(globalOptions.serverMode,
+                     globalOptions.serverPort,
+                     globalOptions.serverTLSPort,
+                     &globalOptions.serverCA,
+                     &globalOptions.serverCert,
+                     &globalOptions.serverKey,
+                     &globalOptions.serverPasswordHash,
+                     globalOptions.serverMaxConnections,
+                     globalOptions.indexDatabaseFileName
                     );
   if (error != ERROR_NONE)
   {
@@ -4077,10 +3937,10 @@ LOCAL Errors runDaemon(void)
   }
 
   // update config
-  if (configModified)
+  if (Configuration_isModified())
   {
     (void)updateConfig();
-    configModified = FALSE;
+    Configuration_clearModified();
   }
 
   // done continouous
@@ -4114,7 +3974,7 @@ LOCAL Errors runBatch(void)
   // batch mode -> run server with standard i/o
   error = Server_batch(STDIN_FILENO,
                        STDOUT_FILENO,
-                       indexDatabaseFileName
+                       globalOptions.indexDatabaseFileName
                       );
   if (error != ERROR_NONE)
   {
@@ -4168,9 +4028,9 @@ LOCAL Errors runJob(ConstString jobUUIDName)
     }
 
     // get job data
-    String_set(storageName,jobNode->job.storageName);
-    EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,NULL,NULL);
-    PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,NULL,NULL);
+    String_set(globalOptions.storageName,jobNode->job.storageName);
+    EntryList_copy(&globalOptions.includeEntryList,&jobNode->job.includeEntryList,NULL,NULL);
+    PatternList_copy(&globalOptions.excludePatternList,&jobNode->job.excludePatternList,NULL,NULL);
     archiveType  = jobNode->archiveType;
     storageFlags = jobNode->storageFlags;
     Job_duplicateOptions(&jobOptions,&jobNode->job.options);
@@ -4185,9 +4045,9 @@ LOCAL Errors runJob(ConstString jobUUIDName)
                          NULL, // schedule UUID
                          NULL, // scheduleTitle
                          NULL, // scheduleCustomText
-                         storageName,
-                         &includeEntryList,
-                         &excludePatternList,
+                         globalOptions.storageName,
+                         &globalOptions.includeEntryList,
+                         &globalOptions.excludePatternList,
                          &jobOptions,
                          archiveType,
                          Misc_getCurrentDateTime(),
@@ -4229,7 +4089,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   // get include/excluded entries from file list
   if (!String_isEmpty(globalOptions.includeFileListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileListFileName));
+    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileListFileName));
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get included list (error: %s)!"),
@@ -4240,7 +4100,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.includeImageListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageListFileName));
+    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageListFileName));
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get included list (error: %s)!"),
@@ -4251,7 +4111,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.excludeListFileName))
   {
-    error = addExcludeListFromFile(&excludePatternList,String_cString(globalOptions.excludeListFileName));
+    error = addExcludeListFromFile(&globalOptions.excludePatternList,String_cString(globalOptions.excludeListFileName));
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get excluded list (error: %s)!"),
@@ -4264,7 +4124,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   // get include/excluded entries from commands
   if (!String_isEmpty(globalOptions.includeFileCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileCommand));
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get included list (error: %s)!"),
@@ -4275,7 +4135,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.includeImageCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageCommand));
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get included list (error: %s)!"),
@@ -4286,7 +4146,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.excludeCommand))
   {
-    error = addExcludeListFromCommand(&excludePatternList,String_cString(globalOptions.excludeCommand));
+    error = addExcludeListFromCommand(&globalOptions.excludePatternList,String_cString(globalOptions.excludeCommand));
     if (error != ERROR_NONE)
     {
       printError(_("Cannot get excluded list (error: %s)!"),
@@ -4306,7 +4166,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   Job_initOptions(&jobOptions);
 
   error = ERROR_NONE;
-  switch (command)
+  switch (globalOptions.command)
   {
     case COMMAND_CREATE_FILES:
     case COMMAND_CREATE_IMAGES:
@@ -4317,7 +4177,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         // get storage name
         if (argc > 1)
         {
-          String_setCString(storageName,argv[1]);
+          String_setCString(globalOptions.storageName,argv[1]);
         }
         else
         {
@@ -4328,7 +4188,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         // get include patterns
         if (error == ERROR_NONE)
         {
-          switch (command)
+          switch (globalOptions.command)
           {
             case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
             case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
@@ -4336,7 +4196,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           }
           for (i = 2; i < argc; i++)
           {
-            error = EntryList_appendCString(&includeEntryList,entryType,argv[i],globalOptions.patternType,NULL);
+            error = EntryList_appendCString(&globalOptions.includeEntryList,entryType,argv[i],globalOptions.patternType,NULL);
             if (error != ERROR_NONE)
             {
               break;
@@ -4352,13 +4212,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  scheduleUUID,
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
-                                 storageName,
-                                 &includeEntryList,
-                                 &excludePatternList,
+                                 globalOptions.storageName,
+                                 &globalOptions.includeEntryList,
+                                 &globalOptions.excludePatternList,
                                  &jobOptions,
                                  globalOptions.archiveType,
                                  Misc_getCurrentDateTime(),
-                                 storageFlags,
+                                 globalOptions.storageFlags,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  CALLBACK_(NULL,NULL),  // createStatusInfo
                                  CALLBACK_(NULL,NULL),  // storageRequestVolume
@@ -4426,13 +4286,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           StringList_appendCString(&storageNameList,argv[i]);
         }
 
-        switch (command)
+        switch (globalOptions.command)
         {
           case COMMAND_NONE:
             // default: info/list content
             error = Command_list(&storageNameList,
-                                 &includeEntryList,
-                                 &excludePatternList,
+                                 &globalOptions.includeEntryList,
+                                 &globalOptions.excludePatternList,
                                  !globalOptions.metaInfoFlag,  // showEntriesFlag
                                  &jobOptions,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),
@@ -4441,8 +4301,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             break;
           case COMMAND_LIST:
             error = Command_list(&storageNameList,
-                                 &includeEntryList,
-                                 &excludePatternList,
+                                 &globalOptions.includeEntryList,
+                                 &globalOptions.excludePatternList,
                                  TRUE,  // showEntriesFlag
                                  &jobOptions,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),
@@ -4451,8 +4311,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             break;
           case COMMAND_TEST:
             error = Command_test(&storageNameList,
-                                 &includeEntryList,
-                                 &excludePatternList,
+                                 &globalOptions.includeEntryList,
+                                 &globalOptions.excludePatternList,
                                  &jobOptions,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
@@ -4460,8 +4320,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             break;
           case COMMAND_COMPARE:
             error = Command_compare(&storageNameList,
-                                    &includeEntryList,
-                                    &excludePatternList,
+                                    &globalOptions.includeEntryList,
+                                    &globalOptions.excludePatternList,
                                     &jobOptions,
                                     CALLBACK_(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
@@ -4469,10 +4329,10 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             break;
           case COMMAND_RESTORE:
             error = Command_restore(&storageNameList,
-                                    &includeEntryList,
-                                    &excludePatternList,
+                                    &globalOptions.includeEntryList,
+                                    &globalOptions.excludePatternList,
                                     &jobOptions,
-                                    storageFlags,
+                                    globalOptions.storageFlags,
                                     CALLBACK_(NULL,NULL),  // restoreStatusInfo callback
                                     CALLBACK_(NULL,NULL),  // restoreError callback
                                     CALLBACK_(getCryptPasswordFromConsole,NULL),
@@ -4563,24 +4423,24 @@ LOCAL Errors runDebug(void)
   indexHandle = NULL;
 
   // init index database
-  if (stringIsEmpty(indexDatabaseFileName))
+  if (stringIsEmpty(globalOptions.indexDatabaseFileName))
   {
     printError("No index database!");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_DATABASE;
   }
 
-  error = Index_init(indexDatabaseFileName,CALLBACK_(NULL,NULL));
+  error = Index_init(globalOptions.indexDatabaseFileName,CALLBACK_(NULL,NULL));
   if (error != ERROR_NONE)
   {
     printError("Cannot init index database '%s' (error: %s)!",
-               indexDatabaseFileName,
+               globalOptions.indexDatabaseFileName,
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
+  AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseFileName,{ Index_done(); });
 
   // open index
   indexHandle = NULL;
@@ -4991,7 +4851,6 @@ LOCAL Errors bar(int argc, const char *argv[])
 {
   String         fileName;
   Errors         error;
-  ConfigFileNode *configFileNode;
   const JobNode  *jobNode;
   bool           printInfoFlag;
 
@@ -5008,7 +4867,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
 
   // output version, help
-  if (versionFlag)
+  if (globalOptions.versionFlag)
   {
     #ifndef NDEBUG
       printf("BAR version %s (debug)\n",VERSION_STRING);
@@ -5018,11 +4877,11 @@ LOCAL Errors bar(int argc, const char *argv[])
 
     return ERROR_NONE;
   }
-  if (helpFlag || xhelpFlag || helpInternalFlag)
+  if (globalOptions.helpFlag || globalOptions.xhelpFlag || globalOptions.helpInternalFlag)
   {
-    if      (helpInternalFlag) printUsage(argv[0],2);
-    else if (xhelpFlag       ) printUsage(argv[0],1);
-    else                       printUsage(argv[0],0);
+    if      (globalOptions.helpInternalFlag) printUsage(argv[0],2);
+    else if (globalOptions.xhelpFlag       ) printUsage(argv[0],1);
+    else                                     printUsage(argv[0],0);
 
     return ERROR_NONE;
   }
@@ -5037,11 +4896,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     if (File_isFile(fileName) && File_isReadable(fileName))
     {
       // add to config list
-      configFileNode = newConfigFileNode(CONFIG_FILE_TYPE_AUTO,
-                                         String_cString(fileName)
-                                        );
-      assert(configFileNode != NULL);
-      List_append(&configFileList,configFileNode);
+      Configuration_add(CONFIG_FILE_TYPE_AUTO,String_cString(fileName));
     }
 
     // read default configuration from $HOME/.bar/bar.cfg (if exists)
@@ -5051,11 +4906,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     if (File_isFile(fileName))
     {
       // add to config list
-      configFileNode = newConfigFileNode(CONFIG_FILE_TYPE_AUTO,
-                                         String_cString(fileName)
-                                        );
-      assert(configFileNode != NULL);
-      List_append(&configFileList,configFileNode);
+      Configuration_add(CONFIG_FILE_TYPE_AUTO,String_cString(fileName));
     }
 
     String_delete(fileName);
@@ -5074,19 +4925,17 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
 
   // if daemon: print info
-  printInfoFlag = !globalOptions.quietFlag && daemonFlag;
+  printInfoFlag = !globalOptions.quietFlag && globalOptions.daemonFlag;
 
   // read all configuration files
-  LIST_ITERATE(&configFileList,configFileNode)
+  error = Configuration_readAllConfigFiles(isPrintInfo(2) || printInfoFlag);
+  if (error != ERROR_NONE)
   {
-    if (!readConfigFile(configFileNode->fileName,isPrintInfo(2) || printInfoFlag))
-    {
-      return ERROR_CONFIG;
-    }
+    return error;
   }
 
   // special case: set verbose level/quiet flag in interactive mode
-  if (!daemonFlag && !batchFlag)
+  if (!globalOptions.daemonFlag && !globalOptions.batchFlag)
   {
     globalOptions.quietFlag    = FALSE;
     globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
@@ -5104,32 +4953,32 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_INVALID_ARGUMENT;
   }
 
-  if (serverMode == SERVER_MODE_MASTER)
+  if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
     // read jobs (if possible)
     (void)Job_rereadAll(globalOptions.jobsDirectory);
 
     // get UUID of job to execute
-    if (!String_isEmpty(jobUUIDName))
+    if (!String_isEmpty(globalOptions.jobUUIDOrName))
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
       {
         // find job by name or UUID
         jobNode = NULL;
-        if (jobNode == NULL) jobNode = Job_findByName(jobUUIDName);
-        if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
+        if (jobNode == NULL) jobNode = Job_findByName(globalOptions.jobUUIDOrName);
+        if (jobNode == NULL) jobNode = Job_findByUUID(globalOptions.jobUUIDOrName);
         if      (jobNode != NULL)
         {
           String_set(jobUUID,jobNode->job.uuid);
         }
-        else if (String_matchCString(jobUUIDName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
+        else if (String_matchCString(globalOptions.jobUUIDOrName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
         {
-          String_set(jobUUID,jobUUIDName);
+          String_set(jobUUID,globalOptions.jobUUIDOrName);
         }
         else
         {
           printError(_("Cannot find job '%s'!"),
-                     String_cString(jobUUIDName)
+                     String_cString(globalOptions.jobUUIDOrName)
                     );
           Job_listUnlock();
           return ERROR_CONFIG;
@@ -5184,15 +5033,15 @@ error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES);
 
   // run
   error = ERROR_NONE;
-  if      (daemonFlag)
+  if      (globalOptions.daemonFlag)
   {
     error = runDaemon();
   }
-  else if (batchFlag)
+  else if (globalOptions.batchFlag)
   {
     error = runBatch();
   }
-  else if (!String_isEmpty(jobUUID) && (command == COMMAND_NONE))
+  else if (!String_isEmpty(jobUUID) && (globalOptions.command == COMMAND_NONE))
   {
     error = runJob(jobUUID);
   }
@@ -5276,13 +5125,13 @@ int main(int argc, const char *argv[])
   // change working directory
   if (error == ERROR_NONE)
   {
-    if (!stringIsEmpty(changeToDirectory))
+    if (!stringIsEmpty(globalOptions.changeToDirectory))
     {
-      error = File_changeDirectoryCString(changeToDirectory);
+      error = File_changeDirectoryCString(globalOptions.changeToDirectory);
       if (error != ERROR_NONE)
       {
         printError(_("Cannot change to directory '%s' (error: %s)!"),
-                   changeToDirectory,
+                   globalOptions.changeToDirectory,
                    Error_getText(error)
                   );
       }
@@ -5292,12 +5141,12 @@ int main(int argc, const char *argv[])
   // run bar
   if (error == ERROR_NONE)
   {
-    if (   daemonFlag
-        && !noDetachFlag
-        && !versionFlag
-        && !helpFlag
-        && !xhelpFlag
-        && !helpInternalFlag
+    if (   globalOptions.daemonFlag
+        && !globalOptions.noDetachFlag
+        && !globalOptions.versionFlag
+        && !globalOptions.helpFlag
+        && !globalOptions.xhelpFlag
+        && !globalOptions.helpInternalFlag
        )
     {
       // run as daemon

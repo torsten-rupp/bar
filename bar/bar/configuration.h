@@ -23,6 +23,7 @@
 #include "common/global.h"
 #include "common/lists.h"
 #include "common/strings.h"
+#include "common/cmdoptions.h"
 #include "common/configvalues.h"
 #include "common/patterns.h"
 #include "common/patternlists.h"
@@ -32,8 +33,6 @@
 #include "entrylists.h"
 #include "compress.h"
 #include "crypt.h"
-#include "index.h"
-#include "jobs.h"
 #include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
@@ -59,6 +58,7 @@ extern const ConfigValueSelect CONFIG_VALUE_RESTORE_ENTRY_MODES[];
 extern ConfigValue             CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
+
 // config file type
 typedef enum
 {
@@ -81,100 +81,10 @@ typedef struct
   LIST_HEADER(ConfigFileNode);
 } ConfigFileList;
 
-// mounted list
-typedef struct MountedNode
-{
-  LIST_NODE_HEADER(struct MountedNode);
-
-  String name;                                                // mount point
-  String device;                                              // mount device (optional)
-  uint   mountCount;                                          // mount count (unmount iff 0)
-  uint64 lastMountTimestamp;
-} MountedNode;
-
-typedef struct
-{
-  LIST_HEADER(MountedNode);
-
-  Semaphore lock;
-} MountedList;
-
-// commands
-typedef enum
-{
-  COMMAND_NONE,
-
-  COMMAND_CREATE_FILES,
-  COMMAND_CREATE_IMAGES,
-  COMMAND_LIST,
-  COMMAND_TEST,
-  COMMAND_COMPARE,
-  COMMAND_RESTORE,
-  COMMAND_CONVERT,
-
-  COMMAND_GENERATE_ENCRYPTION_KEYS,
-  COMMAND_GENERATE_SIGNATURE_KEYS,
-  COMMAND_NEW_KEY_PASSWORD,
-
-  COMMAND_UNKNOWN,
-} Commands;
-
 /***************************** Variables *******************************/
 extern GlobalOptions   globalOptions;          // global options
 extern GlobalOptionSet globalOptionSet;        // global option set
 extern String          uuid;                   // BAR instance UUID
-extern String          tmpDirectory;           // temporary directory
-
-// Note: initialized once only here
-extern bool               daemonFlag;
-extern bool               noDetachFlag;
-extern bool               versionFlag;
-extern bool               helpFlag;
-extern bool               xhelpFlag;
-extern bool               helpInternalFlag;
-
-extern MountedList        mountedList;                      // list of current mounts
-
-extern Commands           command;
-extern String             jobUUIDName;
-
-extern String             jobUUID;                          // UUID of job to execute/convert
-extern String             storageName;
-extern EntryList          includeEntryList;                 // included entries
-extern PatternList        excludePatternList;               // excluded entry patterns
-
-extern StorageFlags       storageFlags;
-
-extern const char         *changeToDirectory;
-
-extern Server             defaultFileServer;
-extern Server             defaultFTPServer;
-extern Server             defaultSSHServer;
-extern Server             defaultWebDAVServer;
-extern Device             defaultDevice;
-extern ServerModes        serverMode;
-extern uint               serverPort;
-extern uint               serverTLSPort;
-extern Certificate        serverCA;
-extern Certificate        serverCert;
-extern Key                serverKey;
-extern Hash               serverPasswordHash;
-extern uint               serverMaxConnections;
-
-extern const char         *continuousDatabaseFileName;
-extern const char         *indexDatabaseFileName;
-
-extern ulong              logTypes;
-extern const char         *logFileName;
-extern const char         *logFormat;
-extern const char         *logPostCommand;
-
-extern bool               batchFlag;
-
-extern const char         *pidFileName;
-
-extern uint               generateKeyBits;
-extern uint               generateKeyMode;
 
 /****************************** Macros *********************************/
 
@@ -219,41 +129,7 @@ extern uint               generateKeyMode;
 #endif
 
 /***********************************************************************\
-* Name   : initCertificate
-* Purpose: init empty certificate
-* Input  : certificate - certificate
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void initCertificate(Certificate *certificate);
-
-/***********************************************************************\
-* Name   : duplicateCertificate
-* Purpose: duplicate certificate
-* Input  : toCertificate   - certificate variable
-*          fromCertificate - from certificate
-* Output : -
-* Return : TRUE iff certificate duplicated
-* Notes  : -
-\***********************************************************************/
-
-bool duplicateCertificate(Certificate *toCertificate, const Certificate *fromCertificate);
-
-/***********************************************************************\
-* Name   : doneCertificate
-* Purpose: free certificate
-* Input  : certificate - certificate
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void doneCertificate(Certificate *certificate);
-
-/***********************************************************************\
-* Name   : isCertificateAvailable
+* Name   : Configuration_isCertificateAvailable
 * Purpose: check if certificate is available
 * Input  : certificate - certificate
 * Output : -
@@ -261,43 +137,15 @@ void doneCertificate(Certificate *certificate);
 * Notes  : -
 \***********************************************************************/
 
-bool isCertificateAvailable(const Certificate *certificate);
+INLINE bool Configuration_isCertificateAvailable(const Certificate *certificate);
+#if defined(NDEBUG) || defined(__CONFIGURATION_IMPLEMENTATION__)
+INLINE bool Configuration_isCertificateAvailable(const Certificate *certificate)
+{
+  assert(certificate != NULL);
 
-/***********************************************************************\
-* Name   : clearCertificate
-* Purpose: clear certificate
-* Input  : certificate - certificate
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void clearCertificate(Certificate *certificate);
-
-/***********************************************************************\
-* Name   : setCertificate
-* Purpose: set certificate
-* Input  : certificate       - certificate
-*          certificateData   - certificate data
-*          certificateLength - length of certificate data [bytes]
-* Output : -
-* Return : TRUE iff set
-* Notes  : -
-\***********************************************************************/
-
-bool setCertificate(Certificate *certificate, const void *certificateData, uint certificateLength);
-
-/***********************************************************************\
-* Name   : setCertificateString
-* Purpose: set certificate with string
-* Input  : certificate - certificate
-*          string      - certificate data
-* Output : -
-* Return : TRUE iff set
-* Notes  : -
-\***********************************************************************/
-
-bool setCertificateString(Certificate *kecertificatey, ConstString string);
+  return (certificate->data != NULL) && (certificate->length > 0);
+}
+#endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
 //TODO: remove
 #if 0
@@ -317,7 +165,7 @@ Errors readCAFile(Certificate *certificate, const char *fileName);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : initKey
+* Name   : Configuration_initKey
 * Purpose: init empty public/private key
 * Input  : key - key
 * Output : -
@@ -325,10 +173,10 @@ Errors readCAFile(Certificate *certificate, const char *fileName);
 * Notes  : -
 \***********************************************************************/
 
-void initKey(Key *key);
+void Configuration_initKey(Key *key);
 
 /***********************************************************************\
-* Name   : setKey
+* Name   : Configuration_setKey
 * Purpose: set public/private key
 * Input  : key    - key
 *          data   - key data
@@ -338,10 +186,10 @@ void initKey(Key *key);
 * Notes  : -
 \***********************************************************************/
 
-bool setKey(Key *key, const void *data, uint length);
+bool Configuration_setKey(Key *key, const void *data, uint length);
 
 /***********************************************************************\
-* Name   : setKeyString
+* Name   : Configuration_setKeyString
 * Purpose: set public/private key with string
 * Input  : key    - key
 *          string - key data (PEM encoded)
@@ -350,10 +198,10 @@ bool setKey(Key *key, const void *data, uint length);
 * Notes  : -
 \***********************************************************************/
 
-bool setKeyString(Key *key, ConstString string);
+bool Configuration_setKeyString(Key *key, ConstString string);
 
 /***********************************************************************\
-* Name   : duplicateKey
+* Name   : Configuration_duplicateKey
 * Purpose: duplicate public/private key
 * Input  : key     - key variable
 *          fromKey - from key
@@ -362,7 +210,7 @@ bool setKeyString(Key *key, ConstString string);
 * Notes  : -
 \***********************************************************************/
 
-bool duplicateKey(Key *key, const Key *fromKey);
+bool Configuration_duplicateKey(Key *key, const Key *fromKey);
 
 /***********************************************************************\
 * Name   : doneKey
@@ -376,7 +224,7 @@ bool duplicateKey(Key *key, const Key *fromKey);
 void doneKey(Key *key);
 
 /***********************************************************************\
-* Name   : clearKey
+* Name   : Configuration_clearKey
 * Purpose: clear public/private key
 * Input  : key - key
 * Output : -
@@ -384,10 +232,10 @@ void doneKey(Key *key);
 * Notes  : -
 \***********************************************************************/
 
-void clearKey(Key *key);
+void Configuration_clearKey(Key *key);
 
 /***********************************************************************\
-* Name   : copyKey
+* Name   : Configuration_copyKey
 * Purpose: copy public/private key
 * Input  : key     - key variable
 *          fromKey - from key
@@ -396,10 +244,10 @@ void clearKey(Key *key);
 * Notes  : -
 \***********************************************************************/
 
-bool copyKey(Key *key, const Key *fromKey);
+bool Configuration_copyKey(Key *key, const Key *fromKey);
 
 /***********************************************************************\
-* Name   : isKeyAvailable
+* Name   : Configuration_isKeyAvailable
 * Purpose: check if public/private key is available
 * Input  : key - key
 * Output : -
@@ -407,18 +255,18 @@ bool copyKey(Key *key, const Key *fromKey);
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool isKeyAvailable(const Key *key);
+INLINE bool Configuration_isKeyAvailable(const Key *key);
 #if defined(NDEBUG) || defined(__CONFIGURATION_IMPLEMENTATION__)
-INLINE bool isKeyAvailable(const Key *key)
+INLINE bool Configuration_isKeyAvailable(const Key *key)
 {
   assert(key != NULL);
 
-  return key->data != NULL;
+  return (key->data != NULL) && (key->length > 0);
 }
 #endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : keyEquals
+* Name   : Configuration_keyEquals
 * Purpose: check if public/private key equals
 * Input  : key0,key1 - keys
 * Output : -
@@ -426,9 +274,9 @@ INLINE bool isKeyAvailable(const Key *key)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool keyEquals(const Key *key0, const Key *key1);
+INLINE bool Configuration_keyEquals(const Key *key0, const Key *key1);
 #if defined(NDEBUG) || defined(__CONFIGURATION_IMPLEMENTATION__)
-INLINE bool keyEquals(const Key *key0, const Key *key1)
+INLINE bool Configuration_keyEquals(const Key *key0, const Key *key1)
 {
   if      ((key0 != NULL) && (key1 != NULL))
   {
@@ -448,18 +296,7 @@ INLINE bool keyEquals(const Key *key0, const Key *key1)
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : initHash
-* Purpose: init hash
-* Input  : hash - hash variable
-* Output : hash - empty hash
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void initHash(Hash *hash);
-
-/***********************************************************************\
-* Name   : setHash
+* Name   : Configuration_setHash
 * Purpose: set hash
 * Input  : hash      - hash
 *          cryptHash - crypt hash
@@ -468,21 +305,10 @@ void initHash(Hash *hash);
 * Notes  : -
 \***********************************************************************/
 
-bool setHash(Hash *hash, const CryptHash *cryptHash);
+bool Configuration_setHash(Hash *hash, const CryptHash *cryptHash);
 
 /***********************************************************************\
-* Name   : doneHash
-* Purpose: done hash
-* Input  : hash - hash
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void doneHash(Hash *hash);
-
-/***********************************************************************\
-* Name   : clearHash
+* Name   : Configuration_clearHash
 * Purpose: clear hash
 * Input  : hash - hash
 * Output : -
@@ -490,10 +316,10 @@ void doneHash(Hash *hash);
 * Notes  : -
 \***********************************************************************/
 
-void clearHash(Hash *hash);
+void Configuration_clearHash(Hash *hash);
 
 /***********************************************************************\
-* Name   : isHashAvailable
+* Name   : Configuration_isHashAvailable
 * Purpose: check if hash is available
 * Input  : hash - hash
 * Output : -
@@ -501,27 +327,27 @@ void clearHash(Hash *hash);
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool isHashAvailable(const Hash *hash);
+INLINE bool Configuration_isHashAvailable(const Hash *hash);
 #if defined(NDEBUG) || defined(__CONFIGURATION_IMPLEMENTATION__)
-INLINE bool isHashAvailable(const Hash *hash)
+INLINE bool Configuration_isHashAvailable(const Hash *hash)
 {
   assert(hash != NULL);
 
-  return hash->data != NULL;
+  return (hash->data != NULL) && (hash->length > 0);
 }
 #endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : equalsHash
-* Purpose: clear hash
+* Name   : Configuration_equalsHash
+* Purpose: check if hash equals crypt hash
 * Input  : hash      - hash
 *          cryptHash - crypt hash
 * Output : -
-* Return : TRUE if hashes equals
+* Return : TRUE iff hashes equals
 * Notes  : -
 \***********************************************************************/
 
-bool equalsHash(Hash *hash, const CryptHash *cryptHash);
+bool Configuration_equalsHash(Hash *hash, const CryptHash *cryptHash);
 
 // ----------------------------------------------------------------------
 
@@ -1109,6 +935,28 @@ bool configValueHashDataParse(void *userData, void *variable, const char *name, 
 //bool configValueHashDataFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
 
 /***********************************************************************\
+* Name   : Configuration_initGlobalOptions
+* Purpose: initialize global option values
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_initGlobalOptions(void);
+
+/***********************************************************************\
+* Name   : Configuration_doneGlobalOptions
+* Purpose: deinitialize global option values
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneGlobalOptions(void);
+
+/***********************************************************************\
 * Name   : getConfigFileName
 * Purpose: get writable config file name
 * Input  : fileName - file name variable
@@ -1118,6 +966,12 @@ bool configValueHashDataParse(void *userData, void *variable, const char *name, 
 \***********************************************************************/
 
 String getConfigFileName(String fileName);
+
+void Configuration_add(ConfigFileTypes configFileType, const char *fileName);
+
+void Configuration_setModified(void);
+void Configuration_clearModified(void);
+bool Configuration_isModified(void);
 
 /***********************************************************************\
 * Name   : readConfigFile
@@ -1130,6 +984,17 @@ String getConfigFileName(String fileName);
 \***********************************************************************/
 
 bool readConfigFile(ConstString fileName, bool printInfoFlag);
+
+/***********************************************************************\
+* Name   : Configuration_readAllConfigFiles
+* Purpose: read configuration from file
+* Input  : printInfoFlag - TRUE for output info, FALSE otherwise
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Configuration_readAllConfigFiles(bool printInfoFlag);
 
 /***********************************************************************\
 * Name   : updateConfig

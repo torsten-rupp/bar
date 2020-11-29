@@ -320,7 +320,7 @@ LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *stora
   File_splitFileName(archiveName,&directoryName,&baseName);
   result = File_getTmpFileName(archiveName,
                                String_cString(baseName),
-                               !String_isEmpty(directoryName) ? directoryName : tmpDirectory
+                               !String_isEmpty(directoryName) ? directoryName : globalOptions.tmpDirectory
                               );
   String_delete(baseName);
   String_delete(directoryName);

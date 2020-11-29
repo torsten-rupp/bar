@@ -666,6 +666,35 @@ typedef struct
   Semaphore lock;
 } MaintenanceList;
 
+// storage flags
+typedef struct
+{
+  bool noStorage : 1;
+  bool dryRun : 1;
+} StorageFlags;
+extern const StorageFlags STORAGE_FLAGS_NONE;
+extern const StorageFlags STORAGE_FLAGS_NO_STORAGE;
+
+// commands
+typedef enum
+{
+  COMMAND_NONE,
+
+  COMMAND_CREATE_FILES,
+  COMMAND_CREATE_IMAGES,
+  COMMAND_LIST,
+  COMMAND_TEST,
+  COMMAND_COMPARE,
+  COMMAND_RESTORE,
+  COMMAND_CONVERT,
+
+  COMMAND_GENERATE_ENCRYPTION_KEYS,
+  COMMAND_GENERATE_SIGNATURE_KEYS,
+  COMMAND_NEW_KEY_PASSWORD,
+
+  COMMAND_UNKNOWN,
+} Commands;
+
 // global options
 typedef struct
 {
@@ -690,12 +719,23 @@ typedef struct
   ServerList                  serverList;                     // list with FTP/SSH/WebDAV servers
   DeviceList                  deviceList;                     // list with devices
 
+  Server                      defaultFileServer;
+  Server                      defaultFTPServer;
+  Server                      defaultSSHServer;
+  Server                      defaultWebDAVServer;
+  Device                      defaultDevice;
+
+  const char                  *indexDatabaseFileName;
   bool                        indexDatabaseUpdateFlag;        // TRUE for update of index database
   bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index database
   BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
   uint                        indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 
+  const char                  *continuousDatabaseFileName;
+
   MaintenanceList             maintenanceList;                // maintenance list
+
+  StorageFlags                storageFlags;
 
   bool                        metaInfoFlag;                   // TRUE iff meta info should be print
   bool                        groupFlag;                      // TRUE iff entries in list should be grouped
@@ -732,6 +772,43 @@ typedef struct
                                                                    5 - some SSH debug debug
                                                                    6 - all SSH/FTP/WebDAV debug
                                                               */
+
+  // --- run options
+  String                      jobUUIDOrName;                  // job to execute (name or UUID)
+
+  String                      storageName;
+  EntryList                   includeEntryList;               // included entries
+  PatternList                 excludePatternList;             // excluded entry patterns
+
+  const char                  *changeToDirectory;
+
+  Commands                    command;
+  uint                        generateKeyBits;
+  uint                        generateKeyMode;
+
+  ulong                       logTypes;
+  const char                  *logFileName;
+  const char                  *logFormat;
+  const char                  *logPostCommand;
+
+  const char                  *pidFileName;
+
+  bool                        daemonFlag;
+  bool                        noDetachFlag;
+  bool                        batchFlag;
+  bool                        versionFlag;
+  bool                        helpFlag;
+  bool                        xhelpFlag;
+  bool                        helpInternalFlag;
+
+  ServerModes                 serverMode;
+  uint                        serverPort;
+  uint                        serverTLSPort;
+  Certificate                 serverCA;
+  Certificate                 serverCert;
+  Key                         serverKey;
+  Hash                        serverPasswordHash;
+  uint                        serverMaxConnections;
 
   // --- job options default values
   ArchiveTypes                archiveType;                    // archive type for create
@@ -793,18 +870,9 @@ typedef struct
   Key                         signaturePrivateKey;            // signature private key (not encrypted)
 #endif
   Server                      *fileServer;                    // current selected file server
-  Server                      *defaultFileServer;             // default file server
-
   Server                      *ftpServer;                     // current selected FTP server
-  Server                      *defaultFTPServer;              // default FTP server
-
   Server                      *sshServer;                     // current selected SSH server
-  Server                      *defaultSSHServer;              // default SSH server
-
   Server                      *webDAVServer;                  // current selected WebDAV server
-  Server                      *defaultWebDAVServer;           // default WebDAV server
-
-  Device                      *defaultDevice;                 // default device
   Device                      *device;                        // current selected device
 
   String                      comment;                        // comment

@@ -45,6 +45,8 @@ TEST_DATA_DIR      ?= test
 # shell in Makefile must be bash
 SHELL                     = bash
 
+CTAGS_FLAGS               = 
+
 CC                        = @CC@
 CC_FLAGS                  = @CC_FLAGS@ -g
 CC_WARN_FLAGS             = @CC_WARN_FLAGS@
@@ -144,6 +146,7 @@ CD              = cd
 CHATTR          = chattr
 CHMOD           = chmod
 CP              = cp
+CTAGS           = ctags
 CUT             = cut
 DD              = dd
 DDD             = ddd
@@ -560,7 +563,7 @@ DESTROYER_OBJECTS           = $(foreach z,$(filter %.c,  $(DESTROYER_SOURCES)),$
 
 BAR_MINIDUMP_SOURCES        = bar-minidump.cpp \
 
-BAR_MINIDUMP_SOURCES_COMMON = common/minidump.c \
+BAR_MINIDUMP_SOURCES_COMMON = common/minidump.cpp \
 
 BAR_MINIDUMP_HEADERS        = \
 
@@ -634,6 +637,7 @@ clean: \
   testcode_clean \
   gcov_clean \
   test_clean
+	$(RMF) bar.tags
 	$(RMF) $(BAR_OBJECTS_RELEASE)
 	$(RMF) $(BAR_OBJECTS_DEBUG)
 	$(RMF) $(BAR_OBJECTS_GCOV)
@@ -785,6 +789,18 @@ Makefile.depend: $(SOURCE_DIR)/Makefile $(SOURCE_DIR)/Makefile.in
           $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' >> Makefile.depend; \
         done;
+
+# create tags file
+bar.tags: \
+  $(BAR_SOURCES) \
+  $(BAR_SOURCES_OTHER) \
+  $(COMMON_SOURCES) \
+  $(COMMON_SOURCES_OTHER) \
+  $(EXTERN_SOURCES) \
+  $(DESTROYER_SOURCES) \
+  $(BAR_MINIDUMP_SOURCES) \
+  $(BAR_MINIDUMP_SOURCES_COMMON)
+	$(CTAGS) $(CTAGS_FLAGS) -f $@ $^
 
 # ----------------------------------------------------------------------------
 

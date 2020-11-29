@@ -2726,7 +2726,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->tell != NULL);
 
-  if (isKeyAvailable(&globalOptions.signaturePrivateKey))
+  if (Configuration_isKeyAvailable(&globalOptions.signaturePrivateKey))
   {
     // init variables
     AutoFree_init(&autoFreeList);
@@ -2876,7 +2876,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_unlock(&archiveHandle->lock); });
 
       // create intermediate data filename
-      error = File_getTmpFileName(archiveHandle->create.tmpFileName,"archive",tmpDirectory);
+      error = File_getTmpFileName(archiveHandle->create.tmpFileName,"archive",globalOptions.tmpDirectory);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
@@ -5730,11 +5730,11 @@ UNUSED_VARIABLE(storageInfo);
         const Key *cryptPublicKey;
 
         // check if public key available
-        if      (isKeyAvailable(&storageInfo->jobOptions->cryptPublicKey))
+        if      (Configuration_isKeyAvailable(&storageInfo->jobOptions->cryptPublicKey))
         {
           cryptPublicKey = &storageInfo->jobOptions->cryptPublicKey;
         }
-        else if (isKeyAvailable(&globalOptions.cryptPublicKey))
+        else if (Configuration_isKeyAvailable(&globalOptions.cryptPublicKey))
         {
           cryptPublicKey = &globalOptions.cryptPublicKey;
         }
@@ -6412,11 +6412,11 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
           const Key *cryptPrivateKey;
 
           // check if private key available
-          if      (isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
+          if      (Configuration_isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
           {
             cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
           }
-          else if (isKeyAvailable(&globalOptions.cryptPrivateKey))
+          else if (Configuration_isKeyAvailable(&globalOptions.cryptPrivateKey))
           {
             cryptPrivateKey = &globalOptions.cryptPrivateKey;
           }
@@ -6425,7 +6425,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
             archiveHandle->pendingError = ERROR_NO_PRIVATE_CRYPT_KEY;
             return FALSE;
           }
-          assert(isKeyAvailable(cryptPrivateKey));
+          assert(Configuration_isKeyAvailable(cryptPrivateKey));
           assert(archiveHandle->archiveCryptInfo != NULL);
 
 //fprintf(stderr,"%s, %d: private key1 \n",__FILE__,__LINE__); debugDumpMemory(cryptPrivateKey->data,cryptPrivateKey->length,0);
@@ -6640,7 +6640,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->file.deltaBufferSize           = 0L;
 
   // get intermediate output file
-  error = File_getTmpFile(&archiveEntryInfo->file.intermediateFileHandle,NULL,tmpDirectory);
+  error = File_getTmpFile(&archiveEntryInfo->file.intermediateFileHandle,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -7049,7 +7049,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->image.deltaBufferSize           = 0L;
 
   // get intermediate output file
-  error = File_getTmpFile(&archiveEntryInfo->image.intermediateFileHandle,NULL,tmpDirectory);
+  error = File_getTmpFile(&archiveEntryInfo->image.intermediateFileHandle,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -7893,7 +7893,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->hardLink.deltaBufferSize           = 0L;
 
   // get intermediate output file
-  error = File_getTmpFile(&archiveEntryInfo->hardLink.intermediateFileHandle,NULL,tmpDirectory);
+  error = File_getTmpFile(&archiveEntryInfo->hardLink.intermediateFileHandle,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -8753,11 +8753,11 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           const Key *cryptPrivateKey;
 
           // check if private key available
-          if      (isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
+          if      (Configuration_isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
           {
             cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
           }
-          else if (isKeyAvailable(&globalOptions.cryptPrivateKey))
+          else if (Configuration_isKeyAvailable(&globalOptions.cryptPrivateKey))
           {
             cryptPrivateKey = &globalOptions.cryptPrivateKey;
           }
@@ -8765,7 +8765,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           {
             return ERROR_NO_PRIVATE_CRYPT_KEY;
           }
-          assert(isKeyAvailable(cryptPrivateKey));
+          assert(Configuration_isKeyAvailable(cryptPrivateKey));
 
           // init private key: try with no password/salt, then all passwords
           Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
@@ -14454,7 +14454,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
     if (chunkHeader.id == CHUNK_ID_SIGNATURE)
     {
       // check if signature public key is available
-      if (!isKeyAvailable(&globalOptions.signaturePublicKey))
+      if (!Configuration_isKeyAvailable(&globalOptions.signaturePublicKey))
       {
         error = ERROR_NO_PUBLIC_SIGNATURE_KEY;
         break;

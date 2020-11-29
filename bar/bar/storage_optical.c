@@ -713,7 +713,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
      raw cd/dvd/bd data (volumeSize) and cd/dvd image (4G, single layer)
      including error correction codes (2x)
   */
-  error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
+  error = File_getFileSystemInfo(&fileSystemInfo,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     doneOpticalDiskSettings(&opticalDisk);
@@ -757,7 +757,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   if (fileSystemInfo.freeBytes < (volumeSize+maxMediumSize*(((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) ? 2 : 1)))
   {
     printWarning("Insufficient space in temporary directory '%s' for medium (%.1lf%s free, %.1lf%s recommended)!",
-                 String_cString(tmpDirectory),
+                 String_cString(globalOptions.tmpDirectory),
                  BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
                  BYTES_SHORT((volumeSize+maxMediumSize*(((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ? 2 : 1)))),BYTES_UNIT((volumeSize+maxMediumSize*(((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ? 2 : 1))))
                 );
@@ -797,7 +797,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   storageInfo->opticalDisk.write.totalSize              = 0LL;
 
   // create temporary directory for medium files
-  error = File_getTmpDirectoryName(storageInfo->opticalDisk.write.directory,NULL,tmpDirectory);
+  error = File_getTmpDirectoryName(storageInfo->opticalDisk.write.directory,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     StringList_done(&storageInfo->opticalDisk.write.fileNameList);
@@ -1196,7 +1196,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
     // get temporary image file name
     imageFileName = String_new();
-    error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
+    error = File_getTmpFileName(imageFileName,NULL,globalOptions.tmpDirectory);
     if (error != ERROR_NONE)
     {
       StringList_done(&executeIOInfo.stderrList);

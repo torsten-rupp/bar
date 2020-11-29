@@ -62,6 +62,7 @@
 #include "common/passwords.h"
 
 #include "errors.h"
+#include "configuration.h"
 #include "crypt.h"
 #include "server_io.h"
 #include "bar_global.h"
@@ -74,15 +75,6 @@
 #define STORAGE_BAND_WIDTH_UNLIMITED 0L
 
 /***************************** Datatypes *******************************/
-
-// storage flags
-typedef struct
-{
-  bool noStorage : 1;
-  bool dryRun : 1;
-} StorageFlags;
-extern const StorageFlags STORAGE_FLAGS_NONE;
-extern const StorageFlags STORAGE_FLAGS_NO_STORAGE;
 
 // status info data
 typedef struct

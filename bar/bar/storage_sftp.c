@@ -377,10 +377,10 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
     if (storageInfo->storageSpecifier.hostPort == 0) storageInfo->storageSpecifier.hostPort = sshServer.port;
-    duplicateKey(&storageInfo->sftp.publicKey, &sshServer.publicKey );
-    duplicateKey(&storageInfo->sftp.privateKey,&sshServer.privateKey);
-    AUTOFREE_ADD(&autoFreeList,&storageInfo->sftp.publicKey,{ doneKey(&storageInfo->sftp.publicKey); });
-    AUTOFREE_ADD(&autoFreeList,&storageInfo->sftp.privateKey,{ doneKey(&storageInfo->sftp.privateKey); });
+    Configuration_duplicateKey(&storageInfo->sftp.publicKey, &sshServer.publicKey );
+    Configuration_duplicateKey(&storageInfo->sftp.privateKey,&sshServer.privateKey);
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->sftp.publicKey,{ Configuration_doneKey(&storageInfo->sftp.publicKey); });
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->sftp.privateKey,{ Configuration_doneKey(&storageInfo->sftp.privateKey); });
     if (String_isEmpty(storageInfo->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
@@ -496,8 +496,8 @@ LOCAL Errors StorageSFTP_done(StorageInfo *storageInfo)
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
-    doneKey(&storageInfo->sftp.privateKey);
-    doneKey(&storageInfo->sftp.publicKey);
+    Configuration_doneKey(&storageInfo->sftp.privateKey);
+    Configuration_doneKey(&storageInfo->sftp.publicKey);
     freeServer(storageInfo->sftp.serverId);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);

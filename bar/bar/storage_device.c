@@ -439,7 +439,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   storageInfo->device.write.totalSize              = 0LL;
 
   // check space in temporary directory: 2x volumeSize
-  error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
+  error = File_getFileSystemInfo(&fileSystemInfo,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     StringList_done(&storageInfo->device.write.fileNameList);
@@ -450,14 +450,14 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   if (fileSystemInfo.freeBytes < (device.volumeSize*2))
   {
     printWarning("Insufficient space in temporary directory '%s' (%.1lf%s free, %.1lf%s recommended)!",
-                 String_cString(tmpDirectory),
+                 String_cString(globalOptions.tmpDirectory),
                  BYTES_SHORT(fileSystemInfo.freeBytes),BYTES_UNIT(fileSystemInfo.freeBytes),
                  BYTES_SHORT(device.volumeSize*2),BYTES_UNIT(device.volumeSize*2)
                 );
   }
 
   // create temporary directory for device files
-  error = File_getTmpDirectoryName(storageInfo->device.write.directory,NULL,tmpDirectory);
+  error = File_getTmpDirectoryName(storageInfo->device.write.directory,NULL,globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
     StringList_done(&storageInfo->device.write.fileNameList);
@@ -605,7 +605,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
 
     // get temporary image file name
     imageFileName = String_new();
-    error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
+    error = File_getTmpFileName(imageFileName,NULL,globalOptions.tmpDirectory);
     if (error != ERROR_NONE)
     {
       return error;

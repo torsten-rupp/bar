@@ -26,6 +26,8 @@
 #include "common/stringmaps.h"
 #include "common/strings.h"
 
+#include "errors.h"
+#include "configuration.h"
 #include "crypt.h"
 #include "bar_global.h"
 

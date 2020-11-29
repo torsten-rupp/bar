@@ -125,6 +125,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 LOCAL bool              initFlag = FALSE;
+//TODO
 LOCAL const char        *continuousDatabaseFileName;
 LOCAL DatabaseOpenModes continuousDatabaseOpenMode;
 LOCAL DatabaseHandle    continuousDatabaseHandle;
