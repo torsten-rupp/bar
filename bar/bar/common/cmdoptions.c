@@ -1126,52 +1126,53 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
     switch (commandLineOptions[i].type)
     {
       case CMD_OPTION_TYPE_INTEGER:
-        assert(commandLineOptions[i].variable.i != NULL);
-        assert((*commandLineOptions[i].variable.i) >= commandLineOptions[i].integerOption.min);
-        assert((*commandLineOptions[i].variable.i) <= commandLineOptions[i].integerOption.max);
+        assertx(commandLineOptions[i].variable.i != NULL,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.i) >= commandLineOptions[i].integerOption.min,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.i) <= commandLineOptions[i].integerOption.max,"%s",commandLineOptions[i].name);
         commandLineOptions[i].defaultValue.i = (*commandLineOptions[i].variable.i);
         break;
       case CMD_OPTION_TYPE_INTEGER64:
-        assert(commandLineOptions[i].variable.l != NULL);
-        assert((*commandLineOptions[i].variable.l) >= commandLineOptions[i].integer64Option.min);
-        assert((*commandLineOptions[i].variable.l) <= commandLineOptions[i].integer64Option.max);
+        assertx(commandLineOptions[i].variable.l != NULL,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.l) >= commandLineOptions[i].integer64Option.min,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.l) <= commandLineOptions[i].integer64Option.max,"%s",commandLineOptions[i].name);
         commandLineOptions[i].defaultValue.l = (*commandLineOptions[i].variable.l);
         break;
       case CMD_OPTION_TYPE_DOUBLE:
-        assert(commandLineOptions[i].variable.d != NULL);
-        assert((*commandLineOptions[i].variable.d) >= commandLineOptions[i].doubleOption.min);
-        assert((*commandLineOptions[i].variable.d) <= commandLineOptions[i].doubleOption.max);
+        assertx(commandLineOptions[i].variable.d != NULL,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.d) >= commandLineOptions[i].doubleOption.min,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.d) <= commandLineOptions[i].doubleOption.max,"%s",commandLineOptions[i].name);
         commandLineOptions[i].defaultValue.d = (*commandLineOptions[i].variable.d);
         break;
       case CMD_OPTION_TYPE_BOOLEAN:
-        assert(commandLineOptions[i].variable.b != NULL);
-        assert(   ((*commandLineOptions[i].variable.b) == TRUE )
-               || ((*commandLineOptions[i].variable.b) == FALSE)
-              );
+        assertx(commandLineOptions[i].variable.b != NULL,"%s",commandLineOptions[i].name);
+        assertx(   ((*commandLineOptions[i].variable.b) == TRUE )
+                || ((*commandLineOptions[i].variable.b) == FALSE),
+                "%s",commandLineOptions[i].name
+               );
         commandLineOptions[i].defaultValue.b = (*commandLineOptions[i].variable.b);
         break;
       case CMD_OPTION_TYPE_FLAG:
-        assert(commandLineOptions[i].variable.flags != NULL);
-        commandLineOptions[i].defaultValue.flags = (*commandLineOptions[i].variable.flags);
+        assertx(commandLineOptions[i].variable.flags != NULL,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.flags = (*commandLineOptions[i].variable.flags,"%s",commandLineOptions[i].name);
         break;
       case CMD_OPTION_TYPE_INCREMENT:
-        assert(commandLineOptions[i].variable.increment != NULL);
-        commandLineOptions[i].defaultValue.increment = (*commandLineOptions[i].variable.increment);
+        assertx(commandLineOptions[i].variable.increment != NULL,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.increment = (*commandLineOptions[i].variable.increment,"%s",commandLineOptions[i].name);
         break;
       case CMD_OPTION_TYPE_ENUM:
-        assert(commandLineOptions[i].variable.enumeration != NULL);
-        commandLineOptions[i].defaultValue.enumeration = (*commandLineOptions[i].variable.enumeration);
+        assertx(commandLineOptions[i].variable.enumeration != NULL,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.enumeration = (*commandLineOptions[i].variable.enumeration,"%s",commandLineOptions[i].name);
         break;
       case CMD_OPTION_TYPE_SELECT:
-        assert(commandLineOptions[i].variable.select != NULL);
-        commandLineOptions[i].defaultValue.select = (*commandLineOptions[i].variable.select);
+        assertx(commandLineOptions[i].variable.select != NULL,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.select = (*commandLineOptions[i].variable.select,"%s",commandLineOptions[i].name);
         break;
       case CMD_OPTION_TYPE_SET:
-        assert(commandLineOptions[i].variable.set != NULL);
+        assertx(commandLineOptions[i].variable.set != NULL,"%s",commandLineOptions[i].name);
         commandLineOptions[i].defaultValue.set = (*commandLineOptions[i].variable.set);
         break;
       case CMD_OPTION_TYPE_CSTRING:
-        assert(commandLineOptions[i].variable.cString != NULL);
+        assertx(commandLineOptions[i].variable.cString != NULL,"%s",commandLineOptions[i].name);
         if ((*commandLineOptions[i].variable.cString) != NULL)
         {
           commandLineOptions[i].defaultValue.cString = (*commandLineOptions[i].variable.cString);
@@ -1183,7 +1184,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
         }
         break;
       case CMD_OPTION_TYPE_STRING:
-        assert(commandLineOptions[i].variable.string != NULL);
+        assertx(commandLineOptions[i].variable.string != NULL,"%s",commandLineOptions[i].name);
         if ((*commandLineOptions[i].variable.string) != NULL)
         {
           commandLineOptions[i].defaultValue.string = (*commandLineOptions[i].variable.string);
