@@ -256,6 +256,15 @@ typedef enum
   #define PASSWORD_HASH_ALGORITHM CRYPT_HASH_ALGORITHM_NONE
 #endif /* HAVE_GCRYPT */
 
+// id none
+#define ID_NONE                                  0
+
+// keep all
+#define KEEP_ALL                                 -1
+
+// forever age
+#define AGE_FOREVER                              -1
+
 /***************************** Datatypes *******************************/
 
 // owner

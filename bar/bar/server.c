@@ -409,9 +409,9 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   // parse date
   if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (   !parseDateNumber(s0,&maintenanceNode->date.year )
-        || !parseDateMonth (s1,&maintenanceNode->date.month)
-        || !parseDateNumber(s2,&maintenanceNode->date.day  )
+    if (   !Configuration_parseDateNumber(s0,&maintenanceNode->date.year )
+        || !Configuration_parseDateMonth (s1,&maintenanceNode->date.month)
+        || !Configuration_parseDateNumber(s2,&maintenanceNode->date.day  )
        )
     {
       error = ERROR_PARSE_DATE;
@@ -423,7 +423,7 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   }
 
   // parse week days
-  if (!parseWeekDaySet(String_cString(weekDays),&maintenanceNode->weekDaySet))
+  if (!Configuration_parseWeekDaySet(String_cString(weekDays),&maintenanceNode->weekDaySet))
   {
     error = ERROR_PARSE_WEEKDAYS;
   }
@@ -431,8 +431,8 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   // parse begin/end time
   if (String_parse(beginTime,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (   !parseTimeNumber(s0,&maintenanceNode->beginTime.hour  )
-        || !parseTimeNumber(s1,&maintenanceNode->beginTime.minute)
+    if (   !Configuration_parseTimeNumber(s0,&maintenanceNode->beginTime.hour  )
+        || !Configuration_parseTimeNumber(s1,&maintenanceNode->beginTime.minute)
        )
     {
       error = ERROR_PARSE_TIME;
@@ -444,8 +444,8 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   }
   if (String_parse(endTime,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (   !parseTimeNumber(s0,&maintenanceNode->endTime.hour  )
-        || !parseTimeNumber(s1,&maintenanceNode->endTime.minute)
+    if (   !Configuration_parseTimeNumber(s0,&maintenanceNode->endTime.hour  )
+        || !Configuration_parseTimeNumber(s1,&maintenanceNode->endTime.minute)
        )
     {
       error = ERROR_PARSE_TIME;
@@ -624,9 +624,9 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
   // parse date
   if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (   !parseDateNumber(s0,&scheduleNode->date.year )
-        || !parseDateMonth (s1,&scheduleNode->date.month)
-        || !parseDateNumber(s2,&scheduleNode->date.day  )
+    if (   !Configuration_parseDateNumber(s0,&scheduleNode->date.year )
+        || !Configuration_parseDateMonth (s1,&scheduleNode->date.month)
+        || !Configuration_parseDateNumber(s2,&scheduleNode->date.day  )
        )
     {
       error = ERROR_PARSE_DATE;
@@ -638,7 +638,7 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
   }
 
   // parse week days
-  if (!parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
+  if (!Configuration_parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
   {
     error = ERROR_PARSE_WEEKDAYS;
   }
@@ -646,8 +646,8 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
   // parse time
   if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (   !parseTimeNumber(s0,&scheduleNode->time.hour  )
-        || !parseTimeNumber(s1,&scheduleNode->time.minute)
+    if (   !Configuration_parseTimeNumber(s0,&scheduleNode->time.hour  )
+        || !Configuration_parseTimeNumber(s1,&scheduleNode->time.minute)
        )
     {
       error = ERROR_PARSE_TIME;
@@ -997,7 +997,7 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
               );
 
     // update config file
-    error = updateConfig();
+    error = Configuration_update();
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&newMaster.lock);
@@ -1091,7 +1091,7 @@ LOCAL Errors clearPairedMaster(void)
     }
 
     // update config file
-    error = updateConfig();
+    error = Configuration_update();
     if (error != ERROR_NONE)
     {
       return error;
@@ -5822,7 +5822,7 @@ LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, IndexHandle *
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  error = updateConfig();
+  error = Configuration_update();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -6222,7 +6222,7 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
   }
 
   // create new mainteance
-  maintenanceNode = newMaintenanceNode();
+  maintenanceNode = Configuration_newMaintenanceNode();
   assert(maintenanceNode != NULL);
 
   // parse maintenance
@@ -6244,7 +6244,7 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
                         beginTime,
                         endTime
                        );
-    deleteMaintenanceNode(maintenanceNode);
+    Configuration_deleteMaintenanceNode(maintenanceNode);
     String_delete(endTime);
     String_delete(beginTime);
     String_delete(weekDays);
@@ -6258,7 +6258,7 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
   }
 
   // update config file
-  error = updateConfig();
+  error = Configuration_update();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -6394,7 +6394,7 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
   }
 
   // update config file
-  error = updateConfig();
+  error = Configuration_update();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -6462,7 +6462,7 @@ LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHand
   }
 
   // update config file
-  error = updateConfig();
+  error = Configuration_update();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -6690,7 +6690,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   // allocate storage server node
-  serverNode = newServerNode(name,serverType);
+  serverNode = Configuration_newServerNode(name,serverType);
   assert(serverNode != NULL);
 
   // init storage server settings
@@ -6737,7 +6737,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   // update config file
-  error = updateConfig();
+  error = Configuration_update();
   if (error != ERROR_NONE)
   {
     Semaphore_unlock(&globalOptions.serverList.lock);
@@ -6941,7 +6941,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     serverNode->maxStorageSize     = maxStorageSize;
 
     // update config file
-    error = updateConfig();
+    error = Configuration_update();
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -7009,10 +7009,10 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // delete storage server
-    List_removeAndFree(&globalOptions.serverList,serverNode,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
+    List_removeAndFree(&globalOptions.serverList,serverNode,CALLBACK_((ListNodeFreeFunction)Configuration_freeServerNode,NULL));
 
     // update config file
-    error = updateConfig();
+    error = Configuration_update();
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);

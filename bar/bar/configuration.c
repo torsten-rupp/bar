@@ -73,14 +73,15 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-GlobalOptions            globalOptions;
-GlobalOptionSet          globalOptionSet;
-String                   uuid;
+GlobalOptions        globalOptions;
+GlobalOptionSet      globalOptionSet;
+String               uuid;
+
+bool                 configModified;
 
 /*---------------------------------------------------------------------*/
 
-LOCAL ConfigFileList     configFileList;      // list of configuration files to read
-LOCAL bool               configModified;
+LOCAL ConfigFileList configFileList;      // list of configuration files to read
 
 /****************************** Macros *********************************/
 
@@ -90,52 +91,6 @@ LOCAL bool               configModified;
 
 #ifdef __cplusplus
   extern "C" {
-#endif
-
-#if 0
-LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseStorageFlagDryRun(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseStorageFlagNoStorage(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-
-// deprecated
-LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-
-LOCAL bool configValueConfigFileParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
-LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
-LOCAL bool configValueMaintenanceWeekDaySetParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
-LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
-LOCAL void *configValueServerFTPSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
-LOCAL void *configValueServerSSHSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
-LOCAL void *configValueServerWebDAVSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
-
-// handle deprecated configuration values
-LOCAL bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueDeprecatedMountDeviceParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
 #endif
 
 LOCAL const CommandLineUnit COMMAND_LINE_BYTES_UNITS[] = CMD_VALUE_UNIT_ARRAY
@@ -589,35 +544,15 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
   doneDevice(&deviceNode->device);
 }
 
-MaintenanceNode *newMaintenanceNode(void)
-{
-  MaintenanceNode *maintenanceNode;
-
-  maintenanceNode = LIST_NEW_NODE(MaintenanceNode);
-  if (maintenanceNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  maintenanceNode->id               = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-  maintenanceNode->date.year        = DATE_ANY;
-  maintenanceNode->date.month       = DATE_ANY;
-  maintenanceNode->date.day         = DATE_ANY;
-  maintenanceNode->weekDaySet       = WEEKDAY_SET_ANY;
-  maintenanceNode->beginTime.hour   = TIME_ANY;
-  maintenanceNode->beginTime.minute = TIME_ANY;
-  maintenanceNode->endTime.hour     = TIME_ANY;
-  maintenanceNode->endTime.minute   = TIME_ANY;
-
-  return maintenanceNode;
-}
-
-void deleteMaintenanceNode(MaintenanceNode *maintenanceNode)
-{
-  assert(maintenanceNode != NULL);
-
-  freeMaintenanceNode(maintenanceNode,NULL);
-  LIST_DELETE_NODE(maintenanceNode);
-}
+/***********************************************************************\
+* Name   : freeMaintenanceNode
+* Purpose: free maintenace node
+* Input  : maintenanceNode - maintenance node
+*          userData        - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData)
 {
@@ -627,42 +562,121 @@ void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData)
   UNUSED_VARIABLE(userData);
 }
 
-ServerNode *newServerNode(ConstString name, ServerTypes serverType)
+/***********************************************************************\
+* Name   : newMountNodeCString
+* Purpose: new mount node
+* Input  : mountName  - mount name
+*          deviceName - device name
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL MountNode *newMountNodeCString(const char *mountName, const char *deviceName)
 {
-  ServerNode *serverNode;
+  MountNode *mountNode;
 
-  assert(name != NULL);
+  assert(mountName != NULL);
+  assert(!stringIsEmpty(mountName));
 
-  // allocate server node
-  serverNode = LIST_NEW_NODE(ServerNode);
-  if (serverNode == NULL)
+  // allocate mount node
+  mountNode = LIST_NEW_NODE(MountNode);
+  if (mountNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  serverNode->id                                  = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-  initServer(serverNode,name,serverType);
-  serverNode->connection.lowPriorityRequestCount  = 0;
-  serverNode->connection.highPriorityRequestCount = 0;
-  serverNode->connection.count                    = 0;
+  mountNode->id            = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  mountNode->name          = String_newCString(mountName);
+  mountNode->device        = String_newCString(deviceName);
+  mountNode->mounted       = FALSE;
+  mountNode->mountCount    = 0;
 
-  return serverNode;
+  return mountNode;
 }
 
-void deleteServerNode(ServerNode *serverNode)
-{
-  assert(serverNode != NULL);
+/***********************************************************************\
+* Name   : newMountNode
+* Purpose: new mount node
+* Input  : mountName  - mount name
+*          deviceName - device name
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
 
-  freeServerNode(serverNode,NULL);
-  LIST_DELETE_NODE(serverNode);
+LOCAL MountNode *newMountNode(ConstString mountName, ConstString deviceName)
+{
+  assert(mountName != NULL);
+
+  return newMountNodeCString(String_cString(mountName),
+                             String_cString(deviceName)
+                            );
 }
 
-void freeServerNode(ServerNode *serverNode, void *userData)
+/***********************************************************************\
+* Name   : duplicateMountNode
+* Purpose: duplicate mount node
+* Input  : fromMountNode - from mount name
+*          userData      - user data
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL MountNode *duplicateMountNode(MountNode *fromMountNode,
+                                    void      *userData
+                                   )
 {
-  assert(serverNode != NULL);
+  MountNode *mountNode;
+
+  assert(fromMountNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  doneServer(serverNode);
+  mountNode = newMountNode(fromMountNode->name,
+                           fromMountNode->device
+                          );
+  assert(mountNode != NULL);
+
+  return mountNode;
+}
+
+/***********************************************************************\
+* Name   : freeMountNode
+* Purpose: free mount node
+* Input  : mountNode - mount node
+*          userData  - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeMountNode(MountNode *mountNode, void *userData)
+{
+  assert(mountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(mountNode->device);
+  String_delete(mountNode->name);
+}
+
+/***********************************************************************\
+* Name   : deleteMountNode
+* Purpose: delete mount node
+* Input  : mountNode - mount node
+*          userData  - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteMountNode(MountNode *mountNode)
+{
+  assert(mountNode != NULL);
+
+  freeMountNode(mountNode,NULL);
+  LIST_DELETE_NODE(mountNode);
 }
 
 //TODO: required? remove?
@@ -726,73 +740,6 @@ LOCAL Errors readCAFile(Certificate *certificate, const char *fileName)
   return ERROR_NONE;
 }
 #endif
-
-LOCAL MountNode *newMountNodeCString(const char *mountName, const char *deviceName)
-{
-  MountNode *mountNode;
-
-  assert(mountName != NULL);
-  assert(!stringIsEmpty(mountName));
-
-  // allocate mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  mountNode->id            = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-  mountNode->name          = String_newCString(mountName);
-  mountNode->device        = String_newCString(deviceName);
-  mountNode->mounted       = FALSE;
-  mountNode->mountCount    = 0;
-
-  return mountNode;
-}
-
-LOCAL MountNode *newMountNode(ConstString mountName, ConstString deviceName)
-{
-  assert(mountName != NULL);
-
-  return newMountNodeCString(String_cString(mountName),
-                             String_cString(deviceName)
-                            );
-}
-
-LOCAL MountNode *duplicateMountNode(MountNode *fromMountNode,
-                              void      *userData
-                             )
-{
-  MountNode *mountNode;
-
-  assert(fromMountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  mountNode = newMountNode(fromMountNode->name,
-                           fromMountNode->device
-                          );
-  assert(mountNode != NULL);
-
-  return mountNode;
-}
-
-LOCAL void freeMountNode(MountNode *mountNode, void *userData)
-{
-  assert(mountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(mountNode->device);
-  String_delete(mountNode->name);
-}
-
-LOCAL void deleteMountNode(MountNode *mountNode)
-{
-  assert(mountNode != NULL);
-
-  freeMountNode(mountNode,NULL);
-  LIST_DELETE_NODE(mountNode);
-}
 
 /***********************************************************************\
 * Name   : cmdOptionParseString
@@ -2250,7 +2197,7 @@ void doneDeviceSettings(Device *device)
   UNUSED_VARIABLE(device);
 }
 
-bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
+bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -2293,7 +2240,7 @@ bool parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
   return TRUE;
 }
 
-bool parseDateNumber(ConstString s, int *n)
+bool Configuration_parseDateNumber(ConstString s, int *n)
 {
   ulong i;
   long  nextIndex;
@@ -2323,7 +2270,7 @@ bool parseDateNumber(ConstString s, int *n)
   return TRUE;
 }
 
-bool parseDateMonth(ConstString s, int *month)
+bool Configuration_parseDateMonth(ConstString s, int *month)
 {
   String name;
   ulong i;
@@ -2371,7 +2318,7 @@ bool parseDateMonth(ConstString s, int *month)
   return TRUE;
 }
 
-bool parseTimeNumber(ConstString s, int *n)
+bool Configuration_parseTimeNumber(ConstString s, int *n)
 {
   ulong i;
   long  nextIndex;
@@ -2457,17 +2404,17 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
   {
     if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
     {
-      if (!parseDateNumber(s0,&bandWidthNode->year ))
+      if (!Configuration_parseDateNumber(s0,&bandWidthNode->year ))
       {
         if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth year '%s'",String_cString(s0));
         errorFlag = TRUE;
       }
-      if (!parseDateMonth     (s1,&bandWidthNode->month))
+      if (!Configuration_parseDateMonth     (s1,&bandWidthNode->month))
       {
         if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth month '%s'",String_cString(s1));
         errorFlag = TRUE;
       }
-      if (!parseTimeNumber(s2,&bandWidthNode->day  ))
+      if (!Configuration_parseTimeNumber(s2,&bandWidthNode->day  ))
       {
         if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth day '%s'",String_cString(s2));
         errorFlag = TRUE;
@@ -2482,17 +2429,17 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
     {
       if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
       {
-        if (!parseWeekDaySet(String_cString(s0),&bandWidthNode->weekDaySet))
+        if (!Configuration_parseWeekDaySet(String_cString(s0),&bandWidthNode->weekDaySet))
         {
           if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth weekday '%s'",String_cString(s0));
           errorFlag = TRUE;
         }
-        if (!parseTimeNumber(s1,&bandWidthNode->hour  ))
+        if (!Configuration_parseTimeNumber(s1,&bandWidthNode->hour  ))
         {
           if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth hour '%s'",String_cString(s1));
           errorFlag = TRUE;
         }
-        if (!parseTimeNumber(s2,&bandWidthNode->minute))
+        if (!Configuration_parseTimeNumber(s2,&bandWidthNode->minute))
         {
           if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth minute '%s'",String_cString(s2));
           errorFlag = TRUE;
@@ -2500,12 +2447,12 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
       }
       else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
       {
-        if (!parseTimeNumber(s0,&bandWidthNode->hour  ))
+        if (!Configuration_parseTimeNumber(s0,&bandWidthNode->hour  ))
         {
           if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth hour '%s'",String_cString(s0));
           errorFlag = TRUE;
         }
-        if (!parseTimeNumber(s1,&bandWidthNode->minute))
+        if (!Configuration_parseTimeNumber(s1,&bandWidthNode->minute))
         {
           if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse bandwidth minute '%s'",String_cString(s1));
           errorFlag = TRUE;
@@ -2778,7 +2725,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = readCertificateFile(certificate,value);
+  error = Configuration_readCertificateFile(certificate,value);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -2809,7 +2756,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = readKeyFile(key,value);
+  error = Configuration_readKeyFile(key,value);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -2845,7 +2792,7 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
   if (File_existsCString(value))
   {
     // read key data from file
-    error = readKeyFile(key,value);
+    error = Configuration_readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -3249,9 +3196,9 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
   s2 = String_new();
   if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (!parseDateNumber(s0,&date.year )) errorFlag = TRUE;
-    if (!parseDateMonth (s1,&date.month)) errorFlag = TRUE;
-    if (!parseDateNumber(s2,&date.day  )) errorFlag = TRUE;
+    if (!Configuration_parseDateNumber(s0,&date.year )) errorFlag = TRUE;
+    if (!Configuration_parseDateMonth (s1,&date.month)) errorFlag = TRUE;
+    if (!Configuration_parseDateNumber(s2,&date.day  )) errorFlag = TRUE;
   }
   else
   {
@@ -3379,7 +3326,7 @@ LOCAL bool configValueMaintenanceWeekDaySetParse(void *userData, void *variable,
   UNUSED_VARIABLE(name);
 
   // parse
-  if (!parseWeekDaySet(value,&weekDaySet))
+  if (!Configuration_parseWeekDaySet(value,&weekDaySet))
   {
     snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",value);
     return FALSE;
@@ -3500,8 +3447,8 @@ LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const
   s1 = String_new();
   if (String_parseCString(value,"%S:%S",NULL,s0,s1))
   {
-    if (!parseTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
-    if (!parseTimeNumber(s1,&time.minute)) errorFlag = TRUE;
+    if (!Configuration_parseTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
+    if (!Configuration_parseTimeNumber(s1,&time.minute)) errorFlag = TRUE;
   }
   String_delete(s1);
   String_delete(s0);
@@ -3745,7 +3692,7 @@ LOCAL bool configValueDeprecatedMountDeviceParse(void *userData, void *variable,
 * Notes  : -
 \***********************************************************************/
 
-bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -3785,7 +3732,7 @@ bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const
 * Notes  : -
 \***********************************************************************/
 
-bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -3815,7 +3762,7 @@ bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, void *va
 * Notes  : -
 \***********************************************************************/
 
-bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -3827,6 +3774,873 @@ bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, void *v
   UNUSED_VARIABLE(errorMessageSize);
 
   (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_OVERWRITE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueScheduleDateParse
+* Purpose: config value option call back for parsing schedule date
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1,s2;
+  ScheduleDate date;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+  if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (!Configuration_parseDateNumber(s0,&date.year )) errorFlag = TRUE;
+    if (!Configuration_parseDateMonth (s1,&date.month)) errorFlag = TRUE;
+    if (!Configuration_parseDateNumber(s2,&date.day  )) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule date '%s'",value);
+    return FALSE;
+  }
+
+  // store values
+  (*(ScheduleDate*)variable) = date;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueScheduleDateFormat
+* Purpose: format schedule config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (formatOperation)
+  {
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (ScheduleDate*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<yyyy>|*-<mm>|*-<dd>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
+        String             line          = (String)data;
+
+        if (scheduleDate != NULL)
+        {
+          if (scheduleDate->year != DATE_ANY)
+          {
+            String_appendFormat(line,"%4d",scheduleDate->year);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+          String_appendChar(line,'-');
+          if (scheduleDate->month != DATE_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleDate->month);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+          String_appendChar(line,'-');
+          if (scheduleDate->day != DATE_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleDate->day);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueScheduleWeekDaySetParse
+* Purpose: config value option call back for parsing schedule week day
+*          set
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  WeekDaySet weekDaySet;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  if (!Configuration_parseWeekDaySet(value,&weekDaySet))
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
+    return FALSE;
+  }
+
+  // store value
+  (*(WeekDaySet*)variable) = weekDaySet;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueScheduleWeekDaySetFormat
+* Purpose: format schedule config week day set
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (formatOperation)
+  {
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (ScheduleWeekDaySet*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"Mon|Tue|Wed|Thu|Fri|Sat|Sun|*,...");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const ScheduleWeekDaySet *scheduleWeekDaySet = (const ScheduleWeekDaySet*)(*formatUserData);
+        String                   names;
+        String                   line                = (String)data;
+
+        if (scheduleWeekDaySet != NULL)
+        {
+          if ((*scheduleWeekDaySet) != WEEKDAY_SET_ANY)
+          {
+            names = String_new();
+
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+
+            String_append(line,names);
+            String_appendChar(line,' ');
+
+            String_delete(names);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueScheduleTimeParse
+* Purpose: config value option call back for parsing schedule time
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1;
+  ScheduleTime time;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  if (String_parseCString(value,"%S:%S",NULL,s0,s1))
+  {
+    if (!Configuration_parseTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
+    if (!Configuration_parseTimeNumber(s1,&time.minute)) errorFlag = TRUE;
+  }
+  String_delete(s1);
+  String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule time '%s'",value);
+    return FALSE;
+  }
+
+  // store values
+  (*(ScheduleTime*)variable) = time;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueScheduleTimeFormat
+* Purpose: format schedule config
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (formatOperation)
+  {
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (ScheduleTime*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<hh>|*:<mm>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const ScheduleTime *scheduleTime = (ScheduleTime*)(*formatUserData);
+        String             line          = (String)data;
+
+        if (scheduleTime != NULL)
+        {
+          if (scheduleTime->hour != TIME_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleTime->hour);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+          String_appendChar(line,':');
+          if (scheduleTime->minute != TIME_ANY)
+          {
+            String_appendFormat(line,"%02d",scheduleTime->minute);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValuePersistenceMinKeepParse
+* Purpose: config value option call back for parsing min. keep
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  int minKeep;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  if (!stringEquals(value,"*"))
+  {
+    if (!String_parseCString(value,"%d",NULL,&minKeep))
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence min. keep '%s'",value);
+      return FALSE;
+    }
+  }
+  else
+  {
+    minKeep = KEEP_ALL;
+  }
+
+  // store values
+  (*(int*)variable) = minKeep;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValuePersistenceMinKeepFormat
+* Purpose: format min. keep config
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (formatOperation)
+  {
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (PersistenceNode*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<n>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
+        String                line             = (String)data;
+
+        if (persistenceNode != NULL)
+        {
+          if (persistenceNode->minKeep != KEEP_ALL)
+          {
+            String_appendFormat(line,"%d",persistenceNode->minKeep);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValuePersistenceMaxKeepParse
+* Purpose: config value option call back for parsing max. keep
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  int maxKeep;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  if (!stringEquals(value,"*"))
+  {
+    if (!String_parseCString(value,"%d",NULL,&maxKeep))
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. keep '%s'",value);
+      return FALSE;
+    }
+  }
+  else
+  {
+    maxKeep = KEEP_ALL;
+  }
+
+  // store values
+  (*(int*)variable) = maxKeep;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValuePersistenceMaxKeepFormat
+* Purpose: format max. keep config
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (PersistenceNode*)data;
+
+  switch (formatOperation)
+  {
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (PersistenceNode*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<n>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
+        String                line             = (String)data;
+
+        if (persistenceNode != NULL)
+        {
+          if (persistenceNode->maxKeep != KEEP_ALL)
+          {
+            String_appendFormat(line,"%d",persistenceNode->maxKeep);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParsePersistenceMaxAge
+* Purpose: config value option call back for parsing max. age
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  int maxAge;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  if (!stringEquals(value,"*"))
+  {
+    if (!String_parseCString(value,"%d",NULL,&maxAge))
+    {
+      snprintf(errorMessage,errorMessageSize,"Cannot parse persistence max. age '%s'",value);
+      return FALSE;
+    }
+  }
+  else
+  {
+    maxAge = AGE_FOREVER;
+  }
+
+  // store values
+  (*(int*)variable) = maxAge;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValuePersistenceMaxAgeFormat
+* Purpose: format max. age config
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  switch (formatOperation)
+  {
+    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+      (*formatUserData) = (PersistenceNode*)data;
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+      {
+        String line = (String)data;
+        String_appendFormat(line,"<n>|*");
+      }
+      break;
+    case CONFIG_VALUE_FORMAT_OPERATION:
+      {
+        const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
+        String                line             = (String)data;
+
+        if (persistenceNode != NULL)
+        {
+          if (persistenceNode->maxAge != AGE_FOREVER)
+          {
+            String_appendFormat(line,"%d",persistenceNode->maxAge);
+          }
+          else
+          {
+            String_appendCString(line,"*");
+          }
+
+          (*formatUserData) = NULL;
+
+          return TRUE;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      break;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueDeprecatedRemoteHostParse
+* Purpose: config value option call back for deprecated remote host
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  String string;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
+  String_set(*((String*)variable),string);
+
+  // free resources
+  String_delete(string);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueDeprecatedRemotePortParse
+* Purpose: config value option call back for deprecated remote port
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueDeprecatedRemotePortParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  uint n;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  if (!stringToUInt(value,&n))
+  {
+    stringFormat(errorMessage,errorMessageSize,"expected port number: 0..65535");
+    return FALSE;
+  }
+  (*(uint*)variable) = n;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueDeprecatedScheduleMinKeepParse
+* Purpose: config value option call back for deprecated min. keep of
+*          schedule
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueDeprecatedScheduleMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((ScheduleNode*)variable)->minKeep                   = strtol(value,NULL,0);
+  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueDeprecatedScheduleMaxKeepParse
+* Purpose: config value option call back for deprecated max. keep of
+*          schedule
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((ScheduleNode*)variable)->maxKeep                   = strtol(value,NULL,0);
+  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueDeprecatedScheduleMaxAgeParse
+* Purpose: config value option call back for deprecated max. age of
+*          schedule
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((ScheduleNode*)variable)->maxAge                    = strtol(value,NULL,0);
+  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
 
   return TRUE;
 }
@@ -3848,47 +4662,6 @@ LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   String_delete(bandWidthNode->fileName);
-}
-
-/***********************************************************************\
-* Name   : readAllServerKeys
-* Purpose: initialize all server keys/certificates
-* Input  : -
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-//TODO: here?
-LOCAL Errors readAllServerKeys(void)
-{
-  String fileName;
-  Key    key;
-
-  // init default servers
-  fileName = String_new();
-  Configuration_initKey(&key);
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
-  {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
-  }
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
-  {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
-  }
-  Configuration_doneKey(&key);
-  String_delete(fileName);
-
-  // read default server CA, certificate, key
-  (void)readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-  (void)readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
-
-  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -4081,7 +4854,21 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   return n;
 }
 
-bool configValuePasswordParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValuePasswordParse
+* Purpose: config value option call back for parsing password
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePasswordParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   String string;
 
@@ -4112,7 +4899,20 @@ bool configValuePasswordParse(void *userData, void *variable, const char *name, 
   return TRUE;
 }
 
-bool configValuePasswordFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValuePasswordFormat
+* Purpose: format passwrd config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePasswordFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -4179,7 +4979,7 @@ bool configValuePasswordHashParse(void *userData, void *variable, const char *na
   return TRUE;
 }
 
-void configValueInitPassordHashFormat(void **formatUserData, void *userData, void *variable)
+LOCAL void configValueInitPassordHashFormat(void **formatUserData, void *userData, void *variable)
 {
   assert(formatUserData != NULL);
 
@@ -4188,13 +4988,13 @@ void configValueInitPassordHashFormat(void **formatUserData, void *userData, voi
   (*formatUserData) = (*(Hash**)variable);
 }
 
-void configValueDonePasswordHashFormat(void **formatUserData, void *userData)
+LOCAL void configValueDonePasswordHashFormat(void **formatUserData, void *userData)
 {
   UNUSED_VARIABLE(formatUserData);
   UNUSED_VARIABLE(userData);
 }
 
-bool configValuePasswordHashFormat(void **formatUserData, void *userData, String line)
+LOCAL bool configValuePasswordHashFormat(void **formatUserData, void *userData, String line)
 {
   Hash *passwordHash;
 
@@ -4223,7 +5023,21 @@ bool configValuePasswordHashFormat(void **formatUserData, void *userData, String
 }
 #endif
 
-bool configValueCryptAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueCryptAlgorithmsParse
+* Purpose: config value option call back for parsing crypt algorithms
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueCryptAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
 #ifdef MULTI_CRYPT
   StringTokenizer stringTokenizer;
@@ -4291,7 +5105,20 @@ bool configValueCryptAlgorithmsParse(void *userData, void *variable, const char 
   return TRUE;
 }
 
-bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueCryptAlgorithmsFormat
+* Purpose: format crypt algorithms config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
 #ifdef MULTI_CRYPT
   uint            i;
@@ -4348,7 +5175,22 @@ bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueFormatOp
   return TRUE;
 }
 
-bool configValueBandWidthParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueBandWidthParse
+* Purpose: config value call back for parsing band width setting
+*          patterns
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueBandWidthParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   BandWidthNode *bandWidthNode;
   String        s;
@@ -4375,7 +5217,19 @@ bool configValueBandWidthParse(void *userData, void *variable, const char *name,
   return TRUE;
 }
 
-bool configValueBandWidthFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueBandWidthFormat
+* Purpose: format next config band width setting
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   const StringUnit UNITS[] =
   {
@@ -4482,7 +5336,21 @@ bool configValueBandWidthFormat(void **formatUserData, ConfigValueFormatOperatio
   return TRUE;
 }
 
-bool configValueOwnerParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueOwnerParse
+* Purpose: config value call back for parsing owner patterns
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueOwnerParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   char   userName[256],groupName[256];
   uint32 userId,groupId;
@@ -4527,7 +5395,19 @@ bool configValueOwnerParse(void *userData, void *variable, const char *name, con
   return TRUE;
 }
 
-bool configValueOwnerFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueOwnerFormat
+* Purpose: format next config owner statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -4573,7 +5453,21 @@ bool configValueOwnerFormat(void **formatUserData, ConfigValueFormatOperations f
   return TRUE;
 }
 
-bool configValuePermissionsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValuePermissionsParse
+* Purpose: config value call back for parsing permissions
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePermissionsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   char           user[4],group[4],world[4];
   uint           n;
@@ -4636,7 +5530,19 @@ bool configValuePermissionsParse(void *userData, void *variable, const char *nam
   return TRUE;
 }
 
-bool configValuePermissionsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValuePermissionsFormat
+* Purpose: format next config owner statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   ;
 
@@ -4691,7 +5597,7 @@ bool configValuePermissionsFormat(void **formatUserData, ConfigValueFormatOperat
   return TRUE;
 }
 
-bool configValueEntryPatternParse(EntryTypes entryType, void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   const char* FILENAME_MAP_FROM[] = {"\\n","\\r","\\\\"};
   const char* FILENAME_MAP_TO[]   = {"\n","\r","\\"};
@@ -4737,17 +5643,46 @@ bool configValueEntryPatternParse(EntryTypes entryType, void *userData, void *va
   return TRUE;
 }
 
-bool configValueFileEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueFileEntryPatternParse
+*          configValueImageEntryPatternParse
+* Purpose: config value option call back for parsing file/image entry
+*          patterns
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueFileEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   return configValueEntryPatternParse(ENTRY_TYPE_FILE,userData,variable,name,value,errorMessage,errorMessageSize);
 }
 
-bool configValueImageEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueImageEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   return configValueEntryPatternParse(ENTRY_TYPE_IMAGE,userData,variable,name,value,errorMessage,errorMessageSize);
 }
 
-bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueFileEntryPatternFormat,
+*          configValueImageEntryPatternFormat
+* Purpose: format next config include statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
   const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
@@ -4816,7 +5751,7 @@ bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueFormatO
   return TRUE;
 }
 
-bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -4879,7 +5814,21 @@ bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValueFormat
   return TRUE;
 }
 
-bool configValuePatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValuePatternParse
+* Purpose: config value option call back for parsing pattern
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
   String       string;
@@ -4922,7 +5871,19 @@ bool configValuePatternParse(void *userData, void *variable, const char *name, c
   return TRUE;
 }
 
-bool configValuePatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValuePatternFormat
+* Purpose: format next config pattern statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValuePatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -4981,7 +5942,21 @@ bool configValuePatternFormat(void **formatUserData, ConfigValueFormatOperations
   return TRUE;
 }
 
-bool configValueMountParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueMountParse
+* Purpose: config value option call back for parsing mounts
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueMountParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   String    mountName;
   String    deviceName;
@@ -5048,7 +6023,19 @@ bool configValueMountParse(void *userData, void *variable, const char *name, con
   return TRUE;
 }
 
-bool configValueMountFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueMountFormat
+* Purpose: format next config mount statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueMountFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -5092,7 +6079,22 @@ bool configValueMountFormat(void **formatUserData, ConfigValueFormatOperations f
   return TRUE;
 }
 
-bool configValueDeltaSourceParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueDeltaSourceParse
+* Purpose: config value option call back for parsing delta source
+*          pattern
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueDeltaSourceParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes    patternType;
   String          string;
@@ -5138,7 +6140,19 @@ bool configValueDeltaSourceParse(void *userData, void *variable, const char *nam
   return TRUE;
 }
 
-bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueDeltaSourceFormat
+* Purpose: format next config delta source pattern statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -5197,7 +6211,20 @@ bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueFormatOperat
   return TRUE;
 }
 
-bool configValueCompressAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueCompressAlgorithmsParse
+* Purpose: config value option call back for parsing compress algorithm
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueCompressAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   char                          algorithm1[256],algorithm2[256];
   CompressAlgorithms            compressAlgorithmDelta,compressAlgorithmByte;
@@ -5321,7 +6348,20 @@ bool configValueCompressAlgorithmsParse(void *userData, void *variable, const ch
   return TRUE;
 }
 
-bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueCompressAlgorithmsFormat
+* Purpose: format compress algorithm config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -5368,7 +6408,20 @@ bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValueForma
   return TRUE;
 }
 
-bool configValueCertificateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueCertificateParse
+* Purpose: config value option call back for parsing certificate
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : read from file or decode base64 data
+\***********************************************************************/
+
+LOCAL bool configValueCertificateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   Certificate *certificate = (Certificate*)variable;
   Errors      error;
@@ -5386,7 +6439,7 @@ bool configValueCertificateParse(void *userData, void *variable, const char *nam
   if      (File_existsCString(value))
   {
     // read certificate from file
-    error = readCertificateFile(certificate,value);
+    error = Configuration_readCertificateFile(certificate,value);
     if (error != ERROR_NONE)
     {
       return FALSE;
@@ -5461,7 +6514,20 @@ bool configValueCertificateParse(void *userData, void *variable, const char *nam
   return TRUE;
 }
 
-bool configValueCertificateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueCertificateFormat
+* Purpose: format server certificate config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -5521,7 +6587,20 @@ bool configValueCertificateFormat(void **formatUserData, ConfigValueFormatOperat
   return TRUE;
 }
 
-bool configValueKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueKeyParse
+* Purpose: config value option call back for parsing key
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : read from file or decode base64 data
+\***********************************************************************/
+
+LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   Key        *key = (Key*)variable;
   Errors     error;
@@ -5540,7 +6619,7 @@ bool configValueKeyParse(void *userData, void *variable, const char *name, const
   {
     // read key data from file
 
-    error = readKeyFile(key,value);
+    error = Configuration_readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -5606,7 +6685,20 @@ bool configValueKeyParse(void *userData, void *variable, const char *name, const
   return TRUE;
 }
 
-bool configValueKeyFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+/***********************************************************************\
+* Name   : configValueKeyFormat
+* Purpose: format key config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -5653,7 +6745,7 @@ bool configValueKeyFormat(void **formatUserData, ConfigValueFormatOperations for
   return TRUE;
 }
 
-bool configValuePublicPrivateKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePublicPrivateKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   CryptKey *cryptKey = (CryptKey*)variable;
   Errors   error;
@@ -5727,7 +6819,20 @@ bool configValuePublicPrivateKeyParse(void *userData, void *variable, const char
   return TRUE;
 }
 
-bool configValueHashDataParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueHashDataParse
+* Purpose: config value option call back for parsing hash data
+* Input  : userData - user data
+*          variable - config variable
+*          name     - config name
+*          value    - config value
+* Output : -
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : read from file or decode base64 data
+\***********************************************************************/
+
+LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   Hash                *hash = (Hash*)variable;
   char                cryptHashAlgorithmName[64];
@@ -5879,6 +6984,19 @@ bool configValueHashDataParse(void *userData, void *variable, const char *name, 
   return TRUE;
 }
 
+/***********************************************************************\
+* Name   : configValueHashDataFormat
+* Purpose: format hash data config statement
+* Input  : formatUserData  - format user data
+*          formatOperation - format operation
+*          data            - operation data
+*          userData        - user data
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
@@ -5924,6 +7042,727 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueFormatOpe
   }
 
   return TRUE;
+}
+
+/***********************************************************************\
+* Name   : readConfigFile
+* Purpose: read configuration from file
+* Input  : fileName      - file name
+*          printInfoFlag - TRUE for output info, FALSE otherwise
+* Output : -
+* Return : TRUE iff configuration read, FALSE otherwise (error)
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
+{
+  FileInfo   fileInfo;
+  Errors     error;
+  FileHandle fileHandle;
+  bool       failFlag;
+  uint       lineNb;
+  String     line;
+  String     name,value;
+  StringList commentLineList;
+  long       nextIndex;
+
+  assert(fileName != NULL);
+
+  // check file permissions
+  error = File_getInfo(&fileInfo,fileName);
+  if (error == ERROR_NONE)
+  {
+    if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
+    {
+      printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600)"),
+                   String_cString(fileName),
+                   fileInfo.permission & FILE_PERMISSION_MASK
+                  );
+    }
+  }
+  else
+  {
+    printWarning(_("Cannot get file info for configuration file '%s' (error: %s)"),
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+  }
+
+  // open file
+  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    printWarning(_("Cannot open configuration file '%s' (error: %s)!"),
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+    return TRUE;
+  }
+
+  // parse file
+  failFlag   = FALSE;
+  line       = String_new();
+  lineNb     = 0;
+  name       = String_new();
+  value      = String_new();
+  StringList_init(&commentLineList);
+//TODO: remove
+extern Semaphore       consoleLock;            // lock console
+  SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
+    while (   !failFlag
+           && File_getLine(&fileHandle,line,&lineNb,NULL)
+          )
+    {
+      // parse line
+//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
+      String_trim(line,STRING_WHITE_SPACES);
+      if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+      {
+        // discard comments if separator or empty line
+        StringList_clear(&commentLineList);
+      }
+      else if (String_startsWithCString(line,"# "))
+      {
+        // store comment
+        String_remove(line,STRING_BEGIN,2);
+        StringList_append(&commentLineList,line);
+      }
+      else if (String_startsWithChar(line,'#'))
+      {
+        // ignore commented values
+      }
+      else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
+      {
+        ServerNode *serverNode;
+
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->type == SERVER_TYPE_FILE)
+                                              && String_equals(serverNode->name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FILE);
+        assert(serverNode != NULL);
+        assert(serverNode->type == SERVER_TYPE_FILE);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "file-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"file-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"file-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    serverNode,
+                                    &commentLineList
+                                   );
+            assert(StringList_isEmpty(&commentLineList));
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.serverList,serverNode);
+        }
+      }
+      else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
+      {
+        ServerNode *serverNode;
+
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->type == SERVER_TYPE_FTP)
+//TODO: port number
+                                              && String_equals(serverNode->name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FTP);
+        assert(serverNode != NULL);
+        assert(serverNode->type == SERVER_TYPE_FTP);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "ftp-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ftp-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    serverNode,
+                                    &commentLineList
+                                   );
+            assert(StringList_isEmpty(&commentLineList));
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.serverList,serverNode);
+        }
+      }
+      else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
+      {
+        ServerNode *serverNode;
+
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->type == SERVER_TYPE_SSH)
+//TODO: port number
+                                              && String_equals(serverNode->name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_SSH);
+        assert(serverNode != NULL);
+        assert(serverNode->type == SERVER_TYPE_SSH);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "ssh-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ssh-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    serverNode,
+                                    &commentLineList
+                                   );
+            assert(StringList_isEmpty(&commentLineList));
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.serverList,serverNode);
+        }
+      }
+      else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
+      {
+        ServerNode *serverNode;
+
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->type == SERVER_TYPE_WEBDAV)
+//TODO: port number
+                                              && String_equals(serverNode->name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_WEBDAV);
+        assert(serverNode != NULL);
+        assert(serverNode->type == SERVER_TYPE_WEBDAV);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "webdav-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"webdav-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    serverNode,
+                                    &commentLineList
+                                   );
+            assert(StringList_isEmpty(&commentLineList));
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.serverList,serverNode);
+        }
+      }
+      else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
+      {
+        DeviceNode *deviceNode;
+
+        // find/allocate device node
+        deviceNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->device.name,name));
+          if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
+        }
+        if (deviceNode == NULL) deviceNode = newDeviceNode(name);
+
+        // parse section
+        while (   File_getLine(&fileHandle,line,&lineNb,NULL)
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "device",
+                                    LAMBDA(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"device-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    }),NULL,
+                                    LAMBDA(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
+                                    }),NULL,
+                                    &deviceNode->device,
+                                    &commentLineList
+                                   );
+            assert(StringList_isEmpty(&commentLineList));
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to device list
+        SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.deviceList,deviceNode);
+        }
+      }
+      else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
+      {
+StringList_clear(&commentLineList);
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "master",
+                                    LAMBDA(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    }),NULL,
+                                    LAMBDA(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
+                                    }),NULL,
+                                    &globalOptions.masterInfo,
+                                    &commentLineList
+                                   );
+            assert(StringList_isEmpty(&commentLineList));
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+      }
+      else if (String_parse(line,STRING_BEGIN,"[maintenance]",NULL))
+      {
+        MaintenanceNode *maintenanceNode;
+
+        // allocate new maintenance time node
+        maintenanceNode = Configuration_newMaintenanceNode();
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,NULL)
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          {
+            // discard comments if separator or empty line
+            StringList_clear(&commentLineList);
+          }
+          else if (String_startsWithCString(line,"# "))
+          {
+            // store comment
+            String_remove(line,STRING_BEGIN,2);
+            StringList_append(&commentLineList,line);
+          }
+          else if (String_startsWithChar(line,'#'))
+          {
+            // ignore commented values
+          }
+          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "maintenance",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"maintenance",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"maintenance",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    maintenanceNode,
+                                    &commentLineList
+                                   );
+            assert(StringList_isEmpty(&commentLineList));
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to maintenance list
+        SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.maintenanceList,maintenanceNode);
+        }
+      }
+      else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
+      {
+        // nothing to do
+      }
+      else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
+      {
+        // nothing to do
+      }
+      else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+      {
+        (void)ConfigValue_parse(String_cString(name),
+                                String_cString(value),
+                                CONFIG_VALUES,
+                                NULL, // section name
+                                LAMBDA(void,(const char *errorMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
+
+                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                  printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                                  failFlag = TRUE;
+                                }),NULL,
+                                LAMBDA(void,(const char *warningMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
+
+                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                  printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                                }),NULL,
+                                NULL,  // variable
+                                &commentLineList
+                               );
+        assert(StringList_isEmpty(&commentLineList));
+        if (failFlag) break;
+      }
+      else
+      {
+        if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+        printError(_("Unknown config entry '%s' in %s, line %ld"),
+                   String_cString(line),
+                   String_cString(fileName),
+                   lineNb
+                  );
+        failFlag = TRUE;
+        break;
+      }
+    }
+    if (!failFlag)
+    {
+      if (printInfoFlag) { printConsole(stdout,0,"OK\n"); }
+    }
+  }
+  StringList_done(&commentLineList);
+
+  // free resources
+  String_delete(value);
+  String_delete(name);
+  String_delete(line);
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  return !failFlag;
 }
 
 /*---------------------------------------------------------------------*/
@@ -7108,7 +8947,7 @@ void Configuration_doneGlobalOptions(void)
 
   List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
   Semaphore_done(&globalOptions.deviceList.lock);
-  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
+  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)Configuration_freeServerNode,NULL));
   Semaphore_done(&globalOptions.serverList.lock);
 
   List_done(&globalOptions.maxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
@@ -7124,6 +8963,74 @@ void Configuration_doneGlobalOptions(void)
   List_done(&configFileList,CALLBACK_((ListNodeFreeFunction)freeConfigFileNode,NULL));
 }
 
+MaintenanceNode *Configuration_newMaintenanceNode(void)
+{
+  MaintenanceNode *maintenanceNode;
+
+  maintenanceNode = LIST_NEW_NODE(MaintenanceNode);
+  if (maintenanceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  maintenanceNode->id               = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  maintenanceNode->date.year        = DATE_ANY;
+  maintenanceNode->date.month       = DATE_ANY;
+  maintenanceNode->date.day         = DATE_ANY;
+  maintenanceNode->weekDaySet       = WEEKDAY_SET_ANY;
+  maintenanceNode->beginTime.hour   = TIME_ANY;
+  maintenanceNode->beginTime.minute = TIME_ANY;
+  maintenanceNode->endTime.hour     = TIME_ANY;
+  maintenanceNode->endTime.minute   = TIME_ANY;
+
+  return maintenanceNode;
+}
+
+void Configuration_deleteMaintenanceNode(MaintenanceNode *maintenanceNode)
+{
+  assert(maintenanceNode != NULL);
+
+  freeMaintenanceNode(maintenanceNode,NULL);
+  LIST_DELETE_NODE(maintenanceNode);
+}
+
+ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType)
+{
+  ServerNode *serverNode;
+
+  assert(name != NULL);
+
+  // allocate server node
+  serverNode = LIST_NEW_NODE(ServerNode);
+  if (serverNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  serverNode->id                                  = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  initServer(serverNode,name,serverType);
+  serverNode->connection.lowPriorityRequestCount  = 0;
+  serverNode->connection.highPriorityRequestCount = 0;
+  serverNode->connection.count                    = 0;
+
+  return serverNode;
+}
+
+void Configuration_freeServerNode(ServerNode *serverNode, void *userData)
+{
+  assert(serverNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  doneServer(serverNode);
+}
+
+void Configuration_deleteServerNode(ServerNode *serverNode)
+{
+  assert(serverNode != NULL);
+
+  Configuration_freeServerNode(serverNode,NULL);
+  LIST_DELETE_NODE(serverNode);
+}
+
 void Configuration_add(ConfigFileTypes configFileType, const char *fileName)
 {
   ConfigFileNode *configFileNode;
@@ -7135,743 +9042,7 @@ void Configuration_add(ConfigFileTypes configFileType, const char *fileName)
   List_append(&configFileList,configFileNode);
 }
 
-void Configuration_setModified(void)
-{
-  configModified = TRUE;
-}
-
-void Configuration_clearModified(void)
-{
-  configModified = FALSE;
-}
-
-bool Configuration_isModified(void)
-{
-  return configModified;
-}
-
-/***********************************************************************\
-* Name   : readConfigFile
-* Purpose: read configuration from file
-* Input  : fileName      - file name
-*          printInfoFlag - TRUE for output info, FALSE otherwise
-* Output : -
-* Return : TRUE iff configuration read, FALSE otherwise (error)
-* Notes  : -
-\***********************************************************************/
-
-bool readConfigFile(ConstString fileName, bool printInfoFlag)
-{
-  FileInfo   fileInfo;
-  Errors     error;
-  FileHandle fileHandle;
-  bool       failFlag;
-  uint       lineNb;
-  String     line;
-  String     name,value;
-  StringList commentLineList;
-  long       nextIndex;
-
-  assert(fileName != NULL);
-
-  // check file permissions
-  error = File_getInfo(&fileInfo,fileName);
-  if (error == ERROR_NONE)
-  {
-    if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
-    {
-      printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600)"),
-                   String_cString(fileName),
-                   fileInfo.permission & FILE_PERMISSION_MASK
-                  );
-    }
-  }
-  else
-  {
-    printWarning(_("Cannot get file info for configuration file '%s' (error: %s)"),
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-  }
-
-  // open file
-  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    printWarning(_("Cannot open configuration file '%s' (error: %s)!"),
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-    return TRUE;
-  }
-
-  // parse file
-  failFlag   = FALSE;
-  line       = String_new();
-  lineNb     = 0;
-  name       = String_new();
-  value      = String_new();
-  StringList_init(&commentLineList);
-//TODO: remove
-extern Semaphore       consoleLock;            // lock console
-  SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
-    while (   !failFlag
-           && File_getLine(&fileHandle,line,&lineNb,NULL)
-          )
-    {
-      // parse line
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
-      String_trim(line,STRING_WHITE_SPACES);
-      if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-      {
-        // discard comments if separator or empty line
-        StringList_clear(&commentLineList);
-      }
-      else if (String_startsWithCString(line,"# "))
-      {
-        // store comment
-        String_remove(line,STRING_BEGIN,2);
-        StringList_append(&commentLineList,line);
-      }
-      else if (String_startsWithChar(line,'#'))
-      {
-        // ignore commented values
-      }
-      else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
-      {
-        ServerNode *serverNode;
-
-        // find/allocate server node
-        serverNode = NULL;
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_FILE)
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FILE);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_FILE);
-
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "file-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"file-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"file-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          List_append(&globalOptions.serverList,serverNode);
-        }
-      }
-      else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
-      {
-        ServerNode *serverNode;
-
-        // find/allocate server node
-        serverNode = NULL;
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_FTP)
-//TODO: port number
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FTP);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_FTP);
-
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "ftp-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ftp-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          List_append(&globalOptions.serverList,serverNode);
-        }
-      }
-      else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
-      {
-        ServerNode *serverNode;
-
-        // find/allocate server node
-        serverNode = NULL;
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_SSH)
-//TODO: port number
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_SSH);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_SSH);
-
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "ssh-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ssh-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          List_append(&globalOptions.serverList,serverNode);
-        }
-      }
-      else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
-      {
-        ServerNode *serverNode;
-
-        // find/allocate server node
-        serverNode = NULL;
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_WEBDAV)
-//TODO: port number
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_WEBDAV);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_WEBDAV);
-
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "webdav-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"webdav-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          List_append(&globalOptions.serverList,serverNode);
-        }
-      }
-      else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
-      {
-        DeviceNode *deviceNode;
-
-        // find/allocate device node
-        deviceNode = NULL;
-        SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->device.name,name));
-          if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
-        }
-        if (deviceNode == NULL) deviceNode = newDeviceNode(name);
-
-        // parse section
-        while (   File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "device",
-                                    LAMBDA(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"device-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    }),NULL,
-                                    LAMBDA(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
-                                    }),NULL,
-                                    &deviceNode->device,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to device list
-        SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          List_append(&globalOptions.deviceList,deviceNode);
-        }
-      }
-      else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
-      {
-StringList_clear(&commentLineList);
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "master",
-                                    LAMBDA(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    }),NULL,
-                                    LAMBDA(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
-                                    }),NULL,
-                                    &globalOptions.masterInfo,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-      }
-      else if (String_parse(line,STRING_BEGIN,"[maintenance]",NULL))
-      {
-        MaintenanceNode *maintenanceNode;
-
-        // allocate new maintenance time node
-        maintenanceNode = newMaintenanceNode();
-
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "maintenance",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"maintenance",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"maintenance",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    maintenanceNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to maintenance list
-        SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          List_append(&globalOptions.maintenanceList,maintenanceNode);
-        }
-      }
-      else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
-      {
-        // nothing to do
-      }
-      else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
-      {
-        // nothing to do
-      }
-      else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-      {
-        (void)ConfigValue_parse(String_cString(name),
-                                String_cString(value),
-                                CONFIG_VALUES,
-                                NULL, // section name
-                                LAMBDA(void,(const char *errorMessage, void *userData),
-                                {
-                                  UNUSED_VARIABLE(userData);
-
-                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                  printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
-                                  failFlag = TRUE;
-                                }),NULL,
-                                LAMBDA(void,(const char *warningMessage, void *userData),
-                                {
-                                  UNUSED_VARIABLE(userData);
-
-                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                  printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
-                                }),NULL,
-                                NULL,  // variable
-                                &commentLineList
-                               );
-        assert(StringList_isEmpty(&commentLineList));
-        if (failFlag) break;
-      }
-      else
-      {
-        if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-        printError(_("Unknown config entry '%s' in %s, line %ld"),
-                   String_cString(line),
-                   String_cString(fileName),
-                   lineNb
-                  );
-        failFlag = TRUE;
-        break;
-      }
-    }
-    if (!failFlag)
-    {
-      if (printInfoFlag) { printConsole(stdout,0,"OK\n"); }
-    }
-  }
-  StringList_done(&commentLineList);
-
-  // free resources
-  String_delete(value);
-  String_delete(name);
-  String_delete(line);
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  return !failFlag;
-}
-
-Errors Configuration_readAllConfigFiles(bool printInfoFlag)
+Errors Configuration_readAll(bool printInfoFlag)
 {
   const ConfigFileNode *configFileNode;
 
@@ -7886,7 +9057,7 @@ Errors Configuration_readAllConfigFiles(bool printInfoFlag)
   return ERROR_NONE;
 }
 
-Errors updateConfig(void)
+Errors Configuration_update(void)
 {
   String                configFileName;
   StringList            configLinesList;
@@ -8153,7 +9324,7 @@ Errors updateConfig(void)
   return ERROR_NONE;
 }
 
-Errors readCertificateFile(Certificate *certificate, const char *fileName)
+Errors Configuration_readCertificateFile(Certificate *certificate, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
@@ -8211,7 +9382,7 @@ Errors readCertificateFile(Certificate *certificate, const char *fileName)
   return ERROR_NONE;
 }
 
-Errors readKeyFile(Key *key, const char *fileName)
+Errors Configuration_readKeyFile(Key *key, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
@@ -8269,6 +9440,154 @@ Errors readKeyFile(Key *key, const char *fileName)
 
   return ERROR_NONE;
 }
+
+Errors Configuration_readAllServerKeys(void)
+{
+  String fileName;
+  Key    key;
+
+  // init default servers
+  fileName = String_new();
+  Configuration_initKey(&key);
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
+  if (File_exists(fileName) && (Configuration_readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  {
+    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
+  }
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
+  if (File_exists(fileName) && (Configuration_readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  {
+    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
+  }
+  Configuration_doneKey(&key);
+  String_delete(fileName);
+
+  // read default server CA, certificate, key
+  (void)Configuration_readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
+  (void)Configuration_readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+  (void)Configuration_readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+
+  return ERROR_NONE;
+}
+
+// ----------------------------------------------------------------------
+
+ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+(
+  CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ,"<uuid>"),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
+  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-tls",      JobNode,job.slaveHost.forceTLS,                  "yes|no"),
+  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.storageName                          ,"<name>"),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",              JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
+
+  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",     JobNode,job.options.incrementalListFileName      ,"<file name>"),
+
+  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",         JobNode,job.options.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+
+  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",           JobNode,job.options.directoryStripCount,         -1,MAX_INT,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_STRING      ("destination",               JobNode,job.options.destination                  ,"<directory>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                     JobNode,job.options.owner,                       configValueOwnerParse,configValueOwnerFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",              JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES,"<type>"),
+
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",        JobNode,job.options.compressAlgorithms,          configValueCompressAlgorithmsParse,configValueCompressAlgorithmsFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.options.compressExcludePatternList,  configValuePatternParse,configValuePatternFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",           JobNode,job.options.cryptAlgorithms,             configValueCryptAlgorithmsParse,configValueCryptAlgorithmsFormat,NULL),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",                JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES,"<type>"),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",       JobNode,job.options.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES,"<mode>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",            JobNode,job.options.cryptPassword,               configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",          JobNode,job.options.cryptPublicKey,              configValueKeyParse,configValueKeyFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_STRING      ("pre-command",               JobNode,job.options.preProcessScript             ,"<command>"),
+  CONFIG_STRUCT_VALUE_STRING      ("post-command",              JobNode,job.options.postProcessScript            ,"<command>"),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-pre-command",         JobNode,job.options.slavePreProcessScript        ,"<command>"),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-post-command",        JobNode,job.options.slavePostProcessScript       ,"<command>"),
+
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("storage-on-master",         JobNode,job.options.storageOnMaster,             "yes|no"),
+
+  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",            JobNode,job.options.ftpServer.loginName          ,"<name>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ,"<name>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueFileEntryPatternParse,configValueFileEntryPatternFormat,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.options.includeFileListFileName      ,"<file name>"),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.options.includeFileCommand           ,"<command>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                    configValueImageEntryPatternParse,configValueImageEntryPatternFormat,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.options.includeImageListFileName     ,"<file name>"),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.options.includeImageCommand          ,"<command>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                  configValuePatternParse,configValuePatternFormat,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.options.excludeListFileName          ,"<file name>"),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.options.excludeCommand               ,"<command>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.options.deltaSourceList,             configValueDeltaSourceParse,configValueDeltaSourceFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.options.mountList,                   configValueMountParse,configValueMountFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                       JobNode,job.options.errorCorrectionCodesFlag,    "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                     JobNode,job.options.blankFlag,                   "yes|no"),
+
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",           JobNode,job.options.skipUnreadableFlag,          "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",                JobNode,job.options.rawImagesFlag,               "yes|no"),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",         JobNode,job.options.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES,"<mode>"),
+  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",        JobNode,job.options.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES,"<mode>"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",         JobNode,job.options.waitFirstVolumeFlag,         "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",              JobNode,job.options.noSignatureFlag,             "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",          JobNode,job.options.noBAROnMediumFlag,           "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag,           "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag,  "yes|no"),
+
+  CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ,"<uuid>"),
+    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ,"<uuid>"),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueScheduleDateFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueScheduleWeekDaySetParse,configValueScheduleWeekDaySetFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                               configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
+    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                        CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
+    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ,"<text>"),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage,                          "yes|no"),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled,                            "yes|no"),
+
+    // deprecated
+    CONFIG_VALUE_DEPRECATED       ("min-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMinKeepParse,NULL,NULL,FALSE),
+    CONFIG_VALUE_DEPRECATED       ("max-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMaxKeepParse,NULL,NULL,FALSE),
+    CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueDeprecatedScheduleMaxAgeParse,NULL,NULL,FALSE),
+  CONFIG_VALUE_END_SECTION(),
+
+  CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
+  CONFIG_VALUE_END_SECTION(),
+
+  CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ,"<text>"),
+
+  // deprecated
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueDeprecatedRemoteHostParse,NULL,"slave-host-name",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueDeprecatedRemotePortParse,NULL,"slave-host-port",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  // Note: archive-file-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-archive-files",   JobNode,job.options.archiveFileMode,             configValueDeprecatedArchiveFileModeOverwriteParse,NULL,"archive-file-mode",TRUE),
+  // Note: restore-entry-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueDeprecatedRestoreEntryModeOverwriteParse,NULL,"restore-entry-mode=overwrite",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueDeprecatedMountDeviceParse,NULL,"mount",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueDeprecatedStopOnErrorParse,NULL,"no-stop-on-error",TRUE),
+
+  // ignored
+  CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
+);
 
 #ifdef __cplusplus
   }

@@ -22,6 +22,7 @@
 #include "common/patternlists.h"
 
 #include "bar_global.h"
+#include "configuration.h"
 #include "entrylists.h"
 #include "connector.h"
 
@@ -29,7 +30,6 @@
 #define MAX_CRYPT_ALGORITHMS 4
 
 /***************************** Constants *******************************/
-extern ConfigValue JOB_CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 

@@ -1343,46 +1343,6 @@ LOCAL void doneAll(void)
 }
 
 /***********************************************************************\
-* Name   : readAllServerKeys
-* Purpose: initialize all server keys/certificates
-* Input  : -
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors readAllServerKeys(void)
-{
-  String fileName;
-  Key    key;
-
-  // init default servers
-  fileName = String_new();
-  Configuration_initKey(&key);
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
-  {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
-  }
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
-  {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
-  }
-  Configuration_doneKey(&key);
-  String_delete(fileName);
-
-  // read default server CA, certificate, key
-  (void)readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-  (void)readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : validateOptions
 * Purpose: validate options
 * Input  : -
@@ -3888,7 +3848,7 @@ LOCAL Errors runDaemon(void)
   if (String_isEmpty(uuid))
   {
     Misc_getUUID(uuid);
-    (void)updateConfig();
+    (void)Configuration_update();
   }
 
   // create pid file
@@ -3939,7 +3899,7 @@ LOCAL Errors runDaemon(void)
   // update config
   if (Configuration_isModified())
   {
-    (void)updateConfig();
+    (void)Configuration_update();
     Configuration_clearModified();
   }
 
@@ -4928,7 +4888,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   printInfoFlag = !globalOptions.quietFlag && globalOptions.daemonFlag;
 
   // read all configuration files
-  error = Configuration_readAllConfigFiles(isPrintInfo(2) || printInfoFlag);
+  error = Configuration_readAll(isPrintInfo(2) || printInfoFlag);
   if (error != ERROR_NONE)
   {
     return error;
@@ -5113,7 +5073,7 @@ int main(int argc, const char *argv[])
   // read all server keys/certificates
   if (error == ERROR_NONE)
   {
-    error = readAllServerKeys();
+    error = Configuration_readAllServerKeys();
     if (error != ERROR_NONE)
     {
       printError(_("Cannot read server keys/certificates (error: %s)!"),
