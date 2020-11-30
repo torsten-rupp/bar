@@ -3319,16 +3319,7 @@ LOCAL Errors runDaemon(void)
   globalOptions.runMode = RUN_MODE_SERVER;
 
   // run server (not detached)
-  error = Server_run(globalOptions.serverMode,
-                     globalOptions.serverPort,
-                     globalOptions.serverTLSPort,
-                     &globalOptions.serverCA,
-                     &globalOptions.serverCert,
-                     &globalOptions.serverKey,
-                     &globalOptions.serverPasswordHash,
-                     globalOptions.serverMaxConnections,
-                     globalOptions.indexDatabaseFileName
-                    );
+  error = Server_run();
   if (error != ERROR_NONE)
   {
     if (Continuous_isAvailable()) Continuous_done();

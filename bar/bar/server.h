@@ -68,35 +68,15 @@ Errors Server_initAll(void);
 void Server_doneAll(void);
 
 /***********************************************************************\
-* Name   : Server_runtypedef struct ResultNode
+* Name   : Server_run
 * Purpose: run network server
-* Input  : mode                  - server mode; see SERVER_MODE_...
-*          port                  - server port (or 0 to disable)
-*          tlsPort               - server TLS (SSL) port (or 0 to
-*                                  disable)
-*          ca                    - CA data or NULL
-*          cert                  - TLS cerificate or NULL
-*          key                   - TLS key or NULL
-*          password              - server authenfication password
-*          maxConnections        - max. number of connections or 0
-*          defaultJobOptions     - default job options
-*          indexDatabaseFileName - index database file name or NULL
+* Input  : -
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_run(ServerModes       mode,
-                  uint              port,
-                  uint              tlsPort,
-                  const Certificate *ca,
-                  const Certificate *cert,
-                  const Key         *key,
-//                  const Password    *password,
-                  const Hash        *password,
-                  uint              maxConnections,
-                  const char        *indexDatabaseFileName
-                 );
+Errors Server_run(void);
 
 /***********************************************************************\
 * Name   : Server_batch

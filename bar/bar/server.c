@@ -19760,16 +19760,7 @@ void Server_doneAll(void)
   #endif /* SIMULATE_PURGE */
 }
 
-Errors Server_run(ServerModes       mode,
-                  uint              port,
-                  uint              tlsPort,
-                  const Certificate *ca,
-                  const Certificate *cert,
-                  const Key         *key,
-                  const Hash        *passwordHash,
-                  uint              maxConnections,
-                  const char        *indexDatabaseFileName
-                 )
+Errors Server_run(void)
 {
   AutoFreeList          autoFreeList;
   Errors                error;
@@ -19849,7 +19840,7 @@ Errors Server_run(ServerModes       mode,
            );
 
   // create jobs directory if necessary
-  if (mode == SERVER_MODE_MASTER)
+  if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
     if (!String_isEmpty(globalOptions.jobsDirectory) && !File_exists(globalOptions.jobsDirectory))
     {
@@ -19877,19 +19868,19 @@ Errors Server_run(ServerModes       mode,
   }
 
   // init index database
-  if (!stringIsEmpty(indexDatabaseFileName))
+  if (!stringIsEmpty(globalOptions.indexDatabaseFileName))
   {
-    error = Index_init(indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
+    error = Index_init(globalOptions.indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
       printError("Cannot init index database '%s' (error: %s)!",
-                 indexDatabaseFileName,
+                 globalOptions.indexDatabaseFileName,
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
+    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseFileName,{ Index_done(); });
   }
 
   // open index
@@ -19903,10 +19894,10 @@ Errors Server_run(ServerModes       mode,
   // init server sockets
   serverFlag    = FALSE;
   serverTLSFlag = FALSE;
-  if (port != 0)
+  if (globalOptions.serverPort != 0)
   {
     error = Network_initServer(&serverSocketHandle,
-                               port,
+                               globalOptions.serverPort,
                                SERVER_SOCKET_TYPE_PLAIN,
                                NULL,
                                0,
@@ -19918,26 +19909,26 @@ Errors Server_run(ServerModes       mode,
     if (error != ERROR_NONE)
     {
       printError("Cannot initialize server at port %u (error: %s)!",
-                 port,
+                 globalOptions.serverPort,
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    printInfo(1,"Opened port %d\n",port);
+    printInfo(1,"Opened port %d\n",globalOptions.serverPort);
     serverFlag = TRUE;
     AUTOFREE_ADD(&autoFreeList,&serverSocketHandle,{ Network_doneServer(&serverSocketHandle); });
   }
-  if (tlsPort != 0)
+  if (globalOptions.serverTLSPort != 0)
   {
-    if (   Configuration_isCertificateAvailable(ca)
-        && Configuration_isCertificateAvailable(cert)
-        && Configuration_isKeyAvailable(key)
+    if (   Configuration_isCertificateAvailable(&globalOptions.serverCA)
+        && Configuration_isCertificateAvailable(&globalOptions.serverCert)
+        && Configuration_isKeyAvailable(&globalOptions.serverKey)
        )
     {
       #ifdef HAVE_GNU_TLS
         error = Network_initServer(&serverTLSSocketHandle,
-                                   tlsPort,
+                                   globalOptions.serverTLSPort,
                                    SERVER_SOCKET_TYPE_TLS,
                                    globalOptions.serverCA.data,
                                    globalOptions.serverCA.length,
@@ -19949,14 +19940,14 @@ Errors Server_run(ServerModes       mode,
         if (error != ERROR_NONE)
         {
           printError("Cannot initialize TLS/SSL server at port %u (error: %s)!",
-                     tlsPort,
+                     globalOptions.serverTLSPort,
                      Error_getText(error)
                     );
           AutoFree_cleanup(&autoFreeList);
           return FALSE;
         }
         AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
-        printInfo(1,"Opened TLS/SSL port %u\n",tlsPort);
+        printInfo(1,"Opened TLS/SSL port %u\n",globalOptions.serverTLSPort);
         serverTLSFlag = TRUE;
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(ca);
@@ -19968,14 +19959,14 @@ Errors Server_run(ServerModes       mode,
     }
     else
     {
-      if (!Configuration_isCertificateAvailable(ca)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started");
-      if (!Configuration_isCertificateAvailable(cert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started");
-      if (!Configuration_isKeyAvailable(key)) printWarning("No key data (bar-server-key.pem file) - TLS server not started");
+      if (!Configuration_isCertificateAvailable(&globalOptions.serverCA)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started");
+      if (!Configuration_isCertificateAvailable(&globalOptions.serverCert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started");
+      if (!Configuration_isKeyAvailable(&globalOptions.serverKey)) printWarning("No key data (bar-server-key.pem file) - TLS server not started");
     }
   }
   if (!serverFlag && !serverTLSFlag)
   {
-    if ((port == 0) && (tlsPort == 0))
+    if ((globalOptions.serverPort == 0) && (globalOptions.serverTLSPort == 0))
     {
       printError("Cannot start any server (error: no port numbers specified)!");
     }
@@ -20120,14 +20111,14 @@ Errors Server_run(ServerModes       mode,
     SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // get standard port connection requests
-      if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
+      if (serverFlag    && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections)))
       {
         Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverSocketHandle),HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID);
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverSocketHandle));
       }
 
       // get TLS port connection requests
-      if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
+      if (serverTLSFlag && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections)))
       {
         Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverTLSSocketHandle),HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID);
 //TODO:
@@ -20174,7 +20165,7 @@ Errors Server_run(ServerModes       mode,
       if      (   serverFlag
                && (handle == Network_getServerSocket(&serverSocketHandle))
                && Misc_isHandleEvent(events,HANDLE_EVENT_INPUT)
-               && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
+               && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
               )
       {
         error = newNetworkClient(&clientNode,&serverSocketHandle);
@@ -20226,7 +20217,7 @@ Errors Server_run(ServerModes       mode,
       else if (   serverTLSFlag
                && (handle == Network_getServerSocket(&serverTLSSocketHandle))
                && Misc_isHandleEvent(events,HANDLE_EVENT_INPUT)
-               && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
+               && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
               )
       {
         error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
@@ -20587,7 +20578,7 @@ Errors Server_run(ServerModes       mode,
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
-  if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
+  if (!stringIsEmpty(globalOptions.indexDatabaseFileName)) Index_done();
   List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
