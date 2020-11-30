@@ -679,68 +679,6 @@ LOCAL void deleteMountNode(MountNode *mountNode)
   LIST_DELETE_NODE(mountNode);
 }
 
-//TODO: required? remove?
-#if 0
-LOCAL Errors readCAFile(Certificate *certificate, const char *fileName)
-{
-  Errors     error;
-  FileHandle fileHandle;
-  uint64     dataLength;
-  void       *data;
-
-  assert(certificate != NULL);
-  assert(fileName != NULL);
-
-  certificate->data   = NULL;
-  certificate->length = 0;
-
-  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // get file size
-  dataLength = File_getSize(&fileHandle);
-  if (dataLength == 0LL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_CA;
-  }
-
-  // allocate memory
-  data = malloc((size_t)dataLength);
-  if (data == NULL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  // read file data
-  error = File_read(&fileHandle,
-                    data,
-                    dataLength,
-                    NULL
-                   );
-  if (error != ERROR_NONE)
-  {
-    free(data);
-    (void)File_close(&fileHandle);
-    return error;
-  }
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  // set certificate data
-  if (certificate->data != NULL) free(certificate->data);
-  certificate->data   = data;
-  certificate->length = dataLength;
-
-  return ERROR_NONE;
-}
-#endif
-
 /***********************************************************************\
 * Name   : cmdOptionParseString
 * Purpose: command line option call back for parsing string
@@ -1320,6 +1258,7 @@ LOCAL void clearCertificate(Certificate *certificate)
   assert(certificate != NULL);
 
   if (certificate->data != NULL) free(certificate->data);
+  certificate->type   = CERTIFICATE_TYPE_NONE;
   certificate->data   = NULL;
   certificate->length = 0;
 }
@@ -1349,6 +1288,8 @@ LOCAL bool setCertificate(Certificate *certificate, const void *certificateData,
   memCopyFast(data,certificateLength,certificateData,certificateLength);
 
   if (certificate->data != NULL) free(certificate->data);
+//TODO: type?
+//  certificate->type   = data;
   certificate->data   = data;
   certificate->length = certificateLength;
 
@@ -2479,6 +2420,147 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
 }
 
 /***********************************************************************\
+* Name   : readCertificateFile
+* Purpose: read certificate file
+* Input  : certificate - certificate variable
+*          fileName    - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint64     dataLength;
+  void       *data;
+
+  assert(certificate != NULL);
+  assert(fileName != NULL);
+
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get file size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_CERTIFICATE;
+  }
+
+  // allocate memory
+  data = malloc((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    free(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set certificate data
+  if (certificate->data != NULL) free(certificate->data);
+  certificate->type   = CERTIFICATE_TYPE_FILE;
+  String_setCString(certificate->fileName,fileName);
+  certificate->data   = data;
+  certificate->length = dataLength;
+
+  printInfo(2,"Read certificate file '%s'\n",fileName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : readKeyFile
+* Purpose: read public/private key file
+* Input  : key      - key variable
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readKeyFile(Key *key, const char *fileName)
+{
+  Errors     error;
+  FileHandle fileHandle;
+  uint       dataLength;
+  char       *data;
+
+  assert(key != NULL);
+  assert(fileName != NULL);
+
+  // open file
+  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get data size
+  dataLength = File_getSize(&fileHandle);
+  if (dataLength == 0LL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_NO_TLS_KEY;
+  }
+
+  // allocate secure memory
+  data = (char*)allocSecure((size_t)dataLength);
+  if (data == NULL)
+  {
+    (void)File_close(&fileHandle);
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // read file data
+  error = File_read(&fileHandle,
+                    data,
+                    dataLength,
+                    NULL
+                   );
+  if (error != ERROR_NONE)
+  {
+    freeSecure(data);
+    (void)File_close(&fileHandle);
+    return error;
+  }
+
+  // close file
+  (void)File_close(&fileHandle);
+
+  // set key data
+  if (key->data != NULL) freeSecure(key->data);
+  key->data   = data;
+  key->length = dataLength;
+
+  printInfo(3,"Read key file '%s'\n",fileName);
+
+  return ERROR_NONE;
+}
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : cmdOptionParseBandWidth
 * Purpose: command line option call back for parsing band width settings
 * Input  : -
@@ -2713,6 +2795,7 @@ LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *na
 * Notes  : -
 \***********************************************************************/
 
+//TODO: rename? cmdOptionCertificateParse
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   Certificate *certificate = (Certificate*)variable;
@@ -2725,7 +2808,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = Configuration_readCertificateFile(certificate,value);
+  error = readCertificateFile(certificate,value);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -2756,7 +2839,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = Configuration_readKeyFile(key,value);
+  error = readKeyFile(key,value);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -2792,7 +2875,7 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
   if (File_existsCString(value))
   {
     // read key data from file
-    error = Configuration_readKeyFile(key,value);
+    error = readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -4690,7 +4773,14 @@ LOCAL bool validateOptions(void)
   return TRUE;
 }
 
-/*---------------------------------------------------------------------*/
+/***********************************************************************\
+* Name   : getConfigFileName
+* Purpose: get writable config file name
+* Input  : fileName - file name variable
+* Output : fileName - file anme
+* Return : file name
+* Notes  : -
+\***********************************************************************/
 
 String getConfigFileName(String fileName)
 {
@@ -6439,13 +6529,11 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
   if      (File_existsCString(value))
   {
     // read certificate from file
-    error = Configuration_readCertificateFile(certificate,value);
+    error = readCertificateFile(certificate,value);
     if (error != ERROR_NONE)
     {
       return FALSE;
     }
-    certificate->type = CERTIFICATE_TYPE_FILE;
-    String_setCString(certificate->fileName,value);
   }
   else if (stringStartsWith(value,"base64:"))
   {
@@ -6478,6 +6566,7 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
     // set certificate data
     if (certificate->data != NULL) free(certificate->data);
     certificate->type   = CERTIFICATE_TYPE_CONFIG;
+    String_clear(certificate->fileName);
     certificate->data   = data;
     certificate->length = dataLength;
   }
@@ -6507,6 +6596,8 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
 
     // set certificate data
     if (certificate->data != NULL) free(certificate->data);
+    certificate->type   = CERTIFICATE_TYPE_CONFIG;
+    String_clear(certificate->fileName);
     certificate->data   = data;
     certificate->length = dataLength;
   }
@@ -6536,7 +6627,7 @@ LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueFormat
   switch (formatOperation)
   {
     case CONFIG_VALUE_FORMAT_OPERATION_INIT:
-      (*formatUserData) = (CompressAlgorithmsDeltaByte*)data;
+      (*formatUserData) = (Certificate*)data;
       break;
     case CONFIG_VALUE_FORMAT_OPERATION_DONE:
       break;
@@ -6619,7 +6710,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
   {
     // read key data from file
 
-    error = Configuration_readKeyFile(key,value);
+    error = readKeyFile(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -8089,6 +8180,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                          0,                                                             "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                       0,0,6,                                                         "increment/set verbosity level"                                            ),
 
+  CMD_OPTION_CSTRING      ("save-configuration",                0,  1,1,globalOptions.saveConfigurationFileName,          0,                                                             "configuration file name","file name"                                      ),
+
   CMD_OPTION_BOOLEAN      ("version",                           0  ,0,0,globalOptions.versionFlag,                        0,                                                             "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,globalOptions.helpFlag,                           0,                                                             "output this help"                                                         ),
   CMD_OPTION_BOOLEAN      ("xhelp",                             0,  0,0,globalOptions.xhelpFlag,                          0,                                                             "output help to extended options"                                          ),
@@ -8565,6 +8658,123 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions.noStopOnErrorFlag,-1,                           configValueDeprecatedStopOnErrorParse,NULL,"no-stop-on-error",TRUE),
 
   // ignored
+);
+
+// ----------------------------------------------------------------------
+
+ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+(
+  CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ,"<uuid>"),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
+  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-tls",      JobNode,job.slaveHost.forceTLS,                  "yes|no"),
+  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.storageName                          ,"<name>"),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",              JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
+
+  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",     JobNode,job.options.incrementalListFileName      ,"<file name>"),
+
+  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",         JobNode,job.options.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+
+  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",           JobNode,job.options.directoryStripCount,         -1,MAX_INT,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_STRING      ("destination",               JobNode,job.options.destination                  ,"<directory>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                     JobNode,job.options.owner,                       configValueOwnerParse,configValueOwnerFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",              JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES,"<type>"),
+
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",        JobNode,job.options.compressAlgorithms,          configValueCompressAlgorithmsParse,configValueCompressAlgorithmsFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.options.compressExcludePatternList,  configValuePatternParse,configValuePatternFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",           JobNode,job.options.cryptAlgorithms,             configValueCryptAlgorithmsParse,configValueCryptAlgorithmsFormat,NULL),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",                JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES,"<type>"),
+  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",       JobNode,job.options.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES,"<mode>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",            JobNode,job.options.cryptPassword,               configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",          JobNode,job.options.cryptPublicKey,              configValueKeyParse,configValueKeyFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_STRING      ("pre-command",               JobNode,job.options.preProcessScript             ,"<command>"),
+  CONFIG_STRUCT_VALUE_STRING      ("post-command",              JobNode,job.options.postProcessScript            ,"<command>"),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-pre-command",         JobNode,job.options.slavePreProcessScript        ,"<command>"),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-post-command",        JobNode,job.options.slavePostProcessScript       ,"<command>"),
+
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("storage-on-master",         JobNode,job.options.storageOnMaster,             "yes|no"),
+
+  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",            JobNode,job.options.ftpServer.loginName          ,"<name>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ,"<name>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
+//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueFileEntryPatternParse,configValueFileEntryPatternFormat,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.options.includeFileListFileName      ,"<file name>"),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.options.includeFileCommand           ,"<command>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                    configValueImageEntryPatternParse,configValueImageEntryPatternFormat,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.options.includeImageListFileName     ,"<file name>"),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.options.includeImageCommand          ,"<command>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                  configValuePatternParse,configValuePatternFormat,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.options.excludeListFileName          ,"<file name>"),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.options.excludeCommand               ,"<command>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.options.deltaSourceList,             configValueDeltaSourceParse,configValueDeltaSourceFormat,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.options.mountList,                   configValueMountParse,configValueMountFormat,NULL),
+
+  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                       JobNode,job.options.errorCorrectionCodesFlag,    "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                     JobNode,job.options.blankFlag,                   "yes|no"),
+
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",           JobNode,job.options.skipUnreadableFlag,          "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",                JobNode,job.options.rawImagesFlag,               "yes|no"),
+  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",         JobNode,job.options.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES,"<mode>"),
+  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",        JobNode,job.options.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES,"<mode>"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",         JobNode,job.options.waitFirstVolumeFlag,         "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",              JobNode,job.options.noSignatureFlag,             "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",          JobNode,job.options.noBAROnMediumFlag,           "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag,           "yes|no"),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag,  "yes|no"),
+
+  CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ,"<uuid>"),
+    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ,"<uuid>"),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueScheduleDateFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueScheduleWeekDaySetParse,configValueScheduleWeekDaySetFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                               configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
+    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                        CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
+    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ,"<text>"),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage,                          "yes|no"),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled,                            "yes|no"),
+
+    // deprecated
+    CONFIG_VALUE_DEPRECATED       ("min-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMinKeepParse,NULL,NULL,FALSE),
+    CONFIG_VALUE_DEPRECATED       ("max-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMaxKeepParse,NULL,NULL,FALSE),
+    CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueDeprecatedScheduleMaxAgeParse,NULL,NULL,FALSE),
+  CONFIG_VALUE_END_SECTION(),
+
+  CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL,NULL,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
+  CONFIG_VALUE_END_SECTION(),
+
+  CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ,"<text>"),
+
+  // deprecated
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueDeprecatedRemoteHostParse,NULL,"slave-host-name",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueDeprecatedRemotePortParse,NULL,"slave-host-port",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  // Note: archive-file-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-archive-files",   JobNode,job.options.archiveFileMode,             configValueDeprecatedArchiveFileModeOverwriteParse,NULL,"archive-file-mode",TRUE),
+  // Note: restore-entry-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueDeprecatedRestoreEntryModeOverwriteParse,NULL,"restore-entry-mode=overwrite",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueDeprecatedMountDeviceParse,NULL,"mount",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueDeprecatedStopOnErrorParse,NULL,"no-stop-on-error",TRUE),
+
+  // ignored
+  CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
 );
 
 void Configuration_initGlobalOptions(void)
@@ -9326,123 +9536,6 @@ Errors Configuration_update(void)
   return ERROR_NONE;
 }
 
-Errors Configuration_readCertificateFile(Certificate *certificate, const char *fileName)
-{
-  Errors     error;
-  FileHandle fileHandle;
-  uint64     dataLength;
-  void       *data;
-
-  assert(certificate != NULL);
-  assert(fileName != NULL);
-
-  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // get file size
-  dataLength = File_getSize(&fileHandle);
-  if (dataLength == 0LL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_CERTIFICATE;
-  }
-
-  // allocate memory
-  data = malloc((size_t)dataLength);
-  if (data == NULL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  // read file data
-  error = File_read(&fileHandle,
-                    data,
-                    dataLength,
-                    NULL
-                   );
-  if (error != ERROR_NONE)
-  {
-    free(data);
-    (void)File_close(&fileHandle);
-    return error;
-  }
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  // set certificate data
-  if (certificate->data != NULL) free(certificate->data);
-  certificate->data   = data;
-  certificate->length = dataLength;
-
-  printInfo(2,"Read certificate file '%s'\n",fileName);
-
-  return ERROR_NONE;
-}
-
-Errors Configuration_readKeyFile(Key *key, const char *fileName)
-{
-  Errors     error;
-  FileHandle fileHandle;
-  uint       dataLength;
-  char       *data;
-
-  assert(key != NULL);
-  assert(fileName != NULL);
-
-  // open file
-  error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // get data size
-  dataLength = File_getSize(&fileHandle);
-  if (dataLength == 0LL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_NO_TLS_KEY;
-  }
-
-  // allocate secure memory
-  data = (char*)allocSecure((size_t)dataLength);
-  if (data == NULL)
-  {
-    (void)File_close(&fileHandle);
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-
-  // read file data
-  error = File_read(&fileHandle,
-                    data,
-                    dataLength,
-                    NULL
-                   );
-  if (error != ERROR_NONE)
-  {
-    freeSecure(data);
-    (void)File_close(&fileHandle);
-    return error;
-  }
-
-  // close file
-  (void)File_close(&fileHandle);
-
-  // set key data
-  if (key->data != NULL) freeSecure(key->data);
-  key->data   = data;
-  key->length = dataLength;
-
-  printInfo(3,"Read key file '%s'\n",fileName);
-
-  return ERROR_NONE;
-}
-
 Errors Configuration_readAllServerKeys(void)
 {
   String fileName;
@@ -9452,13 +9545,13 @@ Errors Configuration_readAllServerKeys(void)
   fileName = String_new();
   Configuration_initKey(&key);
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
-  if (File_exists(fileName) && (Configuration_readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
   {
     Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
     Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
   }
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
-  if (File_exists(fileName) && (Configuration_readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
   {
     Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
     Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
@@ -9467,9 +9560,9 @@ Errors Configuration_readAllServerKeys(void)
   String_delete(fileName);
 
   // read default server CA, certificate, key
-  (void)Configuration_readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)Configuration_readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-  (void)Configuration_readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+  (void)readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
+  (void)readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+  (void)readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
 
   return ERROR_NONE;
 }
@@ -9490,123 +9583,6 @@ bool Configuration_validate(void)
 
   return TRUE;
 }
-
-// ----------------------------------------------------------------------
-
-ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
-(
-  CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ,"<uuid>"),
-  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
-  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL,"<n>"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-tls",      JobNode,job.slaveHost.forceTLS,                  "yes|no"),
-  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.storageName                          ,"<name>"),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-type",              JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
-
-  CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",     JobNode,job.options.incrementalListFileName      ,"<file name>"),
-
-  CONFIG_STRUCT_VALUE_INTEGER64   ("archive-part-size",         JobNode,job.options.archivePartSize,             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
-
-  CONFIG_STRUCT_VALUE_INTEGER     ("directory-strip",           JobNode,job.options.directoryStripCount,         -1,MAX_INT,NULL,"<n>"),
-  CONFIG_STRUCT_VALUE_STRING      ("destination",               JobNode,job.options.destination                  ,"<directory>"),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("owner",                     JobNode,job.options.owner,                       configValueOwnerParse,configValueOwnerFormat,NULL),
-
-  CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",              JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES,"<type>"),
-
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",        JobNode,job.options.compressAlgorithms,          configValueCompressAlgorithmsParse,configValueCompressAlgorithmsFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.options.compressExcludePatternList,  configValuePatternParse,configValuePatternFormat,NULL),
-
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",           JobNode,job.options.cryptAlgorithms,             configValueCryptAlgorithmsParse,configValueCryptAlgorithmsFormat,NULL),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",                JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES,"<type>"),
-  CONFIG_STRUCT_VALUE_SELECT      ("crypt-password-mode",       JobNode,job.options.cryptPasswordMode,           CONFIG_VALUE_PASSWORD_MODES,"<mode>"),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-password",            JobNode,job.options.cryptPassword,               configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-public-key",          JobNode,job.options.cryptPublicKey,              configValueKeyParse,configValueKeyFormat,NULL),
-
-  CONFIG_STRUCT_VALUE_STRING      ("pre-command",               JobNode,job.options.preProcessScript             ,"<command>"),
-  CONFIG_STRUCT_VALUE_STRING      ("post-command",              JobNode,job.options.postProcessScript            ,"<command>"),
-  CONFIG_STRUCT_VALUE_STRING      ("slave-pre-command",         JobNode,job.options.slavePreProcessScript        ,"<command>"),
-  CONFIG_STRUCT_VALUE_STRING      ("slave-post-command",        JobNode,job.options.slavePostProcessScript       ,"<command>"),
-
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("storage-on-master",         JobNode,job.options.storageOnMaster,             "yes|no"),
-
-  CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",            JobNode,job.options.ftpServer.loginName          ,"<name>"),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
-
-  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL,"<n>"),
-  CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ,"<name>"),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key-data",       JobNode,job.options.sshServer.publicKey,         configValueKeyParse,configValueKeyFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
-//  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueKeyParse,configValueKeyFormat,NULL),
-
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueFileEntryPatternParse,configValueFileEntryPatternFormat,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.options.includeFileListFileName      ,"<file name>"),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.options.includeFileCommand           ,"<command>"),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                    configValueImageEntryPatternParse,configValueImageEntryPatternFormat,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.options.includeImageListFileName     ,"<file name>"),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.options.includeImageCommand          ,"<command>"),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                  configValuePatternParse,configValuePatternFormat,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.options.excludeListFileName          ,"<file name>"),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.options.excludeCommand               ,"<command>"),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.options.deltaSourceList,             configValueDeltaSourceParse,configValueDeltaSourceFormat,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.options.mountList,                   configValueMountParse,configValueMountFormat,NULL),
-
-  CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
-  CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("ecc",                       JobNode,job.options.errorCorrectionCodesFlag,    "yes|no"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("blank",                     JobNode,job.options.blankFlag,                   "yes|no"),
-
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("skip-unreadable",           JobNode,job.options.skipUnreadableFlag,          "yes|no"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("raw-images",                JobNode,job.options.rawImagesFlag,               "yes|no"),
-  CONFIG_STRUCT_VALUE_SELECT      ("archive-file-mode",         JobNode,job.options.archiveFileMode,             CONFIG_VALUE_ARCHIVE_FILE_MODES,"<mode>"),
-  CONFIG_STRUCT_VALUE_SELECT      ("restore-entry-mode",        JobNode,job.options.restoreEntryMode,            CONFIG_VALUE_RESTORE_ENTRY_MODES,"<mode>"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("wait-first-volume",         JobNode,job.options.waitFirstVolumeFlag,         "yes|no"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-signature",              JobNode,job.options.noSignatureFlag,             "yes|no"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-bar-on-medium",          JobNode,job.options.noBAROnMediumFlag,           "yes|no"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag,           "yes|no"),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag,  "yes|no"),
-
-  CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL,NULL,NULL),
-    CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ,"<uuid>"),
-    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ,"<uuid>"),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueScheduleDateFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueScheduleWeekDaySetParse,configValueScheduleWeekDaySetFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                               configValueScheduleTimeParse,configValueScheduleTimeFormat,NULL),
-    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                        CONFIG_VALUE_ARCHIVE_TYPES,"<type>"),
-    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL,"<n>"),
-    CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ,"<text>"),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage,                          "yes|no"),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled,                            "yes|no"),
-
-    // deprecated
-    CONFIG_VALUE_DEPRECATED       ("min-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMinKeepParse,NULL,NULL,FALSE),
-    CONFIG_VALUE_DEPRECATED       ("max-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMaxKeepParse,NULL,NULL,FALSE),
-    CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueDeprecatedScheduleMaxAgeParse,NULL,NULL,FALSE),
-  CONFIG_VALUE_END_SECTION(),
-
-  CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL,NULL,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
-  CONFIG_VALUE_END_SECTION(),
-
-  CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ,"<text>"),
-
-  // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueDeprecatedRemoteHostParse,NULL,"slave-host-name",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueDeprecatedRemotePortParse,NULL,"slave-host-port",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
-  // Note: archive-file-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-archive-files",   JobNode,job.options.archiveFileMode,             configValueDeprecatedArchiveFileModeOverwriteParse,NULL,"archive-file-mode",TRUE),
-  // Note: restore-entry-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueDeprecatedRestoreEntryModeOverwriteParse,NULL,"restore-entry-mode=overwrite",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueDeprecatedMountDeviceParse,NULL,"mount",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueDeprecatedStopOnErrorParse,NULL,"no-stop-on-error",TRUE),
-
-  // ignored
-  CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
-);
 
 #ifdef __cplusplus
   }

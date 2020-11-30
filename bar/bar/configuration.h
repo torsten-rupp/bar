@@ -478,17 +478,6 @@ void Configuration_freeServerNode(ServerNode *serverNode, void *userData);
 void Configuration_deleteServerNode(ServerNode *serverNode);
 
 /***********************************************************************\
-* Name   : getConfigFileName
-* Purpose: get writable config file name
-* Input  : fileName - file name variable
-* Output : fileName - file anme
-* Return : file name
-* Notes  : -
-\***********************************************************************/
-
-String getConfigFileName(String fileName);
-
-/***********************************************************************\
 * Name   : Configuration_add
 * Purpose: add configuration file
 * Input  : configFileType - config file type
@@ -576,30 +565,6 @@ Errors Configuration_readAll(bool printInfoFlag);
 \***********************************************************************/
 
 Errors Configuration_update(void);
-
-/***********************************************************************\
-* Name   : Configuration_readCertificateFile
-* Purpose: read certificate file
-* Input  : certificate - certificate variable
-*          fileName    - file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Configuration_readCertificateFile(Certificate *certificate, const char *fileName);
-
-/***********************************************************************\
-* Name   : Configuration_readKeyFile
-* Purpose: read public/private key file
-* Input  : key      - key variable
-*          fileName - file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Configuration_readKeyFile(Key *key, const char *fileName);
 
 /***********************************************************************\
 * Name   : Configuration_readAllServerKeys

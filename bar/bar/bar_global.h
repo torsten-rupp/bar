@@ -906,6 +906,8 @@ typedef struct
   bool                        errorCorrectionCodesFlag;       // TRUE iff error correction codes should be added
   bool                        waitFirstVolumeFlag;            // TRUE for wait for first volume
 
+  const char                  *saveConfigurationFileName;     // configuration save file name
+
   // debug/test only
   struct
   {
