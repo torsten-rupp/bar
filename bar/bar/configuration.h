@@ -568,7 +568,7 @@ Errors Configuration_readAll(bool printInfoFlag);
 
 /***********************************************************************\
 * Name   : updateConfig
-* Purpose: update config file
+* Purpose: update configuration file
 * Input  : -
 * Output : -
 * Return : -
@@ -590,7 +590,7 @@ Errors Configuration_update(void);
 Errors Configuration_readCertificateFile(Certificate *certificate, const char *fileName);
 
 /***********************************************************************\
-* Name   : readKeyFile
+* Name   : Configuration_readKeyFile
 * Purpose: read public/private key file
 * Input  : key      - key variable
 *          fileName - file name
@@ -602,7 +602,7 @@ Errors Configuration_readCertificateFile(Certificate *certificate, const char *f
 Errors Configuration_readKeyFile(Key *key, const char *fileName);
 
 /***********************************************************************\
-* Name   : readAllServerKeys
+* Name   : Configuration_readAllServerKeys
 * Purpose: initialize all server keys/certificates
 * Input  : -
 * Output : -
