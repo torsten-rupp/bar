@@ -9472,6 +9472,23 @@ Errors Configuration_readAllServerKeys(void)
   return ERROR_NONE;
 }
 
+bool Configuration_validate(void)
+{
+  if (!String_isEmpty(globalOptions.tmpDirectory))
+  {
+    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+  }
+
+  if (!Continuous_isAvailable())
+  {
+    printWarning("Continuous support is not available");
+  }
+
+  return TRUE;
+}
+
 // ----------------------------------------------------------------------
 
 ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY

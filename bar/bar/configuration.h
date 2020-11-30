@@ -613,6 +613,17 @@ Errors Configuration_readKeyFile(Key *key, const char *fileName);
 
 Errors Configuration_readAllServerKeys(void);
 
+/***********************************************************************\
+* Name   : Configuration_validate
+* Purpose: validate options
+* Input  : -
+* Output : -
+* Return : TRUE if options valid, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Configuration_validate(void);
+
 #ifdef __cplusplus
   }
 #endif
