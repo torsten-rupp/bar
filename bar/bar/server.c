@@ -492,29 +492,6 @@ LOCAL bool parseServerType(const char *name, ServerTypes *serverType, void *user
 }
 
 /***********************************************************************\
-* Name   : freeScheduleNode
-* Purpose: free schedule node
-* Input  : scheduleNode - schedule node
-*          userData     - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
-{
-  assert(scheduleNode != NULL);
-  assert(scheduleNode->uuid != NULL);
-  assert(scheduleNode->customText != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(scheduleNode->customText);
-  String_delete(scheduleNode->parentUUID);
-  String_delete(scheduleNode->uuid);
-}
-
-/***********************************************************************\
 * Name   : newScheduleNode
 * Purpose: allocate new schedule node
 * Input  : scheduleUUID - schedule UUIDor NULL for generate new UUID
@@ -567,6 +544,29 @@ LOCAL ScheduleNode *newScheduleNode(ConstString scheduleUUID)
   }
 
   return scheduleNode;
+}
+
+/***********************************************************************\
+* Name   : freeScheduleNode
+* Purpose: free schedule node
+* Input  : scheduleNode - schedule node
+*          userData     - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
+{
+  assert(scheduleNode != NULL);
+  assert(scheduleNode->uuid != NULL);
+  assert(scheduleNode->customText != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(scheduleNode->customText);
+  String_delete(scheduleNode->parentUUID);
+  String_delete(scheduleNode->uuid);
 }
 
 /***********************************************************************\
@@ -667,24 +667,6 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
 }
 
 /***********************************************************************\
-* Name   : freePersistenceNode
-* Purpose: free persistence node
-* Input  : persistenceNode - persistence node
-*          userData        - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
-{
-  assert(persistenceNode != NULL);
-
-  UNUSED_VARIABLE(persistenceNode);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
 * Name   : newPersistenceNode
 * Purpose: allocate new persistence node
 * Input  : archiveType     - archive type; see ArchiveTypes
@@ -718,23 +700,6 @@ LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
 }
 
 /***********************************************************************\
-* Name   : deletePersistenceNode
-* Purpose: delete persistence node
-* Input  : persistenceNode - persistence node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deletePersistenceNode(PersistenceNode *persistenceNode)
-{
-  assert(persistenceNode != NULL);
-
-  freePersistenceNode(persistenceNode,NULL);
-  LIST_DELETE_NODE(persistenceNode);
-}
-
-/***********************************************************************\
 * Name   : insertPersistenceNode
 * Purpose: insert persistence node into list
 * Input  : persistenceList - persistence list
@@ -761,6 +726,41 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
 
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
+}
+
+/***********************************************************************\
+* Name   : freePersistenceNode
+* Purpose: free persistence node
+* Input  : persistenceNode - persistence node
+*          userData        - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
+{
+  assert(persistenceNode != NULL);
+
+  UNUSED_VARIABLE(persistenceNode);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : deletePersistenceNode
+* Purpose: delete persistence node
+* Input  : persistenceNode - persistence node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deletePersistenceNode(PersistenceNode *persistenceNode)
+{
+  assert(persistenceNode != NULL);
+
+  freePersistenceNode(persistenceNode,NULL);
+  LIST_DELETE_NODE(persistenceNode);
 }
 
 #if 0
