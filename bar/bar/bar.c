@@ -3318,8 +3318,8 @@ LOCAL Errors runDaemon(void)
   // daemon mode -> run server with network
   globalOptions.runMode = RUN_MODE_SERVER;
 
-  // run server (not detached)
-  error = Server_run();
+  // daemon mode -> run server with sockets
+  error = Server_socket();
   if (error != ERROR_NONE)
   {
     if (Continuous_isAvailable()) Continuous_done();
@@ -3364,10 +3364,7 @@ LOCAL Errors runBatch(void)
   globalOptions.runMode = RUN_MODE_BATCH;
 
   // batch mode -> run server with standard i/o
-  error = Server_batch(STDIN_FILENO,
-                       STDOUT_FILENO,
-                       globalOptions.indexDatabaseFileName
-                      );
+  error = Server_batch(STDIN_FILENO,STDOUT_FILENO);
   if (error != ERROR_NONE)
   {
     return error;

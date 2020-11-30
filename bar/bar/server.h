@@ -68,7 +68,7 @@ Errors Server_initAll(void);
 void Server_doneAll(void);
 
 /***********************************************************************\
-* Name   : Server_run
+* Name   : Server_socket
 * Purpose: run network server
 * Input  : -
 * Output : -
@@ -76,22 +76,20 @@ void Server_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_run(void);
+Errors Server_socket(void);
 
 /***********************************************************************\
 * Name   : Server_batch
 * Purpose: run batch server
-* Input  : inputDescriptor       - input file descriptor
-*          outputDescriptor      - input file descriptor
-*          indexDatabaseFileName - index database file name or NULL
+* Input  : inputDescriptor  - input file descriptor
+*          outputDescriptor - input file descriptor
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_batch(int        inputDescriptor,
-                    int        outputDescriptor,
-                    const char *indexDatabaseFileName
+Errors Server_batch(int inputDescriptor,
+                    int outputDescriptor
                    );
 
 #if 0

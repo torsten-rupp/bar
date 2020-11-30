@@ -19760,7 +19760,7 @@ void Server_doneAll(void)
   #endif /* SIMULATE_PURGE */
 }
 
-Errors Server_run(void)
+Errors Server_socket(void)
 {
   AutoFreeList          autoFreeList;
   Errors                error;
@@ -20595,9 +20595,8 @@ Errors Server_run(void)
   return ERROR_NONE;
 }
 
-Errors Server_batch(int        inputDescriptor,
-                    int        outputDescriptor,
-                    const char *indexDatabaseFileName
+Errors Server_batch(int inputDescriptor,
+                    int outputDescriptor
                    )
 {
   AutoFreeList autoFreeList;
@@ -20635,21 +20634,21 @@ Errors Server_batch(int        inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   // init index database
-  if (!stringIsEmpty(indexDatabaseFileName))
+  if (!stringIsEmpty(globalOptions.indexDatabaseFileName))
   {
-    error = Index_init(indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
+    error = Index_init(globalOptions.indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
       printError("Cannot init index database '%s' (error: %s)!",
-                 indexDatabaseFileName,
+                 globalOptions.indexDatabaseFileName,
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
     printInfo(1,"OK\n");
-    AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
+    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseFileName,{ Index_done(); });
   }
 
   // open index
@@ -20804,7 +20803,7 @@ processCommand(&clientInfo,commandString);
 
   // free resources
   doneClient(&clientInfo);
-  if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
+  if (!stringIsEmpty(globalOptions.indexDatabaseFileName)) Index_done();
   Semaphore_done(&serverStateLock);
   List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
