@@ -111,29 +111,6 @@ uint64 jobListLockTimestamp;
 #endif
 
 /***********************************************************************\
-* Name   : freeScheduleNode
-* Purpose: free schedule node
-* Input  : scheduleNode - schedule node
-*          userData     - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
-{
-  assert(scheduleNode != NULL);
-  assert(scheduleNode->uuid != NULL);
-  assert(scheduleNode->customText != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(scheduleNode->customText);
-  String_delete(scheduleNode->parentUUID);
-  String_delete(scheduleNode->uuid);
-}
-
-/***********************************************************************\
 * Name   : newScheduleNode
 * Purpose: allocate new schedule node
 * Input  : -
@@ -233,6 +210,29 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
 }
 
 /***********************************************************************\
+* Name   : freeScheduleNode
+* Purpose: free schedule node
+* Input  : scheduleNode - schedule node
+*          userData     - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
+{
+  assert(scheduleNode != NULL);
+  assert(scheduleNode->uuid != NULL);
+  assert(scheduleNode->customText != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(scheduleNode->customText);
+  String_delete(scheduleNode->parentUUID);
+  String_delete(scheduleNode->uuid);
+}
+
+/***********************************************************************\
 * Name   : deleteScheduleNode
 * Purpose: delete schedule node
 * Input  : scheduleNode - schedule node
@@ -324,40 +324,11 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
 }
 #endif
 
-/***********************************************************************\
-* Name   : freePersistenceNode
-* Purpose: free persistence node
-* Input  : persistenceNode - persistence node
-*          userData        - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
-{
-  assert(persistenceNode != NULL);
-
-  UNUSED_VARIABLE(persistenceNode);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : newPersistenceNode
-* Purpose: allocate new persistence node
-* Input  : archiveType     - archive type; see ArchiveTypes
-*          minKeep,maxKeep - min./max. keep
-*          maxAge          - max. age [days] or AGE_FOREVER
-* Output : -
-* Return : new persistence node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
-                                          int          minKeep,
-                                          int          maxKeep,
-                                          int          maxAge
-                                         )
+PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
+                                        int          minKeep,
+                                        int          maxKeep,
+                                        int          maxAge
+                                       )
 {
   PersistenceNode *persistenceNode;
 
@@ -375,19 +346,9 @@ LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
   return persistenceNode;
 }
 
-/***********************************************************************\
-* Name   : duplicatePersistenceNode
-* Purpose: duplicate persistence node
-* Input  : fromPersistenceNode - from persistence node
-*          userData            - user data (not used)
-* Output : -
-* Return : duplicated persistence node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL PersistenceNode *duplicatePersistenceNode(PersistenceNode *fromPersistenceNode,
-                                                void            *userData
-                                               )
+PersistenceNode *Job_duplicatePersistenceNode(PersistenceNode *fromPersistenceNode,
+                                              void            *userData
+                                             )
 {
   PersistenceNode *persistenceNode;
 
@@ -409,36 +370,9 @@ LOCAL PersistenceNode *duplicatePersistenceNode(PersistenceNode *fromPersistence
   return persistenceNode;
 }
 
-/***********************************************************************\
-* Name   : deletePersistenceNode
-* Purpose: delete persistence node
-* Input  : persistenceNode - persistence node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deletePersistenceNode(PersistenceNode *persistenceNode)
-{
-  assert(persistenceNode != NULL);
-
-  freePersistenceNode(persistenceNode,NULL);
-  LIST_DELETE_NODE(persistenceNode);
-}
-
-/***********************************************************************\
-* Name   : insertPersistenceNode
-* Purpose: insert persistence node into list
-* Input  : persistenceList - persistence list
-*          persistenceNode - persistence node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
-                                 PersistenceNode *persistenceNode
-                                )
+void Job_insertPersistenceNode(PersistenceList *persistenceList,
+                               PersistenceNode *persistenceNode
+                              )
 {
   PersistenceNode *nextPersistenceNode;
 
@@ -453,6 +387,22 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
 
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
+}
+
+void Job_freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
+{
+  assert(persistenceNode != NULL);
+
+  UNUSED_VARIABLE(persistenceNode);
+  UNUSED_VARIABLE(userData);
+}
+
+void Job_deletePersistenceNode(PersistenceNode *persistenceNode)
+{
+  assert(persistenceNode != NULL);
+
+  Job_freePersistenceNode(persistenceNode,NULL);
+  LIST_DELETE_NODE(persistenceNode);
 }
 
 /***********************************************************************\
@@ -1029,7 +979,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   PatternList_clear(&jobOptions->compressExcludePatternList);
   DeltaSourceList_clear(&jobOptions->deltaSourceList);
   List_clear(&jobOptions->scheduleList,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_clear(&jobOptions->persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_clear(&jobOptions->persistenceList,CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL));
   jobOptions->persistenceList.lastModificationDateTime = 0LL;
 
   jobOptions->archiveType                = ARCHIVE_TYPE_NORMAL;
@@ -1732,15 +1682,15 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       if (persistenceNode == NULL)
       {
         // create new persistence node
-        persistenceNode = newPersistenceNode(scheduleNode->archiveType,
-                                             minKeep,
-                                             maxKeep,
-                                             maxAge
-                                            );
+        persistenceNode = Job_newPersistenceNode(scheduleNode->archiveType,
+                                                 minKeep,
+                                                 maxKeep,
+                                                 maxAge
+                                                );
         assert(persistenceNode != NULL);
 
         // insert into persistence list
-        insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
+        Job_insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
       }
     }
   }
@@ -1978,7 +1928,7 @@ NULL // commentLineList
       if (Archive_parseType(String_cString(s),&archiveType,NULL))
       {
         // new persistence
-        persistenceNode = newPersistenceNode(archiveType,0,0,0);
+        persistenceNode = Job_newPersistenceNode(archiveType,0,0,0);
         assert(persistenceNode != NULL);
         while (   File_getLine(&fileHandle,line,&lineNb,"#")
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
@@ -2029,12 +1979,12 @@ NULL // commentLineList
            )
         {
           // insert into persistence list
-          insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
+          Job_insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
         }
         else
         {
           // duplicate -> discard
-          deletePersistenceNode(persistenceNode);
+          Job_deletePersistenceNode(persistenceNode);
         }
       }
       else
@@ -2725,7 +2675,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      &fromJobOptions->persistenceList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Job_duplicatePersistenceNode,NULL)
                     );
   jobOptions->persistenceList.lastModificationDateTime  = 0LL;
 
@@ -2827,7 +2777,7 @@ void Job_doneOptions(JobOptions *jobOptions)
   String_delete(jobOptions->destination);
   String_delete(jobOptions->incrementalListFileName);
 
-  List_done(&jobOptions->persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_done(&jobOptions->persistenceList,CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL));
   List_done(&jobOptions->scheduleList,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobOptions->deltaSourceList);
   PatternList_done(&jobOptions->compressExcludePatternList);
@@ -2852,13 +2802,13 @@ void Job_duplicatePersistenceList(PersistenceList *persistenceList, const Persis
                      fromPersistenceList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Job_duplicatePersistenceNode,NULL)
                     );
 }
 
 void Job_donePersistenceList(PersistenceList *persistenceList)
 {
-  List_done(persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_done(persistenceList,CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL));
 }
 
 SlaveNode *Job_addSlave(ConstString name, uint port)

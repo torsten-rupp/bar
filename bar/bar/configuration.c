@@ -8288,6 +8288,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPACE(),
 
+//TODO remove
+#if 0
   // ignored schedule settings (server only)
   CONFIG_VALUE_SEPARATOR("schedule"),
   CONFIG_VALUE_BEGIN_SECTION     ("schedule",NULL,-1,NULL,NULL,NULL,NULL),
@@ -8312,6 +8314,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
   CONFIG_VALUE_END_SECTION(),
+#endif
 
   // commands
   CONFIG_VALUE_SEPARATOR("commands"),

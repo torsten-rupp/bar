@@ -583,6 +583,74 @@ Errors Job_initAll(void);
 void Job_doneAll(void);
 
 /***********************************************************************\
+* Name   : Job_newPersistenceNode
+* Purpose: allocate new persistence node
+* Input  : archiveType     - archive type; see ArchiveTypes
+*          minKeep,maxKeep - min./max. keep
+*          maxAge          - max. age [days] or AGE_FOREVER
+* Output : -
+* Return : new persistence node
+* Notes  : -
+\***********************************************************************/
+
+PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
+                                        int          minKeep,
+                                        int          maxKeep,
+                                        int          maxAge
+                                       );
+
+/***********************************************************************\
+* Name   : Job_duplicatePersistenceNode
+* Purpose: duplicate persistence node
+* Input  : fromPersistenceNode - from persistence node
+*          userData            - user data (not used)
+* Output : -
+* Return : duplicated persistence node
+* Notes  : -
+\***********************************************************************/
+
+PersistenceNode *Job_duplicatePersistenceNode(PersistenceNode *fromPersistenceNode,
+                                              void            *userData
+                                             );
+
+/***********************************************************************\
+* Name   : Job_insertPersistenceNode
+* Purpose: insert persistence node into list
+* Input  : persistenceList - persistence list
+*          persistenceNode - persistence node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_insertPersistenceNode(PersistenceList *persistenceList,
+                               PersistenceNode *persistenceNode
+                              );
+
+/***********************************************************************\
+* Name   : freePersistenceNode
+* Purpose: free persistence node
+* Input  : persistenceNode - persistence node
+*          userData        - not used
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_freePersistenceNode(PersistenceNode *persistenceNode, void *userData);
+
+/***********************************************************************\
+* Name   : Job_deletePersistenceNode
+* Purpose: delete persistence node
+* Input  : persistenceNode - persistence node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_deletePersistenceNode(PersistenceNode *persistenceNode);
+
+/***********************************************************************\
 * Name   : Job_init
 * Purpose: initialize job
 * Input  : job - job

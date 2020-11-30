@@ -666,103 +666,6 @@ LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
   return error;
 }
 
-/***********************************************************************\
-* Name   : newPersistenceNode
-* Purpose: allocate new persistence node
-* Input  : archiveType     - archive type; see ArchiveTypes
-*          minKeep,maxKeep - min./max. keep
-*          maxAge          - max. age [days] or AGE_FOREVER
-* Output : -
-* Return : new persistence node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL PersistenceNode *newPersistenceNode(ArchiveTypes archiveType,
-                                          int          minKeep,
-                                          int          maxKeep,
-                                          int          maxAge
-                                         )
-{
-  PersistenceNode *persistenceNode;
-
-  persistenceNode = LIST_NEW_NODE(PersistenceNode);
-  if (persistenceNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  persistenceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-  persistenceNode->archiveType = archiveType;
-  persistenceNode->minKeep     = minKeep;
-  persistenceNode->maxKeep     = maxKeep;
-  persistenceNode->maxAge      = maxAge;
-
-  return persistenceNode;
-}
-
-/***********************************************************************\
-* Name   : insertPersistenceNode
-* Purpose: insert persistence node into list
-* Input  : persistenceList - persistence list
-*          persistenceNode - persistence node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
-                                 PersistenceNode *persistenceNode
-                                )
-{
-  PersistenceNode *nextPersistenceNode;
-
-  assert(persistenceList != NULL);
-  assert(persistenceNode != NULL);
-
-  // find position in persistence list
-  nextPersistenceNode = LIST_FIND_FIRST(persistenceList,
-                                        nextPersistenceNode,
-                                        (persistenceNode->maxAge != AGE_FOREVER) && ((nextPersistenceNode->maxAge == AGE_FOREVER) || (nextPersistenceNode->maxAge > persistenceNode->maxAge))
-                                       );
-
-  // insert into persistence list
-  List_insert(persistenceList,persistenceNode,nextPersistenceNode);
-}
-
-/***********************************************************************\
-* Name   : freePersistenceNode
-* Purpose: free persistence node
-* Input  : persistenceNode - persistence node
-*          userData        - not used
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
-{
-  assert(persistenceNode != NULL);
-
-  UNUSED_VARIABLE(persistenceNode);
-  UNUSED_VARIABLE(userData);
-}
-
-/***********************************************************************\
-* Name   : deletePersistenceNode
-* Purpose: delete persistence node
-* Input  : persistenceNode - persistence node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deletePersistenceNode(PersistenceNode *persistenceNode)
-{
-  assert(persistenceNode != NULL);
-
-  freePersistenceNode(persistenceNode,NULL);
-  LIST_DELETE_NODE(persistenceNode);
-}
-
 #if 0
 not used
 /***********************************************************************\
@@ -12432,7 +12335,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     }
 
     // clear persistence list
-    List_clear(&jobNode->job.options.persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
+    List_clear(&jobNode->job.options.persistenceList,CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL));
     jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
     // notify about changed lists
@@ -12527,7 +12430,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
-      deletePersistenceNode(persistenceNode);
+      Job_deletePersistenceNode(persistenceNode);
       return;
     }
 
@@ -12541,9 +12444,9 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
        )
     {
       // insert into persistence list
-      persistenceNode = newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
+      persistenceNode = Job_newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
       assert(persistenceNode != NULL);
-      insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
+      Job_insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
 
       // set last-modified timestamp
       jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
@@ -12682,12 +12585,12 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
        )
     {
       // re-insert updated node into persistence list
-      insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
+      Job_insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
     }
     else
     {
       // duplicate -> discard
-     deletePersistenceNode(persistenceNode);
+      Job_deletePersistenceNode(persistenceNode);
     }
 
 //TODO: remove
@@ -12771,7 +12674,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     // remove from list
     List_removeAndFree(&jobNode->job.options.persistenceList,
                        persistenceNode,
-                       CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL)
+                       CALLBACK_((ListNodeFreeFunction)Job_freePersistenceNode,NULL)
                       );
 
 //TODO: remove
