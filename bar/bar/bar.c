@@ -110,7 +110,8 @@ typedef struct
 } MountedList;
 
 /***************************** Variables *******************************/
-String                   uuid;
+//String                   uuid;
+String                   tmpDirectory;
 Semaphore                consoleLock;
 #ifdef HAVE_NEWLOCALE
   locale_t               POSIXLocale;
@@ -532,6 +533,7 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,initSecure,{ doneSecure(); });
 
   // initialize variables
+  tmpDirectory = String_new();
   Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
@@ -553,6 +555,7 @@ LOCAL Errors initAll(void)
   Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
   lastOutputLine                         = NULL;
 
+  AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
   AUTOFREE_ADD(&autoFreeList,&globalOptions,{ Configuration_doneGlobalOptions(); });
   AUTOFREE_ADD(&autoFreeList,uuid,{ String_delete(uuid); });
@@ -778,6 +781,7 @@ LOCAL void doneAll(void)
   Configuration_doneGlobalOptions();
 
   Semaphore_done(&consoleLock);
+  String_delete(tmpDirectory);
 
   // done secure memory
   doneSecure();
@@ -4372,9 +4376,6 @@ LOCAL Errors bar(int argc, const char *argv[])
           Job_listUnlock();
           return ERROR_CONFIG;
         }
-
-        // get job options
-
       }
     }
   }
@@ -4397,7 +4398,9 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_INVALID_ARGUMENT;
   }
 
-#if 1
+  // save configuration
+  if (globalOptions.saveConfigurationFileName != NULL)
+  {
   String                configFileName;
 
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
@@ -4407,7 +4410,7 @@ String_setCString(configFileName,"/tmp/t.cfg");
 fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(configFileName));
 error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES);
     return error;
-#endif
+  }
 
   // create temporary directory
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);

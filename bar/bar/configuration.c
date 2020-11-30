@@ -9022,13 +9022,15 @@ void Configuration_initGlobalOptions(void)
   globalOptions.errorCorrectionCodesFlag                        = FALSE;
   globalOptions.waitFirstVolumeFlag                             = FALSE;
 
+  globalOptions.saveConfigurationFileName                       = NULL;
+
   // debug/test only
-  globalOptions.debug.serverLevel                                = DEFAULT_SERVER_DEBUG_LEVEL;
-  globalOptions.debug.indexWaitOperationsFlag                    = FALSE;
-  globalOptions.debug.indexPurgeDeletedStoragesFlag              = FALSE;
-  globalOptions.debug.indexAddStorage                            = NULL;
-  globalOptions.debug.indexRemoveStorage                         = NULL;
-  globalOptions.debug.indexRefreshStorage                        = NULL;
+  globalOptions.debug.serverLevel                               = DEFAULT_SERVER_DEBUG_LEVEL;
+  globalOptions.debug.indexWaitOperationsFlag                   = FALSE;
+  globalOptions.debug.indexPurgeDeletedStoragesFlag             = FALSE;
+  globalOptions.debug.indexAddStorage                           = NULL;
+  globalOptions.debug.indexRemoveStorage                        = NULL;
+  globalOptions.debug.indexRefreshStorage                       = NULL;
 
   VALUESET_CLEAR(globalOptionSet);
 }

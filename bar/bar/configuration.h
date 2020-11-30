@@ -148,21 +148,6 @@ INLINE bool Configuration_isCertificateAvailable(const Certificate *certificate)
 }
 #endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
-//TODO: remove
-#if 0
-/***********************************************************************\
-* Name   : readCAFile
-* Purpose: read certicate authority file
-* Input  : certificate - certificate variable
-*          fileName    - file name
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors readCAFile(Certificate *certificate, const char *fileName);
-#endif
-
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

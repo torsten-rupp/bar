@@ -95,9 +95,9 @@ typedef struct
 } TemplateHandle;
 
 /***************************** Variables *******************************/
-extern GlobalOptions   globalOptions;          // global options
-extern GlobalOptionSet globalOptionSet;        // global option set
-extern String          uuid;                   // BAR instance UUID
+//extern GlobalOptions   globalOptions;          // global options
+//extern GlobalOptionSet globalOptionSet;        // global option set
+//extern String          uuid;                   // BAR instance UUID
 extern String          tmpDirectory;           // temporary directory
 extern Semaphore       consoleLock;            // lock console
 #ifdef HAVE_NEWLOCALE
