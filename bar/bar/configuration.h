@@ -40,7 +40,6 @@
 /***************************** Constants *******************************/
 
 extern CommandLineOption       COMMAND_LINE_OPTIONS[];
-extern uint                    COMMAND_LINE_OPTIONS_COUNT;
 
 // config values
 extern const ConfigValueUnit   CONFIG_VALUE_BYTES_UNITS[];

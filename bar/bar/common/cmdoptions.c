@@ -1079,14 +1079,12 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 /*---------------------------------------------------------------------*/
 
 #ifdef NDEBUG
-  bool CmdOption_init(CommandLineOption commandLineOptions[],
-                      uint              commandLineOptionCount
+  bool CmdOption_init(CommandLineOption commandLineOptions[]
                      )
 #else /* not NDEBUG */
   bool __CmdOption_init(const char        *__fileName__,
                         ulong             __lineNb__,
-                        CommandLineOption commandLineOptions[],
-                        uint              commandLineOptionCount
+                        CommandLineOption commandLineOptions[]
                        )
 #endif /* NDEBUG */
 {
@@ -1099,9 +1097,9 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 
   #ifndef NDEBUG
     // check for duplicate names
-    for (i = 0; i < commandLineOptionCount; i++)
+    for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
     {
-      for (j = 0; j < commandLineOptionCount; j++)
+      for (j = 0; commandLineOptions[j].type != CMD_OPTION_TYPE_END; j++)
       {
         if (i != j)
         {
@@ -1121,7 +1119,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
   /* get default values from initial settings of variables
      Note: strings are always new allocated and reallocated in CmdOption_parse() resp. freed in CmdOption_init()
   */
-  for (i = 0; i < commandLineOptionCount; i++)
+  for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     switch (commandLineOptions[i].type)
     {
@@ -1219,14 +1217,12 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 }
 
 #ifdef NDEBUG
-  void CmdOption_done(CommandLineOption commandLineOptions[],
-                      uint              commandLineOptionCount
+  void CmdOption_done(CommandLineOption commandLineOptions[]
                      )
 #else /* not NDEBUG */
   void __CmdOption_done(const char        *__fileName__,
                         ulong             __lineNb__,
-                        CommandLineOption commandLineOptions[],
-                        uint              commandLineOptionCount
+                        CommandLineOption commandLineOptions[]
                        )
 #endif /* NDEBUG */
 {
@@ -1241,7 +1237,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
   assert(commandLineOptions != NULL);
 
   // free values and restore from default values
-  for (i = 0; i < commandLineOptionCount; i++)
+  for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     switch (commandLineOptions[i].type)
     {
@@ -1295,7 +1291,6 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 bool CmdOption_parse(const char              *argv[],
                      int                     *argc,
                      const CommandLineOption commandLineOptions[],
-                     uint                    commandLineOptionCount,
                      uint                    minPriority,
                      uint                    maxPriority,
                      ValueSet                optionSet,
@@ -1326,7 +1321,7 @@ bool CmdOption_parse(const char              *argv[],
   if (minPriority == CMD_PRIORITY_ANY)
   {
     minPriority = MAX_UINT;
-    for (i = 0; i < commandLineOptionCount; i++)
+    for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
     {
       minPriority = MIN(minPriority,commandLineOptions[i].priority);
     }
@@ -1334,7 +1329,7 @@ bool CmdOption_parse(const char              *argv[],
   if (maxPriority == CMD_PRIORITY_ANY)
   {
     maxPriority = 0;
-    for (i = 0; i < commandLineOptionCount; i++)
+    for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
     {
       maxPriority = MAX(maxPriority,commandLineOptions[i].priority);
     }
@@ -1342,7 +1337,7 @@ bool CmdOption_parse(const char              *argv[],
   }
 
   // reset increment options
-  for (i = 0; i < commandLineOptionCount; i++)
+  for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     if (commandLineOptions[i].type == CMD_OPTION_TYPE_INCREMENT)
     {
@@ -1382,11 +1377,11 @@ bool CmdOption_parse(const char              *argv[],
 
         // find option
         j = 0;
-        while ((j < commandLineOptionCount) && !stringEquals(commandLineOptions[j].name,name))
+        while ((commandLineOptions[j].type != CMD_OPTION_TYPE_END) && !stringEquals(commandLineOptions[j].name,name))
         {
           j++;
         }
-        if (j < commandLineOptionCount)
+        if (commandLineOptions[j].type != CMD_OPTION_TYPE_END)
         {
           // get option value
           value = NULL;
@@ -1572,11 +1567,11 @@ bool CmdOption_parse(const char              *argv[],
 
           // find option
           j = 0;
-          while ((j < commandLineOptionCount) && (commandLineOptions[j].shortName != name[0]))
+          while ((commandLineOptions[j].type != CMD_OPTION_TYPE_END) && (commandLineOptions[j].shortName != name[0]))
           {
             j++;
           }
-          if (j < commandLineOptionCount)
+          if (commandLineOptions[j].type != CMD_OPTION_TYPE_END)
           {
             // find optional value for option
             value = NULL;
@@ -1846,7 +1841,6 @@ const char *CmdOption_selectToString(const CommandLineOptionSelect selects[],
 
 void CmdOption_printHelp(FILE                    *outputHandle,
                          const CommandLineOption commandLineOptions[],
-                         uint                    commandLineOptionCount,
                          int                     helpLevel
                         )
 {
@@ -1871,7 +1865,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
 
   // get max. width of name column
   maxNameLength = 0;
-  for (i = 0; i < commandLineOptionCount; i++)
+  for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     assert(commandLineOptions[i].name != NULL);
 
@@ -1992,7 +1986,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   }
 
   // output help
-  for (i = 0; i < commandLineOptionCount; i++)
+  for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     if (   (commandLineOptions[i].type != CMD_OPTION_TYPE_DEPRECATED)
         && ((helpLevel == CMD_HELP_LEVEL_ALL) || (helpLevel >= (int)commandLineOptions[i].helpLevel))

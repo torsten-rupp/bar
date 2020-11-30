@@ -7767,8 +7767,8 @@ StringList_clear(&commentLineList);
 
 /*---------------------------------------------------------------------*/
 
-CommandLineOption COMMAND_LINE_OPTIONS[] =
-{
+CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
+(
   CMD_OPTION_ENUM         ("create",                            'c',0,1,globalOptions.command,                            0,COMMAND_CREATE_FILES,                                        "create new files archives"                                                ),
   CMD_OPTION_ENUM         ("image",                             'm',0,1,globalOptions.command,                            0,COMMAND_CREATE_IMAGES,                                       "create new images archives"                                               ),
   CMD_OPTION_ENUM         ("list",                              'l',0,1,globalOptions.command,                            0,COMMAND_LIST,                                                "list contents of archives"                                                ),
@@ -8106,8 +8106,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,1,globalOptions.debug.indexAddStorage,              0,                                                             "add storage to index database","file name"                                ),
   CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,1,globalOptions.debug.indexRemoveStorage,           0,                                                             "remove storage from index database","file name"                           ),
   CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,1,globalOptions.debug.indexRefreshStorage,          0,                                                             "refresh storage in index database","file name"                            ),
-};
-uint COMMAND_LINE_OPTIONS_COUNT = SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS);
+);
 
 ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (

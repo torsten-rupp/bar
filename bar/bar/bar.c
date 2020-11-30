@@ -462,7 +462,7 @@ LOCAL void printUsage(const char *programName, uint level)
   printf("               device://[<device name>:]<file name>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
-                      COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT,
+                      COMMAND_LINE_OPTIONS,
                       level
                      );
 }
@@ -717,7 +717,7 @@ LOCAL Errors initAll(void)
 
   // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES);
-  CmdOption_init(COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT);
+  CmdOption_init(COMMAND_LINE_OPTIONS);
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -741,7 +741,7 @@ LOCAL void doneAll(void)
   #endif /* HAVE_SIGACTION */
 
   // deinitialize command line options and config values
-  CmdOption_done(COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT);
+  CmdOption_done(COMMAND_LINE_OPTIONS);
   ConfigValue_done(CONFIG_VALUES);
 
   // deinitialize modules
@@ -4257,7 +4257,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT,
+                       COMMAND_LINE_OPTIONS,
                        0,1,
                        globalOptionSet,
                        stderr,"ERROR: ","Warning: "
@@ -4315,7 +4315,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: post-options
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT,
+                       COMMAND_LINE_OPTIONS,
                        2,2,
                        globalOptionSet,
                        stderr,"ERROR: ","Warning: "
@@ -4344,7 +4344,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: pre+post-options
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT,
+                       COMMAND_LINE_OPTIONS,
                        0,2,
                        globalOptionSet,
                        stderr,"ERROR: ","Warning: "
@@ -4393,7 +4393,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: all
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT,
+                       COMMAND_LINE_OPTIONS,
                        CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
                        globalOptionSet,
                        stderr,"ERROR: ","Warning: "
@@ -4500,7 +4500,7 @@ int main(int argc, const char *argv[])
   if (error == ERROR_NONE)
   {
     if (!CmdOption_parse(argv,&argc,
-                         COMMAND_LINE_OPTIONS,COMMAND_LINE_OPTIONS_COUNT,
+                         COMMAND_LINE_OPTIONS,
                          0,0,
                          globalOptionSet,
                          stderr,"ERROR: ","Warning: "

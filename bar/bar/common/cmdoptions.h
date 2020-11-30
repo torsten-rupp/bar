@@ -45,7 +45,9 @@ typedef enum
   CMD_OPTION_TYPE_CSTRING,
   CMD_OPTION_TYPE_STRING,
   CMD_OPTION_TYPE_SPECIAL,
-  CMD_OPTION_TYPE_DEPRECATED
+  CMD_OPTION_TYPE_DEPRECATED,
+
+  CMD_OPTION_TYPE_END
 } CommandLineOptionTypes;
 
 // command option unit
@@ -331,7 +333,48 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 #define CMD_VALUE_SET_ARRAY(...) \
 { \
   __VA_ARGS__ \
-  {NULL,0,NULL} \
+  {\
+    NULL,\
+    0,\
+    NULL \
+  }\
+}
+
+/***********************************************************************\
+* Name   : CMD_VALUE_ARRAY
+* Purpose: define array
+* Input  : ... - values
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define CMD_VALUE_ARRAY(...) \
+{ \
+  __VA_ARGS__ \
+  {\
+    NULL,\
+    '\0',\
+    0,\
+    0,\
+    CMD_OPTION_TYPE_END,\
+    {NULL},\
+    0,\
+    {0,0LL,0.0,FALSE,0L,0,{0},{NULL}},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0,0,NULL,NULL},\
+    {FALSE,0.0,0.0,NULL,NULL},\
+    {FALSE},\
+    {0,NULL},\
+    {FALSE,0,0,NULL},\
+    {0},\
+    {NULL},\
+    {NULL},\
+    {NULL},\
+    {NULL,NULL,0,NULL},\
+    {NULL,NULL,0,NULL},\
+    NULL \
+  }\
 }
 
 /***********************************************************************\
@@ -1005,14 +1048,12 @@ extern "C" {
 ***********************************************************************/
 
 #ifdef NDEBUG
-  bool CmdOption_init(CommandLineOption commandLineOptions[],
-                      uint              commandLineOptionCount
+  bool CmdOption_init(CommandLineOption commandLineOptions[]
                      );
 #else /* not NDEBUG */
   bool __CmdOption_init(const char        *__fileName__,
                         ulong             __lineNb__,
-                        CommandLineOption commandLineOptions[],
-                        uint              commandLineOptionCount
+                        CommandLineOption commandLineOptions[]
                        );
 #endif /* NDEBUG */
 
@@ -1028,14 +1069,12 @@ extern "C" {
 ***********************************************************************/
 
 #ifdef NDEBUG
-  void CmdOption_done(CommandLineOption commandLineOptions[],
-                      uint              commandLineOptionCount
+  void CmdOption_done(CommandLineOption commandLineOptions[]
                      );
 #else /* not NDEBUG */
   void __CmdOption_done(const char        *__fileName__,
                         ulong             __lineNb__,
-                        CommandLineOption commandLineOptions[],
-                        uint              commandLineOptionCount
+                        CommandLineOption commandLineOptions[]
                        );
 #endif /* NDEBUG */
 
@@ -1046,7 +1085,6 @@ extern "C" {
 *          argc                    - number of command line arguments
 *          commandLineOptions      - array with command line options
 *                                    spezification
-*          commandLineOptionCount  - size of command line options array
 *          minPriority,maxPriority - min./max. command line option
 *                                    priority or
 *          optionSet               - option set or NULL
@@ -1063,7 +1101,6 @@ extern "C" {
 bool CmdOption_parse(const char              *argv[],
                      int                     *argc,
                      const CommandLineOption commandLineOptions[],
-                     uint                    commandLineOptionCount,
                      uint                    minPriority,
                      uint                    maxPriority,
                      ValueSet                optionSet,
@@ -1206,11 +1243,10 @@ const char *CmdOption_selectToString(const CommandLineOptionSelect selects[],
 /***********************************************************************
 * Name   : CmdOption_printHelp
 * Purpose: print command line options help
-* Input  : outputHandle           - file handle to print to
-*          commandLineOptions     - array with command line options
-*                                   spezification
-*          commandLineOptionCount - size of command line options array
-*          helpLevel              - help level or CMD_HELP_LEVEL_ALL
+* Input  : outputHandle       - file handle to print to
+*          commandLineOptions - array with command line options
+*                               spezification
+*          helpLevel          - help level or CMD_HELP_LEVEL_ALL
 * Output :
 * Return :
 * Notes  :
@@ -1218,7 +1254,6 @@ const char *CmdOption_selectToString(const CommandLineOptionSelect selects[],
 
 void CmdOption_printHelp(FILE                    *outputHandle,
                          const CommandLineOption commandLineOptions[],
-                         uint                    commandLineOptionCount,
                          int                     helpLevel
                         );
 
