@@ -7736,13 +7736,13 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
         )
   {
     // check if own file (in temporary directory or storage file)
-    ownFileFlag =    String_startsWith(entryMsg.name,globalOptions.tmpDirectory)
+    ownFileFlag =    String_startsWith(entryMsg.name,tmpDirectory)
                   || StringList_contains(&createInfo->storageFileList,entryMsg.name);
     if (!ownFileFlag)
     {
       STRINGLIST_ITERATE(&entryMsg.nameList,stringNode,name)
       {
-        ownFileFlag =    String_startsWith(name,globalOptions.tmpDirectory)
+        ownFileFlag =    String_startsWith(name,tmpDirectory)
                       || StringList_contains(&createInfo->storageFileList,name);
         if (ownFileFlag) break;
       }

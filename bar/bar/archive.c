@@ -2876,7 +2876,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_unlock(&archiveHandle->lock); });
 
       // create intermediate data filename
-      error = File_getTmpFileName(archiveHandle->create.tmpFileName,"archive",globalOptions.tmpDirectory);
+      error = File_getTmpFileName(archiveHandle->create.tmpFileName,"archive",tmpDirectory);
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
@@ -6640,7 +6640,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->file.deltaBufferSize           = 0L;
 
   // get intermediate output file
-  error = File_getTmpFile(&archiveEntryInfo->file.intermediateFileHandle,NULL,globalOptions.tmpDirectory);
+  error = File_getTmpFile(&archiveEntryInfo->file.intermediateFileHandle,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -7049,7 +7049,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->image.deltaBufferSize           = 0L;
 
   // get intermediate output file
-  error = File_getTmpFile(&archiveEntryInfo->image.intermediateFileHandle,NULL,globalOptions.tmpDirectory);
+  error = File_getTmpFile(&archiveEntryInfo->image.intermediateFileHandle,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -7893,7 +7893,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->hardLink.deltaBufferSize           = 0L;
 
   // get intermediate output file
-  error = File_getTmpFile(&archiveEntryInfo->hardLink.intermediateFileHandle,NULL,globalOptions.tmpDirectory);
+  error = File_getTmpFile(&archiveEntryInfo->hardLink.intermediateFileHandle,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);

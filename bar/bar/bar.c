@@ -110,7 +110,6 @@ typedef struct
 } MountedList;
 
 /***************************** Variables *******************************/
-//String                   uuid;
 String                   tmpDirectory;
 Semaphore                consoleLock;
 #ifdef HAVE_NEWLOCALE
@@ -272,9 +271,9 @@ LOCAL void signalHandler(int signalNumber)
   deletePIDFile();
 
   // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
-  if (!String_isEmpty(globalOptions.tmpDirectory) && !String_equalsCString(globalOptions.tmpDirectory,"/"))
+  if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
   {
-    (void)File_delete(globalOptions.tmpDirectory,TRUE);
+    (void)File_delete(tmpDirectory,TRUE);
   }
 
   // Note: do not free resources to avoid further errors
@@ -4401,15 +4400,18 @@ LOCAL Errors bar(int argc, const char *argv[])
   // save configuration
   if (globalOptions.saveConfigurationFileName != NULL)
   {
-  String                configFileName;
+    String configFileName;
 
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-  configFileName = String_new();
-getConfigFileName(configFileName);
-String_setCString(configFileName,"/tmp/t.cfg");
-fprintf(stderr,"%s, %d: configFileName=%s\n",__FILE__,__LINE__,String_cString(configFileName));
-error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES);
-    return error;
+    configFileName = String_newCString(globalOptions.saveConfigurationFileName);
+    if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"Writing configuration file '%s'...",String_cString(configFileName)); }
+    error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES);
+    if (error != ERROR_NONE)
+    {
+       if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"FAIL!\n"); }
+       return error;
+    }
+    if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"OK\n"); }
+    return ERROR_NONE;
   }
 
   // create temporary directory
@@ -4417,7 +4419,7 @@ error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES);
   if (error != ERROR_NONE)
   {
     printError(_("Cannot create temporary directory in '%s' (error: %s)!"),
-               String_cString(globalOptions.tmpDirectory),
+               String_cString(tmpDirectory),
                Error_getText(error)
               );
     return error;
@@ -4578,7 +4580,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     String_debugDone();
     List_debugDone();
   #endif /* not NDEBUG */
-fprintf(stderr,"%s, %d: BBBBBBBBBBBBBBBBBBBBBB\n",__FILE__,__LINE__);
 
   return errorToExitcode(error);
 }

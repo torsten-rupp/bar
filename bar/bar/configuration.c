@@ -4748,32 +4748,6 @@ LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
 }
 
 /***********************************************************************\
-* Name   : validateOptions
-* Purpose: validate options
-* Input  : -
-* Output : -
-* Return : TRUE if options valid, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool validateOptions(void)
-{
-  if (!String_isEmpty(globalOptions.tmpDirectory))
-  {
-    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-  }
-
-  if (!Continuous_isAvailable())
-  {
-    printWarning("Continuous support is not available");
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
 * Name   : getConfigFileName
 * Purpose: get writable config file name
 * Input  : fileName - file name variable
@@ -8180,7 +8154,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                          0,                                                             "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                       0,0,6,                                                         "increment/set verbosity level"                                            ),
 
-  CMD_OPTION_CSTRING      ("save-configuration",                0,  1,1,globalOptions.saveConfigurationFileName,          0,                                                             "configuration file name","file name"                                      ),
+  CMD_OPTION_CSTRING      ("save-configuration",                0,  1,1,globalOptions.saveConfigurationFileName,          0,                                                             "save formated configuration file","file name"                             ),
 
   CMD_OPTION_BOOLEAN      ("version",                           0  ,0,0,globalOptions.versionFlag,                        0,                                                             "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,globalOptions.helpFlag,                           0,                                                             "output this help"                                                         ),

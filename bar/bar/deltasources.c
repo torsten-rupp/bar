@@ -75,7 +75,7 @@ LOCAL Errors createLocalStorageArchive(StorageSpecifier       *localStorageSpeci
   localStorageSpecifier->type = STORAGE_TYPE_FILESYSTEM;
 
   // create temporary file
-  error = File_getTmpFileName(localStorageSpecifier->archiveName,NULL,globalOptions.tmpDirectory);
+  error = File_getTmpFileName(localStorageSpecifier->archiveName,NULL,tmpDirectory);
   if (error != ERROR_NONE)
   {
     return error;
@@ -807,7 +807,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
     {
       // create temporary file as delta source
       tmpFileName = String_new();
-      error = File_getTmpFileName(tmpFileName,NULL,globalOptions.tmpDirectory);
+      error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
       if (error == ERROR_NONE)
       {
         // init variables
@@ -896,7 +896,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
     {
       // create temporary file as delta source
       tmpFileName = String_new();
-      error = File_getTmpFileName(tmpFileName,NULL,globalOptions.tmpDirectory);
+      error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
       if (error == ERROR_NONE)
       {
         // init variables
@@ -1000,7 +1000,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
       {
         // create temporary file as delta source
         tmpFileName = String_new();
-        error = File_getTmpFileName(tmpFileName,NULL,globalOptions.tmpDirectory);
+        error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
         if (error == ERROR_NONE)
         {
           // restore to temporary file
@@ -1061,7 +1061,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
     {
       // create temporary restore file as delta source
       tmpFileName = String_new();
-      error = File_getTmpFileName(tmpFileName,NULL,globalOptions.tmpDirectory);
+      error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
       if (error == ERROR_NONE)
       {
         // create local copy of storage file

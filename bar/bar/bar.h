@@ -95,13 +95,10 @@ typedef struct
 } TemplateHandle;
 
 /***************************** Variables *******************************/
-//extern GlobalOptions   globalOptions;          // global options
-//extern GlobalOptionSet globalOptionSet;        // global option set
-//extern String          uuid;                   // BAR instance UUID
-extern String          tmpDirectory;           // temporary directory
-extern Semaphore       consoleLock;            // lock console
+extern String     tmpDirectory;           // temporary directory
+extern Semaphore  consoleLock;            // lock console
 #ifdef HAVE_NEWLOCALE
-  extern locale_t      POSIXLocale;            // POSIX locale
+  extern locale_t POSIXLocale;            // POSIX locale
 #endif /* HAVE_NEWLOCALE */
 
 /****************************** Macros *********************************/
