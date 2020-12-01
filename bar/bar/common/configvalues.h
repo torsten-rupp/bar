@@ -27,6 +27,14 @@
 /**************************** Constants *******************************/
 #define CONFIG_VALUE_INDEX_NONE MAX_UINT
 
+typedef enum
+{
+  CONFIG_VALUE_OPERATION_INIT,
+  CONFIG_VALUE_OPERATION_DONE,
+  CONFIG_VALUE_OPERATION_TEMPLATE,
+  CONFIG_VALUE_OPERATION
+} ConfigValueOperations;
+
 /***************************** Datatypes ******************************/
 
 /***********************************************************************\
@@ -58,51 +66,17 @@ typedef void(*ConfigReportFunction)(const char *errorMessage, void *userData);
 typedef bool(*ConfigParseFunction)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
-* Name   : ConfigFormatInitFunction
-* Purpose: initialize config format
-* Input  : formatData - format data variable
-*          userData   - user data
-*          variable   - config variable
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*ConfigFormatInitFunction)(void **formatData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : ConfigFormatDoneFunction
-* Purpose: done config format
-* Input  : formatData - format data variable
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*ConfigFormatDoneFunction)(void **formatData, void *userData);
-
-/***********************************************************************\
 * Name   : ConfigFormatFunction
 * Purpose: format config line
 * Input  : formatData - format data
+*          operation  - operation code; see ConfigValueOperations
 *          userData   - user data
 * Output : line - line
 * Return : TRUE if next/formated line, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*ConfigFormatFunctionXXX)(void **formatData, void *userData, String line);
-
-typedef enum
-{
-  CONFIG_VALUE_FORMAT_OPERATION_INIT,
-  CONFIG_VALUE_FORMAT_OPERATION_DONE,
-  CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE,
-  CONFIG_VALUE_FORMAT_OPERATION
-} ConfigValueFormatOperations;
-
-typedef bool(*ConfigFormatFunction)(void **formatData, ConfigValueFormatOperations formatOperation, void *data, void *userData);
+typedef bool(*ConfigFormatFunction)(void **formatData, ConfigValueOperations operation, void *data, void *userData);
 
 // section data iterator
 typedef void* ConfigValueSectionDataIterator;
@@ -217,25 +191,25 @@ typedef struct
   int              offset;                        // offset in struct or -1
   struct
   {
-    int                     min,max;              // valid range
-    const ConfigValueUnit   *units;               // list with units
+    int                   min,max;                // valid range
+    const ConfigValueUnit *units;                 // list with units
   } integerValue;
   struct
   {
-    int64                   min,max;              // valid range
-    const ConfigValueUnit   *units;               // list with units
+    int64                 min,max;                // valid range
+    const ConfigValueUnit *units;                 // list with units
   } integer64Value;
   struct
   {
-    double                  min,max;              // valid range
-    const ConfigValueUnit   *units;               // list with units
+    double                min,max;                // valid range
+    const ConfigValueUnit *units;                 // list with units
   } doubleValue;
   struct
   {
   } booleanValue;
   struct
   {
-    uint                    enumerationValue;     // emumeration value for this enumeration
+    uint enumerationValue;                        // emumeration value for this enumeration
   } enumValue;
   struct
   {
@@ -243,7 +217,7 @@ typedef struct
   } selectValue;
   struct
   {
-    const ConfigValueSet    *sets;                // array with set values
+    const ConfigValueSet *sets;                   // array with set values
   } setValue;
   struct
   {
@@ -253,17 +227,17 @@ typedef struct
   } stringValue;
   struct
   {
-    ConfigParseFunction      parse;               // parse line
-    ConfigFormatFunction     format;              // format line
-    void *userData;                               // user data for parse special
+    ConfigParseFunction  parse;                   // parse line
+    ConfigFormatFunction format;                  // format line
+    void                 *userData;               // user data for parse special
   } specialValue;
   const char *templateText;
   struct
   {
-    bool(*parse)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-    void       *userData;                         // user data for parse deprecated
-    const char *newName;                          // new name
-    bool       warningFlag;                       // TRUE to print warning
+    ConfigParseFunction parse;                    // parse line
+    void                *userData;                // user data for parse deprecated
+    const char          *newName;                 // new name
+    bool                warningFlag;              // TRUE to print warning
   } deprecatedValue;
   struct
   {

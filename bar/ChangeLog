@@ -1,4 +1,6 @@
 2020-xx-xx 0.22
+  * added option --save-configuration: format and
+    save configuration file
   * fix reading cryption keys via config file
 
 2020-09-27 0.21f

@@ -3185,36 +3185,36 @@ LOCAL bool configValueConfigFileParse(void *userData, void *variable, const char
 /***********************************************************************\
 * Name   : configValueFormatMaintenanceDate
 * Purpose: format maintenance config statement
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          operation       - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = ((ConfigFileList*)data)->head;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<file name>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const ConfigFileNode *configFileNode = (const ConfigFileNode*)(*formatUserData);
         String               line            = (String)data;
@@ -3306,7 +3306,7 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
 * Name   : configValueFormatMaintenanceDate
 * Purpose: format maintenance config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -3315,26 +3315,26 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (MaintenanceDate*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<yyyy>|*-<mm>|*-<dd>|*");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
         String             line          = (String)data;
@@ -3424,36 +3424,36 @@ LOCAL bool configValueMaintenanceWeekDaySetParse(void *userData, void *variable,
 /***********************************************************************\
 * Name   : configValueMaintenanceWeekDaySetFormat
 * Purpose: format maintenance config week day set
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          operation       - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (WeekDaySet*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"Mon|Tue|Wed|Thu|Fri|Sat|Sun|*,...");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const ScheduleWeekDaySet *scheduleWeekDaySet = (ScheduleWeekDaySet*)(*formatUserData);
         String                   names;
@@ -3550,36 +3550,36 @@ LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const
 /***********************************************************************\
 * Name   : configValueFormatMaintenanceTime
 * Purpose: format maintenance config
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
+* Input  : formatUserData  - format user data
+*          operation       - format operation
+*          data            - operation data
+*          userData        - user data
 * Output : line - formated line
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (MaintenanceTime*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<hh>|*:<mm>|*");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const MaintenanceTime *maintenanceTime = (const MaintenanceTime*)(*formatUserData);
         String                line             = (String)data;
@@ -3921,7 +3921,7 @@ LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const ch
 * Name   : configValueScheduleDateFormat
 * Purpose: format schedule config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -3930,26 +3930,26 @@ LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const ch
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (ScheduleDate*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<yyyy>|*-<mm>|*-<dd>|*");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
         String             line          = (String)data;
@@ -4040,7 +4040,7 @@ LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, co
 * Name   : configValueScheduleWeekDaySetFormat
 * Purpose: format schedule config week day set
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -4049,26 +4049,26 @@ LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (ScheduleWeekDaySet*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"Mon|Tue|Wed|Thu|Fri|Sat|Sun|*,...");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const ScheduleWeekDaySet *scheduleWeekDaySet = (const ScheduleWeekDaySet*)(*formatUserData);
         String                   names;
@@ -4166,7 +4166,7 @@ LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const ch
 * Name   : configValueScheduleTimeFormat
 * Purpose: format schedule config
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -4175,26 +4175,26 @@ LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const ch
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (ScheduleTime*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<hh>|*:<mm>|*");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const ScheduleTime *scheduleTime = (ScheduleTime*)(*formatUserData);
         String             line          = (String)data;
@@ -4282,7 +4282,7 @@ LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, co
 * Name   : configValuePersistenceMinKeepFormat
 * Purpose: format min. keep config
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -4291,26 +4291,26 @@ LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (PersistenceNode*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<n>|*");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -4389,7 +4389,7 @@ LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, co
 * Name   : configValuePersistenceMaxKeepFormat
 * Purpose: format max. keep config
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -4398,7 +4398,7 @@ LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
@@ -4406,20 +4406,20 @@ LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValu
 
   (*formatUserData) = (PersistenceNode*)data;
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (PersistenceNode*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<n>|*");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -4498,7 +4498,7 @@ LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, con
 * Name   : configValuePersistenceMaxAgeFormat
 * Purpose: format max. age config
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -4507,26 +4507,26 @@ LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, con
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (PersistenceNode*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<n>|*");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -4967,7 +4967,7 @@ LOCAL bool configValuePasswordParse(void *userData, void *variable, const char *
 * Name   : configValuePasswordFormat
 * Purpose: format passwrd config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -4976,26 +4976,26 @@ LOCAL bool configValuePasswordParse(void *userData, void *variable, const char *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePasswordFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValuePasswordFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (Password*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<password>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const Password *password = (Password*)(*formatUserData);
         String         line      = (String)data;
@@ -5173,7 +5173,7 @@ LOCAL bool configValueCryptAlgorithmsParse(void *userData, void *variable, const
 * Name   : configValueCryptAlgorithmsFormat
 * Purpose: format crypt algorithms config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -5182,7 +5182,7 @@ LOCAL bool configValueCryptAlgorithmsParse(void *userData, void *variable, const
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
 #ifdef MULTI_CRYPT
   uint            i;
@@ -5192,20 +5192,20 @@ LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueFo
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (CryptAlgorithms*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<crypt algorithm>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const CryptAlgorithms *cryptAlgorithms = (CryptAlgorithms*)(*formatUserData);
         String                line             = (String)data;
@@ -5285,7 +5285,7 @@ LOCAL bool configValueBandWidthParse(void *userData, void *variable, const char 
 * Name   : configValueBandWidthFormat
 * Purpose: format next config band width setting
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -5293,7 +5293,7 @@ LOCAL bool configValueBandWidthParse(void *userData, void *variable, const char 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   const StringUnit UNITS[] =
   {
@@ -5307,20 +5307,20 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueFormatOp
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = ((BandWidthList*)data)->head;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<band width>[K|M])|<file name> <date> [<weekday>] <time>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const BandWidthNode *bandWidthNode = (BandWidthNode*)(*formatUserData);
         StringUnit          stringUnit;
@@ -5463,7 +5463,7 @@ LOCAL bool configValueOwnerParse(void *userData, void *variable, const char *nam
 * Name   : configValueOwnerFormat
 * Purpose: format next config owner statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -5471,26 +5471,26 @@ LOCAL bool configValueOwnerParse(void *userData, void *variable, const char *nam
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (Owner*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<user>:<group>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const Owner *owner = (Owner*)(*formatUserData);
         String      line   = (String)data;
@@ -5598,7 +5598,7 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
 * Name   : configValuePermissionsFormat
 * Purpose: format next config owner statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -5606,7 +5606,7 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   ;
 
@@ -5614,20 +5614,20 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueFormat
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (FilePermission*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<user>:<group>:<world>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const FilePermission *filePermission = (FilePermission*)(*formatUserData);
         String               line            = (String)data;
@@ -5738,7 +5738,7 @@ LOCAL bool configValueImageEntryPatternParse(void *userData, void *variable, con
 *          configValueImageEntryPatternFormat
 * Purpose: format next config include statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -5746,7 +5746,7 @@ LOCAL bool configValueImageEntryPatternParse(void *userData, void *variable, con
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   const char* FILENAME_MAP_FROM[] = {"\n","\r","\\"};
   const char* FILENAME_MAP_TO[]   = {"\\n","\\r","\\\\"};
@@ -5755,20 +5755,20 @@ LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueF
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = ((EntryList*)data)->head;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"[r|x|g:]<pattern>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
         String          fileName;
@@ -5815,26 +5815,26 @@ LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueF
   return TRUE;
 }
 
-LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = ((EntryList*)data)->head;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"[r|x|g:]<pattern>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
         String          line       = (String)data;
@@ -5939,7 +5939,7 @@ LOCAL bool configValuePatternParse(void *userData, void *variable, const char *n
 * Name   : configValuePatternFormat
 * Purpose: format next config pattern statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -5947,26 +5947,26 @@ LOCAL bool configValuePatternParse(void *userData, void *variable, const char *n
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePatternFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValuePatternFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = ((PatternList*)data)->head;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"[r|x|g:]<pattern>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const PatternNode *patternNode = (PatternNode*)(*formatUserData);
         String            line         = (String)data;
@@ -6091,7 +6091,7 @@ LOCAL bool configValueMountParse(void *userData, void *variable, const char *nam
 * Name   : configValueMountFormat
 * Purpose: format next config mount statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -6099,26 +6099,26 @@ LOCAL bool configValueMountParse(void *userData, void *variable, const char *nam
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMountFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueMountFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = ((PatternList*)data)->head;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<mount point>,<device name>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const MountNode *mountNode = (MountNode*)(*formatUserData);
         String         line        = (String)data;
@@ -6208,7 +6208,7 @@ LOCAL bool configValueDeltaSourceParse(void *userData, void *variable, const cha
 * Name   : configValueDeltaSourceFormat
 * Purpose: format next config delta source pattern statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -6216,26 +6216,26 @@ LOCAL bool configValueDeltaSourceParse(void *userData, void *variable, const cha
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = ((PatternList*)data)->head;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"[r|x|g:]<name|pattern>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const DeltaSourceNode *deltaSourceNode = (const DeltaSourceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -6416,7 +6416,7 @@ LOCAL bool configValueCompressAlgorithmsParse(void *userData, void *variable, co
 * Name   : configValueCompressAlgorithmsFormat
 * Purpose: format compress algorithm config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -6425,26 +6425,26 @@ LOCAL bool configValueCompressAlgorithmsParse(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (CompressAlgorithmsDeltaByte*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<delta compression>+<byte compression>|<delta compression>|<byte compression>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         CompressAlgorithmsDeltaByte *compressAlgorithmsDeltaByte = (CompressAlgorithmsDeltaByte*)(*formatUserData);
         String                      line                         = (String)data;
@@ -6583,7 +6583,7 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
 * Name   : configValueCertificateFormat
 * Purpose: format server certificate config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -6592,26 +6592,26 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (Certificate*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<file name>|base64:<data>|<data>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const Certificate *certificate = (Certificate*)(*formatUserData);
         String            line         = (String)data;
@@ -6754,7 +6754,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 * Name   : configValueKeyFormat
 * Purpose: format key config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -6763,26 +6763,26 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (Key*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<file name>|base64:<data>|<data>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const Key *key = (Key*)(*formatUserData);
         String    line = (String)data;
@@ -7053,7 +7053,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
 * Name   : configValueHashDataFormat
 * Purpose: format hash data config statement
 * Input  : formatUserData  - format user data
-*          formatOperation - format operation
+*          operation       - format operation
 *          data            - operation data
 *          userData        - user data
 * Output : line - formated line
@@ -7062,26 +7062,26 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueFormatOperations formatOperation, void *data, void *userData)
+LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  switch (formatOperation)
+  switch (operation)
   {
-    case CONFIG_VALUE_FORMAT_OPERATION_INIT:
+    case CONFIG_VALUE_OPERATION_INIT:
       (*formatUserData) = (Hash*)data;
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_DONE:
+    case CONFIG_VALUE_OPERATION_DONE:
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE:
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
       {
         String line = (String)data;
         String_appendFormat(line,"<file name>|base64:<data>|<data>");
       }
       break;
-    case CONFIG_VALUE_FORMAT_OPERATION:
+    case CONFIG_VALUE_OPERATION:
       {
         const Hash *hash = (const Hash*)(*formatUserData);
         String     line  = (String)data;

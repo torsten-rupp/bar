@@ -2259,7 +2259,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         {
           String_format(line,"%*C#%s = ",indent,' ',configValue->name);
           configValue->specialValue.format(&configValueFormat.formatUserData,
-                                           CONFIG_VALUE_FORMAT_OPERATION_TEMPLATE,
+                                           CONFIG_VALUE_OPERATION_TEMPLATE,
                                            line,
                                            configValue->specialValue.userData
                                           );
@@ -2458,7 +2458,10 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             // init iterator
             if (configValues[index].section.sectionIteratorInit != NULL)
             {
-              configValues[index].section.sectionIteratorInit(&sectionIterator,configValues[index].variable.pointer,configValues[index].section.userData);
+              configValues[index].section.sectionIteratorInit(&sectionIterator,
+                                                              configValues[index].variable.pointer,
+                                                              configValues[index].section.userData
+                                                             );
             }
 
             if (configValues[index].section.sectionIteratorNext != NULL)
@@ -2470,6 +2473,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                 if (data != NULL)
                 {
                   // write section begin
+//                  if (
                   if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s]",configValues[index].name);
 
                   // write section
@@ -2510,7 +2514,9 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             // done iterator
             if (configValues[index].section.sectionIteratorDone != NULL)
             {
-              configValues[index].section.sectionIteratorDone(&sectionIterator,configValues[index].section.userData);
+              configValues[index].section.sectionIteratorDone(&sectionIterator,
+                                                              configValues[index].section.userData
+                                                             );
             }
           }
 
@@ -3134,7 +3140,7 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
           if      (variable != NULL)
           {
             configValue->specialValue.format(&configValueFormat->formatUserData,
-                                             CONFIG_VALUE_FORMAT_OPERATION_INIT,
+                                             CONFIG_VALUE_OPERATION_INIT,
                                              (byte*)variable+configValueFormat->configValue->offset,
                                              configValue->specialValue.userData
                                             );
@@ -3144,7 +3150,7 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
             if ((*configValueFormat->configValue->variable.reference) != NULL)
             {
               configValue->specialValue.format(&configValueFormat->formatUserData,
-                                               CONFIG_VALUE_FORMAT_OPERATION_INIT,
+                                               CONFIG_VALUE_OPERATION_INIT,
                                                (byte*)(*configValueFormat->configValue->variable.reference)+configValueFormat->configValue->offset,
                                                configValue->specialValue.userData
                                               );
@@ -3154,7 +3160,7 @@ void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,
         else if (configValueFormat->configValue->variable.special != NULL)
         {
           configValue->specialValue.format(&configValueFormat->formatUserData,
-                                           CONFIG_VALUE_FORMAT_OPERATION_INIT,
+                                           CONFIG_VALUE_OPERATION_INIT,
                                            configValueFormat->configValue->variable.special,
                                            configValue->specialValue.userData
                                           );
@@ -3230,7 +3236,7 @@ void ConfigValue_formatDone(ConfigValueFormat *configValueFormat)
       if (configValueFormat->configValue->specialValue.format != NULL)
       {
         configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
-                                                            CONFIG_VALUE_FORMAT_OPERATION_DONE,
+                                                            CONFIG_VALUE_OPERATION_DONE,
                                                             configValueFormat->configValue->variable.special,
                                                             configValueFormat->configValue->specialValue.userData
                                                            );
@@ -3709,7 +3715,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         if (configValueFormat->configValue->specialValue.format != NULL)
         {
           configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
-                                                                                                  CONFIG_VALUE_FORMAT_OPERATION,
+                                                                                                  CONFIG_VALUE_OPERATION,
                                                                                                   line,
                                                                                                   configValueFormat->configValue->specialValue.userData
                                                                                                  );
