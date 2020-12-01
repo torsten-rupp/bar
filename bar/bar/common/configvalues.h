@@ -67,12 +67,13 @@ typedef bool(*ConfigParseFunction)(void *userData, void *variable, const char *n
 
 /***********************************************************************\
 * Name   : ConfigFormatFunction
-* Purpose: format config line
+* Purpose: format config operation
 * Input  : formatData - format data
 *          operation  - operation code; see ConfigValueOperations
+*          data       - operation data
 *          userData   - user data
-* Output : line - line
-* Return : TRUE if next/formated line, FALSE otherwise
+* Output : data - line
+* Return : next data or NULL
 * Notes  : -
 \***********************************************************************/
 
@@ -82,40 +83,18 @@ typedef bool(*ConfigFormatFunction)(void **formatData, ConfigValueOperations ope
 typedef void* ConfigValueSectionDataIterator;
 
 /***********************************************************************\
-* Name   : ConfigSectionIteratorInitFunction
-* Purpose: section iterator initialize
-* Input  : sectionIterator - section iterator variable
-*          userData        - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*ConfigSectionIteratorInitFunction)(ConfigValueSectionDataIterator *sectionIterator, void *variable, void *userData);
-
-/***********************************************************************\
-* Name   : ConfigSectionIteratorDoneFunction
-* Purpose: section iterator done
-* Input  : sectionIterator - section iterator variable
-*          userData        - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*ConfigSectionIteratorDoneFunction)(ConfigValueSectionDataIterator *sectionIterator, void *userData);
-
-/***********************************************************************\
-* Name   : ConfigSectionIteratorNextFunction
-* Purpose: section iterator next
+* Name   : ConfigSectionIteratorFunction
+* Purpose: section iterator operation
 * Input  : sectionData - section iterator variable
+*          operation   - operation code; see ConfigValueOperations
+*          data        - operation data
 *          userData    - user data
-* Output : -
-* Return : TRUE to format next line, FALSE otherwise
+* Output : data - name
+* Return : next data or NULL
 * Notes  : -
 \***********************************************************************/
 
-typedef void*(*ConfigSectionIteratorNextFunction)(ConfigValueSectionDataIterator *sectionIterator, void *userData);
+typedef void*(*ConfigSectionIteratorFunction)(ConfigValueSectionDataIterator *sectionIterator, ConfigValueOperations operation, void *data, void *userData);
 
 // config value data types
 typedef enum
@@ -246,10 +225,13 @@ typedef struct
   } ignoreValue;
   struct
   {
+#if 0
     ConfigSectionIteratorInitFunction sectionIteratorInit;  // section iterator init
     ConfigSectionIteratorDoneFunction sectionIteratorDone;  // section iterator done
     ConfigSectionIteratorNextFunction sectionIteratorNext;  // section iterator next
-    void *userData;                               // user data for parse special
+#endif
+    ConfigSectionIteratorFunction sectionIterator;  // section iterator
+    void                          *userData;      // user data for parse special
   } section;
   struct
   {
@@ -445,7 +427,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -482,7 +464,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -506,7 +488,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -547,7 +529,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -590,7 +572,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -633,7 +615,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -674,54 +656,13 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member,templateText) \
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member),templateText)
-
-/***********************************************************************\
-* Name   : CONFIG_VALUE_BOOLEAN_YESNO, CONFIG_STRUCT_VALUE_BOOLEAN_YESNO
-* Purpose: define an bool-value with yes/no
-* Input  : name            - name
-*          variablePointer - pointer to variable or NULL
-*          offset          - offset in structure or -1
-*          type            - structure type
-*          member          - structure memory name
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#warning obsolete
-#define xxxCONFIG_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
-  { \
-    CONFIG_VALUE_TYPE_BOOLEAN,\
-    name,\
-    {variablePointer},\
-    offset,\
-    {0,0,NULL},\
-    {0LL,0LL,NULL},\
-    {0.0,0.0,NULL},\
-    {TRUE},\
-    {0},\
-    {NULL},\
-    {NULL}, \
-    {},\
-    {},\
-    {NULL,NULL,NULL},\
-"xxx2",\
-    {NULL,NULL,NULL,FALSE},\
-    {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
-    {NULL},\
-    {NULL,NULL},\
-    NULL\
-  }
-#define xxxCONFIG_STRUCT_VALUE_BOOLEAN_YESNO(name,variablePointer,offset) \
-  xxxCONFIG_VALUE_BOOLEAN_YESNO(name,NULL,offsetof(type,member))
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_ENUM, CONFIG_STRUCT_VALUE_ENUM
@@ -758,7 +699,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -800,7 +741,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -842,7 +783,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -883,7 +824,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -924,7 +865,7 @@ typedef struct
     templateText,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -969,7 +910,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -1005,7 +946,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {newName,warningFlag},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -1048,7 +989,7 @@ typedef struct
     NULL,\
     {parse,userData,newName,warningFlag},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -1066,7 +1007,7 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_BEGIN_SECTION(name,variablePointer,offset,sectionIteratorInit,sectionIteratorDone,sectionIteratorNext,userData) \
+#define CONFIG_VALUE_BEGIN_SECTION(name,variablePointer,offset,sectionIterator,userData) \
   { \
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     name,\
@@ -1085,7 +1026,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {sectionIteratorInit,sectionIteratorDone,sectionIteratorNext,userData},\
+    {sectionIterator,userData},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -1110,7 +1051,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -1144,7 +1085,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {text},\
     {NULL,NULL},\
     NULL\
@@ -1178,7 +1119,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {text,NULL},\
     NULL\
@@ -1212,7 +1153,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL,NULL,NULL},\
+    {NULL,NULL},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -1742,6 +1683,8 @@ void ConfigValue_listSectionDataIteratorDone(ConfigValueSectionDataIterator *sec
 \***********************************************************************/
 
 void *ConfigValue_listSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
+
+void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData);
 
 #ifdef __GNUG__
 }

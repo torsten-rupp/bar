@@ -199,7 +199,7 @@ bool Configuration_setKeyString(Key *key, ConstString string);
 bool Configuration_duplicateKey(Key *key, const Key *fromKey);
 
 /***********************************************************************\
-* Name   : doneKey
+* Name   : Configuration_doneKey
 * Purpose: free public/private key
 * Input  : key - key
 * Output : -
@@ -207,7 +207,7 @@ bool Configuration_duplicateKey(Key *key, const Key *fromKey);
 * Notes  : -
 \***********************************************************************/
 
-void doneKey(Key *key);
+void Configuration_doneKey(Key *key);
 
 /***********************************************************************\
 * Name   : Configuration_clearKey

@@ -2435,9 +2435,10 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
     {
       case CONFIG_VALUE_TYPE_BEGIN_SECTION:
         {
-          uint sectionFirstValueIndex,sectionLastValueIndex;
-          void *sectionIterator;
-          void *data;
+          uint   sectionFirstValueIndex,sectionLastValueIndex;
+          void   *sectionIterator;
+          String name;
+          void   *data;
 
           if (   (configValues[index+1].type != CONFIG_VALUE_TYPE_END_SECTION)
               && (configValues[index+1].type != CONFIG_VALUE_TYPE_END)
@@ -2456,25 +2457,37 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             error = flushCommentLines(fileHandle,indent,&commentList);
 
             // init iterator
-            if (configValues[index].section.sectionIteratorInit != NULL)
+            if (configValues[index].section.sectionIterator != NULL)
             {
-              configValues[index].section.sectionIteratorInit(&sectionIterator,
-                                                              configValues[index].variable.pointer,
-                                                              configValues[index].section.userData
-                                                             );
+              configValues[index].section.sectionIterator(&sectionIterator,
+                                                          CONFIG_VALUE_OPERATION_INIT,
+                                                          configValues[index].variable.pointer,
+                                                          configValues[index].section.userData
+                                                         );
             }
 
-            if (configValues[index].section.sectionIteratorNext != NULL)
+            if (configValues[index].section.sectionIterator != NULL)
             {
               // iterate
+              name = String_new();
               do
               {
-                data = configValues[index].section.sectionIteratorNext(&sectionIterator,configValues[index].section.userData);
+                data = configValues[index].section.sectionIterator(&sectionIterator,
+                                                                   CONFIG_VALUE_OPERATION,
+                                                                   name,
+                                                                   configValues[index].section.userData
+                                                                  );
                 if (data != NULL)
                 {
                   // write section begin
-//                  if (
-                  if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s]",configValues[index].name);
+                  if (!String_isEmpty(name))
+                  {
+                    if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s '%S']",configValues[index].name,name);
+                  }
+                  else
+                  {
+                    if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s]",configValues[index].name);
+                  }
 
                   // write section
                   if (error == ERROR_NONE) error = writeConfigFile(fileHandle,
@@ -2491,6 +2504,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                 }
               }
               while ((data != NULL) && (error == ERROR_NONE));
+              String_delete(name);
             }
             else
             {
@@ -2512,11 +2526,13 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             }
 
             // done iterator
-            if (configValues[index].section.sectionIteratorDone != NULL)
+            if (configValues[index].section.sectionIterator != NULL)
             {
-              configValues[index].section.sectionIteratorDone(&sectionIterator,
-                                                              configValues[index].section.userData
-                                                             );
+              configValues[index].section.sectionIterator(&sectionIterator,
+                                                          CONFIG_VALUE_OPERATION_DONE,
+                                                          NULL, // data
+                                                          configValues[index].section.userData
+                                                         );
             }
           }
 
@@ -4156,6 +4172,45 @@ void *ConfigValue_listSectionDataIteratorNext(ConfigValueSectionDataIterator *se
   }
 
   return node;
+}
+
+void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
+{
+  void *result;
+
+  assert(sectionDataIterator != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  result = NULL;
+
+  switch (operation)
+  {
+    case CONFIG_VALUE_OPERATION_INIT:
+      assert(data != NULL);
+
+      (*sectionDataIterator) = List_first((List*)data);
+      break;
+    case CONFIG_VALUE_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
+      break;
+    case CONFIG_VALUE_OPERATION:
+      {
+        Node   *node = (Node*)(*sectionDataIterator);
+        String name  = (String)data;
+
+        if (node != NULL)
+        {
+          (*sectionDataIterator) = node->next;
+        }
+        String_clear(name);
+
+        result = node;
+      }
+   }
+
+   return result;
 }
 
 #ifdef __GNUC__

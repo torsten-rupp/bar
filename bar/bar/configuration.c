@@ -3620,89 +3620,127 @@ LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueOp
 }
 
 /***********************************************************************\
-* Name   : configValueServerSectionIteratorNext
-* Purpose: get next server node
+* Name   : configValueServerSectionIterator
+* Purpose: section iterator operation
 * Input  : sectionDataIterator - section data iterator
 *          serverType          - server type
+*          operation           - operation code; see ConfigValueOperations
+*          data                - operation data
+*          userData            - user data
 * Output : next section data or NULL
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void *configValueServerSectionIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, ServerTypes serverType)
+LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sectionDataIterator, ServerTypes serverType, ConfigValueOperations operation, void *data, void *userData)
 {
-  ServerNode *serverNode = (ServerNode*)(*sectionDataIterator);
+  void *result;
 
   assert(sectionDataIterator != NULL);
 
-  while ((serverNode != NULL) && (serverNode->type != serverType))
-  {
-    serverNode = serverNode->next;
-  }
+  result = NULL;
 
-  if (serverNode != NULL)
+  switch (operation)
   {
-    (*sectionDataIterator) = serverNode->next;
-  }
+    case CONFIG_VALUE_OPERATION_INIT:
+      assert(data != NULL);
 
-  return serverNode;
+      (*sectionDataIterator) = List_first((List*)data);
+      break;
+    case CONFIG_VALUE_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
+      break;
+    case CONFIG_VALUE_OPERATION:
+      {
+        ServerNode *serverNode = (ServerNode*)(*sectionDataIterator);
+        String     name        = (String)data;
+
+        assert(sectionDataIterator != NULL);
+
+        while ((serverNode != NULL) && (serverNode->type != serverType))
+        {
+          serverNode = serverNode->next;
+        }
+
+        if (serverNode != NULL)
+        {
+          String_set(name,serverNode->name);
+          (*sectionDataIterator) = serverNode->next;
+        }
+        else
+        {
+          String_clear(name);
+        }
+
+        result = serverNode;
+      }
+   }
+
+   return result;
 }
 
 /***********************************************************************\
 * Name   : configValueServerFTPSectionDataIteratorNext
 * Purpose: get next FTP server node
 * Input  : sectionDataIterator - section data iterator
+*          operation           - operation code; see ConfigValueOperations
+*          data                - operation data
 *          userData            - user data
 * Output : next section data or NULL
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void *configValueServerFTPSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData)
+LOCAL void *configValueServerFTPSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(sectionDataIterator != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  return configValueServerSectionIteratorNext(sectionDataIterator,SERVER_TYPE_FTP);
+  return configValueServerSectionIterator(sectionDataIterator,SERVER_TYPE_FTP,operation,data,userData);
 }
 
 /***********************************************************************\
 * Name   : configValueServerSSHSectionDataIteratorNext
 * Purpose: get next SSH server node
 * Input  : sectionDataIterator - section data iterator
+*          operation           - operation code; see ConfigValueOperations
+*          data                - operation data
 *          userData            - user data
 * Output : next section data or NULL
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void *configValueServerSSHSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData)
+LOCAL void *configValueServerSSHSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(sectionDataIterator != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  return configValueServerSectionIteratorNext(sectionDataIterator,SERVER_TYPE_SSH);
+  return configValueServerSectionIterator(sectionDataIterator,SERVER_TYPE_SSH,operation,data,userData);
 }
 
 /***********************************************************************\
 * Name   : configValueServerWebDAVSectionIteratorNext
 * Purpose: get next WebDAV server node
 * Input  : sectionDataIterator - section data iterator
+*          operation           - operation code; see ConfigValueOperations
+*          data                - operation data
 *          userData            - user data
 * Output : next section data or NULL
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void *configValueServerWebDAVSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData)
+LOCAL void *configValueServerWebDAVSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
 {
   assert(sectionDataIterator != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  return configValueServerSectionIteratorNext(sectionDataIterator,SERVER_TYPE_WEBDAV);
+  return configValueServerSectionIterator(sectionDataIterator,SERVER_TYPE_WEBDAV,operation,data,userData);
 }
 
 /***********************************************************************\
@@ -8193,7 +8231,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_COMMENT("master settings"),
-  CONFIG_VALUE_BEGIN_SECTION     ("master",NULL,-1,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("master",NULL,-1,NULL,NULL),
 //TODO
     CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1,                             "<name>"),
     CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueHashDataParse,configValueHashDataFormat,NULL),
@@ -8252,7 +8290,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("maintenance"),
-  CONFIG_VALUE_BEGIN_SECTION     ("maintenance",&globalOptions.maintenanceList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,ConfigValue_listSectionDataIteratorNext,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("maintenance",&globalOptions.maintenanceList,-1,ConfigValue_listSectionDataIterator,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL  ("date",                             MaintenanceNode,date,                                          configValueMaintenanceDateParse,configValueMaintenanceDateFormat,&globalOptions.maintenanceList),
     CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                         MaintenanceNode,weekDaySet,                                    configValueMaintenanceWeekDaySetParse,configValueMaintenanceWeekDaySetFormat,&globalOptions.maintenanceList),
     CONFIG_STRUCT_VALUE_SPECIAL  ("begin",                            MaintenanceNode,beginTime,                                     configValueMaintenanceTimeParse,configValueMaintenanceTimeFormat,&globalOptions.maintenanceList),
@@ -8359,7 +8397,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 #if 0
   // ignored schedule settings (server only)
   CONFIG_VALUE_SEPARATOR("schedule"),
-  CONFIG_VALUE_BEGIN_SECTION     ("schedule",NULL,-1,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("schedule",NULL,-1,NULL,NULL),
     CONFIG_VALUE_IGNORE          ("UUID",                                                                                            NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("parentUUID",                                                                                      NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("date",                                                                                            NULL,FALSE),
@@ -8376,7 +8414,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   // ignored persitence settings (server only)
   CONFIG_VALUE_SEPARATOR("persistence"),
-  CONFIG_VALUE_BEGIN_SECTION     ("persistence",NULL,-1,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("persistence",NULL,-1,NULL,NULL),
     CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
@@ -8475,7 +8513,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SEPARATOR(),
 //  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",            &defaultFileServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
-  CONFIG_VALUE_BEGIN_SECTION     ("file-server",NULL,-1,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("file-server",NULL,-1,NULL,NULL),
     CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",            Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
     CONFIG_STRUCT_VALUE_STRING   ("file-write-pre-command",           Server,writePreProcessCommand,                                 "<command>"),
     CONFIG_STRUCT_VALUE_STRING   ("file-write-post-command",          Server,writePostProcessCommand,                                "<command>"),
@@ -8487,7 +8525,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("ftp-max-connections",              &globalOptions.defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",             &globalOptions.defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_BEGIN_SECTION     ("ftp-server",&globalOptions.serverList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,configValueServerFTPSectionDataIteratorNext,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("ftp-server",&globalOptions.serverList,-1,configValueServerFTPSectionDataIterator,NULL),
     CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",                   Server,ftp.loginName,                                          "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                     Server,ftp.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",              Server,maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
@@ -8505,7 +8543,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &globalOptions.defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &globalOptions.defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_BEGIN_SECTION     ("ssh-server",&globalOptions.serverList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,configValueServerSSHSectionDataIteratorNext,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("ssh-server",&globalOptions.serverList,-1,configValueServerSSHSectionDataIterator,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         Server,ssh.port,                                               0,65535,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   Server,ssh.loginName,                                          "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                     Server,ssh.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
@@ -8524,7 +8562,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("webdav-max-connections",           &globalOptions.defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",          &globalOptions.defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_BEGIN_SECTION     ("webdav-server",&globalOptions.serverList,-1,ConfigValue_listSectionDataIteratorInit,ConfigValue_listSectionDataIteratorDone,configValueServerWebDAVSectionDataIteratorNext,NULL),
+  CONFIG_VALUE_BEGIN_SECTION     ("webdav-server",&globalOptions.serverList,-1,configValueServerWebDAVSectionDataIterator,NULL),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",                Server,webDAV.loginName,                                       "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",                  Server,webDAV.password,                                        configValuePasswordParse,configValuePasswordFormat,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",           Server,maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
@@ -8709,7 +8747,7 @@ ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag,           "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag,  "yes|no"),
 
-  CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL),
     CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ,"<uuid>"),
     CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ,"<uuid>"),
     CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueScheduleDateFormat,NULL),
@@ -8727,7 +8765,7 @@ ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueDeprecatedScheduleMaxAgeParse,NULL,NULL,FALSE),
   CONFIG_VALUE_END_SECTION(),
 
-  CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),

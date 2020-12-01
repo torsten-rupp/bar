@@ -2213,7 +2213,7 @@ Errors Job_write(JobNode *jobNode)
   StringList            jobLinesList;
   String                line;
   Errors                error;
-  int                   i;
+  uint                  i;
   StringNode            *nextStringNode;
   const ScheduleNode    *scheduleNode;
   const PersistenceNode *persistenceNode;
