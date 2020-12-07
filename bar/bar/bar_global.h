@@ -505,6 +505,8 @@ typedef struct ServerNode
   String      writePreProcessCommand;                         // command to execute before writing
   String      writePostProcessCommand;                        // command to execute after writing
 
+  StringList  commentList;
+
   struct
   {
     uint lowPriorityRequestCount;                             // number of waiting low priority connection requests
@@ -609,6 +611,8 @@ typedef struct DeviceNode
 
   uint   id;                                                  // unique device id
   Device device;
+
+  StringList  commentList;
 } DeviceNode;
 
 // device list

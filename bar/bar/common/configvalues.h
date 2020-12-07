@@ -32,6 +32,7 @@ typedef enum
   CONFIG_VALUE_OPERATION_INIT,
   CONFIG_VALUE_OPERATION_DONE,
   CONFIG_VALUE_OPERATION_TEMPLATE,
+  CONFIG_VALUE_OPERATION_COMMENTS,
   CONFIG_VALUE_OPERATION
 } ConfigValueOperations;
 
@@ -1332,6 +1333,43 @@ uint ConfigValue_valueIndex(const ConfigValue configValues[],
                            );
 
 /***********************************************************************\
+* Name   : ConfigValue_find
+* Purpose: find value
+* Input  : configValues                   - config values array
+*          firstValueIndex,lastValueIndex - first/last value index or
+*                                           CONFIG_VALUE_INDEX_NONE
+*          name                           - name
+* Output : -
+* Return : index or CONFIG_VALUE_INDEX_NONE
+* Notes  : -
+\***********************************************************************/
+
+uint ConfigValue_find(const ConfigValue configValues[],
+                      uint              firstValueIndex,
+                      uint              lastValueIndex,
+                      const char        *name
+                     );
+
+/***********************************************************************\
+* Name   : ConfigValue_findSection
+* Purpose: find section value indizes
+* Input  : configValues - config values array
+*          sectionName  - section name
+* Output : sectionIndex    - section index (can be NULL)
+*          firstValueIndex - first value index (can be NULL)
+*          lastValueIndex  - last value index (can be NULL)
+* Return : TRUE iff section found
+* Notes  : -
+\***********************************************************************/
+
+bool ConfigValue_findSection(const ConfigValue configValues[],
+                             const char        *sectionName,
+                             uint              *sectionIndex,
+                             uint              *firstValueIndex,
+                             uint              *lastValueIndex
+                            );
+
+/***********************************************************************\
 * Name   : ConfigValue_firstValueIndex
 * Purpose: get first value index
 * Input  : configValues - config values array
@@ -1389,8 +1427,18 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
 
 bool ConfigValue_parse(const char           *name,
                        const char           *value,
-                       ConfigValue    configValues[],
+                       ConfigValue          configValues[],
                        const char           *sectionName,
+                       ConfigReportFunction errorReportFunction,
+                       void                 *errorReportUserData,
+                       ConfigReportFunction warningReportFunction,
+                       void                 *warningReportUserData,
+                       void                 *variable,
+                       StringList           *commentLineList
+                      );
+bool ConfigValue_parse2(ConfigValue          *configValue,
+                       const char           *sectionName,
+                       const char           *value,
                        ConfigReportFunction errorReportFunction,
                        void                 *errorReportUserData,
                        ConfigReportFunction warningReportFunction,
@@ -1487,6 +1535,10 @@ bool ConfigValue_parseDeprecatedString(void       *userData,
                                        char       errorMessage[],
                                        uint       errorMessageSize
                                       );
+
+void ConfigValue_addComments(ConfigValue *configValue,
+                             StringList  *commentList
+                            );
 
 /***********************************************************************\
 * Name   : ConfigValue_getIntegerValue
@@ -1648,32 +1700,7 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                                   );
 
 /***********************************************************************\
-* Name   : ConfigValue_listSectionDataIteratorInit
-* Purpose: init section iterator
-* Input  : sectionDataIterator - section data iterator variable
-*          variable            - variable
-*          userData            - user data
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-void ConfigValue_listSectionDataIteratorInit(ConfigValueSectionDataIterator *sectionDataIterator, void *variable, void *userData);
-
-/***********************************************************************\
-* Name   : ConfigValue_listSectionIteratorDone
-* Purpose: done section iterator
-* Input  : sectionDataIterator - section data iterator variable
-*          userData            - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void ConfigValue_listSectionDataIteratorDone(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
-
-/***********************************************************************\
-* Name   : ConfigValue_updateConfigFile
+* Name   : ConfigValue_listSectionDataIterator
 * Purpose: get next section iterator value
 * Input  : sectionDataIterator - section data iterator variable
 *          userData            - user data
@@ -1681,8 +1708,6 @@ void ConfigValue_listSectionDataIteratorDone(ConfigValueSectionDataIterator *sec
 * Return : next data element or NULL
 * Notes  : -
 \***********************************************************************/
-
-void *ConfigValue_listSectionDataIteratorNext(ConfigValueSectionDataIterator *sectionDataIterator, void *userData);
 
 void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData);
 

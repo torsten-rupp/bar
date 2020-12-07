@@ -668,7 +668,6 @@ LOCAL bool getInteger64Value(int64                 *value,
 * Purpose: process single config value
 * Input  : configValue           - config value
 *          sectionName           - section name or NULL
-*          name                  - option name
 *          value                 - option value or NULL
 *          errorReportFunction   - error report function (can be NULL)
 *          errorReportUserData   - error report user data
@@ -681,7 +680,6 @@ LOCAL bool getInteger64Value(int64                 *value,
 
 LOCAL bool processValue(const ConfigValue    *configValue,
                         const char           *sectionName,
-                        const char           *name,
                         const char           *value,
                         ConfigReportFunction errorReportFunction,
                         void                 *errorReportUserData,
@@ -711,7 +709,6 @@ LOCAL bool processValue(const ConfigValue    *configValue,
   const char *message;
 
   assert(configValue != NULL);
-  assert(name != NULL);
 
   stringClear(errorMessage);
   switch (configValue->type)
@@ -745,7 +742,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                         value,
                         configValue->integerValue.min,
                         configValue->integerValue.max,
-                        name
+                        configValue->name
                        );
           return FALSE;
         }
@@ -802,7 +799,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                         value,
                         configValue->integer64Value.min,
                         configValue->integer64Value.max,
-                        name
+                        configValue->name
                        );
           return FALSE;
         }
@@ -904,7 +901,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                         value,
                         configValue->doubleValue.min,
                         configValue->doubleValue.max,
-                        name
+                        configValue->name
                        );
           return FALSE;
         }
@@ -962,7 +959,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                         errorReportUserData,
                         "Invalid value '%s' for boolean config value '%s'",
                         value,
-                        name
+                        configValue->name
                        );
           return FALSE;
         }
@@ -1030,7 +1027,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                         errorReportUserData,
                         "Unknown value '%s' for config value '%s'",
                         value,
-                        name
+                        configValue->name
                        );
           return FALSE;
         }
@@ -1099,7 +1096,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                             errorReportUserData,
                             "Unknown value '%s' for config value '%s'",
                             setName,
-                            name
+                            configValue->name
                            );
               return FALSE;
             }
@@ -2455,6 +2452,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             }
 
             error = flushCommentLines(fileHandle,indent,&commentList);
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List_count(&commentList));
+            error = writeCommentLines(fileHandle,indent,NULL,configValues[index].commentList);
 
             // init iterator
             if (configValues[index].section.sectionIterator != NULL)
@@ -2472,6 +2471,26 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
               name = String_new();
               do
               {
+#if 1
+                const StringList *commentList = configValues[index].section.sectionIterator(&sectionIterator,
+                                                                                            CONFIG_VALUE_OPERATION_COMMENTS,
+                                                                                            name,
+                                                                                            configValues[index].section.userData
+                                                                                           );
+                if (commentList != NULL)
+                {
+                  StringNode *stringNode;
+                  String     line;
+
+                  // write lines
+                  STRINGLIST_ITERATE(commentList,stringNode,line)
+                  {
+                    error = File_printLine(fileHandle,"# %S",line);
+                    if (error != ERROR_NONE) break;
+                  }
+                }
+#endif
+
                 data = configValues[index].section.sectionIterator(&sectionIterator,
                                                                    CONFIG_VALUE_OPERATION,
                                                                    name,
@@ -2578,6 +2597,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
         }
         break;
       default:
+//fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List_count(&commentList));
+//File_printLine(fileHandle,"a %d %d",List_count(&commentList),(configValues[index].commentList!=0) ? List_count(configValues[index].commentList) : -1);
         error = writeValue(fileHandle,
                            indent,
                            &configValues[index],
@@ -2585,6 +2606,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                            &commentList
                           );
         StringList_clear(&commentList);
+//File_printLine(fileHandle,"b");
         break;
     }
   }
@@ -2624,6 +2646,96 @@ void ConfigValue_done(ConfigValue configValues[])
   }
 }
 
+bool ConfigValue_findSection(const ConfigValue configValues[],
+                             const char        *sectionName,
+                             uint              *sectionIndex,
+                             uint              *firstValueIndex,
+                             uint              *lastValueIndex
+                            )
+{
+  uint index;
+  bool skipFlag;
+
+  assert(configValues != NULL);
+  assert(sectionName != NULL);
+
+  index = 0;
+  if (sectionName != NULL)
+  {
+    // find section
+    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+           && (   (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
+               || !stringEquals(configValues[index].name,sectionName)
+              )
+          )
+    {
+      do
+      {
+        skipFlag = TRUE;
+        switch (configValues[index].type)
+        {
+          case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+            do
+            {
+              index++;
+            }
+            while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+                   && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+                  );
+            if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
+            {
+              skipFlag = FALSE;
+            }
+            else
+            {
+              index++;
+            }
+            break;
+          case CONFIG_VALUE_TYPE_END:
+            skipFlag = FALSE;
+            break;
+          default:
+            index++;
+            skipFlag = FALSE;
+            break;
+        }
+      }
+      while (skipFlag);
+    }
+    if (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
+    {
+      return FALSE;
+    }
+    if (sectionIndex != NULL) (*sectionIndex) = index;
+    index++;
+
+    // get first index
+    if (firstValueIndex != NULL) (*firstValueIndex) = index;
+
+    // find section end
+    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+           && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+          )
+    {
+      index++;
+    }
+    if (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+    {
+      return FALSE;
+    }
+    index--;
+
+    // get last index
+    if (lastValueIndex != NULL) (*lastValueIndex) = index;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 uint ConfigValue_valueIndex(const ConfigValue configValues[],
                             const char        *sectionName,
                             const char        *name
@@ -2650,6 +2762,40 @@ uint ConfigValue_valueIndex(const ConfigValue configValues[],
          )
            ? index
            : CONFIG_VALUE_INDEX_NONE;
+}
+
+uint ConfigValue_find(const ConfigValue configValues[],
+                      uint              firstValueIndex,
+                      uint              lastValueIndex,
+                      const char        *name
+                     )
+{
+  uint index;
+
+  assert(configValues != NULL);
+  assert(name != NULL);
+
+  index = (firstValueIndex != CONFIG_VALUE_INDEX_NONE) ? firstValueIndex : 0;
+  if (lastValueIndex != CONFIG_VALUE_INDEX_NONE)
+  {
+    while (   (index <= lastValueIndex)
+           && !stringEquals(configValues[index].name,name)
+          )
+    {
+      index = ConfigValue_nextValueIndex(configValues,index);
+    }
+  }
+  else
+  {
+    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+           && !stringEquals(configValues[index].name,name)
+          )
+    {
+      index = ConfigValue_nextValueIndex(configValues,index);
+    }
+  }
+
+  return index;
 }
 
 uint ConfigValue_firstValueIndex(const ConfigValue configValues[],
@@ -2940,14 +3086,14 @@ bool ConfigValue_parse(const char           *name,
                        StringList           *commentLineList
                       )
 {
-  int i;
+  uint i;
 
   assert(name != NULL);
   assert(configValues != NULL);
 
   // find config value
   i = ConfigValue_valueIndex(configValues,sectionName,name);
-  if (i < 0)
+  if (i == CONFIG_VALUE_INDEX_NONE)
   {
     reportMessage(errorReportFunction,
                   errorReportUserData,
@@ -2960,7 +3106,6 @@ bool ConfigValue_parse(const char           *name,
   // process value
   if (!processValue(&configValues[i],
                     sectionName,
-                    name,
                     value,
                     errorReportFunction,
                     errorReportUserData,
@@ -2978,7 +3123,53 @@ bool ConfigValue_parse(const char           *name,
     {
       configValues[i].commentList = StringList_new();
     }
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,name,List_count(commentLineList));
+    StringList_clear(configValues[i].commentList);
     StringList_move(configValues[i].commentList,commentLineList);
+//StringList_clear(commentLineList);
+fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,name,List_count(configValues[i].commentList),List_count(commentLineList));
+  }
+
+  return TRUE;
+}
+bool ConfigValue_parse2(ConfigValue          *configValue,
+                       const char           *sectionName,
+                       const char           *value,
+                       ConfigReportFunction errorReportFunction,
+                       void                 *errorReportUserData,
+                       ConfigReportFunction warningReportFunction,
+                       void                 *warningReportUserData,
+                       void                 *variable,
+                       StringList           *commentLineList
+                      )
+{
+//  assert(name != NULL);
+  assert(configValue != NULL);
+
+  if (!processValue(configValue,
+                    sectionName,
+                    value,
+                    errorReportFunction,
+                    errorReportUserData,
+                    warningReportFunction,
+                    warningReportUserData,
+                    variable
+                   ))
+  {
+    return FALSE;
+  }
+
+  if ((commentLineList != NULL) && !StringList_isEmpty(commentLineList))
+  {
+    if (configValue->commentList == NULL)
+    {
+      configValue->commentList = StringList_new();
+    }
+fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValue->name,List_count(commentLineList));
+    StringList_clear(configValue->commentList);
+    StringList_move(configValue->commentList,commentLineList);
+//StringList_clear(commentLineList);
+fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,configValue->name,List_count(configValue->commentList),List_count(commentLineList));
   }
 
   return TRUE;
@@ -3101,6 +3292,19 @@ bool ConfigValue_parseDeprecatedString(void *userData, void *variable, const cha
   }
 
   return TRUE;
+}
+
+void ConfigValue_addComments(ConfigValue *configValue,
+                             StringList  *commentList
+                            )
+{
+  assert(configValue != NULL);
+
+  if (configValue->commentList == NULL)
+  {
+    configValue->commentList = StringList_new();
+  }
+  StringList_move(configValue->commentList,commentList);
 }
 
 bool ConfigValue_getIntegerValue(int                   *value,
@@ -4056,10 +4260,10 @@ Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *c
 
 Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList)
 {
-  String     line;
   Errors     error;
   FileHandle fileHandle;
   StringNode *stringNode;
+  String     line;
 
   assert(configFileName != NULL);
   assert(configLinesList != NULL);
@@ -4199,6 +4403,8 @@ void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectio
       {
         Node   *node = (Node*)(*sectionDataIterator);
         String name  = (String)data;
+
+        assert(name != NULL);
 
         if (node != NULL)
         {

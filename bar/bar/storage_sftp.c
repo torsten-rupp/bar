@@ -371,8 +371,8 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->sftp.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->sftp.bandWidthLimiter); });
 
     // get SSH server settings
-    storageInfo->sftp.serverId = initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
-    AUTOFREE_ADD(&autoFreeList,&sshServer,{ doneSSHServerSettings(&sshServer); });
+    storageInfo->sftp.serverId = Configuration_initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,sshServer.loginName);
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
@@ -475,7 +475,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     }
 
     // free resources
-    doneSSHServerSettings(&sshServer);
+    Configuration_doneSSHServerSettings(&sshServer);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;
@@ -1815,8 +1815,8 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
     String_set(storageDirectoryListHandle->sftp.pathName,pathName);
 
     // get SSH server settings
-    initSSHServerSettings(&sshServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
-    AUTOFREE_ADD(&autoFreeList,&sshServer,{ doneSSHServerSettings(&sshServer); });
+    Configuration_initSSHServerSettings(&sshServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
@@ -1948,7 +1948,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
     }
 
     // free resources
-    doneSSHServerSettings(&sshServer);
+    Configuration_doneSSHServerSettings(&sshServer);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;

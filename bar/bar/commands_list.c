@@ -3314,7 +3314,7 @@ NULL, // masterSocketHandle
         {
 
           // get SSH server settings
-          initSSHServerSettings(&sshServer,storageSpecifier->hostName,jobOptions);
+          Configuration_initSSHServerSettings(&sshServer,storageSpecifier->hostName,jobOptions);
           if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
           if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("USER"));
@@ -3325,7 +3325,7 @@ NULL, // masterSocketHandle
 #if 0
             printError("No host name given!");
 #endif
-            doneSSHServerSettings(&sshServer);
+            Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_HOST_NAME;
             break;
           }
@@ -3335,7 +3335,7 @@ NULL, // masterSocketHandle
 #if 0
             printError("Cannot SSH public key given!");
 #endif
-            doneSSHServerSettings(&sshServer);
+            Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PUBLIC_KEY;
             break;
           }
@@ -3345,7 +3345,7 @@ NULL, // masterSocketHandle
 #if 0
             printError("Cannot SSH private key given!");
 #endif
-            doneSSHServerSettings(&sshServer);
+            Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PRIVATE_KEY;
             break;
           }
@@ -3403,12 +3403,12 @@ NULL, // masterSocketHandle
                       );
 #endif
             (void)Network_disconnect(&socketHandle);
-            doneSSHServerSettings(&sshServer);
+            Configuration_doneSSHServerSettings(&sshServer);
             break;
           }
 
           // free resources
-          doneSSHServerSettings(&sshServer);
+          Configuration_doneSSHServerSettings(&sshServer);
 
           remoteBarFlag = TRUE;
         }

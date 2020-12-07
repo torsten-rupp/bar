@@ -382,8 +382,8 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->scp.bandWidthLimiter); });
 
     // get SSH server settings
-    storageInfo->scp.serverId = initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
-    AUTOFREE_ADD(&autoFreeList,&sshServer,{ doneSSHServerSettings(&sshServer); });
+    storageInfo->scp.serverId = Configuration_initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,sshServer.loginName);
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
@@ -502,7 +502,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     }
 
     // free resources
-    doneSSHServerSettings(&sshServer);
+    Configuration_doneSSHServerSettings(&sshServer);
     AutoFree_done(&autoFreeList);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);

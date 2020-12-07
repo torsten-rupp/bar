@@ -408,7 +408,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   }
 
   // get device settings
-  initDeviceSettings(&device,storageInfo->storageSpecifier.deviceName,jobOptions);
+  Configuration_initDeviceSettings(&device,storageInfo->storageSpecifier.deviceName,jobOptions);
 
   // init variables
   storageInfo->device.write.requestVolumeCommand   = device.requestVolumeCommand;
@@ -444,7 +444,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   {
     StringList_done(&storageInfo->device.write.fileNameList);
     String_delete(storageInfo->device.write.directory);
-    doneDeviceSettings(&device);
+    Configuration_doneDeviceSettings(&device);
     return error;
   }
   if (fileSystemInfo.freeBytes < (device.volumeSize*2))
@@ -462,7 +462,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   {
     StringList_done(&storageInfo->device.write.fileNameList);
     String_delete(storageInfo->device.write.directory);
-    doneDeviceSettings(&device);
+    Configuration_doneDeviceSettings(&device);
     return error;
   }
 
@@ -470,7 +470,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   storageInfo->requestedVolumeNumber = 1;
 
   // free resources
-  doneDeviceSettings(&device);
+  Configuration_doneDeviceSettings(&device);
 
   return ERROR_NONE;
 }

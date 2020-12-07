@@ -338,6 +338,197 @@ bool Configuration_equalsHash(Hash *hash, const CryptHash *cryptHash);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Configuration_initFileServerSettings
+* Purpose: init device settings
+* Input  : fileServer - files server variable
+*          directory  - directory
+*          jobOptions - job options
+* Output : fileServer - files server
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint Configuration_initFileServerSettings(FileServer       *fileServer,
+                                          ConstString      directory,
+                                          const JobOptions *jobOptions
+                                         );
+
+/***********************************************************************\
+* Name   : Configuration_doneFileServerSettings
+* Purpose: done file server settings
+* Input  : fileServer - file ferver
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneFileServerSettings(FileServer *fileServer);
+
+/***********************************************************************\
+* Name   : Configuration_initFTPServerSettings
+* Purpose: init device settings
+* Input  : ftpServer  - FTP server variable
+*          hostName   - host name
+*          jobOptions - job options
+* Output : ftpServer - FTP server
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint Configuration_initFTPServerSettings(FTPServer        *ftpServer,
+                                         ConstString      hostName,
+                                         const JobOptions *jobOptions
+                                        );
+
+/***********************************************************************\
+* Name   : Configuration_doneFTPServerSettings
+* Purpose: done ftp server settings
+* Input  : ftpServer - FTP server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneFTPServerSettings(FTPServer *ftpServer);
+
+/***********************************************************************\
+* Name   : Configuration_initSSHServerSettings
+* Purpose: init device settings
+* Input  : sshServer  - SSh server variable
+*          hostName   - host name
+*          jobOptions - job options
+* Output : sshServer - SSH server
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint Configuration_initSSHServerSettings(SSHServer        *sshServer,
+                                         ConstString      hostName,
+                                         const JobOptions *jobOptions
+                                        );
+
+/***********************************************************************\
+* Name   : Configuration_doneSSHServerSettings
+* Purpose: parse date week day set
+* Input  : names - day names to parse
+* Output : weekDaySet - week day set
+* Return : TRUE iff week day parsed
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneSSHServerSettings(SSHServer *sshServer);
+
+/***********************************************************************\
+* Name   : Configuration_initWebDAVServerSettings
+* Purpose: init device settings
+* Input  : webDAVServer - webDAV server variable
+*          hostName     - host name
+*          jobOptions   - job options
+* Output : webDAVServer - webDAV server
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
+                                            ConstString      hostName,
+                                            const JobOptions *jobOptions
+                                           );
+
+
+/***********************************************************************\
+* Name   : Configuration_doneWebDAVServerSettings
+* Purpose: done webDAV server settings
+* Input  : webDAVServer - webDAV server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer);
+
+/***********************************************************************\
+* Name   : Configuration_initCDSettings
+* Purpose: init device settings
+* Input  : cd         - cd variable
+*          jobOptions - job options
+* Output : cd - cd
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_initCDSettings(OpticalDisk      *cd,
+                                  const JobOptions *jobOptions
+                                 );
+
+/***********************************************************************\
+* Name   : Configuration_initDVDSettings
+* Purpose: init device settings
+* Input  : dvd        - dvd variable
+*          jobOptions - job options
+* Output : dvd - dvd
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_initDVDSettings(OpticalDisk      *dvd,
+                                   const JobOptions *jobOptions
+                                  );
+
+/***********************************************************************\
+* Name   : Configuration_initBDSettings
+* Purpose: init device settings
+* Input  : bd         - bd variable
+*          jobOptions - job options
+* Output : bd - bd
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_initBDSettings(OpticalDisk      *bd,
+                                  const JobOptions *jobOptions
+                                 );
+
+/***********************************************************************\
+* Name   : Configuration_doneOpticalDiskSettings
+* Purpose: done opticaldisk settings
+* Input  : opticalDisk - optical disk
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneOpticalDiskSettings(OpticalDisk *opticalDisk);
+
+/***********************************************************************\
+* Name   : Configuration_initDeviceSettings
+* Purpose: init device settings
+* Input  : device     - device variable
+*          name       - name
+*          jobOptions - job options
+* Output : device - device
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_initDeviceSettings(Device           *device,
+                                      ConstString      name,
+                                      const JobOptions *jobOptions
+                                     );
+
+/***********************************************************************\
+* Name   : Configuration_doneDeviceSettings
+* Purpose: done device settings
+* Input  : device - device
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneDeviceSettings(Device *device);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : Configuration_parseWeekDaySet
 * Purpose: parse date week day set
 * Input  : names - day names to parse
@@ -461,6 +652,40 @@ void Configuration_freeServerNode(ServerNode *serverNode, void *userData);
 \***********************************************************************/
 
 void Configuration_deleteServerNode(ServerNode *serverNode);
+
+/***********************************************************************\
+* Name   : Configuration_newDeviceNode
+* Purpose: new server node
+* Input  : name - device name
+* Output : -
+* Return : device node
+* Notes  : -
+\***********************************************************************/
+
+DeviceNode *Configuration_newDeviceNode(ConstString name);
+
+/***********************************************************************\
+* Name   : Configuration_freeDeviceNode
+* Purpose: free device node
+* Input  : deviceNode - device node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_freeDeviceNode(DeviceNode *deviceNode, void *userData);
+
+/***********************************************************************\
+* Name   : Configuration_deleteDeviceNode
+* Purpose: delete device node
+* Input  : deviceNode - device node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_deleteDeviceNode(DeviceNode *deviceNode);
 
 /***********************************************************************\
 * Name   : Configuration_add

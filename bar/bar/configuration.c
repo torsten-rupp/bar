@@ -498,53 +498,6 @@ LOCAL void doneDevice(Device *device)
 }
 
 /***********************************************************************\
-* Name   : newDeviceNode
-* Purpose: new server node
-* Input  : name - device name
-* Output : -
-* Return : device node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL DeviceNode *newDeviceNode(ConstString name)
-{
-  DeviceNode *deviceNode;
-
-  // allocate new device node
-  deviceNode = LIST_NEW_NODE(DeviceNode);
-  if (deviceNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
-  initDevice(&deviceNode->device);
-
-  deviceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-  deviceNode->device.name = String_duplicate(name);
-
-  return deviceNode;
-}
-
-/***********************************************************************\
-* Name   : freeDeviceNode
-* Purpose: free device node
-* Input  : deviceNode - device node
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
-{
-  assert(deviceNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  doneDevice(&deviceNode->device);
-}
-
-/***********************************************************************\
 * Name   : freeMaintenanceNode
 * Purpose: free maintenace node
 * Input  : maintenanceNode - maintenance node
@@ -1544,6 +1497,7 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
   server->maxStorageSize          = 0;
   server->writePreProcessCommand  = String_new();
   server->writePostProcessCommand = String_new();
+  StringList_init(&server->commentList);
 }
 
 void doneServer(Server *server)
@@ -1578,6 +1532,7 @@ void doneServer(Server *server)
         break; // not reached
     #endif /* NDEBUG */
   }
+  StringList_done(&server->commentList);
   String_delete(server->writePostProcessCommand);
   String_delete(server->writePreProcessCommand);
   String_delete(server->name);
@@ -1588,8 +1543,8 @@ uint getServerSettings(Server                 *server,
                        const JobOptions       *jobOptions
                       )
 {
-  uint       serverId;
-  ServerNode *serverNode;
+  uint             serverId;
+  const ServerNode *serverNode;
 
   assert(server != NULL);
   assert(storageSpecifier != NULL);
@@ -1777,12 +1732,12 @@ uint getServerSettings(Server                 *server,
   return serverId;
 }
 
-uint initFileServerSettings(FileServer       *fileServer,
-                            ConstString      directory,
-                            const JobOptions *jobOptions
-                           )
+uint Configuration_initFileServerSettings(FileServer       *fileServer,
+                                          ConstString      directory,
+                                          const JobOptions *jobOptions
+                                         )
 {
-  ServerNode *serverNode;
+  const ServerNode *serverNode;
 
   assert(fileServer != NULL);
   assert(directory != NULL);
@@ -1806,19 +1761,19 @@ uint initFileServerSettings(FileServer       *fileServer,
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-void doneFileServerSettings(FileServer *fileServer)
+void Configuration_doneFileServerSettings(FileServer *fileServer)
 {
   assert(fileServer != NULL);
 
   UNUSED_VARIABLE(fileServer);
 }
 
-uint initFTPServerSettings(FTPServer        *ftpServer,
-                           ConstString      hostName,
-                           const JobOptions *jobOptions
-                          )
+uint Configuration_initFTPServerSettings(FTPServer        *ftpServer,
+                                         ConstString      hostName,
+                                         const JobOptions *jobOptions
+                                        )
 {
-  ServerNode *serverNode;
+  const ServerNode *serverNode;
 
   assert(ftpServer != NULL);
   assert(hostName != NULL);
@@ -1858,7 +1813,7 @@ uint initFTPServerSettings(FTPServer        *ftpServer,
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-void doneFTPServerSettings(FTPServer *ftpServer)
+void Configuration_doneFTPServerSettings(FTPServer *ftpServer)
 {
   assert(ftpServer != NULL);
 
@@ -1866,12 +1821,12 @@ void doneFTPServerSettings(FTPServer *ftpServer)
   String_delete(ftpServer->loginName);
 }
 
-uint initSSHServerSettings(SSHServer        *sshServer,
-                           ConstString      hostName,
-                           const JobOptions *jobOptions
-                          )
+uint Configuration_initSSHServerSettings(SSHServer        *sshServer,
+                                         ConstString      hostName,
+                                         const JobOptions *jobOptions
+                                        )
 {
-  ServerNode *serverNode;
+  const ServerNode *serverNode;
 
   assert(sshServer != NULL);
   assert(hostName != NULL);
@@ -1933,7 +1888,7 @@ uint initSSHServerSettings(SSHServer        *sshServer,
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-void doneSSHServerSettings(SSHServer *sshServer)
+void Configuration_doneSSHServerSettings(SSHServer *sshServer)
 {
   assert(sshServer != NULL);
 
@@ -1943,12 +1898,12 @@ void doneSSHServerSettings(SSHServer *sshServer)
   String_delete(sshServer->loginName);
 }
 
-uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
-                              ConstString      hostName,
-                              const JobOptions *jobOptions
-                             )
+uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
+                                            ConstString      hostName,
+                                            const JobOptions *jobOptions
+                                           )
 {
-  ServerNode *serverNode;
+  const ServerNode *serverNode;
 
   assert(hostName != NULL);
   assert(webDAVServer != NULL);
@@ -2005,7 +1960,7 @@ uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
   return (serverNode != NULL) ? serverNode->id : 0;
 }
 
-void doneWebDAVServerSettings(WebDAVServer *webDAVServer)
+void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
 
@@ -2015,9 +1970,9 @@ void doneWebDAVServerSettings(WebDAVServer *webDAVServer)
   String_delete(webDAVServer->loginName);
 }
 
-void initCDSettings(OpticalDisk      *cd,
-                    const JobOptions *jobOptions
-                   )
+void Configuration_initCDSettings(OpticalDisk      *cd,
+                                  const JobOptions *jobOptions
+                                 )
 {
   assert(cd != NULL);
 
@@ -2039,9 +1994,9 @@ void initCDSettings(OpticalDisk      *cd,
   cd->writeImageCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeImageCommand      )) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
 }
 
-void initDVDSettings(OpticalDisk      *dvd,
-                     const JobOptions *jobOptions
-                    )
+void Configuration_initDVDSettings(OpticalDisk      *dvd,
+                                   const JobOptions *jobOptions
+                                  )
 {
   assert(dvd != NULL);
 
@@ -2063,9 +2018,9 @@ void initDVDSettings(OpticalDisk      *dvd,
   dvd->writeImageCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeImageCommand      )) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
 }
 
-void initBDSettings(OpticalDisk      *bd,
-                    const JobOptions *jobOptions
-                   )
+void Configuration_initBDSettings(OpticalDisk      *bd,
+                                  const JobOptions *jobOptions
+                                 )
 {
   assert(bd != NULL);
 
@@ -2087,19 +2042,19 @@ void initBDSettings(OpticalDisk      *bd,
   bd->writeImageCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeImageCommand      )) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
 }
 
-void doneOpticalDiskSettings(OpticalDisk *opticalDisk)
+void Configuration_doneOpticalDiskSettings(OpticalDisk *opticalDisk)
 {
   assert(opticalDisk != NULL);
 
   UNUSED_VARIABLE(opticalDisk);
 }
 
-void initDeviceSettings(Device           *device,
-                        ConstString      name,
-                        const JobOptions *jobOptions
-                       )
+void Configuration_initDeviceSettings(Device           *device,
+                                      ConstString      name,
+                                      const JobOptions *jobOptions
+                                     )
 {
-  DeviceNode *deviceNode;
+  const DeviceNode *deviceNode;
 
   assert(device != NULL);
   assert(name != NULL);
@@ -2131,7 +2086,7 @@ void initDeviceSettings(Device           *device,
   }
 }
 
-void doneDeviceSettings(Device *device)
+void Configuration_doneDeviceSettings(Device *device)
 {
   assert(device != NULL);
 
@@ -3214,6 +3169,8 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperati
         String_appendFormat(line,"<file name>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const ConfigFileNode *configFileNode = (const ConfigFileNode*)(*formatUserData);
@@ -3225,6 +3182,7 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperati
         {
           configFileNode = configFileNode->next;
         }
+
 
         if (configFileNode != NULL)
         {
@@ -3334,34 +3292,36 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOp
         String_appendFormat(line,"<yyyy>|*-<mm>|*-<dd>|*");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
-        const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
-        String             line          = (String)data;
+        const MaintenanceDate *maintenanceDate = (const MaintenanceDate*)(*formatUserData);
+        String                line             = (String)data;
 
-        if (scheduleDate != NULL)
+        if (maintenanceDate != NULL)
         {
-          if (scheduleDate->year != DATE_ANY)
+          if (maintenanceDate->year != DATE_ANY)
           {
-            String_appendFormat(line,"%d",scheduleDate->year);
+            String_appendFormat(line,"%d",maintenanceDate->year);
           }
           else
           {
             String_appendCString(line,"*");
           }
           String_appendChar(line,'-');
-          if (scheduleDate->month != DATE_ANY)
+          if (maintenanceDate->month != DATE_ANY)
           {
-            String_appendFormat(line,"%d",scheduleDate->month);
+            String_appendFormat(line,"%d",maintenanceDate->month);
           }
           else
           {
             String_appendCString(line,"*");
           }
           String_appendChar(line,'-');
-          if (scheduleDate->day != DATE_ANY)
+          if (maintenanceDate->day != DATE_ANY)
           {
-            String_appendFormat(line,"%d",scheduleDate->day);
+            String_appendFormat(line,"%d",maintenanceDate->day);
           }
           else
           {
@@ -3453,25 +3413,27 @@ LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigV
         String_appendFormat(line,"Mon|Tue|Wed|Thu|Fri|Sat|Sun|*,...");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
-        const ScheduleWeekDaySet *scheduleWeekDaySet = (ScheduleWeekDaySet*)(*formatUserData);
-        String                   names;
-        String                   line                = (String)data;
+        const MaintenanceWeekDaySet *maintenanceWeekDaySet = (MaintenanceWeekDaySet*)(*formatUserData);
+        String                      names;
+        String                      line                   = (String)data;
 
-        if (scheduleWeekDaySet != NULL)
+        if (maintenanceWeekDaySet != NULL)
         {
-          if ((*scheduleWeekDaySet) != WEEKDAY_SET_ANY)
+          if ((*maintenanceWeekDaySet) != WEEKDAY_SET_ANY)
           {
             names = String_new();
 
-            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
-            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
-            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
-            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
-            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
-            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
-            if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+            if (IN_SET(*maintenanceWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+            if (IN_SET(*maintenanceWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+            if (IN_SET(*maintenanceWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+            if (IN_SET(*maintenanceWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+            if (IN_SET(*maintenanceWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+            if (IN_SET(*maintenanceWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+            if (IN_SET(*maintenanceWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
 
             String_append(line,names);
             String_appendChar(line,' ');
@@ -3579,6 +3541,8 @@ LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueOp
         String_appendFormat(line,"<hh>|*:<mm>|*");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const MaintenanceTime *maintenanceTime = (const MaintenanceTime*)(*formatUserData);
@@ -3643,13 +3607,38 @@ LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sec
   switch (operation)
   {
     case CONFIG_VALUE_OPERATION_INIT:
-      assert(data != NULL);
+      {
+        assert(data != NULL);
 
-      (*sectionDataIterator) = List_first((List*)data);
+        ServerNode *serverNode = (ServerNode*)List_first((List*)data);
+
+        while ((serverNode != NULL) && (serverNode->type != serverType))
+        {
+          serverNode = serverNode->next;
+        }
+
+        (*sectionDataIterator) = serverNode;
+      }
       break;
     case CONFIG_VALUE_OPERATION_DONE:
       break;
     case CONFIG_VALUE_OPERATION_TEMPLATE:
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      {
+        ServerNode *serverNode = (ServerNode*)(*sectionDataIterator);
+
+        while (   (serverNode != NULL)
+               && (serverNode->type != serverType)
+              )
+        {
+          serverNode = serverNode->next;
+        }
+
+        (*sectionDataIterator) = serverNode;
+
+        result = (serverNode != NULL) ? &serverNode->commentList : NULL;
+      }
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -3658,7 +3647,9 @@ LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sec
 
         assert(sectionDataIterator != NULL);
 
-        while ((serverNode != NULL) && (serverNode->type != serverType))
+        while (   (serverNode != NULL)
+               && (serverNode->type != serverType)
+              )
         {
           serverNode = serverNode->next;
         }
@@ -3666,6 +3657,7 @@ LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sec
         if (serverNode != NULL)
         {
           String_set(name,serverNode->name);
+
           (*sectionDataIterator) = serverNode->next;
         }
         else
@@ -3987,6 +3979,8 @@ LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueOpera
         String_appendFormat(line,"<yyyy>|*-<mm>|*-<dd>|*");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
@@ -4105,6 +4099,8 @@ LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValu
         String line = (String)data;
         String_appendFormat(line,"Mon|Tue|Wed|Thu|Fri|Sat|Sun|*,...");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -4232,6 +4228,8 @@ LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueOpera
         String_appendFormat(line,"<hh>|*:<mm>|*");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const ScheduleTime *scheduleTime = (ScheduleTime*)(*formatUserData);
@@ -4348,6 +4346,8 @@ LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValu
         String_appendFormat(line,"<n>|*");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
@@ -4457,6 +4457,8 @@ LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValu
         String_appendFormat(line,"<n>|*");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
@@ -4563,6 +4565,8 @@ LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValue
         String line = (String)data;
         String_appendFormat(line,"<n>|*");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -5033,6 +5037,8 @@ LOCAL bool configValuePasswordFormat(void **formatUserData, ConfigValueOperation
         String_appendFormat(line,"<password>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const Password *password = (Password*)(*formatUserData);
@@ -5243,6 +5249,8 @@ LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueOp
         String_appendFormat(line,"<crypt algorithm>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const CryptAlgorithms *cryptAlgorithms = (CryptAlgorithms*)(*formatUserData);
@@ -5357,6 +5365,8 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
         String line = (String)data;
         String_appendFormat(line,"<band width>[K|M])|<file name> <date> [<weekday>] <time>");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -5528,6 +5538,8 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
         String_appendFormat(line,"<user>:<group>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const Owner *owner = (Owner*)(*formatUserData);
@@ -5664,6 +5676,8 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperat
         String line = (String)data;
         String_appendFormat(line,"<user>:<group>:<world>");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -5806,6 +5820,8 @@ LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueO
         String_appendFormat(line,"[r|x|g:]<pattern>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
@@ -5872,6 +5888,8 @@ LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValue
         String_appendFormat(line,"[r|x|g:]<pattern>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
@@ -5881,6 +5899,7 @@ LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValue
         {
           entryNode = entryNode->next;
         }
+
         if (entryNode != NULL)
         {
           switch (entryNode->pattern.type)
@@ -6003,6 +6022,8 @@ LOCAL bool configValuePatternFormat(void **formatUserData, ConfigValueOperations
         String line = (String)data;
         String_appendFormat(line,"[r|x|g:]<pattern>");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -6156,6 +6177,8 @@ LOCAL bool configValueMountFormat(void **formatUserData, ConfigValueOperations o
         String_appendFormat(line,"<mount point>,<device name>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const MountNode *mountNode = (MountNode*)(*formatUserData);
@@ -6272,6 +6295,8 @@ LOCAL bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueOperat
         String line = (String)data;
         String_appendFormat(line,"[r|x|g:]<name|pattern>");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -6482,6 +6507,8 @@ LOCAL bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValu
         String_appendFormat(line,"<delta compression>+<byte compression>|<delta compression>|<byte compression>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         CompressAlgorithmsDeltaByte *compressAlgorithmsDeltaByte = (CompressAlgorithmsDeltaByte*)(*formatUserData);
@@ -6648,6 +6675,8 @@ LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueOperat
         String line = (String)data;
         String_appendFormat(line,"<file name>|base64:<data>|<data>");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -6819,6 +6848,8 @@ LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations ope
         String line = (String)data;
         String_appendFormat(line,"<file name>|base64:<data>|<data>");
       }
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
     case CONFIG_VALUE_OPERATION:
       {
@@ -7119,6 +7150,8 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
         String_appendFormat(line,"<file name>|base64:<data>|<data>");
       }
       break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
     case CONFIG_VALUE_OPERATION:
       {
         const Hash *hash = (const Hash*)(*formatUserData);
@@ -7145,6 +7178,148 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
   }
 
   return TRUE;
+}
+
+/***********************************************************************\
+* Name   : readConfigFile
+* Purpose: read configuration from file
+* Input  : fileName      - file name
+*          printInfoFlag - TRUE for output info, FALSE otherwise
+* Output : -
+* Return : TRUE iff configuration read, FALSE otherwise (error)
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool readConfigFileSection(ConstString fileName,
+                                 FileHandle  *fileHandle,
+                                 const char  *sectionName,
+                                 uint        i0,
+                                 uint        i1,
+                                 bool        printInfoFlag,
+                                 void        *variable
+                                )
+{
+  bool       failFlag;
+  uint       lineNb;
+  String     line;
+  String     name,value;
+  StringList commentLineList;
+  long       nextIndex;
+
+  // parse section
+  failFlag   = FALSE;
+  line       = String_new();
+  lineNb     = 0;
+  name       = String_new();
+  value      = String_new();
+  StringList_init(&commentLineList);
+  while (   !failFlag
+         && File_getLine(fileHandle,line,&lineNb,NULL)
+         && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+        )
+  {
+    if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+    {
+      // discard comments if separator or empty line
+      StringList_clear(&commentLineList);
+    }
+    else if (String_startsWithCString(line,"# "))
+    {
+      // store comment
+      String_remove(line,STRING_BEGIN,2);
+      StringList_append(&commentLineList,line);
+    }
+    else if (String_startsWithChar(line,'#'))
+    {
+      // ignore commented values
+    }
+    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+    {
+fprintf(stderr,"%s, %d: %d %s -- %d %s\n",__FILE__,__LINE__,i0,CONFIG_VALUES[i0].name,i1,CONFIG_VALUES[i1].name);
+#if 1
+uint i = ConfigValue_find(CONFIG_VALUES,
+                       i0,
+                       i1,
+                       String_cString(name)
+                      );
+  if (i != CONFIG_VALUE_INDEX_NONE)
+  {
+      (void)ConfigValue_parse2(&CONFIG_VALUES[i],
+                              sectionName,
+                              String_cString(value),
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
+                              },NULL),
+                              variable,
+                              &commentLineList
+                             );
+      assert(StringList_isEmpty(&commentLineList));
+  }
+  else
+  {
+    if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+    printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
+    failFlag = TRUE;
+  }
+#else
+      (void)ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              CONFIG_VALUES,
+                              sectionName,
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
+                              },NULL),
+                              variable,
+                              &commentLineList
+                             );
+      assert(StringList_isEmpty(&commentLineList));
+#endif
+      if (failFlag) break;
+    }
+    else
+    {
+      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+      printError(_("Syntax error in '%s', line %ld: '%s'"),
+                 String_cString(fileName),
+                 lineNb,
+                 String_cString(line)
+                );
+      failFlag = TRUE;
+      break;
+    }
+  }
+  File_ungetLine(fileHandle,line,&lineNb);
+
+  // free resources
+  String_delete(value);
+  String_delete(name);
+  String_delete(line);
+
+  return failFlag;
 }
 
 /***********************************************************************\
@@ -7238,7 +7413,18 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
       {
+        bool       result;
+        uint       i,i0,i1;
         ServerNode *serverNode;
+
+        // find section
+        result = ConfigValue_findSection(CONFIG_VALUES,
+                                         "file-server",
+                                         &i,
+                                         &i0,
+                                         &i1
+                                        );
+        assertx(result,"unknown section 'file-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -7255,75 +7441,42 @@ extern Semaphore       consoleLock;            // lock console
         assert(serverNode != NULL);
         assert(serverNode->type == SERVER_TYPE_FILE);
 
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
+        // read config section
+        if (readConfigFileSection(fileName,
+                                  &fileHandle,
+                                  "file-server",
+                                  i0,i1,
+                                  printInfoFlag,
+                                  serverNode
+                                 )
+           )
         {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          // add to server list
+          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "file-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"file-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"file-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
+            List_append(&globalOptions.serverList,serverNode);
           }
         }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        else
         {
-          List_append(&globalOptions.serverList,serverNode);
+          Configuration_deleteServerNode(serverNode);
+          failFlag = TRUE;
         }
       }
       else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
       {
+        bool       result;
+        uint       i,i0,i1;
         ServerNode *serverNode;
+
+        // find section
+        result = ConfigValue_findSection(CONFIG_VALUES,
+                                         "ftp-server",
+                                         &i,
+                                         &i0,
+                                         &i1
+                                        );
+        assertx(result,"unknown section 'ftp-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -7340,78 +7493,44 @@ extern Semaphore       consoleLock;            // lock console
         if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FTP);
         assert(serverNode != NULL);
         assert(serverNode->type == SERVER_TYPE_FTP);
+        StringList_move(&serverNode->commentList,&commentLineList);
 
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
+        // read config section
+        if (readConfigFileSection(fileName,
+                                  &fileHandle,
+                                  "ftp-server",
+                                  i0,i1,
+                                  printInfoFlag,
+                                  serverNode
+                                 )
+           )
         {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          // add to server list
+          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "ftp-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ftp-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
+            List_append(&globalOptions.serverList,serverNode);
           }
         }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        else
         {
-          List_append(&globalOptions.serverList,serverNode);
+          Configuration_deleteServerNode(serverNode);
+          failFlag = TRUE;
         }
       }
       else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
       {
+        bool       result;
+        uint       i,i0,i1;
         ServerNode *serverNode;
+
+        // find section
+        result = ConfigValue_findSection(CONFIG_VALUES,
+                                         "ssh-server",
+                                         &i,
+                                         &i0,
+                                         &i1
+                                        );
+        assertx(result,"unknown section 'ssh-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -7428,78 +7547,43 @@ extern Semaphore       consoleLock;            // lock console
         if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_SSH);
         assert(serverNode != NULL);
         assert(serverNode->type == SERVER_TYPE_SSH);
+        StringList_move(&serverNode->commentList,&commentLineList);
 
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
+        if (readConfigFileSection(fileName,
+                                  &fileHandle,
+                                  "ssh-server",
+                                  i0,i1,
+                                  printInfoFlag,
+                                  serverNode
+                                 )
+           )
         {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          // add to server list
+          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "ssh-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ssh-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
+            List_append(&globalOptions.serverList,serverNode);
           }
         }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        else
         {
-          List_append(&globalOptions.serverList,serverNode);
+          Configuration_deleteServerNode(serverNode);
+          failFlag = TRUE;
         }
       }
       else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
       {
+        bool       result;
+        uint       i,i0,i1;
         ServerNode *serverNode;
+
+        // find section
+        result = ConfigValue_findSection(CONFIG_VALUES,
+                                         "webdav-server",
+                                         &i,
+                                         &i0,
+                                         &i1
+                                        );
+        assertx(result,"unknown section 'webdav-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -7516,78 +7600,44 @@ extern Semaphore       consoleLock;            // lock console
         if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_WEBDAV);
         assert(serverNode != NULL);
         assert(serverNode->type == SERVER_TYPE_WEBDAV);
+        StringList_move(&serverNode->commentList,&commentLineList);
 
-        // parse section
-        while (   !failFlag
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
+        // read config section
+        if (readConfigFileSection(fileName,
+                                  &fileHandle,
+                                  "webdav-server",
+                                  i0,i1,
+                                  printInfoFlag,
+                                  serverNode
+                                 )
+           )
         {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          // add to server list
+          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "webdav-server",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"webdav-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    serverNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
+            List_append(&globalOptions.serverList,serverNode);
           }
         }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to server list
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        else
         {
-          List_append(&globalOptions.serverList,serverNode);
+          Configuration_deleteServerNode(serverNode);
+          failFlag = TRUE;
         }
       }
       else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
       {
+        bool       result;
+        uint       i,i0,i1;
         DeviceNode *deviceNode;
+
+        // find section
+        result = ConfigValue_findSection(CONFIG_VALUES,
+                                         "device",
+                                         &i,
+                                         &i0,
+                                         &i1
+                                        );
+        assertx(result,"unknown section 'device'");
 
         // find/allocate device node
         deviceNode = NULL;
@@ -7596,74 +7646,31 @@ extern Semaphore       consoleLock;            // lock console
           deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->device.name,name));
           if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
         }
-        if (deviceNode == NULL) deviceNode = newDeviceNode(name);
+        if (deviceNode == NULL) deviceNode = Configuration_newDeviceNode(name);
+        StringList_move(&deviceNode->commentList,&commentLineList);
 
-        // parse section
-        while (   File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
+        // read config section
+        if (readConfigFileSection(fileName,
+                                  &fileHandle,
+                                  "device",
+                                  i0,i1,
+                                  printInfoFlag,
+                                  deviceNode
+                                 )
+           )
         {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          // add to device list
+          SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "device",
-                                    LAMBDA(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"device-server",String_cString(fileName),lineNb);
-                                      failFlag = TRUE;
-                                    }),NULL,
-                                    LAMBDA(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
-                                    }),NULL,
-                                    &deviceNode->device,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-            if (failFlag) break;
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            failFlag = TRUE;
-            break;
+            List_append(&globalOptions.deviceList,deviceNode);
           }
         }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to device list
-        SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        else
         {
-          List_append(&globalOptions.deviceList,deviceNode);
+          Configuration_deleteDeviceNode(deviceNode);
+          failFlag = TRUE;
         }
+
       }
       else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
       {
@@ -7695,21 +7702,21 @@ StringList_clear(&commentLineList);
                                     String_cString(value),
                                     CONFIG_VALUES,
                                     "master",
-                                    LAMBDA(void,(const char *errorMessage, void *userData),
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
                                     {
                                       UNUSED_VARIABLE(userData);
 
                                       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
                                       failFlag = TRUE;
-                                    }),NULL,
-                                    LAMBDA(void,(const char *warningMessage, void *userData),
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
                                     {
                                       UNUSED_VARIABLE(userData);
 
                                       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
-                                    }),NULL,
+                                    },NULL),
                                     &globalOptions.masterInfo,
                                     &commentLineList
                                    );
@@ -7813,11 +7820,49 @@ StringList_clear(&commentLineList);
       }
       else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
       {
+#if 1
+   uint i = ConfigValue_find(CONFIG_VALUES,
+                             CONFIG_VALUE_INDEX_NONE,
+                             CONFIG_VALUE_INDEX_NONE,
+                             String_cString(name)
+                            );
+        if (i != CONFIG_VALUE_INDEX_NONE)
+        {
+        (void)ConfigValue_parse2(&CONFIG_VALUES[i],
+                                NULL, // section name
+                                String_cString(value),
+                                CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
+
+                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                  printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                                  failFlag = TRUE;
+                                },NULL),
+                                CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
+
+                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                  printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                                },NULL),
+                                NULL,  // variable
+                                &commentLineList
+                               );
+          assert(StringList_isEmpty(&commentLineList));
+        }
+        else
+        {
+          if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+          printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
+          failFlag = TRUE;
+        }
+#else
         (void)ConfigValue_parse(String_cString(name),
                                 String_cString(value),
                                 CONFIG_VALUES,
                                 NULL, // section name
-                                LAMBDA(void,(const char *errorMessage, void *userData),
+                                CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
                                 {
                                   UNUSED_VARIABLE(userData);
 
@@ -7825,7 +7870,7 @@ StringList_clear(&commentLineList);
                                   printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
                                   failFlag = TRUE;
                                 }),NULL,
-                                LAMBDA(void,(const char *warningMessage, void *userData),
+                                CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
                                 {
                                   UNUSED_VARIABLE(userData);
 
@@ -7836,6 +7881,7 @@ StringList_clear(&commentLineList);
                                 &commentLineList
                                );
         assert(StringList_isEmpty(&commentLineList));
+#endif
         if (failFlag) break;
       }
       else
@@ -8004,9 +8050,9 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 //TODO
 //  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",              0,  0,2,defaultFTPServer.maxStorageSize,                  NULL,0LL,MAX_INT64,NULL,                                       "max. number of bytes to store on ftp server","unlimited"                  ),
 
-  CMD_OPTION_INTEGER      ("ssh-port",                          0,  0,2,globalOptions.defaultSSHServer.ssh.port,                        0,0,65535,NULL,                                                "ssh port",NULL                                                            ),
   CMD_OPTION_STRING       ("ssh-login-name",                    0,  0,2,globalOptions.defaultSSHServer.ssh.loginName,                   0,                                                             "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                      0,  0,2,&globalOptions.defaultSSHServer.ssh.password,                   0,cmdOptionParsePassword,NULL,1,                               "ssh password (use with care!)","password"                                 ),
+  CMD_OPTION_INTEGER      ("ssh-port",                          0,  0,2,globalOptions.defaultSSHServer.ssh.port,                        0,0,65535,NULL,                                                "ssh port",NULL                                                            ),
   CMD_OPTION_SPECIAL      ("ssh-public-key",                    0,  1,2,&globalOptions.defaultSSHServer.ssh.publicKey,                  0,cmdOptionParseKey,NULL,1,                                    "ssh public key","file name|data"                                          ),
   CMD_OPTION_SPECIAL      ("ssh-private-key",                   0,  1,2,&globalOptions.defaultSSHServer.ssh.privateKey,                 0,cmdOptionParseKey,NULL,1,                                    "ssh private key","file name|data"                                         ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",               0,  1,2,globalOptions.defaultSSHServer.maxConnectionCount,              0,0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections","unlimited"                    ),
@@ -8535,9 +8581,9 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_SEPARATOR("ssh settings"),
-  CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                                 0,65535,NULL,"<n>"),
   CONFIG_VALUE_STRING            ("ssh-login-name",                   &globalOptions.defaultSSHServer.ssh.loginName,-1,                            "<name>"),
   CONFIG_VALUE_SPECIAL           ("ssh-password",                     &globalOptions.defaultSSHServer.ssh.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                                 0,65535,NULL,"<n>"),
   CONFIG_VALUE_SPECIAL           ("ssh-public-key",                   &globalOptions.defaultSSHServer.ssh.publicKey,-1,                            configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("ssh-private-key",                  &globalOptions.defaultSSHServer.ssh.privateKey,-1,                           configValueKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &globalOptions.defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
@@ -9171,7 +9217,7 @@ void Configuration_doneGlobalOptions(void)
   List_done(&globalOptions.maintenanceList,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
   Semaphore_done(&globalOptions.maintenanceList.lock);
 
-  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
+  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)Configuration_freeDeviceNode,NULL));
   Semaphore_done(&globalOptions.deviceList.lock);
   List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)Configuration_freeServerNode,NULL));
   Semaphore_done(&globalOptions.serverList.lock);
@@ -9255,6 +9301,42 @@ void Configuration_deleteServerNode(ServerNode *serverNode)
 
   Configuration_freeServerNode(serverNode,NULL);
   LIST_DELETE_NODE(serverNode);
+}
+
+DeviceNode *Configuration_newDeviceNode(ConstString name)
+{
+  DeviceNode *deviceNode;
+
+  // allocate new device node
+  deviceNode = LIST_NEW_NODE(DeviceNode);
+  if (deviceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  initDevice(&deviceNode->device);
+
+  deviceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  deviceNode->device.name = String_duplicate(name);
+
+  return deviceNode;
+}
+
+void Configuration_freeDeviceNode(DeviceNode *deviceNode, void *userData)
+{
+  assert(deviceNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  doneDevice(&deviceNode->device);
+}
+
+void Configuration_deleteDeviceNode(DeviceNode *deviceNode)
+{
+  assert(deviceNode != NULL);
+
+  Configuration_freeDeviceNode(deviceNode,NULL);
+  LIST_DELETE_NODE(deviceNode);
 }
 
 void Configuration_add(ConfigFileTypes configFileType, const char *fileName)

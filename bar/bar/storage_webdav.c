@@ -839,8 +839,8 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->webdav.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->webdav.bandWidthLimiter); });
 
     // get WebDAV server settings
-    storageInfo->webdav.serverId = initWebDAVServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,jobOptions);
-    AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ doneWebDAVServerSettings(&webDAVServer); });
+    storageInfo->webdav.serverId = Configuration_initWebDAVServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ Configuration_doneWebDAVServerSettings(&webDAVServer); });
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
@@ -941,7 +941,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     }
 
     // free resources
-    doneWebDAVServerSettings(&webDAVServer);
+    Configuration_doneWebDAVServerSettings(&webDAVServer);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;
@@ -2547,8 +2547,8 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     storageDirectoryListHandle->webdav.currentNode = NULL;
 
     // get WebDAV server settings
-    storageDirectoryListHandle->webdav.serverId = initWebDAVServerSettings(&webDAVServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
-    AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ doneWebDAVServerSettings(&webDAVServer); });
+    storageDirectoryListHandle->webdav.serverId = Configuration_initWebDAVServerSettings(&webDAVServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ Configuration_doneWebDAVServerSettings(&webDAVServer); });
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
@@ -2741,7 +2741,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     String_delete(directoryData);
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
-    doneWebDAVServerSettings(&webDAVServer);
+    Configuration_doneWebDAVServerSettings(&webDAVServer);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;
