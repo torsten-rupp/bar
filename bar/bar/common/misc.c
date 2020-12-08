@@ -505,7 +505,7 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
   {
     // encode 3-byte tupels
     i = 0;
-    while ((i+2) < dataLength)
+    while ((i+3) <= dataLength)
     {
       b0 = ((i+0) < dataLength) ? ((byte*)data)[i+0] : 0;
       b1 = ((i+1) < dataLength) ? ((byte*)data)[i+1] : 0;
@@ -533,26 +533,7 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
     }
 
     // encode last 1,2 bytes
-    if      ((i+1) >= dataLength)
-    {
-      // 1 byte => XY==
-      b0 = ((byte*)data)[i+0];
-
-      i0 = (uint)(b0 & 0xFC) >> 2;
-      assert(i0 < 64);
-      i1 = (uint)((b0 & 0x03) << 4);
-      assert(i1 < 64);
-
-      if ((n+4) > bufferSize)
-      {
-        return FALSE;
-      }
-      buffer[n] = BASE64_ENCODING_TABLE[i0]; n++;
-      buffer[n] = BASE64_ENCODING_TABLE[i1]; n++;
-      buffer[n] = '='; n++;
-      buffer[n] = '='; n++;
-    }
-    else if  ((i+2) >= dataLength)
+    if      ((i+2) <= dataLength)
     {
       // 2 byte => XYZ=
       b0 = ((byte*)data)[i+0];
@@ -572,6 +553,25 @@ LOCAL bool base64Encode(char *buffer, ulong bufferSize, ulong *bufferLength, con
       buffer[n] = BASE64_ENCODING_TABLE[i0]; n++;
       buffer[n] = BASE64_ENCODING_TABLE[i1]; n++;
       buffer[n] = BASE64_ENCODING_TABLE[i2]; n++;
+      buffer[n] = '='; n++;
+    }
+    else if ((i+1) <= dataLength)
+    {
+      // 1 byte => XY==
+      b0 = ((byte*)data)[i+0];
+
+      i0 = (uint)(b0 & 0xFC) >> 2;
+      assert(i0 < 64);
+      i1 = (uint)((b0 & 0x03) << 4);
+      assert(i1 < 64);
+
+      if ((n+4) > bufferSize)
+      {
+        return FALSE;
+      }
+      buffer[n] = BASE64_ENCODING_TABLE[i0]; n++;
+      buffer[n] = BASE64_ENCODING_TABLE[i1]; n++;
+      buffer[n] = '='; n++;
       buffer[n] = '='; n++;
     }
   }
