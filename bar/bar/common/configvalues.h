@@ -446,11 +446,11 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define CONFIG_VALUE_SECTION_ARRAY(name,offset,...) \
+#define CONFIG_VALUE_SECTION_ARRAY(name,variablePointer,offset,sectionIterator,userData,...) \
   { \
     CONFIG_VALUE_TYPE_BEGIN_SECTION,\
     name,\
-    {NULL},\
+    {variablePointer},\
     offset,\
     {0,0,NULL},\
     {0LL,0LL,NULL},\
@@ -465,7 +465,7 @@ typedef struct
     NULL,\
     {NULL,NULL,NULL,FALSE},\
     {NULL,FALSE},\
-    {NULL,NULL},\
+    {sectionIterator,userData},\
     {NULL},\
     {NULL,NULL},\
     NULL\
@@ -997,66 +997,6 @@ typedef struct
   }
 #define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName,warningFlag) \
   CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName,warningFlag)
-
-/***********************************************************************\
-* Name   : CONFIG_VALUE_BEGIN_SECTION, CONFIG_VALUE_END_SECTION
-* Purpose: begin/end value section [<name>...]
-* Input  : name   - name
-*          offset - offset in structure or -1
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#define CONFIG_VALUE_BEGIN_SECTION(name,variablePointer,offset,sectionIterator,userData) \
-  { \
-    CONFIG_VALUE_TYPE_BEGIN_SECTION,\
-    name,\
-    {variablePointer},\
-    offset,\
-    {0,0,NULL},\
-    {0LL,0LL,NULL},\
-    {0.0,0.0,NULL},\
-    {},\
-    {0},\
-    {NULL},\
-    {NULL}, \
-    {},\
-    {},\
-    {NULL,NULL,NULL},\
-    NULL,\
-    {NULL,NULL,NULL,FALSE},\
-    {NULL,FALSE},\
-    {sectionIterator,userData},\
-    {NULL},\
-    {NULL,NULL},\
-    NULL\
-  }
-
-#define CONFIG_VALUE_END_SECTION() \
-  { \
-    CONFIG_VALUE_TYPE_END_SECTION,\
-    NULL,\
-    {NULL},\
-    0,\
-    {0,0,NULL},\
-    {0LL,0LL,NULL},\
-    {0.0,0.0,NULL},\
-    {},\
-    {0},\
-    {NULL},\
-    {NULL}, \
-    {},\
-    {},\
-    {NULL,NULL,NULL},\
-    NULL,\
-    {NULL,NULL,NULL,FALSE},\
-    {NULL,FALSE},\
-    {NULL,NULL},\
-    {NULL},\
-    {NULL,NULL},\
-    NULL\
-  }
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_SEPARATOR

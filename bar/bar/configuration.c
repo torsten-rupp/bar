@@ -3102,6 +3102,74 @@ LOCAL void *configValueServerWebDAVSectionDataIterator(ConfigValueSectionDataIte
 }
 
 /***********************************************************************\
+* Name   : configValueDeviceSectionDataIterator
+* Purpose: section iterator operation
+* Input  : sectionDataIterator - section data iterator
+*          serverType          - server type
+*          operation           - operation code; see ConfigValueOperations
+*          data                - operation data
+*          userData            - user data
+* Output : next section data or NULL
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void *configValueDeviceSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
+{
+  void *result;
+
+  assert(sectionDataIterator != NULL);
+
+  result = NULL;
+
+  switch (operation)
+  {
+    case CONFIG_VALUE_OPERATION_INIT:
+      {
+        assert(data != NULL);
+
+        (*sectionDataIterator) = (DeviceNode*)List_first((List*)data);
+      }
+      break;
+    case CONFIG_VALUE_OPERATION_DONE:
+      break;
+    case CONFIG_VALUE_OPERATION_TEMPLATE:
+      break;
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      {
+        DeviceNode *deviceNode = (DeviceNode*)(*sectionDataIterator);
+
+        (*sectionDataIterator) = deviceNode;
+
+        result = (deviceNode != NULL) ? &deviceNode->commentList : NULL;
+      }
+      break;
+    case CONFIG_VALUE_OPERATION:
+      {
+        DeviceNode *deviceNode = (DeviceNode*)(*sectionDataIterator);
+        String     name        = (String)data;
+
+        assert(sectionDataIterator != NULL);
+
+        if (deviceNode != NULL)
+        {
+          String_set(name,deviceNode->name);
+
+          (*sectionDataIterator) = deviceNode->next;
+        }
+        else
+        {
+          String_clear(name);
+        }
+
+        result = deviceNode;
+      }
+   }
+
+   return result;
+}
+
+/***********************************************************************\
 * Name   : configValueDeprecatedMountDeviceParse
 * Purpose: config value option call back for deprecated mount-device
 * Input  : userData              - user data
@@ -7031,6 +7099,7 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 StringList_clear(&commentLineList);
         // parse section
         while (   (error == ERROR_NONE)
@@ -7630,14 +7699,14 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_COMMENT("master settings"),
-  CONFIG_VALUE_BEGIN_SECTION     ("master",NULL,-1,NULL,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("master",NULL,-1,NULL,NULL,
 //TODO
     CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1,                             "<name>"),
     CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueHashDataParse,configValueHashDataFormat,NULL),
 //TODO: required to save?
     CONFIG_VALUE_COMMENT("pubic key"),
     CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueKeyParse,configValueKeyFormat,NULL),
-  CONFIG_VALUE_END_SECTION(),
+  ),
   CONFIG_VALUE_COMMENT           ("pairing master trigger/clear file"),
   CONFIG_VALUE_CSTRING           ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1,                  "<file name>"),
 
@@ -7689,12 +7758,12 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("maintenance"),
-  CONFIG_VALUE_BEGIN_SECTION     ("maintenance",&globalOptions.maintenanceList,-1,ConfigValue_listSectionDataIterator,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("maintenance",&globalOptions.maintenanceList,-1,ConfigValue_listSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_SPECIAL  ("date",                             MaintenanceNode,date,                                          configValueMaintenanceDateParse,configValueMaintenanceDateFormat,&globalOptions.maintenanceList),
     CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                         MaintenanceNode,weekDaySet,                                    configValueMaintenanceWeekDaySetParse,configValueMaintenanceWeekDaySetFormat,&globalOptions.maintenanceList),
     CONFIG_STRUCT_VALUE_SPECIAL  ("begin",                            MaintenanceNode,beginTime,                                     configValueMaintenanceTimeParse,configValueMaintenanceTimeFormat,&globalOptions.maintenanceList),
     CONFIG_STRUCT_VALUE_SPECIAL  ("end",                              MaintenanceNode,endTime,                                       configValueMaintenanceTimeParse,configValueMaintenanceTimeFormat,&globalOptions.maintenanceList),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
   // global job settings
   CONFIG_VALUE_COMMENT("archive"),
@@ -7796,7 +7865,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 #if 0
   // ignored schedule settings (server only)
   CONFIG_VALUE_SEPARATOR("schedule"),
-  CONFIG_VALUE_BEGIN_SECTION     ("schedule",NULL,-1,NULL,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("schedule",NULL,-1,NULL,NULL,
     CONFIG_VALUE_IGNORE          ("UUID",                                                                                            NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("parentUUID",                                                                                      NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("date",                                                                                            NULL,FALSE),
@@ -7809,15 +7878,15 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("enabled",                                                                                         NULL,FALSE),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
   // ignored persitence settings (server only)
   CONFIG_VALUE_SEPARATOR("persistence"),
-  CONFIG_VALUE_BEGIN_SECTION     ("persistence",NULL,-1,NULL,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("persistence",NULL,-1,NULL,NULL,
     CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 #endif
 
   // commands
@@ -7912,11 +7981,11 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SEPARATOR(),
 //  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",            &defaultFileServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
-  CONFIG_VALUE_BEGIN_SECTION     ("file-server",NULL,-1,NULL,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("file-server",NULL,-1,NULL,NULL,
     CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",            Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
     CONFIG_STRUCT_VALUE_STRING   ("file-write-pre-command",           Server,writePreProcessCommand,                                 "<command>"),
     CONFIG_STRUCT_VALUE_STRING   ("file-write-post-command",          Server,writePostProcessCommand,                                "<command>"),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
   CONFIG_VALUE_SEPARATOR("ftp settings"),
   CONFIG_VALUE_STRING            ("ftp-login-name",                   &globalOptions.defaultFTPServer.ftp.loginName,-1,                            "<name>"),
@@ -7924,14 +7993,14 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("ftp-max-connections",              &globalOptions.defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",             &globalOptions.defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_BEGIN_SECTION     ("ftp-server",&globalOptions.serverList,-1,configValueServerFTPSectionDataIterator,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("ftp-server",&globalOptions.serverList,-1,configValueServerFTPSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",                   Server,ftp.loginName,                                          "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                     Server,ftp.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",              Server,maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",             Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
     CONFIG_STRUCT_VALUE_STRING   ("ftp-write-pre-command",            Server,writePreProcessCommand,                                 "<command>"),
     CONFIG_STRUCT_VALUE_STRING   ("ftp-write-post-command",           Server,writePostProcessCommand,                                "<command>"),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
   CONFIG_VALUE_SEPARATOR("ssh settings"),
   CONFIG_VALUE_STRING            ("ssh-login-name",                   &globalOptions.defaultSSHServer.ssh.loginName,-1,                            "<name>"),
@@ -7942,7 +8011,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &globalOptions.defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &globalOptions.defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_BEGIN_SECTION     ("ssh-server",&globalOptions.serverList,-1,configValueServerSSHSectionDataIterator,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("ssh-server",&globalOptions.serverList,-1,configValueServerSSHSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         Server,ssh.port,                                               0,65535,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   Server,ssh.loginName,                                          "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                     Server,ssh.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
@@ -7952,7 +8021,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",             Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",            Server,writePreProcessCommand,                                 "<command>"),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-write-post-command",           Server,writePostProcessCommand,                                "<command>"),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
   CONFIG_VALUE_SEPARATOR("webDAV settings"),
 //  CONFIG_VALUE_INTEGER           ("webdav-port",                      &defaultWebDAVServer.webDAV.port,-1,                           0,65535,NULL,NULL,"<n>),
@@ -7961,14 +8030,14 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("webdav-max-connections",           &globalOptions.defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",          &globalOptions.defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_BEGIN_SECTION     ("webdav-server",&globalOptions.serverList,-1,configValueServerWebDAVSectionDataIterator,NULL),
+  CONFIG_VALUE_SECTION_ARRAY     ("webdav-server",&globalOptions.serverList,-1,configValueServerWebDAVSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",                Server,webDAV.loginName,                                       "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",                  Server,webDAV.password,                                        configValuePasswordParse,configValuePasswordFormat,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",           Server,maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",          Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-write-pre-command",         Server,writePreProcessCommand,                                 "<command>"),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-write-post-command",        Server,writePostProcessCommand,                                "<command>"),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
   CONFIG_VALUE_SEPARATOR("device settings"),
   CONFIG_VALUE_STRING            ("device",                           &globalOptions.defaultDevice.name,-1,                                        "<name>"),
@@ -7987,22 +8056,22 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("device-write-post-command",        &globalOptions.defaultDevice.writePostProcessCommand,-1,                     "<command>"),
   CONFIG_VALUE_STRING            ("device-write-command",             &globalOptions.defaultDevice.writeCommand,-1,                                "<command>"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_SECTION_ARRAY("device",-1,
-    CONFIG_STRUCT_VALUE_STRING   ("device-name",                      Device,name,                                                   "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-request-volume-command",    Device,requestVolumeCommand,                                   "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-unload-volume-command",     Device,unloadVolumeCommand,                                    "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-load-volume-command",       Device,loadVolumeCommand,                                      "<command>"),
-    CONFIG_STRUCT_VALUE_INTEGER64("device-volume-size",               Device,volumeSize,                                             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-image-pre-command",         Device,imagePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-image-post-command",        Device,imagePostProcessCommand,                                "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-image-command",             Device,imageCommand,                                           "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-pre-command",           Device,eccPreProcessCommand,                                   "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-post-command",          Device,eccPostProcessCommand,                                  "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-ecc-command",               Device,eccCommand,                                             "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-blank-command",             Device,blankCommand,                                           "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-write-pre-command",         Device,writePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-write-post-command",        Device,writePostProcessCommand,                                "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("device-write-command",             Device,writeCommand,                                           "<command>"),
+  CONFIG_VALUE_SECTION_ARRAY     ("device",&globalOptions.deviceList,-1,configValueDeviceSectionDataIterator,NULL,
+    CONFIG_STRUCT_VALUE_STRING   ("name",                      Device,name,                                                   "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("request-volume-command",    Device,requestVolumeCommand,                                   "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("unload-volume-command",     Device,unloadVolumeCommand,                                    "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("load-volume-command",       Device,loadVolumeCommand,                                      "<command>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("volume-size",               Device,volumeSize,                                             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("image-pre-command",         Device,imagePreProcessCommand,                                 "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("image-post-command",        Device,imagePostProcessCommand,                                "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("image-command",             Device,imageCommand,                                           "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ecc-pre-command",           Device,eccPreProcessCommand,                                   "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ecc-post-command",          Device,eccPostProcessCommand,                                  "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ecc-command",               Device,eccCommand,                                             "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("blank-command",             Device,blankCommand,                                           "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("write-pre-command",         Device,writePreProcessCommand,                                 "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("write-post-command",        Device,writePostProcessCommand,                                "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("write-command",             Device,writeCommand,                                           "<command>"),
   ),
 
   // server settings
@@ -8146,7 +8215,7 @@ ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-error",          JobNode,job.options.noStopOnErrorFlag,           "yes|no"),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag,  "yes|no"),
 
-  CONFIG_VALUE_BEGIN_SECTION("schedule",NULL,-1,NULL,NULL),
+  CONFIG_VALUE_SECTION_ARRAY("schedule",NULL,-1,NULL,NULL,
     CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ,"<uuid>"),
     CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ,"<uuid>"),
     CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueScheduleDateFormat,NULL),
@@ -8162,13 +8231,13 @@ ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_DEPRECATED       ("min-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMinKeepParse,NULL,NULL,FALSE),
     CONFIG_VALUE_DEPRECATED       ("max-keep",                  NULL,-1,                                         configValueDeprecatedScheduleMaxKeepParse,NULL,NULL,FALSE),
     CONFIG_VALUE_DEPRECATED       ("max-age",                   NULL,-1,                                         configValueDeprecatedScheduleMaxAgeParse,NULL,NULL,FALSE),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
-  CONFIG_VALUE_BEGIN_SECTION("persistence",NULL,-1,NULL,NULL),
+  CONFIG_VALUE_SECTION_ARRAY("persistence",NULL,-1,NULL,NULL,
     CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
-  CONFIG_VALUE_END_SECTION(),
+  ),
 
   CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ,"<text>"),
 
