@@ -583,34 +583,28 @@ typedef struct
   String writeImageCommand;                                   // command to write image on medium
 } OpticalDisk;
 
-// device settings
-typedef struct
-{
-  String name;                                                // device name
-  String requestVolumeCommand;                                // command to request new volume
-  String unloadVolumeCommand;                                 // command to unload volume
-  String loadVolumeCommand;                                   // command to load volume
-  uint64 volumeSize;                                          // size of volume [bytes]
-
-  String imagePreProcessCommand;                              // command to execute before creating image
-  String imagePostProcessCommand;                             // command to execute after created image
-  String imageCommand;                                        // command to create volume image
-  String eccPreProcessCommand;                                // command to execute before ECC calculation
-  String eccPostProcessCommand;                               // command to execute after ECC calculation
-  String eccCommand;                                          // command for ECC calculation
-  String blankCommand;                                        // command to balnk medium
-  String writePreProcessCommand;                              // command to execute before writing volume
-  String writePostProcessCommand;                             // command to execute after writing volume
-  String writeCommand;                                        // command to write volume
-} Device;
-
 // device node
 typedef struct DeviceNode
 {
   LIST_NODE_HEADER(struct DeviceNode);
 
-  uint   id;                                                  // unique device id
-  Device device;
+  uint        id;                                             // unique device id
+  String      name;                                           // device name
+  String      requestVolumeCommand;                           // command to request new volume
+  String      unloadVolumeCommand;                            // command to unload volume
+  String      loadVolumeCommand;                              // command to load volume
+  uint64      volumeSize;                                     // size of volume [bytes]
+
+  String      imagePreProcessCommand;                         // command to execute before creating image
+  String      imagePostProcessCommand;                        // command to execute after created image
+  String      imageCommand;                                   // command to create volume image
+  String      eccPreProcessCommand;                           // command to execute before ECC calculation
+  String      eccPostProcessCommand;                          // command to execute after ECC calculation
+  String      eccCommand;                                     // command for ECC calculation
+  String      blankCommand;                                   // command to balnk medium
+  String      writePreProcessCommand;                         // command to execute before writing volume
+  String      writePostProcessCommand;                        // command to execute after writing volume
+  String      writeCommand;                                   // command to write volume
 
   StringList  commentList;
 } DeviceNode;
@@ -624,8 +618,7 @@ typedef struct
 } DeviceList;
 
 // device (alias)
-//TOOD: add
-//typedef struct DeviceNode Device;
+typedef struct DeviceNode Device;
 
 // comment
 typedef struct

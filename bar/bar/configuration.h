@@ -338,6 +338,108 @@ bool Configuration_equalsHash(Hash *hash, const CryptHash *cryptHash);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Configuration_parseWeekDaySet
+* Purpose: parse date week day set
+* Input  : names - day names to parse
+* Output : weekDaySet - week day set
+* Return : TRUE iff week day parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet);
+
+/***********************************************************************\
+* Name   : Configuration_parseDateNumber
+* Purpose: parse date/time number (year, day, month)
+* Input  : s - string to parse
+* Output : n - number variable
+* Return : TRUE iff number parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Configuration_parseDateNumber(ConstString s, int *n);
+
+/***********************************************************************\
+* Name   : Configuration_parseDateMonth
+* Purpose: parse date month name
+* Input  : s - string to parse
+* Output : month - month (MONTH_JAN..MONTH_DEC)
+* Return : TRUE iff month parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Configuration_parseDateMonth(ConstString s, int *month);
+
+/***********************************************************************\
+* Name   : Configuration_parseTimeNumber
+* Purpose: parse time number (hour, minute)
+* Input  : s - string to parse
+* Output : n - number variable
+* Return : TRUE iff number parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Configuration_parseTimeNumber(ConstString s, int *n);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : Configuration_initGlobalOptions
+* Purpose: initialize global option values
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_initGlobalOptions(void);
+
+/***********************************************************************\
+* Name   : Configuration_doneGlobalOptions
+* Purpose: deinitialize global option values
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneGlobalOptions(void);
+
+/***********************************************************************\
+* Name   : Configuration_newMaintenanceNode
+* Purpose: new maintenance node
+* Input  : -
+* Output : -
+* Return : maintenance node
+* Notes  : -
+\***********************************************************************/
+
+MaintenanceNode *Configuration_newMaintenanceNode(void);
+
+/***********************************************************************\
+* Name   : Configuration_deleteMaintenanceNode
+* Purpose: delete maintenance node
+* Input  : maintenanceNode - maintenance node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_deleteMaintenanceNode(MaintenanceNode *maintenanceNode);
+
+void Configuration_initServer(Server *server, ConstString name, ServerTypes serverType);
+
+void Configuration_doneServer(Server *server);
+
+#if 0
+//TODO: move storage.c
+uint Configuration_getServerSettings(Server                 *server,
+                                     const StorageSpecifier *storageSpecifier,
+                                     const JobOptions       *jobOptions
+                                    );
+#endif
+
+/***********************************************************************\
 * Name   : Configuration_initFileServerSettings
 * Purpose: init device settings
 * Input  : fileServer - files server variable
@@ -447,6 +549,41 @@ uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
 void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer);
 
 /***********************************************************************\
+* Name   : Configuration_newServerNode
+* Purpose: new config file node
+* Input  : name       - name
+*          serverType - server type
+* Output : -
+* Return : server node
+* Notes  : -
+\***********************************************************************/
+
+ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType);
+
+/***********************************************************************\
+* Name   : Configuration_freeServerNode
+* Purpose: free server node
+* Input  : serverNode - server node
+*          userData   - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_freeServerNode(ServerNode *serverNode, void *userData);
+
+/***********************************************************************\
+* Name   : Configuration_deleteServerNode
+* Purpose: delete server mode
+* Input  : serverNode - server node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_deleteServerNode(ServerNode *serverNode);
+
+/***********************************************************************\
 * Name   : Configuration_initCDSettings
 * Purpose: init device settings
 * Input  : cd         - cd variable
@@ -525,133 +662,6 @@ void Configuration_initDeviceSettings(Device           *device,
 \***********************************************************************/
 
 void Configuration_doneDeviceSettings(Device *device);
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : Configuration_parseWeekDaySet
-* Purpose: parse date week day set
-* Input  : names - day names to parse
-* Output : weekDaySet - week day set
-* Return : TRUE iff week day parsed
-* Notes  : -
-\***********************************************************************/
-
-bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet);
-
-/***********************************************************************\
-* Name   : Configuration_parseDateNumber
-* Purpose: parse date/time number (year, day, month)
-* Input  : s - string to parse
-* Output : n - number variable
-* Return : TRUE iff number parsed
-* Notes  : -
-\***********************************************************************/
-
-bool Configuration_parseDateNumber(ConstString s, int *n);
-
-/***********************************************************************\
-* Name   : Configuration_parseDateMonth
-* Purpose: parse date month name
-* Input  : s - string to parse
-* Output : month - month (MONTH_JAN..MONTH_DEC)
-* Return : TRUE iff month parsed
-* Notes  : -
-\***********************************************************************/
-
-bool Configuration_parseDateMonth(ConstString s, int *month);
-
-/***********************************************************************\
-* Name   : Configuration_parseTimeNumber
-* Purpose: parse time number (hour, minute)
-* Input  : s - string to parse
-* Output : n - number variable
-* Return : TRUE iff number parsed
-* Notes  : -
-\***********************************************************************/
-
-bool Configuration_parseTimeNumber(ConstString s, int *n);
-
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : Configuration_initGlobalOptions
-* Purpose: initialize global option values
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_initGlobalOptions(void);
-
-/***********************************************************************\
-* Name   : Configuration_doneGlobalOptions
-* Purpose: deinitialize global option values
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_doneGlobalOptions(void);
-
-/***********************************************************************\
-* Name   : Configuration_newMaintenanceNode
-* Purpose: new maintenance node
-* Input  : -
-* Output : -
-* Return : maintenance node
-* Notes  : -
-\***********************************************************************/
-
-MaintenanceNode *Configuration_newMaintenanceNode(void);
-
-/***********************************************************************\
-* Name   : Configuration_deleteMaintenanceNode
-* Purpose: delete maintenance node
-* Input  : maintenanceNode - maintenance node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_deleteMaintenanceNode(MaintenanceNode *maintenanceNode);
-
-/***********************************************************************\
-* Name   : Configuration_newServerNode
-* Purpose: new config file node
-* Input  : name       - name
-*          serverType - server type
-* Output : -
-* Return : server node
-* Notes  : -
-\***********************************************************************/
-
-ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType);
-
-/***********************************************************************\
-* Name   : Configuration_freeServerNode
-* Purpose: free server node
-* Input  : serverNode - server node
-*          userData   - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_freeServerNode(ServerNode *serverNode, void *userData);
-
-/***********************************************************************\
-* Name   : Configuration_deleteServerNode
-* Purpose: delete server mode
-* Input  : serverNode - server node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_deleteServerNode(ServerNode *serverNode);
 
 /***********************************************************************\
 * Name   : Configuration_newDeviceNode
