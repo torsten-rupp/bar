@@ -3,7 +3,7 @@
 * $Revision: 4195 $
 * $Date: 2015-10-17 10:41:02 +0200 (Sat, 17 Oct 2015) $
 * $Author: torsten $
-* Contents: continous functions
+* Contents: continuous functions
 * Systems: all
 *
 \***********************************************************************/
@@ -135,7 +135,7 @@ Errors Continuous_doneNotify(ConstString name,
 
 /***********************************************************************\
 * Name   : Continuous_open
-* Purpose: open continous database
+* Purpose: open continuous database
 * Input  : databaseHandle - database handle variable
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
@@ -225,7 +225,7 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Continuous_initList
-* Purpose: list continous entries
+* Purpose: list continuous entries
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
 *          scheduleUUID   - schedule UUID
@@ -269,7 +269,7 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
 #ifndef NDEBUG
 /***********************************************************************\
 * Name   : Continuous_dumpEntries
-* Purpose: dump continous entries
+* Purpose: dump continuous entries
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
 *          scheduleUUID   - schedule UUID

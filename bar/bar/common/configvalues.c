@@ -709,6 +709,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
   const char *message;
 
   assert(configValue != NULL);
+  assert(value != NULL);
 
   stringClear(errorMessage);
   switch (configValue->type)
@@ -2472,7 +2473,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List
               name = String_new();
               do
               {
-#if 1
+                // write section comments
                 const StringList *commentList = configValues[index].section.sectionIterator(&sectionIterator,
                                                                                             CONFIG_VALUE_OPERATION_COMMENTS,
                                                                                             name,
@@ -2483,15 +2484,13 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List
                   StringNode *stringNode;
                   String     line;
 
-                  // write lines
-                  STRINGLIST_ITERATE(commentList,stringNode,line)
+                  STRINGLIST_ITERATEX(commentList,stringNode,line,error == ERROR_NONE)
                   {
                     error = File_printLine(fileHandle,"# %S",line);
-                    if (error != ERROR_NONE) break;
                   }
                 }
-#endif
 
+                // get section data
                 data = configValues[index].section.sectionIterator(&sectionIterator,
                                                                    CONFIG_VALUE_OPERATION,
                                                                    name,
@@ -3145,8 +3144,8 @@ bool ConfigValue_parse2(ConfigValue          *configValue,
                        StringList           *commentLineList
                       )
 {
-//  assert(name != NULL);
   assert(configValue != NULL);
+  assert(value != NULL);
 
   if (!processValue(configValue,
                     sectionName,
@@ -3167,11 +3166,8 @@ bool ConfigValue_parse2(ConfigValue          *configValue,
     {
       configValue->commentList = StringList_new();
     }
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValue->name,List_count(commentLineList));
     StringList_clear(configValue->commentList);
     StringList_move(configValue->commentList,commentLineList);
-//StringList_clear(commentLineList);
-fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,configValue->name,List_count(configValue->commentList),List_count(commentLineList));
   }
 
   return TRUE;
@@ -4278,10 +4274,9 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
   }
 
   // write lines
-  STRINGLIST_ITERATE(configLinesList,stringNode,line)
+  STRINGLIST_ITERATEX(configLinesList,stringNode,line,error == ERROR_NONE)
   {
     error = File_writeLine(&fileHandle,line);
-    if (error != ERROR_NONE) break;
   }
 
   // close file

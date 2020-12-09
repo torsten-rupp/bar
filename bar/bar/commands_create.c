@@ -1743,7 +1743,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     DatabaseQueryHandle databaseQueryHandle;
     DatabaseId          databaseId;
 
-    // process entries from continous database
+    // process entries from continuous database
     if (Continuous_isAvailable())
     {
       error = Continuous_initList(&databaseQueryHandle,&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID);
@@ -2654,7 +2654,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   {
     if (Continuous_isAvailable())
     {
-      // process entries from continous database
+      // process entries from continuous database
       while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
              && Continuous_getEntry(&continuousDatabaseHandle,

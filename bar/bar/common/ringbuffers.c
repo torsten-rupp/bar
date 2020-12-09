@@ -535,7 +535,7 @@ bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n)
     {
       if (inIsContiguous(ringBuffer,n))
       {
-        /* continous space -> copy to nextIn..nextIn+n0
+        /* continuous space -> copy to nextIn..nextIn+n0
 
                  <-- n0 -->
            +--+--+--+--+--+--+--+--+--+--+
@@ -548,7 +548,7 @@ bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n)
       }
       else
       {
-        /* non-continous space -> copy to nextIn..nextIn+n0, 0..n1
+        /* non-continuous space -> copy to nextIn..nextIn+n0, 0..n1
 
            <- n1->              <-- n0 -->
            +--+--+--+--+--+--+--+--+--+--+
@@ -614,7 +614,7 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
         // copy data from ring buffer
         if (outIsContiguous(ringBuffer,n))
         {
-          /* continous space -> copy from nextOut..nextOut+n0
+          /* continuous space -> copy from nextOut..nextOut+n0
 
                       <-- n0 -->
              +--+--+--+--+--+--+--+--+--+--+
@@ -622,13 +622,13 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
              +--+--+--+--+--+--+--+--+--+--+
                        ^next out   ^next in
           */
-          // continous space -> copy to n0..n0+n
+          // continuous space -> copy to n0..n0+n
           n0 = n;
           n1 = 0L;
         }
         else
         {
-          /* non-continous space -> copy from nextOut..nextOut+n0, 0..n1
+          /* non-continuous space -> copy from nextOut..nextOut+n0, 0..n1
 
              <- n1->              <-- n0 -->
              +--+--+--+--+--+--+--+--+--+--+
@@ -636,7 +636,7 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
              +--+--+--+--+--+--+--+--+--+--+
                     ^next in       ^next out
           */
-          // non-continous space -> copy to nextIn..nextIn+n0, 0..n1
+          // non-continuous space -> copy to nextIn..nextIn+n0, 0..n1
           n0 = ringBuffer->size-ringBuffer->nextOut;
           n1 = n-n0;
         }
@@ -741,7 +741,7 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
       // copy data into ring buffer
       if (outIsContiguous(sourceRingBuffer,n))
       {
-        /* continous space -> copy from nextOut..nextOut+n0
+        /* continuous space -> copy from nextOut..nextOut+n0
 
                     <-- n0 -->
            +--+--+--+--+--+--+--+--+--+--+
@@ -749,13 +749,13 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
            +--+--+--+--+--+--+--+--+--+--+
                      ^next out   ^next in
         */
-        // continous space -> copy to n0..n0+n
+        // continuous space -> copy to n0..n0+n
         n0 = n;
         n1 = 0L;
       }
       else
       {
-        /* non-continous space -> copy from nextOut..nextOut+n0, 0..n1
+        /* non-continuous space -> copy from nextOut..nextOut+n0, 0..n1
 
            <- n1->              <-- n0 -->
            +--+--+--+--+--+--+--+--+--+--+
@@ -763,7 +763,7 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
            +--+--+--+--+--+--+--+--+--+--+
                   ^next in       ^next out
         */
-        // non-continous space -> copy to nextIn..nextIn+n0, 0..n1
+        // non-continuous space -> copy to nextIn..nextIn+n0, 0..n1
         n0 = sourceRingBuffer->size-sourceRingBuffer->nextOut;
         n1 = n-n0;
       }

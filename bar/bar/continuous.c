@@ -3,12 +3,12 @@
 * $Revision: 4195 $
 * $Date: 2015-10-17 10:41:02 +0200 (Sat, 17 Oct 2015) $
 * $Author: torsten $
-* Contents: continous functions
+* Contents: continuous functions
 * Systems: all
 *
 \***********************************************************************/
 
-#define __CONTINOUS_IMPLEMENTATION__
+#define __CONTINUOUS_IMPLEMENTATION__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -63,7 +63,7 @@
 #define DATABASE_TIMEOUT (30L*MS_PER_SECOND)      // database timeout [ms]
 
 // database version
-#define CONTINOUS_VERSION 1
+#define CONTINUOUS_VERSION 1
 
 #define CONTINUOUS_TABLE_DEFINITION \
   "CREATE TABLE IF NOT EXISTS meta(" \
@@ -1297,7 +1297,7 @@ LOCAL void continuousThreadCode(void)
   }
   absoluteName = String_new();
 
-  // open continous database
+  // open continuous database
   error = Continuous_open(&databaseHandle);
   if (error != ERROR_NONE)
   {
@@ -1516,7 +1516,7 @@ fprintf(stderr,"\n");
     assert(quitFlag || (n == 0));
   }
 
-  // close continous database
+  // close continuous database
   Continuous_close(&databaseHandle);
 
   // free resources
@@ -1659,7 +1659,7 @@ Errors Continuous_init(const char *databaseFileName)
     error = getContinuousVersion(&continuousVersion);
     if (error == ERROR_NONE)
     {
-      if (continuousVersion < CONTINOUS_VERSION)
+      if (continuousVersion < CONTINUOUS_VERSION)
       {
         // discard existing continuous database, create new database
         if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(databaseFileName,FALSE);

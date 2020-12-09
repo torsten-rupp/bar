@@ -6679,6 +6679,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
   String     name,value;
   StringList commentLineList;
   long       nextIndex;
+  uint       i;
 
   // parse section
   error      = ERROR_NONE;
@@ -6709,69 +6710,42 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-#if 1
-uint i = ConfigValue_find(CONFIG_VALUES,
-                       i0,
-                       i1,
-                       String_cString(name)
-                      );
-fprintf(stderr,"%s, %d: %d %s -- %d %s -- %d\n",__FILE__,__LINE__,i0,CONFIG_VALUES[i0].name,i1,CONFIG_VALUES[i1].name,i);
-  if (i != CONFIG_VALUE_INDEX_NONE)
-  {
-      (void)ConfigValue_parse2(&CONFIG_VALUES[i],
-                              sectionName,
-                              String_cString(value),
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+      i = ConfigValue_find(CONFIG_VALUES,
+                           i0,
+                           i1,
+                           String_cString(name)
+                          );
+      if (i != CONFIG_VALUE_INDEX_NONE)
+      {
+          (void)ConfigValue_parse2(&CONFIG_VALUES[i],
+                                  sectionName,
+                                  String_cString(value),
+                                  CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                  {
+                                    UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
-                                error = ERROR_CONFIG;
-                              },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                    if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                    printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
+                                    error = ERROR_CONFIG;
+                                  },NULL),
+                                  CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                  {
+                                    UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
-                              },NULL),
-                              variable,
-                              &commentLineList
-                             );
-      assert(StringList_isEmpty(&commentLineList));
-  }
-  else
-  {
-    if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-    printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
-    error = ERROR_CONFIG;
-  }
-#else
-      (void)ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              CONFIG_VALUES,
-                              sectionName,
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
-
-                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
-                                error = ERROR_CONFIG;
-                              },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
-
-                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
-                              },NULL),
-                              variable,
-                              &commentLineList
-                             );
-      assert(StringList_isEmpty(&commentLineList));
-#endif
+                                    if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                    printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
+                                  },NULL),
+                                  variable,
+                                  &commentLineList
+                                 );
+          assert(StringList_isEmpty(&commentLineList));
+      }
+      else
+      {
+        if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+        printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
+        error = ERROR_CONFIG;
+      }
     }
     else
     {
@@ -7721,7 +7695,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_SEPARATOR("continous meta database"),
+  CONFIG_VALUE_SEPARATOR("continuous meta database"),
   CONFIG_VALUE_CSTRING           ("continuous-database",              &globalOptions.continuousDatabaseFileName,-1,                  "<file name>"),
   CONFIG_VALUE_INTEGER64         ("continuous-max-size",              &globalOptions.continuousMaxSize,-1,                           0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS,"<size>"),
   CONFIG_VALUE_INTEGER           ("continuous-min-time-delta",        &globalOptions.continuousMinTimeDelta,-1,                      0,MAX_INT,CONFIG_VALUE_TIME_UNITS,"<n>"),
