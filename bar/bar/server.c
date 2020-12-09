@@ -6912,7 +6912,8 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // delete storage server
-    List_removeAndFree(&globalOptions.serverList,serverNode,CALLBACK_((ListNodeFreeFunction)Configuration_freeServerNode,NULL));
+    List_remove(&globalOptions.serverList,serverNode);
+    Configuration_deleteServerNode(serverNode);
 
     // update config file
     error = Configuration_update();

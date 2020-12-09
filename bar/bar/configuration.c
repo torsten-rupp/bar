@@ -439,6 +439,25 @@ LOCAL void freeConfigFileNode(ConfigFileNode *configFileNode, void *userData)
 }
 
 /***********************************************************************\
+* Name   : freeServerNode
+* Purpose: free server node
+* Input  : serverNode - server node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeServerNode(ServerNode *serverNode, void *userData)
+{
+  assert(serverNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  Configuration_doneServer(serverNode);
+}
+
+/***********************************************************************\
 * Name   : initDevice
 * Purpose: init device
 * Input  : device - device
@@ -482,6 +501,7 @@ LOCAL void doneDevice(Device *device)
 {
   assert(device != NULL);
 
+  StringList_done(&device->commentList);
   String_delete(device->writeCommand           );
   String_delete(device->writePostProcessCommand);
   String_delete(device->writePreProcessCommand );
@@ -499,6 +519,25 @@ LOCAL void doneDevice(Device *device)
 }
 
 /***********************************************************************\
+* Name   : freeDeviceNode
+* Purpose: free device node
+* Input  : deviceNode - device node
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void freeDeviceNode(DeviceNode *deviceNode, void *userData)
+{
+  assert(deviceNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  doneDevice(deviceNode);
+}
+
+/***********************************************************************\
 * Name   : freeMaintenanceNode
 * Purpose: free maintenace node
 * Input  : maintenanceNode - maintenance node
@@ -512,8 +551,9 @@ void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData)
 {
   assert(maintenanceNode != NULL);
 
-  UNUSED_VARIABLE(maintenanceNode);
   UNUSED_VARIABLE(userData);
+
+  StringList_done(&maintenanceNode->commentList);
 }
 
 /***********************************************************************\
@@ -6871,6 +6911,7 @@ extern Semaphore       consoleLock;            // lock console
         if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FILE);
         assert(serverNode != NULL);
         assert(serverNode->type == SERVER_TYPE_FILE);
+        StringList_move(&serverNode->commentList,&commentLineList);
 
         // read config section
         error = readConfigFileSection(fileName,
@@ -7099,139 +7140,69 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
       {
+        bool result;
+        uint i,i0,i1;
+
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 StringList_clear(&commentLineList);
-        // parse section
-        while (   (error == ERROR_NONE)
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
-        {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-          {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "master",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
-                                      error = ERROR_CONFIG;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
+        // find section
+        result = ConfigValue_findSection(CONFIG_VALUES,
+                                         "master",
+                                         &i,
+                                         &i0,
+                                         &i1
+                                        );
+        assertx(result,"unknown section 'master'");
 
-                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    &globalOptions.masterInfo,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            error = ERROR_CONFIG;
-            break;
-          }
-        }
-        File_ungetLine(&fileHandle,line,&lineNb);
+        // read config section
+        error = readConfigFileSection(fileName,
+                                      &fileHandle,
+                                      "master",
+                                      i0,i1,
+                                      printInfoFlag,
+                                      NULL  // variable
+                                     );
       }
       else if (String_parse(line,STRING_BEGIN,"[maintenance]",NULL))
       {
+        bool            result;
+        uint            i,i0,i1;
         MaintenanceNode *maintenanceNode;
 
-        // allocate new maintenance time node
+        // find section
+        result = ConfigValue_findSection(CONFIG_VALUES,
+                                         "maintenance",
+                                         &i,
+                                         &i0,
+                                         &i1
+                                        );
+        assertx(result,"unknown section 'maintenance'");
+
+        // allocate maintenance node
         maintenanceNode = Configuration_newMaintenanceNode();
+        assert(maintenanceNode != NULL);
+        StringList_move(&maintenanceNode->commentList,&commentLineList);
 
-        // parse section
-        while (   (error == ERROR_NONE)
-               && File_getLine(&fileHandle,line,&lineNb,NULL)
-               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-              )
+        // read config section
+        error = readConfigFileSection(fileName,
+                                      &fileHandle,
+                                      "maintenance",
+                                      i0,i1,
+                                      printInfoFlag,
+                                      maintenanceNode
+                                     );
+        if (error == ERROR_NONE)
         {
-          if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+          // add to maintenance list
+          SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            // discard comments if separator or empty line
-            StringList_clear(&commentLineList);
-          }
-          else if (String_startsWithCString(line,"# "))
-          {
-            // store comment
-            String_remove(line,STRING_BEGIN,2);
-            StringList_append(&commentLineList,line);
-          }
-          else if (String_startsWithChar(line,'#'))
-          {
-            // ignore commented values
-          }
-          else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-          {
-            (void)ConfigValue_parse(String_cString(name),
-                                    String_cString(value),
-                                    CONFIG_VALUES,
-                                    "maintenance",
-                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"maintenance",String_cString(fileName),lineNb);
-                                      error = ERROR_CONFIG;
-                                    },NULL),
-                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                    {
-                                      UNUSED_VARIABLE(userData);
-
-                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"maintenance",String_cString(fileName),lineNb);
-                                    },NULL),
-                                    maintenanceNode,
-                                    &commentLineList
-                                   );
-            assert(StringList_isEmpty(&commentLineList));
-          }
-          else
-          {
-            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-            printError(_("Syntax error in '%s', line %ld: '%s'"),
-                       String_cString(fileName),
-                       lineNb,
-                       String_cString(line)
-                      );
-            error = ERROR_CONFIG;
-            break;
+            List_append(&globalOptions.maintenanceList,maintenanceNode);
           }
         }
-        File_ungetLine(&fileHandle,line,&lineNb);
-
-        // add to maintenance list
-        SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        else
         {
-          List_append(&globalOptions.maintenanceList,maintenanceNode);
+          Configuration_deleteMaintenanceNode(maintenanceNode);
         }
       }
       else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
@@ -8639,9 +8610,9 @@ void Configuration_doneGlobalOptions(void)
   List_done(&globalOptions.maintenanceList,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
   Semaphore_done(&globalOptions.maintenanceList.lock);
 
-  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)Configuration_freeDeviceNode,NULL));
+  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
   Semaphore_done(&globalOptions.deviceList.lock);
-  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)Configuration_freeServerNode,NULL));
+  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
   Semaphore_done(&globalOptions.serverList.lock);
 
   List_done(&globalOptions.maxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
@@ -8675,6 +8646,7 @@ MaintenanceNode *Configuration_newMaintenanceNode(void)
   maintenanceNode->beginTime.minute = TIME_ANY;
   maintenanceNode->endTime.hour     = TIME_ANY;
   maintenanceNode->endTime.minute   = TIME_ANY;
+  StringList_init(&maintenanceNode->commentList);
 
   return maintenanceNode;
 }
@@ -9220,20 +9192,11 @@ ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType
   return serverNode;
 }
 
-void Configuration_freeServerNode(ServerNode *serverNode, void *userData)
-{
-  assert(serverNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  Configuration_doneServer(serverNode);
-}
-
 void Configuration_deleteServerNode(ServerNode *serverNode)
 {
   assert(serverNode != NULL);
 
-  Configuration_freeServerNode(serverNode,NULL);
+  freeServerNode(serverNode,NULL);
   LIST_DELETE_NODE(serverNode);
 }
 
@@ -9376,20 +9339,11 @@ DeviceNode *Configuration_newDeviceNode(ConstString name)
   return deviceNode;
 }
 
-void Configuration_freeDeviceNode(DeviceNode *deviceNode, void *userData)
-{
-  assert(deviceNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  doneDevice(deviceNode);
-}
-
 void Configuration_deleteDeviceNode(DeviceNode *deviceNode)
 {
   assert(deviceNode != NULL);
 
-  Configuration_freeDeviceNode(deviceNode,NULL);
+  freeDeviceNode(deviceNode,NULL);
   LIST_DELETE_NODE(deviceNode);
 }
 

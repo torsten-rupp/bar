@@ -2374,6 +2374,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
       {
         if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C# %s",indent,' ',SEPARATOR);
       }
+      if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
       break;
     case CONFIG_VALUE_TYPE_SPACE:
       if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
@@ -2584,6 +2585,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List
         {
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C# %s",indent,' ',SEPARATOR);
         }
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
         break;
       case CONFIG_VALUE_TYPE_SPACE:
         error = flushCommentLines(fileHandle,indent,&commentList);

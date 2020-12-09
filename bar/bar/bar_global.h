@@ -662,6 +662,8 @@ typedef struct MaintenanceNode
   MaintenanceDate       date;
   MaintenanceWeekDaySet weekDaySet;
   MaintenanceTime       beginTime,endTime;
+
+  StringList            commentList;
 } MaintenanceNode;
 
 // maintenance list
