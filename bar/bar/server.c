@@ -3499,7 +3499,7 @@ LOCAL void autoIndexThreadCode(void)
 
   if (indexHandle != NULL)
   {
-    // run continous check for auto index
+    // run continuous check for auto index
     while (!quitFlag)
     {
       // pause
@@ -5654,6 +5654,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
 LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String name,value;
+  uint   i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5678,10 +5679,22 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // parse
-  if (!ConfigValue_parse(String_cString(name),
-                         String_cString(value),
-                         CONFIG_VALUES,
+  i = ConfigValue_find(CONFIG_VALUES,
+                       CONFIG_VALUE_INDEX_NONE,
+                       CONFIG_VALUE_INDEX_NONE,
+                       String_cString(name)
+                      );
+  if (i != CONFIG_VALUE_INDEX_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config '%S'",name);
+    String_delete(value);
+    String_delete(name);
+    return;
+  }
+
+  if (!ConfigValue_parse(CONFIG_VALUES,
                          NULL, // sectionName
+                         String_cString(value),
                          CALLBACK_(NULL,NULL),  // errorFunction
                          CALLBACK_(NULL,NULL),  // warningFunction
                          NULL,
@@ -5689,7 +5702,7 @@ NULL // commentLineList  //variable
                         )
      )
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid server config '%S'",name);
     String_delete(value);
     String_delete(name);
     return;
@@ -8961,6 +8974,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   String       name,value;
   JobNode      *jobNode;
+  uint         i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9003,10 +9017,23 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     }
 
     // parse
-    if (ConfigValue_parse(String_cString(name),
-                          String_cString(value),
-                          JOB_CONFIG_VALUES,
+    i = ConfigValue_find(JOB_CONFIG_VALUES,
+                         CONFIG_VALUE_INDEX_NONE,
+                         CONFIG_VALUE_INDEX_NONE,
+                         String_cString(name)
+                        );
+    if (i != CONFIG_VALUE_INDEX_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid job config '%S' value: '%S'",name,value);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
+    }
+
+    if (ConfigValue_parse(JOB_CONFIG_VALUES,
                           NULL, // sectionName
+                          String_cString(value),
                           CALLBACK_(NULL,NULL),  // errorFunction
                           CALLBACK_(NULL,NULL),  // warningFunction
                           jobNode,
@@ -9021,7 +9048,11 @@ NULL // commentLineList
     }
     else
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"invalid job config '%S' value: '%S'",name,value);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid job config '%S' value: '%S'",name,value);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
     }
   }
 
@@ -12837,6 +12868,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   String       name,value;
   JobNode      *jobNode;
   ScheduleNode *scheduleNode;
+  uint         i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12895,10 +12927,23 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // parse
-    if (ConfigValue_parse(String_cString(name),
-                          String_cString(value),
-                          JOB_CONFIG_VALUES,
+    i = ConfigValue_find(JOB_CONFIG_VALUES,
+                         CONFIG_VALUE_INDEX_NONE,
+                         CONFIG_VALUE_INDEX_NONE,
+                         String_cString(name)
+                        );
+    if (i != CONFIG_VALUE_INDEX_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
+    }
+
+    if (ConfigValue_parse(JOB_CONFIG_VALUES,
                           "schedule",
+                          String_cString(value),
                           CALLBACK_(NULL,NULL),  // errorFunction
                           CALLBACK_(NULL,NULL),  // warningFunction
                           scheduleNode,
@@ -12906,12 +12951,14 @@ NULL // commentLineList
                          )
        )
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid schedule config '%S'",name);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
     }
-    else
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
-    }
+
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);

@@ -6717,7 +6717,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-          (void)ConfigValue_parse2(&CONFIG_VALUES[i],
+          (void)ConfigValue_parse(&CONFIG_VALUES[i],
                                   sectionName,
                                   String_cString(value),
                                   CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
@@ -6858,18 +6858,16 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
       {
-        bool       result;
         uint       i,i0,i1;
         ServerNode *serverNode;
 
         // find section
-        result = ConfigValue_findSection(CONFIG_VALUES,
-                                         "file-server",
-                                         &i,
-                                         &i0,
-                                         &i1
-                                        );
-        assertx(result,"unknown section 'file-server'");
+        i = ConfigValue_findSection(CONFIG_VALUES,
+                                    "file-server",
+                                    &i0,
+                                    &i1
+                                   );
+        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'file-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -6910,18 +6908,16 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
       {
-        bool       result;
         uint       i,i0,i1;
         ServerNode *serverNode;
 
         // find section
-        result = ConfigValue_findSection(CONFIG_VALUES,
-                                         "ftp-server",
-                                         &i,
-                                         &i0,
-                                         &i1
-                                        );
-        assertx(result,"unknown section 'ftp-server'");
+        i = ConfigValue_findSection(CONFIG_VALUES,
+                                    "ftp-server",
+                                    &i0,
+                                    &i1
+                                   );
+        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'ftp-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -6963,18 +6959,16 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
       {
-        bool       result;
         uint       i,i0,i1;
         ServerNode *serverNode;
 
         // find section
-        result = ConfigValue_findSection(CONFIG_VALUES,
-                                         "ssh-server",
-                                         &i,
-                                         &i0,
-                                         &i1
-                                        );
-        assertx(result,"unknown section 'ssh-server'");
+        i = ConfigValue_findSection(CONFIG_VALUES,
+                                    "ssh-server",
+                                    &i0,
+                                    &i1
+                                   );
+        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'ssh-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -7015,18 +7009,16 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
       {
-        bool       result;
         uint       i,i0,i1;
         ServerNode *serverNode;
 
         // find section
-        result = ConfigValue_findSection(CONFIG_VALUES,
-                                         "webdav-server",
-                                         &i,
-                                         &i0,
-                                         &i1
-                                        );
-        assertx(result,"unknown section 'webdav-server'");
+        i = ConfigValue_findSection(CONFIG_VALUES,
+                                    "webdav-server",
+                                    &i0,
+                                    &i1
+                                   );
+        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'webdav-server'");
 
         // find/allocate server node
         serverNode = NULL;
@@ -7068,18 +7060,16 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
       {
-        bool       result;
         uint       i,i0,i1;
         DeviceNode *deviceNode;
 
         // find section
-        result = ConfigValue_findSection(CONFIG_VALUES,
-                                         "device",
-                                         &i,
-                                         &i0,
-                                         &i1
-                                        );
-        assertx(result,"unknown section 'device'");
+        i = ConfigValue_findSection(CONFIG_VALUES,
+                                    "device",
+                                    &i0,
+                                    &i1
+                                   );
+        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'device'");
 
         // find/allocate device node
         deviceNode = NULL;
@@ -7114,20 +7104,18 @@ extern Semaphore       consoleLock;            // lock console
       }
       else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
       {
-        bool result;
         uint i,i0,i1;
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 StringList_clear(&commentLineList);
 
         // find section
-        result = ConfigValue_findSection(CONFIG_VALUES,
-                                         "master",
-                                         &i,
-                                         &i0,
-                                         &i1
-                                        );
-        assertx(result,"unknown section 'master'");
+        i = ConfigValue_findSection(CONFIG_VALUES,
+                                    "master",
+                                    &i0,
+                                    &i1
+                                   );
+        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'master'");
 
         // read config section
         error = readConfigFileSection(fileName,
@@ -7140,18 +7128,16 @@ StringList_clear(&commentLineList);
       }
       else if (String_parse(line,STRING_BEGIN,"[maintenance]",NULL))
       {
-        bool            result;
         uint            i,i0,i1;
         MaintenanceNode *maintenanceNode;
 
         // find section
-        result = ConfigValue_findSection(CONFIG_VALUES,
-                                         "maintenance",
-                                         &i,
-                                         &i0,
-                                         &i1
-                                        );
-        assertx(result,"unknown section 'maintenance'");
+        i = ConfigValue_findSection(CONFIG_VALUES,
+                                    "maintenance",
+                                    &i0,
+                                    &i1
+                                   );
+        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'maintenance'");
 
         // allocate maintenance node
         maintenanceNode = Configuration_newMaintenanceNode();
@@ -7189,7 +7175,6 @@ StringList_clear(&commentLineList);
       }
       else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
       {
-#if 1
    uint i = ConfigValue_find(CONFIG_VALUES,
                              CONFIG_VALUE_INDEX_NONE,
                              CONFIG_VALUE_INDEX_NONE,
@@ -7197,7 +7182,7 @@ StringList_clear(&commentLineList);
                             );
         if (i != CONFIG_VALUE_INDEX_NONE)
         {
-        (void)ConfigValue_parse2(&CONFIG_VALUES[i],
+        (void)ConfigValue_parse(&CONFIG_VALUES[i],
                                 NULL, // section name
                                 String_cString(value),
                                 CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
@@ -7226,31 +7211,6 @@ StringList_clear(&commentLineList);
           printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
           error = ERROR_CONFIG;
         }
-#else
-        (void)ConfigValue_parse(String_cString(name),
-                                String_cString(value),
-                                CONFIG_VALUES,
-                                NULL, // section name
-                                CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                {
-                                  UNUSED_VARIABLE(userData);
-
-                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                  printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
-                                  error = ERROR_CONFIG;
-                                }),NULL,
-                                CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                {
-                                  UNUSED_VARIABLE(userData);
-
-                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                  printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
-                                }),NULL,
-                                NULL,  // variable
-                                &commentLineList
-                               );
-        assert(StringList_isEmpty(&commentLineList));
-#endif
       }
       else
       {

@@ -1298,13 +1298,12 @@ uint ConfigValue_find(const ConfigValue configValues[],
 * Output : sectionIndex    - section index (can be NULL)
 *          firstValueIndex - first value index (can be NULL)
 *          lastValueIndex  - last value index (can be NULL)
-* Return : TRUE iff section found
+* Return : section index or CONFIG_VALUE_INDEX_NONE
 * Notes  : -
 \***********************************************************************/
 
-bool ConfigValue_findSection(const ConfigValue configValues[],
+uint ConfigValue_findSection(const ConfigValue configValues[],
                              const char        *sectionName,
-                             uint              *sectionIndex,
                              uint              *firstValueIndex,
                              uint              *lastValueIndex
                             );
@@ -1352,10 +1351,9 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
 /***********************************************************************
 * Name   : ConfigValue_parse
 * Purpose: parse config value
-* Input  : name                  - config value name
-*          value                 - config value
-*          configValues          - array with config value specification
+* Input  : configValue           - config value
 *          sectionName           - section name or NULL
+*          value                 - value
 *          errorReportFunction   - error report function (can be NULL)
 *          errorReportUserData   - error report user data
 *          warningReportFunction - warning report function (can be NULL)
@@ -1365,18 +1363,7 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
 * Notes  :
 ***********************************************************************/
 
-bool ConfigValue_parse(const char           *name,
-                       const char           *value,
-                       ConfigValue          configValues[],
-                       const char           *sectionName,
-                       ConfigReportFunction errorReportFunction,
-                       void                 *errorReportUserData,
-                       ConfigReportFunction warningReportFunction,
-                       void                 *warningReportUserData,
-                       void                 *variable,
-                       StringList           *commentLineList
-                      );
-bool ConfigValue_parse2(ConfigValue          *configValue,
+bool ConfigValue_parse(ConfigValue          *configValue,
                        const char           *sectionName,
                        const char           *value,
                        ConfigReportFunction errorReportFunction,

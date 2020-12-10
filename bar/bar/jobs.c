@@ -1794,6 +1794,7 @@ bool Job_read(JobNode *jobNode)
   String     s;
   String     name,value;
   long       nextIndex;
+  uint       i,i0,i1;
 
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
@@ -1835,6 +1836,14 @@ bool Job_read(JobNode *jobNode)
       ScheduleNode       *scheduleNode;
       const ScheduleNode *existingScheduleNode;
 
+      // find section
+      i = ConfigValue_findSection(JOB_CONFIG_VALUES,
+                                  "schedule",
+                                  &i0,
+                                  &i1
+                                 );
+      assertx(i == CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
+
       // new schedule
       scheduleNode = newScheduleNode();
       assert(scheduleNode != NULL);
@@ -1844,30 +1853,42 @@ bool Job_read(JobNode *jobNode)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          ConfigValue_parse(String_cString(name),
-                            String_cString(value),
-                            JOB_CONFIG_VALUES,
-                            "schedule",
-                            LAMBDA(void,(const char *errorMessage, void *userData),
-                            {
-                              UNUSED_VARIABLE(userData);
+          i = ConfigValue_find(JOB_CONFIG_VALUES,
+                               i0,
+                               i1,
+                               String_cString(name)
+                              );
+          if (i != CONFIG_VALUE_INDEX_NONE)
+          {
+            ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+                              "schedule",
+                              String_cString(value),
+                              LAMBDA(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                              printError("%s in %s, line %ld: '%s'",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
-                            }),NULL,
-                            LAMBDA(void,(const char *warningMessage, void *userData),
-                            {
-                              UNUSED_VARIABLE(userData);
+                                printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
+                              }),NULL,
+                              LAMBDA(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                              printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
-                            }),NULL,
-                            scheduleNode,
-NULL // commentLineList
-                           );
+                                printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
+                              }),NULL,
+                              scheduleNode,
+  NULL // commentLineList
+                             );
+          }
+          else
+          {
+            printError("Unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
+            failFlag = TRUE;
+          }
         }
         else
         {
-          printError("Syntax error in %s, line %ld: '%s' - skipped",
-                     String_cString(jobNode->fileName),
+          printError("Syntax error in %S, line %ld: '%s' - skipped",
+                     jobNode->fileName,
                      lineNb,
                      String_cString(line)
                     );
@@ -1925,6 +1946,14 @@ NULL // commentLineList
       PersistenceNode       *persistenceNode;
       const PersistenceNode *existingPersistenceNode;
 
+      // find section
+      i = ConfigValue_findSection(JOB_CONFIG_VALUES,
+                                  "persistence",
+                                  &i0,
+                                  &i1
+                                 );
+      assertx(i == CONFIG_VALUE_INDEX_NONE,"unknown section 'persistence'");
+
       if (Archive_parseType(String_cString(s),&archiveType,NULL))
       {
         // new persistence
@@ -1936,30 +1965,42 @@ NULL // commentLineList
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              JOB_CONFIG_VALUES,
-                              "persistence",
-                              LAMBDA(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+            i = ConfigValue_find(JOB_CONFIG_VALUES,
+                                 CONFIG_VALUE_INDEX_NONE,
+                                 CONFIG_VALUE_INDEX_NONE,
+                                 String_cString(name)
+                                );
+            if (i != CONFIG_VALUE_INDEX_NONE)
+            {
+              ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+                                "persistence",
+                                String_cString(value),
+                                LAMBDA(void,(const char *errorMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
 
-                                printError("%s in %s, line %ld: '%s'",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
-                              }),NULL,
-                              LAMBDA(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                  printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
+                                }),NULL,
+                                LAMBDA(void,(const char *warningMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
 
-                                printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
-                              }),NULL,
-                              persistenceNode,
-NULL // commentLineList
-                             );
+                                  printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
+                                }),NULL,
+                                persistenceNode,
+  NULL // commentLineList
+                               );
+            }
+            else
+            {
+              printError("Unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
+              failFlag = TRUE;
+            }
           }
           else
           {
-            printError("Syntax error in %s, line %ld: '%s' - skipped",
-                       String_cString(jobNode->fileName),
+            printError("Syntax error in %S, line %ld: '%s' - skipped",
+                       jobNode->fileName,
                        lineNb,
                        String_cString(line)
                       );
@@ -1989,10 +2030,10 @@ NULL // commentLineList
       }
       else
       {
-        printError("Unknown archive type '%s' in section '%s' in %s, line %ld - skipped",
+        printError("Unknown archive type '%s' in section '%s' in %S, line %ld - skipped",
                    String_cString(s),
                    "persistence",
-                   String_cString(jobNode->fileName),
+                   jobNode->fileName,
                    lineNb
                   );
 
@@ -2018,30 +2059,42 @@ NULL // commentLineList
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      ConfigValue_parse(String_cString(name),
-                        String_cString(value),
-                        JOB_CONFIG_VALUES,
-                        NULL, // sectionName
-                        LAMBDA(void,(const char *errorMessage, void *userData),
-                        {
-                          UNUSED_VARIABLE(userData);
+      i = ConfigValue_find(JOB_CONFIG_VALUES,
+                           CONFIG_VALUE_INDEX_NONE,
+                           CONFIG_VALUE_INDEX_NONE,
+                           String_cString(name)
+                          );
+      if (i != CONFIG_VALUE_INDEX_NONE)
+      {
+        ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+                          NULL, // sectionName
+                          String_cString(value),
+                          LAMBDA(void,(const char *errorMessage, void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
 
-                          printError("%s in %s, line %ld: '%s'",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
-                        }),NULL,
-                        LAMBDA(void,(const char *warningMessage, void *userData),
-                        {
-                          UNUSED_VARIABLE(userData);
+                            printError("%s in %S, line %ld: '%s'",errorMessage,jobNode->fileName,lineNb,String_cString(line));
+                          }),NULL,
+                          LAMBDA(void,(const char *warningMessage, void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
 
-                          printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
-                        }),NULL,
-                        jobNode,
-NULL // commentLineList
-                       );
+                            printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
+                          }),NULL,
+                          jobNode,
+  NULL // commentLineList
+                         );
+      }
+      else
+      {
+        printError("Unknown value '%S' in %S, line %ld",name,jobNode->fileName,lineNb);
+        failFlag = TRUE;
+      }
     }
     else
     {
-      printError("Syntax error in %s, line %ld: '%s' - skipped",
-                 String_cString(jobNode->fileName),
+      printError("Syntax error in %S, line %ld: '%s' - skipped",
+                 jobNode->fileName,
                  lineNb,
                  String_cString(line)
                 );

@@ -2668,6 +2668,7 @@ LOCAL bool readFromJob(ConstString fileName)
   String     type;
   String     name,value;
   long       nextIndex;
+  uint       i;
 
   assert(fileName != NULL);
 
@@ -2727,27 +2728,37 @@ LOCAL bool readFromJob(ConstString fileName)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      (void)ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              JOB_CONFIG_VALUES,
-                              NULL, // sectionName,
-                              LAMBDA(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+      i = ConfigValue_find(JOB_CONFIG_VALUES,
+                           i0,
+                           i1,
+                           String_cString(name)
+                          );
+      if (i != CONFIG_VALUE_INDEX_NONE)
+      {
+        ConfigValue_parse(&JOB_CONFIG_VALUES[i],
+                          NULL, // sectionName,
+                          String_cString(value),
+                          LAMBDA(void,(const char *errorMessage, void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printf("FAIL!\n");
-                                printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
-                                failFlag = TRUE;
-                              }),NULL,
-                              LAMBDA(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                            printError("%s in %S, line %ld",errorMessage,fileName,lineNb);
+                            failFlag = TRUE;
+                          }),NULL,
+                          LAMBDA(void,(const char *warningMessage, void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printf("FAIL!\n");
-                                printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
-                              }),NULL,
-                              NULL  // variable
-                             );
+                            printWarning("%s in %S, line %ld",warningMessage,fileName,lineNb);
+                          }),NULL,
+                          NULL  // variable
+                         );
+      }
+      else
+      {
+        printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
+        failFlag = TRUE;
+      }
     }
     else
     {
@@ -2756,6 +2767,7 @@ LOCAL bool readFromJob(ConstString fileName)
                  lineNb,
                  String_cString(line)
                 );
+      failFlag = TRUE;
     }
   }
   String_delete(value);

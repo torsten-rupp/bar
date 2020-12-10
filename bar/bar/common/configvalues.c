@@ -2647,14 +2647,14 @@ void ConfigValue_done(ConfigValue configValues[])
   }
 }
 
-bool ConfigValue_findSection(const ConfigValue configValues[],
+uint ConfigValue_findSection(const ConfigValue configValues[],
                              const char        *sectionName,
-                             uint              *sectionIndex,
                              uint              *firstValueIndex,
                              uint              *lastValueIndex
                             )
 {
   uint index;
+  uint sectionIndex;
   bool skipFlag;
 
   assert(configValues != NULL);
@@ -2707,7 +2707,7 @@ bool ConfigValue_findSection(const ConfigValue configValues[],
     {
       return FALSE;
     }
-    if (sectionIndex != NULL) (*sectionIndex) = index;
+    sectionIndex = index;
     index++;
 
     // get first index
@@ -2729,11 +2729,11 @@ bool ConfigValue_findSection(const ConfigValue configValues[],
     // get last index
     if (lastValueIndex != NULL) (*lastValueIndex) = index;
 
-    return TRUE;
+    return sectionIndex;
   }
   else
   {
-    return FALSE;
+    return CONFIG_VALUE_INDEX_NONE;
   }
 }
 
@@ -3075,65 +3075,7 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
 
-bool ConfigValue_parse(const char           *name,
-                       const char           *value,
-                       ConfigValue          configValues[],
-                       const char           *sectionName,
-                       ConfigReportFunction errorReportFunction,
-                       void                 *errorReportUserData,
-                       ConfigReportFunction warningReportFunction,
-                       void                 *warningReportUserData,
-                       void                 *variable,
-                       StringList           *commentLineList
-                      )
-{
-  uint i;
-
-  assert(name != NULL);
-  assert(configValues != NULL);
-
-  // find config value
-  i = ConfigValue_valueIndex(configValues,sectionName,name);
-  if (i == CONFIG_VALUE_INDEX_NONE)
-  {
-    reportMessage(errorReportFunction,
-                  errorReportUserData,
-                  "Unknown value '%s'!",
-                  name
-                 );
-    return FALSE;
-  }
-
-  // process value
-  if (!processValue(&configValues[i],
-                    sectionName,
-                    value,
-                    errorReportFunction,
-                    errorReportUserData,
-                    warningReportFunction,
-                    warningReportUserData,
-                    variable
-                   ))
-  {
-    return FALSE;
-  }
-
-  if ((commentLineList != NULL) && !StringList_isEmpty(commentLineList))
-  {
-    if (configValues[i].commentList == NULL)
-    {
-      configValues[i].commentList = StringList_new();
-    }
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,name,List_count(commentLineList));
-    StringList_clear(configValues[i].commentList);
-    StringList_move(configValues[i].commentList,commentLineList);
-//StringList_clear(commentLineList);
-fprintf(stderr,"%s, %d: %s %d %d\n",__FILE__,__LINE__,name,List_count(configValues[i].commentList),List_count(commentLineList));
-  }
-
-  return TRUE;
-}
-bool ConfigValue_parse2(ConfigValue          *configValue,
+bool ConfigValue_parse(ConfigValue          *configValue,
                        const char           *sectionName,
                        const char           *value,
                        ConfigReportFunction errorReportFunction,
