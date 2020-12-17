@@ -107,6 +107,7 @@ LOCAL bool       checkIntegrityFlag                   = FALSE;  // check databas
 LOCAL bool       checkOrphanedFlag                    = FALSE;  // check database orphaned entries
 LOCAL bool       checkDuplicatesFlag                  = FALSE;  // check database duplicate entries
 LOCAL bool       optimizeFlag                         = FALSE;  // optimize database
+LOCAL bool       reindexFlag                          = FALSE;  // re-create existing indizes
 LOCAL bool       createFlag                           = FALSE;  // create new index database
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
 LOCAL bool       dropTriggersFlag                     = FALSE;  // drop triggers
@@ -180,6 +181,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --create-aggregates-entities          - re-create aggregated data entities\n");
   printf("          --create-aggregates-storages          - re-create aggregated data storages\n");
   printf("          --optimize                            - optimize database (analyze and collect statistics data)\n");
+  printf("          --reindex                             - re-create all existing indizes\n");
   printf("          --check                               - check index database\n");
   printf("          --check-integrity                     - check index database integrity\n");
   printf("          --check-orphaned                      - check index database for orphaned entries\n");
@@ -1585,6 +1587,37 @@ LOCAL void dropIndizes(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
+
+  printInfo("OK\n");
+}
+
+/***********************************************************************\
+* Name   : reindex
+* Purpose: re-create existing indizes
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void reindex(DatabaseHandle *databaseHandle)
+{
+  Errors error;
+  char   name[1024];
+
+  printInfo("Reindex...");
+
+  error = Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "REINDEX"
+                          );
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("reindex fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
 
   printInfo("OK\n");
 }
@@ -6878,6 +6911,11 @@ uint xxxShow=0;
       optimizeFlag = TRUE;
       i++;
     }
+    else if (stringEquals(argv[i],"--reindex"))
+    {
+      reindexFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--create"))
     {
       createFlag = TRUE;
@@ -7315,6 +7353,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && !checkOrphanedFlag
           && !checkDuplicatesFlag
           && !optimizeFlag
+          && !reindexFlag
           && !createTriggersFlag
           && !dropTriggersFlag
           && !createIndizesFlag
@@ -7460,6 +7499,12 @@ else if (stringEquals(argv[i],"--xxx"))
   if (vacuumFlag)
   {
     vacuum(&databaseHandle,toFileName);
+  }
+
+  // re-create existing indizes
+  if (reindexFlag)
+  {
+    reindex(&databaseHandle);
   }
 
   // optimize
