@@ -190,40 +190,42 @@ class BARException extends Exception
   public final static int PARSE_DATE = 185;
   public final static int PARSE_TIME = 186;
   public final static int PARSE_WEEKDAYS = 187;
-  public final static int PARSE_SCHEDULE = 188;
-  public final static int UNKNOWN_COMMAND = 189;
-  public final static int EXPECTED_PARAMETER = 190;
-  public final static int UNKNOWN_VALUE = 191;
-  public final static int INVALID_VALUE = 192;
-  public final static int DEPRECATED_OR_IGNORED_VALUE = 193;
-  public final static int AUTHORIZATION = 194;
-  public final static int JOB_NOT_FOUND = 195;
-  public final static int SCHEDULE_NOT_FOUND = 196;
-  public final static int PERSISTENCE_ID_NOT_FOUND = 197;
-  public final static int SERVER_ID_NOT_FOUND = 198;
-  public final static int ENTRY_ID_NOT_FOUND = 199;
-  public final static int PATTERN_ID_NOT_FOUND = 200;
-  public final static int MOUNT_ID_NOT_FOUND = 201;
-  public final static int DELTA_SOURCE_ID_NOT_FOUND = 202;
-  public final static int DATABASE = 203;
-  public final static int DATABASE_EXISTS = 204;
-  public final static int DATABASE_VERSION_UNKNOWN = 205;
-  public final static int DATABASE_MISSING_TABLE = 206;
-  public final static int DATABASE_MISSING_COLUMN = 207;
-  public final static int DATABASE_OBSOLETE_TABLE = 208;
-  public final static int DATABASE_OBSOLETE_COLUMN = 209;
-  public final static int DATABASE_TYPE_MISMATCH = 210;
-  public final static int DATABASE_CREATE_INDEX = 211;
-  public final static int DATABASE_INDEX_NOT_FOUND = 212;
-  public final static int DATABASE_INDEX_NOT_READY = 213;
-  public final static int DATABASE_INVALID_INDEX = 214;
-  public final static int DATABASE_PARSE_ID = 215;
-  public final static int DATABASE_TIMEOUT = 216;
-  public final static int MASTER_DISCONNECTED = 217;
-  public final static int SLAVE_DISCONNECTED = 218;
-  public final static int NOT_PAIRED = 219;
-  public final static int TESTCODE = 220;
-  public final static int UNKNOWN = 221;
+  public final static int PARSE_MAINTENANCE = 188;
+  public final static int PARSE_SCHEDULE = 189;
+  public final static int UNKNOWN_COMMAND = 190;
+  public final static int EXPECTED_PARAMETER = 191;
+  public final static int UNKNOWN_VALUE = 192;
+  public final static int INVALID_VALUE = 193;
+  public final static int DEPRECATED_OR_IGNORED_VALUE = 194;
+  public final static int AUTHORIZATION = 195;
+  public final static int JOB_NOT_FOUND = 196;
+  public final static int SCHEDULE_NOT_FOUND = 197;
+  public final static int PERSISTENCE_ID_NOT_FOUND = 198;
+  public final static int MAINTENANCE_ID_NOT_FOUND = 199;
+  public final static int SERVER_ID_NOT_FOUND = 200;
+  public final static int ENTRY_ID_NOT_FOUND = 201;
+  public final static int PATTERN_ID_NOT_FOUND = 202;
+  public final static int MOUNT_ID_NOT_FOUND = 203;
+  public final static int DELTA_SOURCE_ID_NOT_FOUND = 204;
+  public final static int DATABASE = 205;
+  public final static int DATABASE_EXISTS = 206;
+  public final static int DATABASE_VERSION_UNKNOWN = 207;
+  public final static int DATABASE_MISSING_TABLE = 208;
+  public final static int DATABASE_MISSING_COLUMN = 209;
+  public final static int DATABASE_OBSOLETE_TABLE = 210;
+  public final static int DATABASE_OBSOLETE_COLUMN = 211;
+  public final static int DATABASE_TYPE_MISMATCH = 212;
+  public final static int DATABASE_CREATE_INDEX = 213;
+  public final static int DATABASE_INDEX_NOT_FOUND = 214;
+  public final static int DATABASE_INDEX_NOT_READY = 215;
+  public final static int DATABASE_INVALID_INDEX = 216;
+  public final static int DATABASE_PARSE_ID = 217;
+  public final static int DATABASE_TIMEOUT = 218;
+  public final static int MASTER_DISCONNECTED = 219;
+  public final static int SLAVE_DISCONNECTED = 220;
+  public final static int NOT_PAIRED = 221;
+  public final static int TESTCODE = 222;
+  public final static int UNKNOWN = 223;
 
   public final int    code;
   public final int    errno;
@@ -1154,6 +1156,13 @@ class BARException extends Exception
           stringFormatAppend(errorText,sizeof(errorText),": %s",errorData);
         }
         break;
+      case PARSE_MAINTENANCE:
+        stringSet(errorText,sizeof(errorText),BARControl.tr("parsing maintenance fail"));
+        if (!stringIsEmpty(errorData))
+        {
+          stringFormatAppend(errorText,sizeof(errorText),": %s",errorData);
+        }
+        break;
       case PARSE_SCHEDULE:
         stringSet(errorText,sizeof(errorText),BARControl.tr("parsing schedule fail"));
         if (!stringIsEmpty(errorData))
@@ -1224,6 +1233,16 @@ class BARException extends Exception
         else
         {
           stringSet(errorText,sizeof(errorText),BARControl.tr("persistence not found"));
+        }
+        break;
+      case MAINTENANCE_ID_NOT_FOUND:
+        if (!stringIsEmpty(errorData))
+        {
+          stringFormat(errorText,sizeof(errorText),"maintenance with id #%s not found",errorData);
+        }
+        else
+        {
+          stringSet(errorText,sizeof(errorText),BARControl.tr("maintenance not found"));
         }
         break;
       case SERVER_ID_NOT_FOUND:
