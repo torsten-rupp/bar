@@ -5208,6 +5208,7 @@ public class TabJobs
                   "*.mkv",
                   "*.mp3",
                   "*.mp4",
+                  "*.mpg",
                   "*.mpeg",
                   "*.avi",
                   "*.wma",
@@ -10561,6 +10562,13 @@ TODO: implement delete entity
   {
     final JobData jobData = selectedJobData;
 
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+    Widgets.setEnabled(widgetTabFolder,false);
+    }});
     if (jobData != null)
     {
       try
@@ -10650,6 +10658,13 @@ TODO: implement delete entity
         }
       });
     }
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+    Widgets.setEnabled(widgetTabFolder,true);
+    }});
   }
 
   /** create new job
@@ -11229,10 +11244,12 @@ throw new Error("NYI");
     clearScheduleTable();
     clearPersistenceTable();
 
+/*
     Background.run(new BackgroundRunnable()
     {
       public void run()
       {
+*/
         // update data
         try
         {
@@ -11255,8 +11272,10 @@ throw new Error("NYI");
             selectJobEvent.trigger();
           }
         });
+/*
       }
     });
+*/
   }
 
   /** clear selected
@@ -15899,8 +15918,8 @@ throw new Error("NYI");
                                                                                              inTransit
                                                                                             );
                                        TreeItem treeItem = Widgets.updateInsertTreeItem(persistenceTreeItem,
-                                                                                        entityIndexData,
                                                                                         Widgets.TREE_ITEM_FLAG_OPEN,
+                                                                                        entityIndexData,
                                                                                         "",
                                                                                         "",
                                                                                         "",
@@ -15926,8 +15945,8 @@ throw new Error("NYI");
 
                                      TreeItem treeItem = Widgets.updateInsertTreeItem(widgetPersistenceTree,
                                                                                       persistenceDataComparator,
-                                                                                      persistenceData,
                                                                                       Widgets.TREE_ITEM_FLAG_FOLDER,
+                                                                                      persistenceData,
                                                                                       persistenceData.archiveType.getText(),
                                                                                       Keep.format(persistenceData.minKeep),
                                                                                       Keep.format(persistenceData.maxKeep),

@@ -9055,14 +9055,14 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param tree tree
-   * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param data item data
    * @param values values list
    * @return updated or inserted tree item
    */
   public static <T> TreeItem updateInsertTreeItem(final Tree      tree,
-                                                  final T         data,
                                                   final int       flags,
+                                                  final T         data,
                                                   final Object... values
                                                  )
   {
@@ -9264,31 +9264,17 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   }
 
   /** update or insert tree item
-   * @param tree tree
-   * @param data item data
-   * @param values values list
-   * @return updated or inserted tree item
-   */
-  public static <T> TreeItem updateInsertTreeItem(final Tree      tree,
-                                                  final T         data,
-                                                  final Object... values
-                                                 )
-  {
-    return updateInsertTreeItem(tree,data,TREE_ITEM_FLAG_NONE,values);
-  }
-
-  /** update or insert tree item
    * @param tree tree widget
    * @param comparator tree item comperator
-   * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param data item data
    * @param values values list
    * @return updated or inserted tree item
    */
   public static <T> TreeItem updateInsertTreeItem(final Tree          tree,
                                                   final Comparator<T> comparator,
-                                                  final T             data,
                                                   final int           flags,
+                                                  final T             data,
                                                   final Object...     values
                                                  )
   {
@@ -9518,14 +9504,14 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param parentTreeItem parent tree item
-   * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param data item data
    * @param values values list
    * @return updated or added tree item
    */
   public static <T> TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
-                                                  final T         data,
                                                   final int       flags,
+                                                  final T         data,
                                                   final Object... values
                                                  )
   {
@@ -9748,15 +9734,15 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   /** update or insert tree item
    * @param parentTreeItem parent tree item
    * @param comparator tree item comperator
-   * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param data item data
    * @param values values list
    * @return updated or added tree item
    */
   public static <T> TreeItem updateInsertTreeItem(final TreeItem      parentTreeItem,
                                                   final Comparator<T> comparator,
-                                                  final T             data,
                                                   final int           flags,
+                                                  final T             data,
                                                   final Object...     values
                                                  )
   {
