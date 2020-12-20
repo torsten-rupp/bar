@@ -692,22 +692,29 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
 }
 
 /***********************************************************************\
-* Name   : parseNextFormatToken
-* Purpose: parse next format token
+* Name   : getNextFormatToken
+* Purpose: get next format token
 * Input  : format - format string
 * Output : formatToken - format token
 * Return : next char after format specifier
-* Notes  : -
+* Notes  : additional format characters
+*           %S   String
+*           %cS  String with quoting char c
+*           %b   binary value
+*           %y   bool value
+*           %nC  repeat char n times (n can be 0)
+*           %*C  repeat char * times (* is uint value preceding char
+*                argument, can be 0)
 \***********************************************************************/
 
-LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatToken)
+LOCAL const char *getNextFormatToken(const char *format, FormatToken *formatToken)
 {
   const char *nextFormat;
 
   #define ADD_CHAR(formatToken,ch) \
     do \
     { \
-      assert(formatToken->length<sizeof(formatToken->token)); \
+      assert(formatToken->length < sizeof(formatToken->token)); \
       formatToken->token[formatToken->length] = ch; formatToken->length++; \
     } while (0)
 
@@ -981,7 +988,7 @@ LOCAL void formatString(struct __String *string,
     if ((*nextFormat) == '%')
     {
       // get format token
-      nextFormat = parseNextFormatToken(nextFormat,&formatToken);
+      nextFormat = getNextFormatToken(nextFormat,&formatToken);
 
       // format and store string
       switch (formatToken.conversionChar)
@@ -1492,6 +1499,223 @@ LOCAL void formatString(struct __String *string,
 #endif /* __GNUC__ */
 
 /***********************************************************************\
+* Name   : getNextParseToken
+* Purpose: get next parse token
+* Input  : format - format string
+* Output : formatToken - format token
+* Return : next char after format specifier
+* Notes  : additional format characters
+*           %S  String
+*           %cS String with quoting char c
+*           %b  binary value
+*           %y  bool value
+\***********************************************************************/
+
+LOCAL const char *getNextParseToken(const char *format, FormatToken *formatToken)
+{
+  const char *nextFormat;
+
+  #define ADD_CHAR(formatToken,ch) \
+    do \
+    { \
+      assert(formatToken->length < sizeof(formatToken->token)); \
+      formatToken->token[formatToken->length] = ch; formatToken->length++; \
+    } while (0)
+
+  assert(format != NULL);
+  assert(formatToken != NULL);
+
+  formatToken->length           = 0;
+  formatToken->alternateFlag    = FALSE;
+  formatToken->zeroPaddingFlag  = FALSE;
+  formatToken->leftAdjustedFlag = FALSE;
+  formatToken->blankFlag        = FALSE;
+  formatToken->signFlag         = FALSE;
+  formatToken->width            = 0;
+  formatToken->widthArgument    = FALSE;
+  formatToken->precision        = 0;
+  formatToken->lengthType       = FORMAT_LENGTH_TYPE_INTEGER;
+  formatToken->quoteChar        = NUL;
+  formatToken->conversionChar   = NUL;
+
+  nextFormat = format;
+
+  // format start character
+  assert((*nextFormat) == '%');
+  ADD_CHAR(formatToken,(*nextFormat));
+  nextFormat++;
+
+  // flags
+  while (   ((*nextFormat) != NUL)
+         && (   ((*nextFormat) == '#')
+             || ((*nextFormat) == '0')
+             || ((*nextFormat) == '-')
+             || ((*nextFormat) == ' ')
+             || ((*nextFormat) == '+')
+            )
+        )
+  {
+    ADD_CHAR(formatToken,(*nextFormat));
+    switch (*nextFormat)
+    {
+      case '#': formatToken->alternateFlag    = TRUE; break;
+      case '0': formatToken->zeroPaddingFlag  = TRUE; break;
+      case '-': formatToken->leftAdjustedFlag = TRUE; break;
+      case ' ': formatToken->blankFlag        = TRUE; break;
+      case '+': formatToken->blankFlag        = TRUE; break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("format '%s': token '%c'",format,*nextFormat);
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
+    nextFormat++;
+  }
+
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  // width, precision
+  while (   ((*nextFormat) != NUL)
+         && isdigit((int)(*nextFormat))
+        )
+  {
+    ADD_CHAR(formatToken,(*nextFormat));
+
+    formatToken->width=formatToken->width*10+((*nextFormat)-'0');
+    nextFormat++;
+  }
+
+  // precision
+  if (   ((*nextFormat) != NUL)
+      && ((*nextFormat) == '.')
+     )
+  {
+    ADD_CHAR(formatToken,(*nextFormat));
+    nextFormat++;
+    while (isdigit((int)(*nextFormat)))
+    {
+      ADD_CHAR(formatToken,(*nextFormat));
+
+      formatToken->precision=formatToken->precision*10+((*nextFormat)-'0');
+      nextFormat++;
+    }
+  }
+
+  // quoting character
+  if (   ((*nextFormat) != NUL)
+      && !isalpha(*nextFormat)
+      && ((*nextFormat) != '%')
+      && (   (*(nextFormat+1) == 's')
+          || (*(nextFormat+1) == 'S')
+         )
+     )
+  {
+    formatToken->quoteChar = (*nextFormat);
+    nextFormat++;
+  }
+
+  // length modifier
+  if ((*nextFormat) != NUL)
+  {
+    if      (((*nextFormat) == 'h') && (*((nextFormat+1)) == 'h'))
+    {
+      ADD_CHAR(formatToken,(*(nextFormat+0)));
+      ADD_CHAR(formatToken,(*(nextFormat+1)));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      nextFormat += 2;
+    }
+    else if ((*nextFormat) == 'h')
+    {
+      ADD_CHAR(formatToken,(*nextFormat));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      nextFormat++;
+    }
+    else if (((*nextFormat) == 'l') && (*((nextFormat+1)) == 'l'))
+    {
+      ADD_CHAR(formatToken,(*(nextFormat+0)));
+      ADD_CHAR(formatToken,(*(nextFormat+1)));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_LONGLONG;
+      nextFormat += 2;
+    }
+    else if ((*nextFormat) == 'l')
+    {
+      ADD_CHAR(formatToken,(*nextFormat));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_LONG;
+      nextFormat++;
+    }
+    else if ((*nextFormat) == 'q')
+    {
+      ADD_CHAR(formatToken,(*nextFormat));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_QUAD;
+      nextFormat++;
+    }
+    else if ((*nextFormat) == 'j')
+    {
+      ADD_CHAR(formatToken,(*nextFormat));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      nextFormat++;
+    }
+    else if ((*nextFormat) == 'z')
+    {
+      ADD_CHAR(formatToken,(*nextFormat));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      nextFormat++;
+    }
+    else if ((*nextFormat) == 't')
+    {
+      ADD_CHAR(formatToken,(*nextFormat));
+
+      formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
+      nextFormat++;
+    }
+    #if   defined(PLATFORM_LINUX)
+    #elif defined(PLATFORM_WINDOWS)
+      if (stringStartsWith(nextFormat,"I64"))
+      {
+        ADD_CHAR(formatToken,(*(nextFormat+0)));
+        ADD_CHAR(formatToken,(*(nextFormat+1)));
+        ADD_CHAR(formatToken,(*(nextFormat+2)));
+
+        formatToken->lengthType = FORMAT_LENGTH_TYPE_LONGLONG;
+        nextFormat += 3;
+      }
+    #endif /* PLATFORM_... */
+  }
+
+  // conversion character
+  if ((*nextFormat) != NUL)
+  {
+    switch (*nextFormat)
+    {
+      case 'S':
+        ADD_CHAR(formatToken,'s');
+        formatToken->conversionChar = 'S';
+        break;
+      default:
+        ADD_CHAR(formatToken,(*nextFormat));
+        formatToken->conversionChar = (*nextFormat);
+        break;
+    }
+    nextFormat++;
+  }
+
+  ADD_CHAR(formatToken,NUL);
+
+  return nextFormat;
+
+  #undef ADD_CHAR
+}
+
+/***********************************************************************\
 * Name   : parseString
 * Purpose: parse a string (like scanf)
 * Input  : String       - string
@@ -1562,7 +1786,7 @@ LOCAL bool parseString(const char *string,
       if ((*nextFormat) == '%')
       {
         // get format token
-        nextFormat = parseNextFormatToken(nextFormat,&formatToken);
+        nextFormat = getNextParseToken(nextFormat,&formatToken);
 
         // parse string and store values
         switch (formatToken.conversionChar)
