@@ -2239,8 +2239,8 @@ Dprintf.dprintf("");
               for (UUIDIndexData uuidIndexData : uuidIndexDataList)
               {
                 TreeItem uuidTreeItem = Widgets.updateInsertTreeItem(widgetStorageTree,
-                                                                     Widgets.TREE_ITEM_FLAG_FOLDER,
                                                                      indexDataComparator,
+                                                                     Widgets.TREE_ITEM_FLAG_FOLDER,
                                                                      uuidIndexData,
                                                                      uuidIndexData.name,
                                                                      "",  // hostName
