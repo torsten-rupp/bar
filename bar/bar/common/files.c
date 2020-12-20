@@ -1862,7 +1862,7 @@ Errors __File_openCString(const char *__fileName__,
       #undef FLAGS
       if (fileDescriptor == -1)
       {
-        return getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+        return getLastError(ERROR_CODE_CREATE_FILE,fileName);
       }
 
       // init handle
@@ -1916,7 +1916,7 @@ Errors __File_openCString(const char *__fileName__,
         fileDescriptor = open(fileName,FLAGS,0);
         if (fileDescriptor == -1)
         {
-          return getLastError(ERROR_CODE_OPEN_FILE,fileHandle->name);
+          return getLastError(ERROR_CODE_OPEN_FILE,String_cString(fileHandle->name));
         }
 
         #if   defined(PLATFORM_LINUX)
