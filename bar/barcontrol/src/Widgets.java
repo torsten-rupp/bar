@@ -7614,10 +7614,10 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param data item data
    * @param values values list
    */
-  public static <T>  void updateTableItem(final TableItem tableItem,
-                                          final T    data,
-                                          final Object... values
-                                         )
+  public static <T> void updateTableItem(final TableItem tableItem,
+                                         final T         data,
+                                         final Object... values
+                                        )
   {
     updateTableItem(tableItem,data,(Image)null,values);
   }
@@ -8408,7 +8408,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param index insert before this index in table [0..n-1] or -1
    * @param data data
    * @param image image
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return new table item
    */
@@ -8532,7 +8532,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param tree tree widget
    * @param index index (0..n)
    * @param data data
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @return new tree item
    */
   public static TreeItem insertTreeItem(Tree      tree,
@@ -8549,7 +8549,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param tree tree widget
    * @param comparator tree item comperator
    * @param data item data
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return new table item
    */
@@ -8664,7 +8664,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param tree tree widget
    * @param data data
    * @param image image
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @return new tree item
    */
   public static TreeItem addTreeItem(Tree      tree,
@@ -8680,7 +8680,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   /** add tree item at end
    * @param tree tree widget
    * @param data data
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @return new tree item
    */
   public static TreeItem addTreeItem(Tree      tree,
@@ -8697,7 +8697,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param index index (0..n)
    * @param data data
    * @param image image
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return new tree item
    */
@@ -8841,7 +8841,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param comparator comparator to get tree item index in tree item
    * @param data data
    * @param image image
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return new tree item
    */
@@ -8866,7 +8866,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param parentTreeItem parent tree item
    * @param index index (0..n)
    * @param data data
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return new tree item
    */
@@ -8884,7 +8884,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param parentTreeItem parent tree item
    * @param data data
    * @param image image
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return new tree item
    */
@@ -8901,7 +8901,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   /** add sub-tree item at end
    * @param parentTreeItem parent tree item
    * @param data data
-   * @param folderFlag TRUE iff foler
+   * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return new tree item
    */
@@ -11207,7 +11207,7 @@ Dprintf.dprintf("");
   }
 
   /** clearSelected tree items
-   * @param tree table
+   * @param tree tree
    */
   public static <T> void clearSelectedTreeItems(final Tree tree)
   {
@@ -11227,7 +11227,7 @@ Dprintf.dprintf("");
   }
 
   /** set selected tree item
-   * @param tree table
+   * @param tree tree
    * @param data item data
    */
   public static <T> void setSelectedTreeItem(final Tree tree, final T data)
@@ -11250,6 +11250,28 @@ Dprintf.dprintf("");
                 break;
               }
             }
+          }
+        }
+      });
+    }
+  }
+
+  /** set selected tree item
+   * @param tree tree
+   * @param treeItem tree item
+   */
+  public static <T> void setSelectedTreeItem(final Tree tree, final TreeItem treeItem)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            tree.deselectAll();
+            tree.setSelection(treeItem);
           }
         }
       });
