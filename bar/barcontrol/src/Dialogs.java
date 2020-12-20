@@ -38,6 +38,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.Collection;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -52,20 +53,21 @@ import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
-import org.eclipse.swt.events.TraverseEvent;
-import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.events.TraverseEvent;
+import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Cursor;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Combo;
@@ -173,9 +175,11 @@ class SimpleBusyDialog
         button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close();
@@ -1321,6 +1325,7 @@ class Dialogs
       // add escape key handler
       dialog.addTraverseListener(new TraverseListener()
       {
+        @Override
         public void keyTraversed(TraverseEvent traverseEvent)
         {
           Shell widget = (Shell)traverseEvent.widget;
@@ -1345,6 +1350,7 @@ class Dialogs
       // add close handler to get result
       dialog.addListener(SWT.Close,new Listener()
       {
+        @Override
         public void handleEvent(Event event)
         {
           // close the dialog
@@ -1355,6 +1361,7 @@ class Dialogs
       // add result handler
       dialog.addDisposeListener(new DisposeListener()
       {
+        @Override
         public void widgetDisposed(DisposeEvent disposeEvent)
         {
           // get result
@@ -1513,10 +1520,12 @@ class Dialogs
           button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               close(dialog);
             }
+            @Override
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
             }
@@ -1632,15 +1641,18 @@ class Dialogs
           text.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
           text.addMouseListener(new MouseListener()
           {
+            @Override
             public void mouseDoubleClick(MouseEvent mouseEvent)
             {
               Text widget = (Text)mouseEvent.widget;
 
               widget.setSelection(0,widget.getText().length());
             }
+            @Override
             public void mouseDown(MouseEvent mouseEvent)
             {
             }
+            @Override
             public void mouseUp(MouseEvent mouseEvent)
             {
             }
@@ -1684,10 +1696,12 @@ class Dialogs
           button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               close(dialog);
             }
+            @Override
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
             }
@@ -1945,12 +1959,14 @@ class Dialogs
           button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Button widget = (Button)selectionEvent.widget;
 
               close(dialog);
             }
+            @Override
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
             }
@@ -2162,10 +2178,12 @@ class Dialogs
           button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               close(dialog,true);
             }
+            @Override
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
             }
@@ -2177,10 +2195,12 @@ class Dialogs
           button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
           button.addSelectionListener(new SelectionListener()
           {
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               close(dialog,false);
             }
+            @Override
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
             }
@@ -2729,9 +2749,11 @@ class Dialogs
           combo.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,4)); column++;
           combo.addSelectionListener(new SelectionListener()
           {
+            @Override
             public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
             }
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Combo widget = (Combo)selectionEvent.widget;
@@ -2756,9 +2778,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,true);
@@ -2770,9 +2794,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,60,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,false);
@@ -2968,9 +2994,11 @@ class Dialogs
                   button.setLayoutData(new TableLayoutData(row,0,TableLayoutData.W)); row++;
                   button.addSelectionListener(new SelectionListener()
                   {
+                    @Override
                     public void widgetDefaultSelected(SelectionEvent selectionEvent)
                     {
                     }
+                    @Override
                     public void widgetSelected(SelectionEvent selectionEvent)
                     {
                       Button widget = (Button)selectionEvent.widget;
@@ -3014,9 +3042,11 @@ class Dialogs
               button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
               button.addSelectionListener(new SelectionListener()
               {
+                @Override
                 public void widgetDefaultSelected(SelectionEvent selectionEvent)
                 {
                 }
+                @Override
                 public void widgetSelected(SelectionEvent selectionEvent)
                 {
                   close(dialog,true);
@@ -3031,9 +3061,11 @@ class Dialogs
               button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
               button.addSelectionListener(new SelectionListener()
               {
+                @Override
                 public void widgetDefaultSelected(SelectionEvent selectionEvent)
                 {
                 }
+                @Override
                 public void widgetSelected(SelectionEvent selectionEvent)
                 {
                   close(dialog,false);
@@ -3067,9 +3099,11 @@ class Dialogs
                 button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,textWidth+20,SWT.DEFAULT)); column++;
                 button.addSelectionListener(new SelectionListener()
                 {
+                  @Override
                   public void widgetDefaultSelected(SelectionEvent selectionEvent)
                   {
                   }
+                  @Override
                   public void widgetSelected(SelectionEvent selectionEvent)
                   {
                     Button widget = (Button)selectionEvent.widget;
@@ -3364,9 +3398,11 @@ class Dialogs
             button.setLayoutData(new TableLayoutData(i,0,TableLayoutData.W));
             button.addSelectionListener(new SelectionListener()
             {
+              @Override
               public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
               }
+              @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Button widget = (Button)selectionEvent.widget;
@@ -3391,10 +3427,12 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,true);
           }
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
@@ -3405,10 +3443,12 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,false);
           }
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
@@ -3558,7 +3598,9 @@ class Dialogs
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
 
       // password
-      final Text   widgetPassword1,widgetPassword2;
+      final Text   widgetPassword1Hidden,widgetPassword2Hidden;
+      final Text   widgetPassword1Visible;
+      final Button widgetShowPassword;
       final Button widgetOkButton;
       row0 = 0;
       if (message != null)
@@ -3591,8 +3633,11 @@ class Dialogs
         label.setText((text1 != null) ? text1 : Dialogs.tr("Password")+":");
         label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
 
-        widgetPassword1 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
-        widgetPassword1.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        widgetPassword1Hidden  = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+        widgetPassword1Hidden.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        widgetPassword1Visible = new Text(composite,SWT.LEFT|SWT.BORDER);
+        widgetPassword1Visible.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
+        widgetPassword1Visible.setVisible(false);
         row1++;
 
         if (text2 != null)
@@ -3601,15 +3646,57 @@ class Dialogs
           label.setText(text2);
           label.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.W));
 
-          widgetPassword2 = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
-          widgetPassword2.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
-
+          widgetPassword2Hidden  = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
+          widgetPassword2Hidden.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT,SWT.DEFAULT,SWT.DEFAULT));
           row1++;
         }
         else
         {
-          widgetPassword2 = null;
+          widgetPassword2Hidden  = null;
         }
+
+        widgetShowPassword = new Button(composite,SWT.CHECK);
+        widgetShowPassword.setText(tr("show password"));
+        widgetShowPassword.setLayoutData(new TableLayoutData(row1,1,TableLayoutData.WE));
+        widgetShowPassword.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Button widget = (Button)selectionEvent.widget;
+
+            if (widget.getSelection())
+            {
+              // show passwords
+              widgetPassword1Visible.setText(widgetPassword1Hidden.getText());
+              widgetPassword1Hidden.setVisible(false);
+              widgetPassword1Visible.setVisible(true);
+
+              if (text2 != null)
+              {
+                widgetPassword2Hidden.setEnabled(false);
+                widgetPassword2Hidden.setText("");
+              }
+            }
+            else
+            {
+              // hide passwords
+              widgetPassword1Hidden.setText(widgetPassword1Visible.getText());
+              widgetPassword1Hidden.setVisible(true);
+              widgetPassword1Visible.setVisible(false);
+
+              if (text2 != null)
+              {
+                widgetPassword2Hidden.setText(widgetPassword1Visible.getText());
+                widgetPassword2Hidden.setEnabled(true);
+              }
+            }
+          }
+        });
       }
       row0++;
 
@@ -3623,15 +3710,17 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            String password1 = widgetPassword1.getText();
+            String password1 = widgetShowPassword.getSelection() ? widgetPassword1Visible.getText() : widgetPassword1Hidden.getText();
             if (text2 != null)
             {
-              String password2 = widgetPassword2.getText();
+              String password2 = widgetPassword2Hidden.getText();
               if (password1.equals(password2))
               {
                 close(dialog,password1);
@@ -3649,9 +3738,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -3660,38 +3751,80 @@ class Dialogs
       }
 
       // install handlers
-      widgetPassword1.addSelectionListener(new SelectionListener()
+      SelectionListener selectionListener1 = new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           if (text2 != null)
           {
-            widgetPassword2.forceFocus();
+            if (widgetShowPassword.getSelection())
+            {
+              widgetOkButton.forceFocus();
+            }
+            else
+            {
+              widgetPassword2Hidden.forceFocus();
+            }
           }
           else
           {
             widgetOkButton.forceFocus();
           }
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
-      });
+      };
+      widgetPassword1Hidden.addSelectionListener(selectionListener1);
+      widgetPassword1Visible.addSelectionListener(selectionListener1);
       if (text2 != null)
       {
-        widgetPassword2.addSelectionListener(new SelectionListener()
+        SelectionListener selectionListener2 = new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             widgetOkButton.forceFocus();
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
           }
-        });
+        };
+        widgetPassword2Hidden.addSelectionListener(selectionListener2);
       }
 
-      widgetPassword1.setFocus();
+      ModifyListener modifyListener = new ModifyListener()
+      {
+        @Override
+        public void modifyText(ModifyEvent modifyEvent)
+        {
+          String password1,password2;
+
+          if (widgetShowPassword.getSelection())
+          {
+            widgetOkButton.setEnabled(true);
+          }
+          else
+          {
+            widgetOkButton.setEnabled(widgetPassword1Hidden.getText().equals(widgetPassword2Hidden.getText()));
+          }
+        }
+      };
+      widgetPassword1Hidden.addModifyListener(modifyListener);
+      widgetPassword1Visible.addModifyListener(modifyListener);
+      widgetPassword2Hidden.addModifyListener(modifyListener);
+
+      if (widgetShowPassword.getSelection())
+      {
+        widgetPassword1Visible.setFocus();
+      }
+      else
+      {
+        widgetPassword1Hidden.setFocus();
+      }
       return (String)run(dialog,null);
     }
     else
@@ -3876,9 +4009,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String name      = widgetName.getText();
@@ -3903,9 +4038,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -3916,16 +4053,19 @@ class Dialogs
       // install handlers
       widgetName.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           widgetPassword1.forceFocus();
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
       });
       widgetPassword1.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           if (text2 != null)
@@ -3937,6 +4077,7 @@ class Dialogs
             widgetOkButton.forceFocus();
           }
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
@@ -3945,10 +4086,12 @@ class Dialogs
       {
         widgetPassword2.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             widgetOkButton.forceFocus();
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
           }
@@ -4518,9 +4661,11 @@ class Dialogs
 
         SelectionListener selectionListener = new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             TableColumn tableColumn = (TableColumn)selectionEvent.widget;
@@ -4664,9 +4809,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -4969,6 +5116,7 @@ class Dialogs
       dragSource.setTransfer(new Transfer[]{TextTransfer.getInstance()});
       dragSource.addDragListener(new DragSourceListener()
       {
+        @Override
         public void dragStart(DragSourceEvent dragSourceEvent)
         {
           Point point = new Point(dragSourceEvent.x,dragSourceEvent.y);
@@ -4982,6 +5130,7 @@ class Dialogs
             dragSourceEvent.doit = false;
           }
         }
+        @Override
         public void dragSetData(DragSourceEvent dragSourceEvent)
         {
           Point point         = new Point(dragSourceEvent.x,dragSourceEvent.y);
@@ -4991,6 +5140,7 @@ class Dialogs
             dragSourceEvent.data = ((T)dragFile[0]).getAbsolutePath();
           }
         }
+        @Override
         public void dragFinished(DragSourceEvent dragSourceEvent)
         {
           dragFile[0] = null;
@@ -5000,12 +5150,15 @@ class Dialogs
       dropTarget.setTransfer(new Transfer[]{TextTransfer.getInstance()});
       dropTarget.addDropListener(new DropTargetAdapter()
       {
+        @Override
         public void dragLeave(DropTargetEvent dropTargetEvent)
         {
         }
+        @Override
         public void dragOver(DropTargetEvent dropTargetEvent)
         {
         }
+        @Override
         public void drop(DropTargetEvent dropTargetEvent)
         {
           if (dropTargetEvent.data != null)
@@ -5584,9 +5737,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,column,TableLayoutData.E));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String path = directory(dialog,Dialogs.tr("Select path"));
@@ -5609,9 +5764,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,widgetPath.getText());
@@ -5623,9 +5780,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -5636,12 +5795,14 @@ class Dialogs
       // install handlers
       widgetPath.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           Text widget = (Text)selectionEvent.widget;
 
           widgetOkButton.setFocus();
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
@@ -5771,9 +5932,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,widgetString.getText());
@@ -5785,9 +5948,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -5812,6 +5977,7 @@ class Dialogs
       });
       widgetString.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           Text widget = (Text)selectionEvent.widget;
@@ -5826,6 +5992,7 @@ class Dialogs
             widgetOkButton.setEnabled(false);
           }
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
@@ -5992,9 +6159,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,widgetString.getText());
@@ -6006,9 +6175,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -6019,12 +6190,14 @@ class Dialogs
       // install handlers
       widgetString.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           Text widget = (Text)selectionEvent.widget;
 
           widgetOkButton.setFocus();
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
@@ -6174,9 +6347,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,widgetText.getText());
@@ -6188,9 +6363,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -6358,9 +6535,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,new Integer(widgetInteger.getSelection()));
@@ -6372,9 +6551,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -6385,10 +6566,12 @@ class Dialogs
       // install handlers
       widgetInteger.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           widgetOkButton.setFocus();
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
@@ -6523,9 +6706,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             int newValue = (widgetSlider.getSelection() / increment) * increment;
@@ -6538,9 +6723,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,new Integer(value));
@@ -6551,10 +6738,12 @@ class Dialogs
       // install handlers
       widgetValue.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           widgetOkButton.setFocus();
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
@@ -6664,9 +6853,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String selection[] = widgetList.getSelection();
@@ -6679,9 +6870,11 @@ class Dialogs
         button.setLayoutData(new TableLayoutData(0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         button.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             close(dialog,null);
@@ -6692,18 +6885,21 @@ class Dialogs
       // install handlers
       widgetList.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           List widget = (List)selectionEvent.widget;
 
           widgetOkButton.setFocus();
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
       });
       widgetList.addMouseListener(new MouseListener()
       {
+        @Override
         public void mouseDoubleClick(MouseEvent mouseEvent)
         {
           List widget = (List)mouseEvent.widget;
@@ -6711,6 +6907,7 @@ class Dialogs
           String selection[] = widgetList.getSelection();
           close(dialog,(selection.length > 0) ? selection[0] : (String)null);
         }
+        @Override
         public void mouseDown(MouseEvent mouseEvent)
         {
         }
@@ -7145,9 +7342,11 @@ class Dialogs
         widgetOkButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
         widgetOkButton.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Calendar calendar = Calendar.getInstance();
@@ -7197,10 +7396,12 @@ class Dialogs
       // install handlers
       widgetDate.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           widgetOkButton.setFocus();
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
