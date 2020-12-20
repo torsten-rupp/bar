@@ -8130,7 +8130,7 @@ void Database_debugPrintInfo(void)
           if (!Thread_isNone(databaseNode->debug.pendingReads[i].threadId))
           {
             fprintf(stderr,
-                    "    pending r  %16lu thread '%s' (%s) at %s, %u\n",
+                    "    pending r  %16"PRIu64"lu thread '%s' (%s) at %s, %u\n",
                     databaseNode->debug.pendingReads[i].cycleCounter,
                     Thread_getName(databaseNode->debug.pendingReads[i].threadId),
                     Thread_getIdString(databaseNode->debug.pendingReads[i].threadId),
@@ -8153,7 +8153,7 @@ void Database_debugPrintInfo(void)
           if (!Thread_isNone(databaseNode->debug.reads[i].threadId))
           {
             fprintf(stderr,
-                    "    locked  r  %16lu thread '%s' (%s) at %s, %u\n",
+                    "    locked  r  %16"PRIu64" thread '%s' (%s) at %s, %u\n",
                     databaseNode->debug.reads[i].cycleCounter,
                     Thread_getName(databaseNode->debug.reads[i].threadId),
                     Thread_getIdString(databaseNode->debug.reads[i].threadId),
@@ -8176,7 +8176,7 @@ void Database_debugPrintInfo(void)
           if (!Thread_isNone(databaseNode->debug.pendingReadWrites[i].threadId))
           {
             fprintf(stderr,
-                    "    pending rw %16lu thread '%s' (%s) at %s, %u\n",
+                    "    pending rw %16"PRIu64" thread '%s' (%s) at %s, %u\n",
                     databaseNode->debug.pendingReadWrites[i].cycleCounter,
                     Thread_getName(databaseNode->debug.pendingReadWrites[i].threadId),
                     Thread_getIdString(databaseNode->debug.pendingReadWrites[i].threadId),
@@ -8199,7 +8199,7 @@ void Database_debugPrintInfo(void)
           if (!Thread_isNone(databaseNode->debug.readWrites[i].threadId))
           {
             fprintf(stderr,
-                    "    locked  rw %16lu thread '%s' (%s) at %s, %u\n",
+                    "    locked  rw %16"PRIu64" thread '%s' (%s) at %s, %u\n",
                     databaseNode->debug.readWrites[i].cycleCounter,
                     Thread_getName(databaseNode->debug.readWrites[i].threadId),
                     Thread_getIdString(databaseNode->debug.readWrites[i].threadId),
@@ -8252,7 +8252,7 @@ void Database_debugPrintInfo(void)
             case DATABASE_LOCK_TYPE_READ_WRITE: s = "RW"; break;
           }
           fprintf(stderr,
-                  "  last trigger %s %16lu thread '%s' (%s) at %s, %u\n",
+                  "  last trigger %s %16"PRIu64" thread '%s' (%s) at %s, %u\n",
                   s,
                   databaseNode->debug.lastTrigger.threadInfo.cycleCounter,
                   Thread_getName(databaseNode->debug.lastTrigger.threadInfo.threadId),
@@ -8301,7 +8301,7 @@ databaseNode->debug.lastTrigger.transactionCount
               case DATABASE_HISTORY_TYPE_UNLOCK:          s = "unlocked"; break;
             }
             fprintf(stderr,
-                    "    %-18s %16lu thread '%s' (%s) at %s, %u\n",
+                    "    %-18s %16"PRIu64" thread '%s' (%s) at %s, %u\n",
                     s,
                     databaseNode->debug.history[index].cycleCounter,
                     Thread_getName(databaseNode->debug.history[index].threadId),
