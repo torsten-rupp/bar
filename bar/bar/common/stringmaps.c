@@ -1782,7 +1782,7 @@ void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap)
               STRING_MAP_TYPE_NAMES[stringMap->entries[i].type],
               stringMap->entries[i].name,
               String_cString(stringMap->entries[i].value.text),
-              (unsigned long)stringMap->entries[i].value.data.p
+              (uintptr_t)stringMap->entries[i].value.data.p
              );
     }
   }
