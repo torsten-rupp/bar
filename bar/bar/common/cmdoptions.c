@@ -1151,19 +1151,19 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
         break;
       case CMD_OPTION_TYPE_FLAG:
         assertx(commandLineOptions[i].variable.flags != NULL,"%s",commandLineOptions[i].name);
-        commandLineOptions[i].defaultValue.flags = (*commandLineOptions[i].variable.flags,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.flags = (*commandLineOptions[i].variable.flags);
         break;
       case CMD_OPTION_TYPE_INCREMENT:
         assertx(commandLineOptions[i].variable.increment != NULL,"%s",commandLineOptions[i].name);
-        commandLineOptions[i].defaultValue.increment = (*commandLineOptions[i].variable.increment,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.increment = (*commandLineOptions[i].variable.increment);
         break;
       case CMD_OPTION_TYPE_ENUM:
         assertx(commandLineOptions[i].variable.enumeration != NULL,"%s",commandLineOptions[i].name);
-        commandLineOptions[i].defaultValue.enumeration = (*commandLineOptions[i].variable.enumeration,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.enumeration = (*commandLineOptions[i].variable.enumeration);
         break;
       case CMD_OPTION_TYPE_SELECT:
         assertx(commandLineOptions[i].variable.select != NULL,"%s",commandLineOptions[i].name);
-        commandLineOptions[i].defaultValue.select = (*commandLineOptions[i].variable.select,"%s",commandLineOptions[i].name);
+        commandLineOptions[i].defaultValue.select = (*commandLineOptions[i].variable.select);
         break;
       case CMD_OPTION_TYPE_SET:
         assertx(commandLineOptions[i].variable.set != NULL,"%s",commandLineOptions[i].name);
