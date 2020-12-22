@@ -75,7 +75,6 @@
 typedef struct
 {
   StorageInfo *storageInfo;
-//TODO: required?
   StringList  stderrList;
 } ExecuteIOInfo;
 
@@ -1217,10 +1216,14 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       TEXT_MACRO_X_INTEGER("%j1",       (j > 1) ? j-1 : 1,                       NULL);
     }
 
-    if ((storageInfo->jobOptions != NULL) && (storageInfo->jobOptions->alwaysCreateImageFlag || storageInfo->jobOptions->errorCorrectionCodesFlag))
+    if (   (storageInfo->jobOptions != NULL)
+        && (   storageInfo->jobOptions->alwaysCreateImageFlag
+            || storageInfo->jobOptions->errorCorrectionCodesFlag
+           )
+       )
     {
       // create medium image
-      printInfo(1,"Make medium image #%d with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
+      printInfo(1,"Create medium image #%u with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
       StringList_clear(&executeIOInfo.stderrList);
       error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imageCommand),
                                   textMacros.data,
@@ -1234,7 +1237,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
         logMessage(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
-                   "Make medium image: %s\n",
+                   "Create medium image #%u: %s",
+                   storageInfo->volumeNumber,
                    Error_getText(error)
                   );
         logLines(storageInfo->logHandle,
@@ -1250,6 +1254,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       }
       File_getInfo(&fileInfo,imageFileName);
       printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
+      logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Created medium image #%u",storageInfo->volumeNumber);
       storageInfo->opticalDisk.write.step++;
 
       if (storageInfo->jobOptions->errorCorrectionCodesFlag)
@@ -1269,7 +1274,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
-                     "Add ECC to image: %s\n",
+                     "Add ECC to image #%u: %s",
+                     storageInfo->volumeNumber,
                      Error_getText(error)
                     );
           logLines(storageInfo->logHandle,
@@ -1285,10 +1291,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         }
         File_getInfo(&fileInfo,imageFileName);
         printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Added error correction codes to medium image #%u",storageInfo->volumeNumber);
         storageInfo->opticalDisk.write.step++;
       }
 
-      // init macros
+      // update macros
       j = Thread_getNumberOfCores();
       TEXT_MACROS_INIT(textMacros)
       {
@@ -1334,7 +1341,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
-                     "Blank medium: %s\n",
+                     "Blank medium #%u: %s",
+                     storageInfo->volumeNumber,
                      Error_getText(error)
                     );
           logLines(storageInfo->logHandle,
@@ -1349,6 +1357,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           return error;
         }
         printInfo(1,"OK\n");
+        logMessage(storageInfo->logHandle,LOG_TYPE_ALWAYS,"Blanked medium image #%u",storageInfo->volumeNumber);
         storageInfo->opticalDisk.write.step++;
       }
 
@@ -1378,7 +1387,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
-                     "Write image to medium: %s\n",
+                     "Write image to medium #%u: %s",
+                     storageInfo->volumeNumber,
                      Error_getText(error)
                     );
           logLines(storageInfo->logHandle,
@@ -1406,6 +1416,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         StringList_done(&executeIOInfo.stderrList);
         return error;
       }
+      logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written medium image #%u",storageInfo->volumeNumber);
       storageInfo->opticalDisk.write.step++;
     }
     else
@@ -1425,10 +1436,9 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         updateStorageStatusInfo(storageInfo);
       }
 
-      // blank mediuam
       if (storageInfo->jobOptions->blankFlag)
       {
-        // add error-correction codes to medium image
+        // blank mediuam
         printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
@@ -1443,7 +1453,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
-                     "Blank medium: %s\n",
+                     "Blank medium #%u: %s",
+                     storageInfo->volumeNumber,
                      Error_getText(error)
                     );
           logLines(storageInfo->logHandle,
@@ -1458,6 +1469,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           return error;
         }
         printInfo(1,"OK\n");
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked medium image #%u",storageInfo->volumeNumber);
         storageInfo->opticalDisk.write.step++;
       }
 
@@ -1499,7 +1511,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       {
         logMessage(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
-                   "Write image to medium: %s\n",
+                   "Write image to medium #%u: %s",
+                   storageInfo->volumeNumber,
                    Error_getText(error)
                   );
         logLines(storageInfo->logHandle,
@@ -1513,6 +1526,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         StringList_done(&executeIOInfo.stderrList);
         return error;
       }
+      logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written medium image #%u",storageInfo->volumeNumber);
       storageInfo->opticalDisk.write.step++;
     }
 
