@@ -2861,7 +2861,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                           &jobNode->job.options.mountList,
                           NULL,
                           NULL,
-                          (ListNodeDuplicateFunction)duplicateMountNode,
+                          (ListNodeDuplicateFunction)Configuration_duplicateMountNode,
                           NULL
                          );
               }
@@ -2915,7 +2915,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     }
 
     // free resources
-    List_done(&mountList,(ListNodeFreeFunction)freeMountNode,NULL);
+    List_done(&mountList,(ListNodeFreeFunction)Configuration_freeMountNode,NULL);
     List_done(&expirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
   }
   while (   !INDEX_ID_IS_NONE(expiredEntityId)
@@ -5684,7 +5684,7 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
                        CONFIG_VALUE_INDEX_NONE,
                        String_cString(name)
                       );
-  if (i != CONFIG_VALUE_INDEX_NONE)
+  if (i == CONFIG_VALUE_INDEX_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config '%S'",name);
     String_delete(value);
@@ -5692,13 +5692,13 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  if (!ConfigValue_parse(CONFIG_VALUES,
+  if (!ConfigValue_parse(&CONFIG_VALUES[i],
                          NULL, // sectionName
                          String_cString(value),
                          CALLBACK_(NULL,NULL),  // errorFunction
                          CALLBACK_(NULL,NULL),  // warningFunction
                          NULL,
-NULL // commentLineList  //variable
+                         NULL // commentLineList  //variable
                         )
      )
   {
@@ -6373,8 +6373,9 @@ LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHand
       return;
     }
 
-    // delete storage server
-    List_removeAndFree(&globalOptions.maintenanceList,maintenanceNode,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
+    // delete mainteance
+    List_remove(&globalOptions.maintenanceList,maintenanceNode);
+    Configuration_deleteMaintenanceNode(maintenanceNode);
   }
 
   // update config file
@@ -9022,7 +9023,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
                          CONFIG_VALUE_INDEX_NONE,
                          String_cString(name)
                         );
-    if (i != CONFIG_VALUE_INDEX_NONE)
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid job config '%S' value: '%S'",name,value);
       Job_listUnlock();
@@ -9031,7 +9032,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
       return;
     }
 
-    if (ConfigValue_parse(JOB_CONFIG_VALUES,
+    if (ConfigValue_parse(&JOB_CONFIG_VALUES[i],
                           NULL, // sectionName
                           String_cString(value),
                           CALLBACK_(NULL,NULL),  // errorFunction
@@ -10823,7 +10824,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // clear mount list
-    List_clear(&jobNode->job.options.mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
+    List_clear(&jobNode->job.options.mountList,CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
 
     // notify about changed lists
     Job_mountChanged(jobNode);
@@ -10903,7 +10904,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     }
 
     // add to mount list
-    mountNode = newMountNode(name,device);
+    mountNode = Configuration_newMountNode(name,device);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,
@@ -11097,7 +11098,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
 
     // remove from mount list and free
     List_remove(&jobNode->job.options.mountList,mountNode);
-    deleteMountNode(mountNode);
+    Configuration_deleteMountNode(mountNode);
 
     // notify about changed lists
     Job_mountChanged(jobNode);
@@ -12932,7 +12933,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
                          CONFIG_VALUE_INDEX_NONE,
                          String_cString(name)
                         );
-    if (i != CONFIG_VALUE_INDEX_NONE)
+    if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
       Job_listUnlock();
@@ -12941,7 +12942,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
       return;
     }
 
-    if (ConfigValue_parse(JOB_CONFIG_VALUES,
+    if (ConfigValue_parse(&JOB_CONFIG_VALUES[i],
                           "schedule",
                           String_cString(value),
                           CALLBACK_(NULL,NULL),  // errorFunction

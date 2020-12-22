@@ -975,7 +975,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   String_clear(jobOptions->excludeListFileName);
   String_clear(jobOptions->excludeCommand);
 
-  List_clear(&jobOptions->mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
+  List_clear(&jobOptions->mountList,CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
   PatternList_clear(&jobOptions->compressExcludePatternList);
   DeltaSourceList_clear(&jobOptions->deltaSourceList);
   List_clear(&jobOptions->scheduleList,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
@@ -1842,7 +1842,8 @@ bool Job_read(JobNode *jobNode)
                                   &i0,
                                   &i1
                                  );
-      assertx(i == CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
+      UNUSED_VARIABLE(i);
 
       // new schedule
       scheduleNode = newScheduleNode();
@@ -1952,7 +1953,8 @@ bool Job_read(JobNode *jobNode)
                                   &i0,
                                   &i1
                                  );
-      assertx(i == CONFIG_VALUE_INDEX_NONE,"unknown section 'persistence'");
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'persistence'");
+      UNUSED_VARIABLE(i);
 
       if (Archive_parseType(String_cString(s),&archiveType,NULL))
       {
@@ -2600,7 +2602,7 @@ void Job_initOptions(JobOptions *jobOptions)
                      &globalOptions.mountList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL)
                     );
   PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
                             &globalOptions.compressExcludePatternList,
@@ -2706,7 +2708,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      &fromJobOptions->mountList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK_((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL)
                     );
   PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
                             &fromJobOptions->compressExcludePatternList,
@@ -2834,7 +2836,7 @@ void Job_doneOptions(JobOptions *jobOptions)
   List_done(&jobOptions->scheduleList,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobOptions->deltaSourceList);
   PatternList_done(&jobOptions->compressExcludePatternList);
-  List_done(&jobOptions->mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
+  List_done(&jobOptions->mountList,CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
 
   String_delete(jobOptions->excludeCommand);
   String_delete(jobOptions->excludeListFileName);
