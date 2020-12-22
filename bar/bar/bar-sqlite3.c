@@ -565,7 +565,7 @@ LOCAL void checkDatabaseIntegrity(DatabaseHandle *databaseHandle)
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
-                           "PRAGMA integrit_check;"
+                           "PRAGMA integrity_check;"
                           );
   if (error == ERROR_NONE)
   {
