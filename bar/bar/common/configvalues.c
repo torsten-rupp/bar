@@ -29,7 +29,24 @@
 
 /***************************** Datatypes ******************************/
 
+// coments list
+typedef struct CommentsNode
+{
+  LIST_NODE_HEADER(struct CommentsNode);
+
+  const ConfigValue *configValue;
+  StringList        commentList;
+} CommentsNode;
+
+typedef struct
+{
+  LIST_HEADER(CommentsNode);
+
+//  Semaphore lock;
+} CommentsList;
+
 /***************************** Variables ******************************/
+LOCAL CommentsList commentsList;
 
 /******************************* Macros *******************************/
 #define ITERATE_UNITS(unit,units) \
@@ -100,6 +117,25 @@
 #ifdef __GNUG__
 extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : freeCommentsNode
+* Purpose: free comments node
+* Input  : commentsNode - comments node
+*          userData     - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeCommentsNode(CommentsNode *commentsNode, void *userData)
+{
+  assert(commentsNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  StringList_done(&commentsNode->commentList);
+}
 
 /***********************************************************************\
 * Name   : reportMessage
@@ -1639,10 +1675,9 @@ LOCAL bool processValue(const ConfigValue    *configValue,
 /***********************************************************************\
 * Name   : writeCommentLines
 * Purpose: write comment lines
-* Input  : fileHandle         - file handle
-*          indent             - indention
-*          commentList        - comment lines list
-*          defaultCommentList - default comment lines list
+* Input  : fileHandle  - file handle
+*          indent      - indention
+*          commentList - comment lines list
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1650,23 +1685,20 @@ LOCAL bool processValue(const ConfigValue    *configValue,
 
 LOCAL Errors writeCommentLines(FileHandle       *fileHandle,
                                uint             indent,
-                               const StringList *commentList,
-                               const StringList *defaultCommentList
+                               const StringList *commentList
                               )
 {
-  const StringList *stringList;
-  Errors           error;
-  StringNode       *iterator;
-  String           string;
+  Errors     error;
+  StringNode *iterator;
+  String     string;
 
   assert(fileHandle != NULL);
 
   error = ERROR_NONE;
 
-  stringList = ((commentList != NULL) && !StringList_isEmpty(commentList)) ? commentList : defaultCommentList;
-  if (stringList != NULL)
+  if (commentList != NULL)
   {
-    STRINGLIST_ITERATEX(stringList,iterator,string,error == ERROR_NONE)
+    STRINGLIST_ITERATEX(commentList,iterator,string,error == ERROR_NONE)
     {
       error = File_printLine(fileHandle,"%*C# %S",indent,' ',string);
     }
@@ -1699,7 +1731,7 @@ LOCAL Errors flushCommentLines(FileHandle *fileHandle,
   error = ERROR_NONE;
   if (commentList != NULL)
   {
-    error = writeCommentLines(fileHandle,indent,commentList,NULL);
+    error = writeCommentLines(fileHandle,indent,commentList);
     StringList_clear(commentList);
   }
 
@@ -1726,6 +1758,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
                         const StringList  *commentList
                        )
 {
+  const CommentsNode *commentsNode;
   Errors error;
   union
   {
@@ -1746,6 +1779,9 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 
   assert(fileHandle != NULL);
   assert(configValue != NULL);
+
+  // find comments
+  commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
 
   error = ERROR_NONE;
   switch (configValue->type)
@@ -1787,16 +1823,18 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           value = value/unit->factor;
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
-        if (value!=0)
+        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
+        if (value != 0)
         {
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %d%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
@@ -1836,16 +1874,17 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           value = value/unit->factor;
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
-        if (value!=0)
+        if (value != 0)
         {
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %"PRIi64"%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
@@ -1885,16 +1924,17 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           value = value/unit->factor;
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
-        if (value!=0)
+        if (value != 0)
         {
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %"PRIi64"%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
@@ -1926,16 +1966,17 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           value = (*configValue->variable.b);
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
         if (value)
         {
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,value ? "yes" : "no");
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
@@ -1981,16 +2022,17 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           return FALSE;
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
-        if (value!=0)
+        if (value != 0)
         {
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,select->name);
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
@@ -2031,16 +2073,17 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           return FALSE;
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
-        if (value!=0)
+        if (value != 0)
         {
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,select->name);
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
       }
@@ -2052,6 +2095,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         const ConfigValueSet *configValueSet;
 
         // get value
+        value = 0L;
         if      (configValue->offset >= 0)
         {
           if      (variable != NULL)
@@ -2083,7 +2127,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         {
           if ((value & configValueSet->value) == configValueSet->value)
           {
-            if (String_length(s) > 0L) String_appendChar(s,',');
+            if (!String_isEmpty(s)) String_appendChar(s,',');
             String_appendCString(s,configValueSet->name);
           }
         }
@@ -2095,16 +2139,17 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           }
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
         if (!String_isEmpty(s))
         {
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %s",indent,' ',configValue->name,String_cString(s));
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
 
@@ -2141,8 +2186,11 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           String_setCString(value,*configValue->variable.cString);
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
         if (!String_isEmpty(value))
         {
           String_escape(value,
@@ -2154,12 +2202,10 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
                       );
           String_quote(value,STRING_QUOTE,NULL);
 
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %S",indent,' ',configValue->name,value);
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
 
@@ -2196,8 +2242,11 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           String_set(value,*configValue->variable.string);
         }
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
+        // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
         if (!String_isEmpty(value))
         {
           String_escape(value,
@@ -2209,12 +2258,10 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
                       );
           String_quote(value,STRING_QUOTE,NULL);
 
-          // write value
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %S",indent,' ',configValue->name,value);
         }
         else
         {
-          // write template
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         }
 
@@ -2243,7 +2290,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         while (ConfigValue_format(&configValueFormat,line))
         {
           // write
-          if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList,configValue->commentList);
+          if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%S",indent,' ',line);
 
           writtenFlag = TRUE;
@@ -2354,44 +2401,11 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
       }
 #endif
       break;
-    case CONFIG_VALUE_TYPE_SEPARATOR:
-      if (configValue->separator.text != NULL)
-      {
-        if (error == ERROR_NONE)
-        {
-          error = File_printLine(fileHandle,
-                                 "%*C# %-.3s %s %.*s",
-                                 indent,' ',
-                                 SEPARATOR,
-                                 configValue->separator.text,
-                                 (stringLength(SEPARATOR) > (3+1+stringLength(configValue->separator.text)+1))
-                                   ? stringLength(SEPARATOR)-(3+1+stringLength(configValue->separator.text)+1)
-                                   : 0,
-                                 SEPARATOR
-                                );
-        }
-      }
-      else
-      {
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C# %s",indent,' ',SEPARATOR);
-      }
-      if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
-      break;
-    case CONFIG_VALUE_TYPE_SPACE:
-      if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
-      break;
-    case CONFIG_VALUE_TYPE_COMMENT:
-      if (!stringIsEmpty(configValue->comment.text))
-      {
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C# %s",indent,' ',configValue->comment.text);
-      }
-      break;
-    #ifndef NDEBUG
-      default:
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,configValue->type);
+    default:
+      #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
+      #endif /* NDEBUG */
+      break;
   }
 
   return error;
@@ -2418,9 +2432,14 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                              const void        *variable
                             )
 {
-  Errors     error;
-  uint       index;
-  StringList commentList;
+  Errors       error;
+  uint         index;
+  StringList   commentList;
+  const CommentsNode *commentsNode;
+
+  assert(fileHandle != NULL);
+  assert(configValues != NULL);
+  assert(configValues[lastValueIndex].type != CONFIG_VALUE_TYPE_END);
 
   // init variables
 
@@ -2430,6 +2449,8 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
   ITERATE_VALUEX(configValues,index,firstValueIndex,lastValueIndex,error == ERROR_NONE)
   {
 //fprintf(stderr,"%s, %d: %d: %s\n",__FILE__,__LINE__,configValues[index].type,configValues[index].name);
+    commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == &configValues[index]);
+
     switch (configValues[index].type)
     {
       case CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -2453,9 +2474,9 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
               sectionLastValueIndex++;
             }
 
+            // write comments
             error = flushCommentLines(fileHandle,indent,&commentList);
-fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List_count(&commentList));
-            error = writeCommentLines(fileHandle,indent,NULL,configValues[index].commentList);
+            error = writeCommentLines(fileHandle,indent,(commentsNode != NULL) ? &commentsNode->commentList : NULL);
 
             // init iterator
             if (configValues[index].section.sectionIterator != NULL)
@@ -2492,7 +2513,7 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List
 
                 // get section data
                 data = configValues[index].section.sectionIterator(&sectionIterator,
-                                                                   CONFIG_VALUE_OPERATION,
+                                                                   CONFIG_VALUE_OPERATION_FORMAT,
                                                                    name,
                                                                    configValues[index].section.userData
                                                                   );
@@ -2584,7 +2605,6 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List
         {
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C# %s",indent,' ',SEPARATOR);
         }
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
         break;
       case CONFIG_VALUE_TYPE_SPACE:
         error = flushCommentLines(fileHandle,indent,&commentList);
@@ -2604,10 +2624,11 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List
                            indent,
                            &configValues[index],
                            variable,
-                           &commentList
+                           !StringList_isEmpty(&commentList)
+                             ? &commentList
+                             : ((commentsNode != NULL) ? &commentsNode->commentList : NULL)
                           );
         StringList_clear(&commentList);
-//File_printLine(fileHandle,"b");
         break;
     }
   }
@@ -2618,40 +2639,56 @@ fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List
   return ERROR_NONE;
 }
 
-// ----------------------------------------------------------------------
+/***********************************************************************\
+* Name   : findFirstLast
+* Purpose: find first/last value index
+* Input  : configValues                   - config values
+*          firstValueIndex,lastValueIndex - first/last value index
+*                                           variables (can be NULL)
+* Output : firstValueIndex,lastValueIndex - first/last value index
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
-bool ConfigValue_init(ConfigValue configValues[])
-{
-  assert(configValues != NULL);
-
-  UNUSED_VARIABLE(configValues);
-
-  return TRUE;
-}
-
-void ConfigValue_done(ConfigValue configValues[])
+LOCAL void findFirstLast(const ConfigValue configValues[],
+                         uint              *firstValueIndex,
+                         uint              *lastValueIndex
+                        )
 {
   uint index;
 
   assert(configValues != NULL);
 
+  // get first index
+  if (firstValueIndex != NULL) (*firstValueIndex) = 0;
+
   index = 0;
   while (configValues[index].type != CONFIG_VALUE_TYPE_END)
   {
-    if (configValues[index].commentList != NULL)
-    {
-      StringList_delete(configValues[index].commentList);
-      configValues[index].commentList = NULL;
-    }
     index++;
   }
+  if (index > 0) index--;
+
+  // get last index
+  if (lastValueIndex != NULL) (*lastValueIndex) = index;
 }
 
-uint ConfigValue_findSection(const ConfigValue configValues[],
-                             const char        *sectionName,
-                             uint              *firstValueIndex,
-                             uint              *lastValueIndex
-                            )
+/***********************************************************************\
+* Name   : findSection
+* Purpose: find section value indizes
+* Input  : configValues - config values array
+*          sectionName  - section name
+* Output : firstValueIndex - first value index (can be NULL)
+*          lastValueIndex  - last value index (can be NULL)
+* Return : section index or CONFIG_VALUE_INDEX_NONE
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint findSection(const ConfigValue configValues[],
+                       const char        *sectionName,
+                       uint              *firstValueIndex,
+                       uint              *lastValueIndex
+                      )
 {
   uint index;
   uint sectionIndex;
@@ -2737,6 +2774,38 @@ uint ConfigValue_findSection(const ConfigValue configValues[],
   }
 }
 
+// ----------------------------------------------------------------------
+
+bool ConfigValue_init(const ConfigValue configValues[])
+{
+  assert(configValues != NULL);
+
+  UNUSED_VARIABLE(configValues);
+
+  List_init(&commentsList);
+
+  return TRUE;
+}
+
+void ConfigValue_done(const ConfigValue configValues[])
+{
+  assert(configValues != NULL);
+
+  List_done(&commentsList,(ListNodeFreeFunction)freeCommentsNode,NULL);
+}
+
+uint ConfigValue_findSection(const ConfigValue configValues[],
+                             const char        *sectionName,
+                             uint              *firstValueIndex,
+                             uint              *lastValueIndex
+                            )
+{
+  assert(configValues != NULL);
+  assert(sectionName != NULL);
+
+  return findSection(configValues,sectionName,firstValueIndex,lastValueIndex);
+}
+
 uint ConfigValue_valueIndex(const ConfigValue configValues[],
                             const char        *sectionName,
                             const char        *name
@@ -2788,7 +2857,8 @@ uint ConfigValue_find(const ConfigValue configValues[],
   }
   else
   {
-    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+    while (   (index != CONFIG_VALUE_INDEX_NONE)
+           && (configValues[index].type != CONFIG_VALUE_TYPE_END)
            && !stringEquals(configValues[index].name,name)
           )
     {
@@ -2803,89 +2873,66 @@ uint ConfigValue_firstValueIndex(const ConfigValue configValues[],
                                  const char        *sectionName
                                 )
 {
+  uint firstValueIndex,lastValueIndex;
   uint index;
   bool skipFlag;
 
   assert(configValues != NULL);
 
-  index = 0;
   if (sectionName != NULL)
   {
-    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
-           && (   (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
-               || !stringEquals(configValues[index].name,sectionName)
-              )
-          )
+    // find section
+    if (findSection(configValues,
+                    sectionName,
+                    &firstValueIndex,
+                    &lastValueIndex
+                   ) != CONFIG_VALUE_INDEX_NONE)
     {
-      // skip section
-      do
-      {
-        skipFlag = TRUE;
-        switch (configValues[index].type)
-        {
-          case CONFIG_VALUE_TYPE_BEGIN_SECTION:
-            do
-            {
-              index++;
-            }
-            while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
-                   && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
-                  );
-            if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
-            {
-              skipFlag = FALSE;
-            }
-            else
-            {
-              index++;
-            }
-            break;
-          case CONFIG_VALUE_TYPE_END:
-            skipFlag = FALSE;
-            break;
-          default:
-            index++;
-            skipFlag = FALSE;
-            break;
-        }
-      }
-      while (skipFlag);
+      return CONFIG_VALUE_INDEX_NONE;
     }
-    if (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION) index++;
   }
   else
   {
-    // skip sections
-    do
-    {
-      skipFlag = TRUE;
-      switch (configValues[index].type)
-      {
-        case CONFIG_VALUE_TYPE_BEGIN_SECTION:
-          do
-          {
-            index++;
-          }
-          while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
-                 && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
-                );
-          if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
-          {
-            skipFlag = FALSE;
-          }
-          else
-          {
-            index++;
-          }
-          break;
-        case CONFIG_VALUE_TYPE_END:
-        default:
-          skipFlag = FALSE;
-          break;
-      }
-    }
-    while (skipFlag);
+    // find fist/last
+    findFirstLast(configValues,&firstValueIndex,&lastValueIndex);
   }
+
+  index = firstValueIndex;
+  do
+  {
+    skipFlag = TRUE;
+    switch (configValues[index].type)
+    {
+      case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+        // skip section
+        do
+        {
+          index++;
+        }
+        while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
+               && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+              );
+        if (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
+        {
+          skipFlag = FALSE;
+        }
+        else
+        {
+          index++;
+        }
+        break;
+      case CONFIG_VALUE_TYPE_SEPARATOR:
+      case CONFIG_VALUE_TYPE_SPACE:
+      case CONFIG_VALUE_TYPE_COMMENT:
+        index++;
+        break;
+      case CONFIG_VALUE_TYPE_END:
+      default:
+        skipFlag = FALSE;
+        break;
+    }
+  }
+  while (skipFlag);
 
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
@@ -2894,135 +2941,30 @@ uint ConfigValue_lastValueIndex(const ConfigValue configValues[],
                                 const char        *sectionName
                                )
 {
+  uint firstValueIndex,lastValueIndex;
   uint index;
-  bool skipFlag;
 
   assert(configValues != NULL);
 
-  index = 0;
   if (sectionName != NULL)
   {
-    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
-           && (   (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
-               || !stringEquals(configValues[index].name,sectionName)
-              )
-          )
+    // find section
+    if (findSection(configValues,
+                    sectionName,
+                    &firstValueIndex,
+                    &lastValueIndex
+                   ) != CONFIG_VALUE_INDEX_NONE)
     {
-      // skip section
-      do
-      {
-        skipFlag = TRUE;
-        switch (configValues[index].type)
-        {
-          case CONFIG_VALUE_TYPE_BEGIN_SECTION:
-            do
-            {
-              index++;
-            }
-            while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
-                   && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
-                  );
-            if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
-            {
-              skipFlag = FALSE;
-            }
-            else
-            {
-              index++;
-            }
-            break;
-          case CONFIG_VALUE_TYPE_END:
-            skipFlag = FALSE;
-            break;
-          default:
-            index++;
-            skipFlag = FALSE;
-            break;
-        }
-      }
-      while (skipFlag);
+      return CONFIG_VALUE_INDEX_NONE;
     }
-
-    while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
-           && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
-          )
-    {
-      index++;
-    }
-    index--;
   }
   else
   {
-    while (configValues[index].type != CONFIG_VALUE_TYPE_END)
-    {
-      // skip sections
-      do
-      {
-        skipFlag = TRUE;
-        switch (configValues[index].type)
-        {
-          case CONFIG_VALUE_TYPE_BEGIN_SECTION:
-            do
-            {
-              index++;
-            }
-            while (   (configValues[index].type != CONFIG_VALUE_TYPE_END)
-                   && (configValues[index].type != CONFIG_VALUE_TYPE_END_SECTION)
-                  );
-            if (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION)
-            {
-              skipFlag = FALSE;
-            }
-            else
-            {
-              index++;
-            }
-            break;
-          case CONFIG_VALUE_TYPE_END:
-          default:
-            skipFlag = FALSE;
-            break;
-        }
-      }
-      while (skipFlag);
-      if (configValues[index].type != CONFIG_VALUE_TYPE_END) index++;
-    }
-    if (index > 0)
-    {
-      index--;
-
-      // skip sections
-      do
-      {
-        skipFlag = TRUE;
-        switch (configValues[index].type)
-        {
-          case CONFIG_VALUE_TYPE_BEGIN_SECTION:
-            while ((index > 0) && (configValues[index].type == CONFIG_VALUE_TYPE_END_SECTION))
-            {
-              do
-              {
-                index--;
-              }
-              while (   (index > 0)
-                     && (configValues[index].type != CONFIG_VALUE_TYPE_BEGIN_SECTION)
-                    );
-              if (configValues[index].type == CONFIG_VALUE_TYPE_BEGIN_SECTION)
-              {
-                if (index > 0) index--;
-              }
-            }
-            skipFlag = FALSE;
-            break;
-          case CONFIG_VALUE_TYPE_END:
-          default:
-            skipFlag = FALSE;
-            break;
-        }
-      }
-      while (skipFlag);
-    }
+    // find fist/last
+    findFirstLast(configValues,&firstValueIndex,&lastValueIndex);
   }
+
+  index = lastValueIndex;
 
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
@@ -3075,7 +3017,7 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : CONFIG_VALUE_INDEX_NONE;
 }
 
-bool ConfigValue_parse(ConfigValue          *configValue,
+bool ConfigValue_parse(const ConfigValue    *configValue,
                        const char           *sectionName,
                        const char           *value,
                        ConfigReportFunction errorReportFunction,
@@ -3083,9 +3025,11 @@ bool ConfigValue_parse(ConfigValue          *configValue,
                        ConfigReportFunction warningReportFunction,
                        void                 *warningReportUserData,
                        void                 *variable,
-                       StringList           *commentLineList
+                       StringList           *commentList
                       )
 {
+  CommentsNode *commentsNode;
+
   assert(configValue != NULL);
   assert(value != NULL);
 
@@ -3102,14 +3046,20 @@ bool ConfigValue_parse(ConfigValue          *configValue,
     return FALSE;
   }
 
-  if ((commentLineList != NULL) && !StringList_isEmpty(commentLineList))
+  if ((commentList != NULL) && !StringList_isEmpty(commentList))
   {
-    if (configValue->commentList == NULL)
+    commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
+    if (commentsNode == NULL)
     {
-      configValue->commentList = StringList_new();
+      commentsNode = LIST_NEW_NODE(CommentsNode);
+
+      commentsNode->configValue = configValue;
+      StringList_init(&commentsNode->commentList);
+      List_append(&commentsList,commentsNode);
     }
-    StringList_clear(configValue->commentList);
-    StringList_move(configValue->commentList,commentLineList);
+
+    StringList_clear(&commentsNode->commentList);
+    StringList_move(&commentsNode->commentList,commentList);
   }
 
   return TRUE;
@@ -3238,13 +3188,21 @@ void ConfigValue_addComments(ConfigValue *configValue,
                              StringList  *commentList
                             )
 {
+  CommentsNode *commentsNode;
+
   assert(configValue != NULL);
 
-  if (configValue->commentList == NULL)
+  commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
+  if (commentsNode == NULL)
   {
-    configValue->commentList = StringList_new();
+    commentsNode = LIST_NEW_NODE(CommentsNode);
+
+    commentsNode->configValue = configValue;
+    StringList_init(&commentsNode->commentList);
+    List_append(&commentsList,commentsNode);
   }
-  StringList_move(configValue->commentList,commentList);
+
+  StringList_move(&commentsNode->commentList,commentList);
 }
 
 bool ConfigValue_getIntegerValue(int                   *value,
@@ -3437,6 +3395,56 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
                         String            line
                        )
 {
+  /***********************************************************************\
+  * Name   : initLine
+  * Purpose: init line
+  * Input  : configValueFormat - config value format
+  *          line              - line
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void initLine(ConfigValueFormat *configValueFormat,
+                     String            line
+                    );
+  void initLine(ConfigValueFormat *configValueFormat,
+                String            line
+               )
+  {
+    assert(configValueFormat != NULL);
+    assert(line != NULL);
+
+    switch (configValueFormat->mode)
+    {
+      case CONFIG_VALUE_FORMAT_MODE_VALUE:
+        break;
+      case CONFIG_VALUE_FORMAT_MODE_LINE:
+        String_format(line,"%s = ",configValueFormat->configValue->name);
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+  }
+
+  /***********************************************************************\
+  * Name   : doneLine
+  * Purpose: done line
+  * Input  : line = line
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void doneLine(String line);
+  void doneLine(String line)
+  {
+    assert(line != NULL);
+  }
+
   union
   {
     void       *pointer;
@@ -3466,25 +3474,13 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
   String_clear(line);
   if (!configValueFormat->endOfDataFlag)
   {
-    switch (configValueFormat->mode)
-    {
-      case CONFIG_VALUE_FORMAT_MODE_VALUE:
-        break;
-      case CONFIG_VALUE_FORMAT_MODE_LINE:
-        String_format(line,"%s = ",configValueFormat->configValue->name);
-        break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-
     switch (configValueFormat->configValue->type)
     {
       case CONFIG_VALUE_TYPE_NONE:
         break;
       case CONFIG_VALUE_TYPE_INTEGER:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3541,8 +3537,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_INTEGER64:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3599,8 +3599,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_DOUBLE:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3657,8 +3661,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_BOOLEAN:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3688,8 +3696,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         String_appendFormat(line,"%s",(*configVariable.b) ? "yes":"no");
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_ENUM:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3719,8 +3731,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         String_appendFormat(line,"%d",configVariable.enumeration);
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_SELECT:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3751,8 +3767,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         String_appendFormat(line,"%s",(select != NULL) ? select->name : "");
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_SET:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3782,7 +3802,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         {
           if (((*configVariable.set) & set->value) == set->value)
           {
-            if (String_length(s) > 0L) String_appendChar(s,',');
+            if (!String_isEmpty(s)) String_appendChar(s,',');
             String_appendCString(s,set->name);
           }
         }
@@ -3801,8 +3821,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         String_delete(s);
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_CSTRING:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3839,8 +3863,12 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         }
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_STRING:
+        initLine(configValueFormat,line);
+
         // get value
         if      (configValueFormat->configValue->offset >= 0)
         {
@@ -3870,12 +3898,16 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         String_appendFormat(line,"%'S",*configVariable.string);
 
         configValueFormat->endOfDataFlag = TRUE;
+
+        doneLine(line);
         break;
       case CONFIG_VALUE_TYPE_SPECIAL:
+        initLine(configValueFormat,line);
+
         if (configValueFormat->configValue->specialValue.format != NULL)
         {
           configValueFormat->endOfDataFlag = !configValueFormat->configValue->specialValue.format(&configValueFormat->formatUserData,
-                                                                                                  CONFIG_VALUE_OPERATION,
+                                                                                                  CONFIG_VALUE_OPERATION_FORMAT,
                                                                                                   line,
                                                                                                   configValueFormat->configValue->specialValue.userData
                                                                                                  );
@@ -3884,6 +3916,9 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
         {
           configValueFormat->endOfDataFlag = TRUE;
         }
+
+        doneLine(line);
+
         if (configValueFormat->endOfDataFlag) return FALSE;
         break;
       case CONFIG_VALUE_TYPE_IGNORE:
@@ -3903,6 +3938,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
       case CONFIG_VALUE_TYPE_SPACE:
       case CONFIG_VALUE_TYPE_COMMENT:
 //TODO
+        return FALSE;
         break;
       case CONFIG_VALUE_TYPE_END:
         // nothing to do
@@ -4233,7 +4269,7 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
 {
   Errors     error;
   FileHandle fileHandle;
-  uint       index;
+  uint       firstValueIndex,lastValueIndex;
 
   assert(configFileName != NULL);
   assert(configValues != NULL);
@@ -4248,19 +4284,15 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
     return error;
   }
 
-  // get last config value
-  index = 0;
-  while (configValues[index+1].type != CONFIG_VALUE_TYPE_END)
-  {
-    index++;
-  }
+  // find fist/last
+  findFirstLast(configValues,&firstValueIndex,&lastValueIndex);
 
   // write file
   error = writeConfigFile(&fileHandle,
-                          0,
+                          0,  // indent
                           configValues,
-                          0,
-                          index,
+                          firstValueIndex,
+                          lastValueIndex,
                           NULL  // variable
                          );
   if (error != ERROR_NONE)
@@ -4284,6 +4316,8 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
   return ERROR_NONE;
 }
 
+//TODO remove?
+#if 0
 void ConfigValue_listSectionDataIteratorInit(ConfigValueSectionDataIterator *sectionDataIterator, void *variable, void *userData)
 {
   assert(sectionDataIterator != NULL);
@@ -4316,6 +4350,7 @@ void *ConfigValue_listSectionDataIteratorNext(ConfigValueSectionDataIterator *se
 
   return node;
 }
+#endif
 
 void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
 {
@@ -4338,7 +4373,9 @@ void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectio
       break;
     case CONFIG_VALUE_OPERATION_TEMPLATE:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_COMMENTS:
+      break;
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         Node   *node = (Node*)(*sectionDataIterator);
         String name  = (String)data;

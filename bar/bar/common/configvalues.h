@@ -31,9 +31,9 @@ typedef enum
 {
   CONFIG_VALUE_OPERATION_INIT,
   CONFIG_VALUE_OPERATION_DONE,
-  CONFIG_VALUE_OPERATION_TEMPLATE,
-  CONFIG_VALUE_OPERATION_COMMENTS,
-  CONFIG_VALUE_OPERATION
+  CONFIG_VALUE_OPERATION_TEMPLATE,  // return template text
+  CONFIG_VALUE_OPERATION_COMMENTS,  // return comments
+  CONFIG_VALUE_OPERATION_FORMAT     // format line
 } ConfigValueOperations;
 
 /***************************** Datatypes ******************************/
@@ -226,11 +226,6 @@ typedef struct
   } ignoreValue;
   struct
   {
-#if 0
-    ConfigSectionIteratorInitFunction sectionIteratorInit;  // section iterator init
-    ConfigSectionIteratorDoneFunction sectionIteratorDone;  // section iterator done
-    ConfigSectionIteratorNextFunction sectionIteratorNext;  // section iterator next
-#endif
     ConfigSectionIteratorFunction sectionIterator;  // section iterator
     void                          *userData;      // user data for parse special
   } section;
@@ -241,9 +236,7 @@ typedef struct
   struct
   {
     const char *text;
-    const char *defaultText;
   } comment;
-  StringList *commentList;
 } ConfigValue;
 
 /* example
@@ -430,8 +423,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   } \
 }; \
 
@@ -467,8 +459,7 @@ typedef struct
     {NULL,FALSE},\
     {sectionIterator,userData},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }, \
   __VA_ARGS__ \
   { \
@@ -491,8 +482,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 
 /***********************************************************************\
@@ -532,8 +522,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER(name,type,member,min,max,units,templateText) \
   CONFIG_VALUE_INTEGER(name,NULL,offsetof(type,member),min,max,units,templateText)
@@ -575,8 +564,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_INTEGER64(name,type,member,min,max,units,templateText) \
   CONFIG_VALUE_INTEGER64(name,NULL,offsetof(type,member),min,max,units,templateText)
@@ -618,8 +606,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DOUBLE(name,type,member,min,max,units,templateText) \
   CONFIG_VALUE_DOUBLE(name,NULL,offsetof(type,member),min,max,units,templateText)
@@ -659,8 +646,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_BOOLEAN(name,type,member,templateText) \
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member),templateText)
@@ -702,8 +688,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define xxxCONFIG_STRUCT_VALUE_ENUM(name,type,member,value,templateText) \
   xxxCONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value,templateText)
@@ -744,8 +729,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SELECT(name,type,member,selects,templateText) \
   CONFIG_VALUE_SELECT(name,NULL,offsetof(type,member),selects,templateText)
@@ -786,8 +770,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SET(name,type,member,set,templateText) \
   CONFIG_VALUE_SET(name,NULL,offsetof(type,member),set,templateText)
@@ -827,8 +810,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_CSTRING(name,type,member,templateText) \
   CONFIG_VALUE_CSTRING(name,NULL,offsetof(type,member),templateText)
@@ -868,8 +850,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_STRING(name,type,member,templateText) \
   CONFIG_VALUE_STRING(name,NULL,offsetof(type,member),templateText)
@@ -913,8 +894,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_SPECIAL(name,type,member,parse,format,userData) \
   CONFIG_VALUE_SPECIAL(name,NULL,offsetof(type,member),parse,format,userData)
@@ -949,8 +929,7 @@ typedef struct
     {newName,warningFlag},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_IGNORE(name,newName,warningFlag) \
   CONFIG_VALUE_IGNORE(name,newName,warningFlag)
@@ -992,8 +971,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 #define CONFIG_STRUCT_VALUE_DEPRECATED(name,type,member,parse,userData,newName,warningFlag) \
   CONFIG_VALUE_DEPRECATED(name,NULL,offsetof(type,member),parse,userData,newName,warningFlag)
@@ -1028,8 +1006,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {text},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 
 /***********************************************************************\
@@ -1062,8 +1039,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {text,NULL},\
-    NULL\
+    {text,NULL}\
   }
 
 /***********************************************************************\
@@ -1096,8 +1072,7 @@ typedef struct
     {NULL,FALSE},\
     {NULL,NULL},\
     {NULL},\
-    {NULL,NULL},\
-    NULL\
+    {NULL}\
   }
 
 /***********************************************************************\
@@ -1205,7 +1180,7 @@ extern "C" {
 * Notes  :
 ***********************************************************************/
 
-bool ConfigValue_init(ConfigValue configValues[]);
+bool ConfigValue_init(const ConfigValue configValues[]);
 
 /***********************************************************************
 * Name   : ConfigValue_done
@@ -1216,7 +1191,7 @@ bool ConfigValue_init(ConfigValue configValues[]);
 * Notes  :
 ***********************************************************************/
 
-void ConfigValue_done(ConfigValue configValues[]);
+void ConfigValue_done(const ConfigValue configValues[]);
 
 /***********************************************************************\
 * Name   : ConfigValue_isValue
@@ -1295,8 +1270,7 @@ uint ConfigValue_find(const ConfigValue configValues[],
 * Purpose: find section value indizes
 * Input  : configValues - config values array
 *          sectionName  - section name
-* Output : sectionIndex    - section index (can be NULL)
-*          firstValueIndex - first value index (can be NULL)
+* Output : firstValueIndex - first value index (can be NULL)
 *          lastValueIndex  - last value index (can be NULL)
 * Return : section index or CONFIG_VALUE_INDEX_NONE
 * Notes  : -
@@ -1358,12 +1332,13 @@ uint ConfigValue_nextValueIndex(const ConfigValue configValues[],
 *          errorReportUserData   - error report user data
 *          warningReportFunction - warning report function (can be NULL)
 *          warningReportUserData - warning report user data
-* Output : variable - variable (can be NULL)
+* Output : variable    - variable (can be NULL)
+*          commentList - comment list (can be NULL)
 * Return : TRUE if config value parsed, FALSE on error
 * Notes  :
 ***********************************************************************/
 
-bool ConfigValue_parse(ConfigValue          *configValue,
+bool ConfigValue_parse(const ConfigValue    *configValue,
                        const char           *sectionName,
                        const char           *value,
                        ConfigReportFunction errorReportFunction,
@@ -1371,7 +1346,7 @@ bool ConfigValue_parse(ConfigValue          *configValue,
                        ConfigReportFunction warningReportFunction,
                        void                 *warningReportUserData,
                        void                 *variable,
-                       StringList           *commentLineList
+                       StringList           *commentList
                       );
 
 /***********************************************************************\
