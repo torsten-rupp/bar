@@ -54,9 +54,9 @@ extern const ConfigValueUnit   CONFIG_VALUE_TIME_UNITS[];
 extern const ConfigValueSet    CONFIG_VALUE_LOG_TYPES[];
 extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[];
 extern const ConfigValueSelect CONFIG_VALUE_RESTORE_ENTRY_MODES[];
-extern ConfigValue             CONFIG_VALUES[];
+extern const ConfigValue       CONFIG_VALUES[];
 
-extern ConfigValue             JOB_CONFIG_VALUES[];
+extern const ConfigValue       JOB_CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 
@@ -130,6 +130,30 @@ extern String          uuid;                   // BAR instance UUID
 #endif
 
 /***********************************************************************\
+* Name   : Configuration_initAll
+* Purpose: initialize configuration functions
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Configuration_initAll(void);
+
+/***********************************************************************\
+* Name   : Configuration_doneAll
+* Purpose: deinitialize configuration functions
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneAll(void);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : Configuration_isCertificateAvailable
 * Purpose: check if certificate is available
 * Input  : certificate - certificate
@@ -147,8 +171,6 @@ INLINE bool Configuration_isCertificateAvailable(const Certificate *certificate)
   return (certificate->data != NULL) && (certificate->length > 0);
 }
 #endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
-
-// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Configuration_initKey
@@ -200,7 +222,7 @@ bool Configuration_duplicateKey(Key *key, const Key *fromKey);
 
 /***********************************************************************\
 * Name   : Configuration_doneKey
-* Purpose: free public/private key
+* Purpose: done public/private key
 * Input  : key - key
 * Output : -
 * Return : -
@@ -384,28 +406,6 @@ bool Configuration_parseTimeNumber(ConstString s, int *n);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : Configuration_initGlobalOptions
-* Purpose: initialize global option values
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_initGlobalOptions(void);
-
-/***********************************************************************\
-* Name   : Configuration_doneGlobalOptions
-* Purpose: deinitialize global option values
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_doneGlobalOptions(void);
-
-/***********************************************************************\
 * Name   : Configuration_newMaintenanceNode
 * Purpose: new maintenance node
 * Input  : -
@@ -427,12 +427,46 @@ MaintenanceNode *Configuration_newMaintenanceNode(void);
 
 void Configuration_deleteMaintenanceNode(MaintenanceNode *maintenanceNode);
 
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : Configuration_initServer
+* Purpose: init server
+* Input  : server     - server variable
+*          name       - server name
+*          serverType - server type
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void Configuration_initServer(Server *server, ConstString name, ServerTypes serverType);
+
+/***********************************************************************\
+* Name   : Configuration_doneServer
+* Purpose: done server
+* Input  : server - server variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
 void Configuration_doneServer(Server *server);
 
-#if 0
+/***********************************************************************\
+* Name   : Configuration_getServerSettings
+* Purpose: get server settings
+* Input  : server           - server variable
+*          storageSpecifier - storage specifier
+*          jobOptions       - job options
+* Output : server - server
+* Return : unique server id
+* Notes  : -
+\***********************************************************************/
+
 //TODO: move storage.c
+#if 0
+unknown here: StorageSpecifier
 uint Configuration_getServerSettings(Server                 *server,
                                      const StorageSpecifier *storageSpecifier,
                                      const JobOptions       *jobOptions
@@ -561,18 +595,6 @@ void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer);
 ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType);
 
 /***********************************************************************\
-* Name   : Configuration_freeServerNode
-* Purpose: free server node
-* Input  : serverNode - server node
-*          userData   - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Configuration_freeServerNode(ServerNode *serverNode, void *userData);
-
-/***********************************************************************\
 * Name   : Configuration_deleteServerNode
 * Purpose: delete server mode
 * Input  : serverNode - server node
@@ -582,6 +604,8 @@ void Configuration_freeServerNode(ServerNode *serverNode, void *userData);
 \***********************************************************************/
 
 void Configuration_deleteServerNode(ServerNode *serverNode);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Configuration_initCDSettings
@@ -663,6 +687,8 @@ void Configuration_initDeviceSettings(Device           *device,
 
 void Configuration_doneDeviceSettings(Device *device);
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
 * Name   : Configuration_newDeviceNode
 * Purpose: new server node
@@ -696,6 +722,58 @@ void Configuration_freeDeviceNode(DeviceNode *deviceNode, void *userData);
 \***********************************************************************/
 
 void Configuration_deleteDeviceNode(DeviceNode *deviceNode);
+
+/***********************************************************************\
+* Name   : Configuration_newMountNode
+* Purpose: new mount node
+* Input  : mountName  - mount name
+*          deviceName - device name
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
+
+MountNode *Configuration_newMountNode(ConstString mountName, ConstString deviceName);
+
+/***********************************************************************\
+* Name   : Configuration_duplicateMountNode
+* Purpose: duplicate mount node
+* Input  : fromMountNode - from mount name
+*          userData      - user data
+* Output : -
+* Return : mount node
+* Notes  : -
+\***********************************************************************/
+
+MountNode *Configuration_duplicateMountNode(MountNode *fromMountNode,
+                                            void      *userData
+                                           );
+
+/***********************************************************************\
+* Name   : Configuration_freeMountNode
+* Purpose: free mount node
+* Input  : mountNode - mount node
+*          userData  - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_freeMountNode(MountNode *mountNode, void *userData);
+
+/***********************************************************************\
+* Name   : Configuration_deleteMountNode
+* Purpose: delete mount node
+* Input  : mountNode - mount node
+*          userData  - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_deleteMountNode(MountNode *mountNode);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Configuration_add
@@ -761,6 +839,8 @@ INLINE bool Configuration_isModified(void);
 INLINE bool Configuration_isModified(void)
 {
   extern bool configModified;
+
+  return configModified;
 }
 #endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
@@ -774,17 +854,6 @@ INLINE bool Configuration_isModified(void)
 \***********************************************************************/
 
 Errors Configuration_readAll(bool printInfoFlag);
-
-/***********************************************************************\
-* Name   : updateConfig
-* Purpose: update configuration file
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-Errors Configuration_update(void);
 
 /***********************************************************************\
 * Name   : Configuration_readAllServerKeys
@@ -807,6 +876,17 @@ Errors Configuration_readAllServerKeys(void);
 \***********************************************************************/
 
 bool Configuration_validate(void);
+
+/***********************************************************************\
+* Name   : updateConfig
+* Purpose: update configuration file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Configuration_update(void);
 
 #ifdef __cplusplus
   }

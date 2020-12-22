@@ -63,6 +63,7 @@
   #include "minidump.h"
 #endif /* HAVE_BREAKPAD */
 #include "jobs.h"
+#include "bar.h"
 
 #include "configuration.h"
 
@@ -448,7 +449,7 @@ LOCAL void freeConfigFileNode(ConfigFileNode *configFileNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-void freeServerNode(ServerNode *serverNode, void *userData)
+LOCAL void freeServerNode(ServerNode *serverNode, void *userData)
 {
   assert(serverNode != NULL);
 
@@ -528,7 +529,7 @@ LOCAL void doneDevice(Device *device)
 * Notes  : -
 \***********************************************************************/
 
-void freeDeviceNode(DeviceNode *deviceNode, void *userData)
+LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 {
   assert(deviceNode != NULL);
 
@@ -547,7 +548,7 @@ void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData)
+LOCAL void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData)
 {
   assert(maintenanceNode != NULL);
 
@@ -586,91 +587,6 @@ LOCAL MountNode *newMountNodeCString(const char *mountName, const char *deviceNa
   mountNode->mountCount    = 0;
 
   return mountNode;
-}
-
-/***********************************************************************\
-* Name   : newMountNode
-* Purpose: new mount node
-* Input  : mountName  - mount name
-*          deviceName - device name
-* Output : -
-* Return : mount node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL MountNode *newMountNode(ConstString mountName, ConstString deviceName)
-{
-  assert(mountName != NULL);
-
-  return newMountNodeCString(String_cString(mountName),
-                             String_cString(deviceName)
-                            );
-}
-
-/***********************************************************************\
-* Name   : duplicateMountNode
-* Purpose: duplicate mount node
-* Input  : fromMountNode - from mount name
-*          userData      - user data
-* Output : -
-* Return : mount node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL MountNode *duplicateMountNode(MountNode *fromMountNode,
-                                    void      *userData
-                                   )
-{
-  MountNode *mountNode;
-
-  assert(fromMountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  mountNode = newMountNode(fromMountNode->name,
-                           fromMountNode->device
-                          );
-  assert(mountNode != NULL);
-
-  return mountNode;
-}
-
-/***********************************************************************\
-* Name   : freeMountNode
-* Purpose: free mount node
-* Input  : mountNode - mount node
-*          userData  - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeMountNode(MountNode *mountNode, void *userData)
-{
-  assert(mountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(mountNode->device);
-  String_delete(mountNode->name);
-}
-
-/***********************************************************************\
-* Name   : deleteMountNode
-* Purpose: delete mount node
-* Input  : mountNode - mount node
-*          userData  - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteMountNode(MountNode *mountNode)
-{
-  assert(mountNode != NULL);
-
-  freeMountNode(mountNode,NULL);
-  LIST_DELETE_NODE(mountNode);
 }
 
 /***********************************************************************\
@@ -716,8 +632,6 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  ConfigFileNode *configFileNode;
-
   assert(value != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -894,9 +808,9 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   if (!String_isEmpty(mountName))
   {
     // add to mount list
-    mountNode = newMountNode(mountName,
-                             deviceName
-                            );
+    mountNode = Configuration_newMountNode(mountName,
+                                           deviceName
+                                          );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
   }
@@ -1305,118 +1219,6 @@ LOCAL bool setCertificateString(Certificate *certificate, ConstString string)
   return setCertificate(certificate,String_cString(string),String_length(string));
 }
 
-// ----------------------------------------------------------------------
-
-void Configuration_initKey(Key *key)
-{
-  assert(key != NULL);
-
-  key->data   = NULL;
-  key->length = 0;
-}
-
-bool Configuration_setKey(Key *key, const void *data, uint length)
-{
-  void *newData;
-
-  assert(key != NULL);
-
-  newData = allocSecure(length);
-  if (newData == NULL)
-  {
-    return FALSE;
-  }
-  memCopyFast(newData,length,data,length);
-
-  if (key->data != NULL) freeSecure(key->data);
-  key->data   = newData;
-  key->length = length;
-
-  return TRUE;
-}
-
-bool Configuration_setKeyString(Key *key, ConstString string)
-{
-  return Configuration_setKey(key,String_cString(string),String_length(string));
-}
-
-bool Configuration_duplicateKey(Key *key, const Key *fromKey)
-{
-  uint length;
-  void *data;
-
-  assert(key != NULL);
-
-  if ((fromKey != NULL) && (fromKey->length > 0))
-  {
-    length = fromKey->length;
-    data = allocSecure(length);
-    if (data == NULL)
-    {
-      return FALSE;
-    }
-    memCopyFast(data,length,fromKey->data,length);
-  }
-  else
-  {
-    data   = NULL;
-    length = 0;
-  }
-
-  key->data   = data;
-  key->length = length;
-
-  return TRUE;
-}
-
-void Configuration_doneKey(Key *key)
-{
-  assert(key != NULL);
-
-  if (key->data != NULL) freeSecure(key->data);
-  key->data   = NULL;
-  key->length = 0;
-}
-
-void Configuration_clearKey(Key *key)
-{
-  assert(key != NULL);
-
-  Configuration_doneKey(key);
-}
-
-bool Configuration_copyKey(Key *key, const Key *fromKey)
-{
-  uint length;
-  void *data;
-
-  assert(key != NULL);
-
-  if (fromKey != NULL)
-  {
-    length = fromKey->length;
-    data = allocSecure(length);
-    if (data == NULL)
-    {
-      return FALSE;
-    }
-    memCopyFast(data,length,fromKey->data,length);
-  }
-  else
-  {
-    data   = NULL;
-    length = 0;
-  }
-
-  if (key->data != NULL) freeSecure(key->data);
-  key->data   = data;
-  key->length = length;
-
-  return TRUE;
-}
-
-// ----------------------------------------------------------------------
-
 /***********************************************************************\
 * Name   : initHash
 * Purpose: init hash
@@ -1454,201 +1256,7 @@ LOCAL void doneHash(Hash *hash)
   hash->length             = 0;
 }
 
-bool Configuration_setHash(Hash *hash, const CryptHash *cryptHash)
-{
-  uint length;
-  void *data;
-
-  assert(hash != NULL);
-  assert(cryptHash != NULL);
-
-  length = Crypt_getHashLength(cryptHash);
-  data   = allocSecure(length);
-  if (data == NULL)
-  {
-    return FALSE;
-  }
-  Crypt_getHash(cryptHash,data,length,NULL);
-
-  if (hash->data != NULL) freeSecure(hash->data);
-  hash->cryptHashAlgorithm = cryptHash->cryptHashAlgorithm;
-  hash->data               = data;
-  hash->length             = length;
-
-  return TRUE;
-}
-
-void Configuration_clearHash(Hash *hash)
-{
-  assert(hash != NULL);
-
-  doneHash(hash);
-}
-
-bool Configuration_equalsHash(Hash *hash, const CryptHash *cryptHash)
-{
-  assert(hash != NULL);
-  assert(cryptHash != NULL);
-
-  return    (hash->cryptHashAlgorithm == cryptHash->cryptHashAlgorithm)
-         && Crypt_equalsHashBuffer(cryptHash,
-                                   hash->data,
-                                   hash->length
-                                  );
-}
-
 // ----------------------------------------------------------------------
-
-bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
-{
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-
-  assert(names != NULL);
-  assert(weekDaySet != NULL);
-
-  if (stringEquals(names,"*"))
-  {
-    (*weekDaySet) = WEEKDAY_SET_ANY;
-  }
-  else
-  {
-    SET_CLEAR(*weekDaySet);
-
-    String_initTokenizerCString(&stringTokenizer,
-                                names,
-                                ",",
-                                STRING_QUOTES,
-                                TRUE
-                               );
-    while (String_getNextToken(&stringTokenizer,&token,NULL))
-    {
-      if      (String_equalsIgnoreCaseCString(token,"mon")) SET_ADD(*weekDaySet,WEEKDAY_MON);
-      else if (String_equalsIgnoreCaseCString(token,"tue")) SET_ADD(*weekDaySet,WEEKDAY_TUE);
-      else if (String_equalsIgnoreCaseCString(token,"wed")) SET_ADD(*weekDaySet,WEEKDAY_WED);
-      else if (String_equalsIgnoreCaseCString(token,"thu")) SET_ADD(*weekDaySet,WEEKDAY_THU);
-      else if (String_equalsIgnoreCaseCString(token,"fri")) SET_ADD(*weekDaySet,WEEKDAY_FRI);
-      else if (String_equalsIgnoreCaseCString(token,"sat")) SET_ADD(*weekDaySet,WEEKDAY_SAT);
-      else if (String_equalsIgnoreCaseCString(token,"sun")) SET_ADD(*weekDaySet,WEEKDAY_SUN);
-      else
-      {
-        String_doneTokenizer(&stringTokenizer);
-        return FALSE;
-      }
-    }
-    String_doneTokenizer(&stringTokenizer);
-  }
-
-  return TRUE;
-}
-
-bool Configuration_parseDateNumber(ConstString s, int *n)
-{
-  ulong i;
-  long  nextIndex;
-
-  assert(s != NULL);
-  assert(n != NULL);
-
-  // init variables
-  if   (String_equalsCString(s,"*"))
-  {
-    (*n) = DATE_ANY;
-  }
-  else
-  {
-    i = STRING_BEGIN;
-    if (String_length(s) > 0)
-    {
-      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
-      {
-        i++;
-      }
-    }
-    (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
-    if (nextIndex != STRING_END) return FALSE;
-  }
-
-  return TRUE;
-}
-
-bool Configuration_parseDateMonth(ConstString s, int *month)
-{
-  String name;
-  ulong i;
-  long   nextIndex;
-
-  assert(s != NULL);
-  assert(month != NULL);
-
-  name = String_toLower(String_duplicate(s));
-  if      (String_equalsCString(s,"*"))
-  {
-    (*month) = DATE_ANY;
-  }
-  else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
-  else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
-  else if (String_equalsIgnoreCaseCString(name,"mar")) (*month) = MONTH_MAR;
-  else if (String_equalsIgnoreCaseCString(name,"apr")) (*month) = MONTH_APR;
-  else if (String_equalsIgnoreCaseCString(name,"may")) (*month) = MONTH_MAY;
-  else if (String_equalsIgnoreCaseCString(name,"jun")) (*month) = MONTH_JUN;
-  else if (String_equalsIgnoreCaseCString(name,"jul")) (*month) = MONTH_JUL;
-  else if (String_equalsIgnoreCaseCString(name,"aug")) (*month) = MONTH_AUG;
-  else if (String_equalsIgnoreCaseCString(name,"sep")) (*month) = MONTH_SEP;
-  else if (String_equalsIgnoreCaseCString(name,"oct")) (*month) = MONTH_OCT;
-  else if (String_equalsIgnoreCaseCString(name,"nov")) (*month) = MONTH_NOV;
-  else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
-  else
-  {
-    i = STRING_BEGIN;
-    if (String_length(s) > 0)
-    {
-      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
-      {
-        i++;
-      }
-    }
-    (*month) = (uint)String_toInteger(s,i,&nextIndex,NULL,0);
-    if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
-    {
-      String_delete(name);
-      return FALSE;
-    }
-  }
-  String_delete(name);
-
-  return TRUE;
-}
-
-bool Configuration_parseTimeNumber(ConstString s, int *n)
-{
-  ulong i;
-  long  nextIndex;
-
-  assert(s != NULL);
-  assert(n != NULL);
-
-  // init variables
-  if   (String_equalsCString(s,"*"))
-  {
-    (*n) = TIME_ANY;
-  }
-  else
-  {
-    i = STRING_BEGIN;
-    if (String_length(s) > 0)
-    {
-      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
-      {
-        i++;
-      }
-    }
-    (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
-    if (nextIndex != STRING_END) return FALSE;
-  }
-
-  return TRUE;
-}
 
 /***********************************************************************\
 * Name   : parseBandWidth
@@ -1917,6 +1525,446 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
   printInfo(3,"Read key file '%s'\n",fileName);
 
   return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : freeBandWidthNode
+* Purpose: free band width node
+* Input  : bandWidthNode - band width node
+*          userData      - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
+{
+  assert(bandWidthNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(bandWidthNode->fileName);
+}
+
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : Configuration_initGlobalOptions
+* Purpose: initialize global option values
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initGlobalOptions(void)
+{
+  uint i;
+
+  memClear(&globalOptions,sizeof(GlobalOptions));
+
+  // --- program options
+  globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;
+  globalOptions.barExecutable                                   = String_new();
+  globalOptions.niceLevel                                       = 0;
+  globalOptions.maxThreads                                      = 0;
+  globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
+  globalOptions.maxTmpSize                                      = 0LL;
+  globalOptions.jobsDirectory                                   = String_newCString(DEFAULT_JOBS_DIRECTORY);
+  globalOptions.incrementalDataDirectory                        = String_newCString(DEFAULT_INCREMENTAL_DATA_DIRECTORY);
+  globalOptions.masterInfo.pairingFileName                      = DEFAULT_PAIRING_MASTER_FILE_NAME;
+  globalOptions.masterInfo.name                                 = String_new();
+  initHash(&globalOptions.masterInfo.uuidHash);
+  Configuration_initKey(&globalOptions.masterInfo.publicKey);
+
+  List_init(&globalOptions.maxBandWidthList);
+  globalOptions.maxBandWidthList.n                              = 0L;
+  globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
+
+  Semaphore_init(&globalOptions.serverList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&globalOptions.serverList);
+  Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&globalOptions.deviceList);
+
+  globalOptions.indexDatabaseUpdateFlag                         = TRUE;
+  globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
+  List_init(&globalOptions.indexDatabaseMaxBandWidthList);
+  globalOptions.indexDatabaseMaxBandWidthList.n                 = 0L;
+  globalOptions.indexDatabaseMaxBandWidthList.lastReadTimestamp = 0LL;
+  globalOptions.indexDatabaseKeepTime                           = S_PER_DAY;
+
+  Semaphore_init(&globalOptions.maintenanceList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&globalOptions.maintenanceList);
+
+  globalOptions.metaInfoFlag                                    = FALSE;
+  globalOptions.groupFlag                                       = FALSE;
+  globalOptions.allFlag                                         = FALSE;
+  globalOptions.longFormatFlag                                  = FALSE;
+  globalOptions.humanFormatFlag                                 = FALSE;
+  globalOptions.numericUIDGIDFlag                               = FALSE;
+  globalOptions.numericPermissionsFlag                          = FALSE;
+  globalOptions.noHeaderFooterFlag                              = FALSE;
+  globalOptions.deleteOldArchiveFilesFlag                       = FALSE;
+  globalOptions.ignoreNoBackupFileFlag                          = FALSE;
+  globalOptions.noDefaultConfigFlag                             = FALSE;
+  globalOptions.forceDeltaCompressionFlag                       = FALSE;
+  globalOptions.ignoreNoDumpAttributeFlag                       = FALSE;
+  globalOptions.alwaysCreateImageFlag                           = FALSE;
+  globalOptions.blankFlag                                       = FALSE;
+  globalOptions.rawImagesFlag                                   = FALSE;
+  globalOptions.noFragmentsCheckFlag                            = FALSE;
+  globalOptions.noIndexDatabaseFlag                             = FALSE;
+  globalOptions.forceVerifySignaturesFlag                       = FALSE;
+  globalOptions.skipVerifySignaturesFlag                        = FALSE;
+  globalOptions.noSignatureFlag                                 = FALSE;
+  globalOptions.noBAROnMediumFlag                               = FALSE;
+  globalOptions.noStopOnErrorFlag                               = FALSE;
+  globalOptions.noStopOnAttributeErrorFlag                      = FALSE;
+
+  globalOptions.jobUUIDOrName                                   = String_new();
+
+  globalOptions.storageName                                     = String_new();
+  EntryList_init(&globalOptions.includeEntryList);
+  PatternList_init(&globalOptions.excludePatternList);
+
+  globalOptions.changeToDirectory                               = NULL;
+
+  globalOptions.command                                         = COMMAND_NONE;
+
+  globalOptions.generateKeyBits                                 = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
+  globalOptions.generateKeyMode                                 = CRYPT_KEY_MODE_NONE;
+
+  globalOptions.logTypes                                        = LOG_TYPE_NONE;
+  globalOptions.logFileName                                     = NULL;
+  globalOptions.logFormat                                       = DEFAULT_LOG_FORMAT;
+  globalOptions.logPostCommand                                  = NULL;
+
+  globalOptions.pidFileName                                     = NULL;
+
+  globalOptions.quietFlag                                       = FALSE;
+  globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
+  globalOptions.daemonFlag                                      = FALSE;
+  globalOptions.noDetachFlag                                    = FALSE;
+  globalOptions.batchFlag                                       = FALSE;
+  globalOptions.versionFlag                                     = FALSE;
+  globalOptions.helpFlag                                        = FALSE;
+  globalOptions.xhelpFlag                                       = FALSE;
+  globalOptions.helpInternalFlag                                = FALSE;
+
+  globalOptions.serverMode                                      = SERVER_MODE_MASTER;
+  globalOptions.serverPort                                      = DEFAULT_SERVER_PORT;
+  globalOptions.serverTLSPort                                   = DEFAULT_TLS_SERVER_PORT;
+  initCertificate(&globalOptions.serverCA);
+  initCertificate(&globalOptions.serverCert);
+  Configuration_initKey(&globalOptions.serverKey);
+  initHash(&globalOptions.serverPasswordHash);
+  globalOptions.serverMaxConnections                            = DEFAULT_MAX_SERVER_CONNECTIONS;
+
+  // --- job options default values
+  globalOptions.archiveType                                     = ARCHIVE_TYPE_NORMAL;
+
+  globalOptions.storageNameListStdin                            = FALSE;
+  globalOptions.storageNameListFileName                         = String_new();
+  globalOptions.storageNameCommand                              = String_new();
+
+  globalOptions.includeFileListFileName                         = String_new();
+  globalOptions.includeFileCommand                              = String_new();
+  globalOptions.includeImageListFileName                        = String_new();
+  globalOptions.includeImageCommand                             = String_new();
+  globalOptions.excludeListFileName                             = String_new();
+  globalOptions.excludeCommand                                  = String_new();
+
+  List_init(&globalOptions.mountList);
+  globalOptions.mountCommand                                    = String_newCString(MOUNT_COMMAND);
+  globalOptions.mountDeviceCommand                              = String_newCString(MOUNT_DEVICE_COMMAND);
+  globalOptions.unmountCommand                                  = String_newCString(UNMOUNT_COMMAND);
+
+  PatternList_init(&globalOptions.compressExcludePatternList);
+  DeltaSourceList_init(&globalOptions.deltaSourceList);
+
+  globalOptions.archivePartSize                                 = 0LL;
+
+  globalOptions.incrementalListFileName                         = String_new();
+
+  globalOptions.directoryStripCount                             = 0;
+  globalOptions.destination                                     = String_new();
+  globalOptions.owner.userId                                    = FILE_DEFAULT_USER_ID;
+  globalOptions.owner.groupId                                   = FILE_DEFAULT_GROUP_ID;
+  globalOptions.permissions                                     = FILE_DEFAULT_PERMISSION;
+
+  globalOptions.patternType                                     = PATTERN_TYPE_GLOB;
+
+  globalOptions.fragmentSize                                    = DEFAULT_FRAGMENT_SIZE;
+  globalOptions.maxStorageSize                                  = 0LL;
+  globalOptions.volumeSize                                      = 0LL;
+
+  globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
+  globalOptions.continuousMaxSize                               = 0LL;
+  globalOptions.continuousMinTimeDelta                          = 0LL;
+
+  globalOptions.compressAlgorithms.delta                        = COMPRESS_ALGORITHM_NONE;
+  globalOptions.compressAlgorithms.byte                         = COMPRESS_ALGORITHM_NONE;
+
+  globalOptions.cryptType                                       = CRYPT_TYPE_SYMMETRIC;
+  for (i = 0; i < 4; i++)
+  {
+    globalOptions.cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
+  }
+  globalOptions.cryptPasswordMode                               = PASSWORD_MODE_DEFAULT;
+  Password_init(&globalOptions.cryptPassword);
+  Password_init(&globalOptions.cryptNewPassword);
+  Configuration_initKey(&globalOptions.cryptPublicKey);
+  Configuration_initKey(&globalOptions.cryptPrivateKey);
+  Configuration_initKey(&globalOptions.signaturePublicKey);
+  Configuration_initKey(&globalOptions.signaturePrivateKey);
+
+  Configuration_initServer(&globalOptions.defaultFileServer,NULL,SERVER_TYPE_FILE);
+  Configuration_initServer(&globalOptions.defaultFTPServer,NULL,SERVER_TYPE_FTP);
+  Configuration_initServer(&globalOptions.defaultSSHServer,NULL,SERVER_TYPE_SSH);
+  Configuration_initServer(&globalOptions.defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
+  initDevice(&globalOptions.defaultDevice,NULL);
+  globalOptions.fileServer                                      = &globalOptions.defaultFileServer;
+  globalOptions.ftpServer                                       = &globalOptions.defaultFTPServer;
+  globalOptions.sshServer                                       = &globalOptions.defaultSSHServer;
+  globalOptions.webDAVServer                                    = &globalOptions.defaultWebDAVServer;
+  globalOptions.device                                          = &globalOptions.defaultDevice;
+
+  globalOptions.comment                                         = NULL;
+
+  globalOptions.remoteBARExecutable                             = NULL;
+
+  globalOptions.file.writePreProcessCommand                     = NULL;
+  globalOptions.file.writePostProcessCommand                    = NULL;
+
+  globalOptions.ftp.writePreProcessCommand                      = NULL;
+  globalOptions.ftp.writePostProcessCommand                     = NULL;
+
+  globalOptions.scp.writePreProcessCommand                      = NULL;
+  globalOptions.scp.writePostProcessCommand                     = NULL;
+
+  globalOptions.sftp.writePreProcessCommand                     = NULL;
+  globalOptions.sftp.writePostProcessCommand                    = NULL;
+
+  globalOptions.cd.deviceName                                   = String_newCString(DEFAULT_CD_DEVICE_NAME);
+  globalOptions.cd.requestVolumeCommand                         = NULL;
+  globalOptions.cd.unloadVolumeCommand                          = String_newCString(CD_UNLOAD_VOLUME_COMMAND);
+  globalOptions.cd.loadVolumeCommand                            = String_newCString(CD_LOAD_VOLUME_COMMAND);
+  globalOptions.cd.volumeSize                                   = DEFAULT_CD_VOLUME_SIZE;
+  globalOptions.cd.imagePreProcessCommand                       = NULL;
+  globalOptions.cd.imagePostProcessCommand                      = NULL;
+  globalOptions.cd.imageCommand                                 = String_newCString(CD_IMAGE_COMMAND);
+  globalOptions.cd.eccPreProcessCommand                         = NULL;
+  globalOptions.cd.eccPostProcessCommand                        = NULL;
+  globalOptions.cd.eccCommand                                   = String_newCString(CD_ECC_COMMAND);
+  globalOptions.cd.blankCommand                                 = String_newCString(CD_BLANK_COMMAND);
+  globalOptions.cd.writePreProcessCommand                       = NULL;
+  globalOptions.cd.writePostProcessCommand                      = NULL;
+  globalOptions.cd.writeCommand                                 = String_newCString(CD_WRITE_COMMAND);
+  globalOptions.cd.writeImageCommand                            = String_newCString(CD_WRITE_IMAGE_COMMAND);
+
+  globalOptions.dvd.deviceName                                  = String_newCString(DEFAULT_DVD_DEVICE_NAME);
+  globalOptions.dvd.requestVolumeCommand                        = NULL;
+  globalOptions.dvd.unloadVolumeCommand                         = String_newCString(DVD_UNLOAD_VOLUME_COMMAND);
+  globalOptions.dvd.loadVolumeCommand                           = String_newCString(DVD_LOAD_VOLUME_COMMAND);
+  globalOptions.dvd.volumeSize                                  = DEFAULT_DVD_VOLUME_SIZE;
+  globalOptions.dvd.imagePreProcessCommand                      = NULL;
+  globalOptions.dvd.imagePostProcessCommand                     = NULL;
+  globalOptions.dvd.imageCommand                                = String_newCString(DVD_IMAGE_COMMAND);
+  globalOptions.dvd.eccPreProcessCommand                        = NULL;
+  globalOptions.dvd.eccPostProcessCommand                       = NULL;
+  globalOptions.dvd.eccCommand                                  = String_newCString(DVD_ECC_COMMAND);
+  globalOptions.dvd.blankCommand                                = String_newCString(DVD_BLANK_COMMAND);
+  globalOptions.dvd.writePreProcessCommand                      = NULL;
+  globalOptions.dvd.writePostProcessCommand                     = NULL;
+  globalOptions.dvd.writeCommand                                = String_newCString(DVD_WRITE_COMMAND);
+  globalOptions.dvd.writeImageCommand                           = String_newCString(DVD_WRITE_IMAGE_COMMAND);
+
+  globalOptions.bd.deviceName                                   = String_newCString(DEFAULT_BD_DEVICE_NAME);
+  globalOptions.bd.requestVolumeCommand                         = NULL;
+  globalOptions.bd.unloadVolumeCommand                          = String_newCString(BD_UNLOAD_VOLUME_COMMAND);
+  globalOptions.bd.loadVolumeCommand                            = String_newCString(BD_LOAD_VOLUME_COMMAND);
+  globalOptions.bd.volumeSize                                   = DEFAULT_BD_VOLUME_SIZE;
+  globalOptions.bd.imagePreProcessCommand                       = NULL;
+  globalOptions.bd.imagePostProcessCommand                      = NULL;
+  globalOptions.bd.imageCommand                                 = String_newCString(BD_IMAGE_COMMAND);
+  globalOptions.bd.eccPreProcessCommand                         = NULL;
+  globalOptions.bd.eccPostProcessCommand                        = NULL;
+  globalOptions.bd.eccCommand                                   = String_newCString(BD_ECC_COMMAND);
+  globalOptions.bd.blankCommand                                 = String_newCString(BD_BLANK_COMMAND);
+  globalOptions.bd.writePreProcessCommand                       = NULL;
+  globalOptions.bd.writePostProcessCommand                      = NULL;
+  globalOptions.bd.writeCommand                                 = String_newCString(BD_WRITE_COMMAND);
+  globalOptions.bd.writeImageCommand                            = String_newCString(BD_WRITE_IMAGE_COMMAND);
+
+  globalOptions.archiveFileMode                                 = ARCHIVE_FILE_MODE_STOP;
+  globalOptions.restoreEntryMode                                = RESTORE_ENTRY_MODE_STOP;
+  globalOptions.skipUnreadableFlag                              = TRUE;
+  globalOptions.errorCorrectionCodesFlag                        = FALSE;
+  globalOptions.waitFirstVolumeFlag                             = FALSE;
+
+  globalOptions.saveConfigurationFileName                       = NULL;
+
+  // debug/test only
+  globalOptions.debug.serverLevel                               = DEFAULT_SERVER_DEBUG_LEVEL;
+  globalOptions.debug.indexWaitOperationsFlag                   = FALSE;
+  globalOptions.debug.indexPurgeDeletedStoragesFlag             = FALSE;
+  globalOptions.debug.indexAddStorage                           = NULL;
+  globalOptions.debug.indexRemoveStorage                        = NULL;
+  globalOptions.debug.indexRefreshStorage                       = NULL;
+
+  VALUESET_CLEAR(globalOptionSet);
+}
+
+/***********************************************************************\
+* Name   : Configuration_doneGlobalOptions
+* Purpose: deinitialize global option values
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneGlobalOptions(void)
+{
+  // debug/test only
+  String_delete(globalOptions.debug.indexRefreshStorage);
+  String_delete(globalOptions.debug.indexRemoveStorage);
+  String_delete(globalOptions.debug.indexAddStorage);
+
+  // --- job options default values
+  String_delete(globalOptions.bd.writeImageCommand);
+  String_delete(globalOptions.bd.writeCommand);
+  String_delete(globalOptions.bd.writePostProcessCommand);
+  String_delete(globalOptions.bd.writePreProcessCommand);
+  String_delete(globalOptions.bd.blankCommand);
+  String_delete(globalOptions.bd.eccCommand);
+  String_delete(globalOptions.bd.eccPostProcessCommand);
+  String_delete(globalOptions.bd.eccPreProcessCommand);
+  String_delete(globalOptions.bd.imageCommand);
+  String_delete(globalOptions.bd.imagePostProcessCommand);
+  String_delete(globalOptions.bd.imagePreProcessCommand);
+  String_delete(globalOptions.bd.loadVolumeCommand);
+  String_delete(globalOptions.bd.unloadVolumeCommand);
+  String_delete(globalOptions.bd.requestVolumeCommand);
+  String_delete(globalOptions.bd.deviceName);
+
+  String_delete(globalOptions.dvd.writeImageCommand);
+  String_delete(globalOptions.dvd.writeCommand);
+  String_delete(globalOptions.dvd.writePostProcessCommand);
+  String_delete(globalOptions.dvd.writePreProcessCommand);
+  String_delete(globalOptions.dvd.blankCommand);
+  String_delete(globalOptions.dvd.eccCommand);
+  String_delete(globalOptions.dvd.eccPostProcessCommand);
+  String_delete(globalOptions.dvd.eccPreProcessCommand);
+  String_delete(globalOptions.dvd.imageCommand);
+  String_delete(globalOptions.dvd.imagePostProcessCommand);
+  String_delete(globalOptions.dvd.imagePreProcessCommand);
+  String_delete(globalOptions.dvd.loadVolumeCommand);
+  String_delete(globalOptions.dvd.unloadVolumeCommand);
+  String_delete(globalOptions.dvd.requestVolumeCommand);
+  String_delete(globalOptions.dvd.deviceName);
+
+  String_delete(globalOptions.cd.writeImageCommand);
+  String_delete(globalOptions.cd.writeCommand);
+  String_delete(globalOptions.cd.writePostProcessCommand);
+  String_delete(globalOptions.cd.writePreProcessCommand);
+  String_delete(globalOptions.cd.blankCommand);
+  String_delete(globalOptions.cd.eccCommand);
+  String_delete(globalOptions.cd.eccPostProcessCommand);
+  String_delete(globalOptions.cd.eccPreProcessCommand);
+  String_delete(globalOptions.cd.imageCommand);
+  String_delete(globalOptions.cd.imagePostProcessCommand);
+  String_delete(globalOptions.cd.imagePreProcessCommand);
+  String_delete(globalOptions.cd.loadVolumeCommand);
+  String_delete(globalOptions.cd.unloadVolumeCommand);
+  String_delete(globalOptions.cd.requestVolumeCommand);
+  String_delete(globalOptions.cd.deviceName);
+
+  String_delete(globalOptions.sftp.writePostProcessCommand);
+  String_delete(globalOptions.sftp.writePreProcessCommand);
+
+  String_delete(globalOptions.scp.writePostProcessCommand);
+  String_delete(globalOptions.scp.writePreProcessCommand);
+
+  String_delete(globalOptions.ftp.writePostProcessCommand);
+  String_delete(globalOptions.ftp.writePreProcessCommand);
+
+  String_delete(globalOptions.file.writePostProcessCommand);
+  String_delete(globalOptions.file.writePreProcessCommand);
+
+  String_delete(globalOptions.remoteBARExecutable);
+
+  String_delete(globalOptions.comment);
+
+  doneDevice(&globalOptions.defaultDevice);
+  Configuration_doneServer(&globalOptions.defaultWebDAVServer);
+  Configuration_doneServer(&globalOptions.defaultSSHServer);
+  Configuration_doneServer(&globalOptions.defaultFTPServer);
+  Configuration_doneServer(&globalOptions.defaultFileServer);
+
+  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
+
+  Configuration_doneKey(&globalOptions.signaturePrivateKey);
+  Configuration_doneKey(&globalOptions.signaturePublicKey);
+  Configuration_doneKey(&globalOptions.cryptPrivateKey);
+  Configuration_doneKey(&globalOptions.cryptPublicKey);
+  Password_done(&globalOptions.cryptNewPassword);
+  Password_done(&globalOptions.cryptPassword);
+
+  String_delete(globalOptions.destination);
+
+  String_delete(globalOptions.incrementalListFileName);
+
+  DeltaSourceList_done(&globalOptions.deltaSourceList);
+  PatternList_done(&globalOptions.compressExcludePatternList);
+
+  String_delete(globalOptions.unmountCommand);
+  String_delete(globalOptions.mountDeviceCommand);
+  String_delete(globalOptions.mountCommand);
+  List_done(&globalOptions.mountList,CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL));
+
+  String_delete(globalOptions.excludeCommand);
+  String_delete(globalOptions.excludeListFileName);
+  String_delete(globalOptions.includeImageCommand);
+  String_delete(globalOptions.includeImageListFileName);
+  String_delete(globalOptions.includeFileCommand);
+  String_delete(globalOptions.includeFileListFileName);
+
+  String_delete(globalOptions.storageNameCommand);
+  String_delete(globalOptions.storageNameListFileName);
+
+  // --- program options
+  doneHash(&globalOptions.serverPasswordHash);
+  Configuration_doneKey(&globalOptions.serverKey);
+  doneCertificate(&globalOptions.serverCert);
+  doneCertificate(&globalOptions.serverCA);
+
+  PatternList_done(&globalOptions.excludePatternList);
+  EntryList_done(&globalOptions.includeEntryList);
+  String_delete(globalOptions.storageName);
+
+  String_delete(globalOptions.jobUUIDOrName);
+
+  List_done(&globalOptions.maintenanceList,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
+  Semaphore_done(&globalOptions.maintenanceList.lock);
+
+  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
+  Semaphore_done(&globalOptions.deviceList.lock);
+  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
+  Semaphore_done(&globalOptions.serverList.lock);
+
+  List_done(&globalOptions.maxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
+
+  Configuration_doneKey(&globalOptions.masterInfo.publicKey);
+  doneHash(&globalOptions.masterInfo.uuidHash);
+  String_delete(globalOptions.masterInfo.name);
+  String_delete(globalOptions.incrementalDataDirectory);
+  String_delete(globalOptions.jobsDirectory);
+  String_delete(globalOptions.tmpDirectory);
+  String_delete(globalOptions.barExecutable);
+
+  List_done(&configFileList,CALLBACK_((ListNodeFreeFunction)freeConfigFileNode,NULL));
 }
 
 // ----------------------------------------------------------------------
@@ -2512,8 +2560,7 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, c
 
 LOCAL bool configValueConfigFileParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  String         string;
-  ConfigFileNode *configFileNode;
+  String string;
 
   assert(value != NULL);
 
@@ -2577,7 +2624,7 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperati
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const ConfigFileNode *configFileNode = (const ConfigFileNode*)(*formatUserData);
         String               line            = (String)data;
@@ -2700,7 +2747,7 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOp
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const MaintenanceDate *maintenanceDate = (const MaintenanceDate*)(*formatUserData);
         String                line             = (String)data;
@@ -2821,7 +2868,7 @@ LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigV
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const MaintenanceWeekDaySet *maintenanceWeekDaySet = (MaintenanceWeekDaySet*)(*formatUserData);
         String                      names;
@@ -2949,7 +2996,7 @@ LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueOp
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const MaintenanceTime *maintenanceTime = (const MaintenanceTime*)(*formatUserData);
         String                line             = (String)data;
@@ -3008,15 +3055,17 @@ LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sec
 
   assert(sectionDataIterator != NULL);
 
+  UNUSED_VARIABLE(userData);
+
   result = NULL;
 
   switch (operation)
   {
     case CONFIG_VALUE_OPERATION_INIT:
       {
-        assert(data != NULL);
-
         ServerNode *serverNode = (ServerNode*)List_first((List*)data);
+
+        assert(serverNode != NULL);
 
         while ((serverNode != NULL) && (serverNode->type != serverType))
         {
@@ -3046,7 +3095,7 @@ LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sec
         result = (serverNode != NULL) ? &serverNode->commentList : NULL;
       }
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         ServerNode *serverNode = (ServerNode*)(*sectionDataIterator);
         String     name        = (String)data;
@@ -3160,6 +3209,8 @@ LOCAL void *configValueDeviceSectionDataIterator(ConfigValueSectionDataIterator 
 
   assert(sectionDataIterator != NULL);
 
+  UNUSED_VARIABLE(userData);
+
   result = NULL;
 
   switch (operation)
@@ -3184,7 +3235,7 @@ LOCAL void *configValueDeviceSectionDataIterator(ConfigValueSectionDataIterator 
         result = (deviceNode != NULL) ? &deviceNode->commentList : NULL;
       }
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         DeviceNode *deviceNode = (DeviceNode*)(*sectionDataIterator);
         String     name        = (String)data;
@@ -3455,7 +3506,7 @@ LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueOpera
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const ScheduleDate *scheduleDate = (const ScheduleDate*)(*formatUserData);
         String             line          = (String)data;
@@ -3576,7 +3627,7 @@ LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValu
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const ScheduleWeekDaySet *scheduleWeekDaySet = (const ScheduleWeekDaySet*)(*formatUserData);
         String                   names;
@@ -3704,7 +3755,7 @@ LOCAL bool configValueScheduleTimeFormat(void **formatUserData, ConfigValueOpera
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const ScheduleTime *scheduleTime = (ScheduleTime*)(*formatUserData);
         String             line          = (String)data;
@@ -3822,7 +3873,7 @@ LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValu
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -3933,7 +3984,7 @@ LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValu
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -4042,7 +4093,7 @@ LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValue
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const PersistenceNode *persistenceNode = (const PersistenceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -4087,7 +4138,7 @@ LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValue
 * Notes  : -
 \***********************************************************************/
 
-bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   String string;
 
@@ -4131,7 +4182,7 @@ bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const 
 * Notes  : -
 \***********************************************************************/
 
-bool configValueDeprecatedRemotePortParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedRemotePortParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   uint n;
 
@@ -4242,25 +4293,6 @@ LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *userData, void *variab
   ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
 
   return TRUE;
-}
-
-/***********************************************************************\
-* Name   : freeBandWidthNode
-* Purpose: free band width node
-* Input  : bandWidthNode - band width node
-*          userData      - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
-{
-  assert(bandWidthNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(bandWidthNode->fileName);
 }
 
 /***********************************************************************\
@@ -4513,7 +4545,7 @@ LOCAL bool configValuePasswordFormat(void **formatUserData, ConfigValueOperation
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const Password *password = (Password*)(*formatUserData);
         String         line      = (String)data;
@@ -4725,7 +4757,7 @@ LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueOp
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const CryptAlgorithms *cryptAlgorithms = (CryptAlgorithms*)(*formatUserData);
         String                line             = (String)data;
@@ -4842,7 +4874,7 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const BandWidthNode *bandWidthNode = (BandWidthNode*)(*formatUserData);
         StringUnit          stringUnit;
@@ -5014,7 +5046,7 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const Owner *owner = (Owner*)(*formatUserData);
         String      line   = (String)data;
@@ -5153,7 +5185,7 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperat
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const FilePermission *filePermission = (FilePermission*)(*formatUserData);
         String               line            = (String)data;
@@ -5296,7 +5328,7 @@ LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueO
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
         String          fileName;
@@ -5364,7 +5396,7 @@ LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValue
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
         String          line       = (String)data;
@@ -5499,7 +5531,7 @@ LOCAL bool configValuePatternFormat(void **formatUserData, ConfigValueOperations
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const PatternNode *patternNode = (PatternNode*)(*formatUserData);
         String            line         = (String)data;
@@ -5603,9 +5635,9 @@ LOCAL bool configValueMountParse(void *userData, void *variable, const char *nam
   if (!String_isEmpty(mountName))
   {
     // add to mount list
-    mountNode = newMountNode(mountName,
-                             deviceName
-                            );
+    mountNode = Configuration_newMountNode(mountName,
+                                           deviceName
+                                          );
     if (mountNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -5653,7 +5685,7 @@ LOCAL bool configValueMountFormat(void **formatUserData, ConfigValueOperations o
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const MountNode *mountNode = (MountNode*)(*formatUserData);
         String         line        = (String)data;
@@ -5772,7 +5804,7 @@ LOCAL bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueOperat
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const DeltaSourceNode *deltaSourceNode = (const DeltaSourceNode*)(*formatUserData);
         String                line             = (String)data;
@@ -5983,7 +6015,7 @@ LOCAL bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValu
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         CompressAlgorithmsDeltaByte *compressAlgorithmsDeltaByte = (CompressAlgorithmsDeltaByte*)(*formatUserData);
         String                      line                         = (String)data;
@@ -6152,7 +6184,7 @@ LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueOperat
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const Certificate *certificate = (Certificate*)(*formatUserData);
         String            line         = (String)data;
@@ -6325,7 +6357,7 @@ LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations ope
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const Key *key = (Key*)(*formatUserData);
         String    line = (String)data;
@@ -6626,7 +6658,7 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
       break;
     case CONFIG_VALUE_OPERATION_COMMENTS:
       break;
-    case CONFIG_VALUE_OPERATION:
+    case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const Hash *hash = (const Hash*)(*formatUserData);
         String     line  = (String)data;
@@ -6655,10 +6687,15 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
 }
 
 /***********************************************************************\
-* Name   : readConfigFile
-* Purpose: read configuration from file
-* Input  : fileName      - file name
-*          printInfoFlag - TRUE for output info, FALSE otherwise
+* Name   : readConfigFileSection
+* Purpose: read configuration section from file
+* Input  : fileName                       - file name
+*          fileHandle                     - file handle
+*          sectionName                    - section name
+*          firstValueIndex,lastValueIndex - first/last section index
+*          printInfoFlag                  - TRUE for output info, FALSE
+*                                           otherwise
+*          variable                       - variable or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -6667,8 +6704,8 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
 LOCAL Errors readConfigFileSection(ConstString fileName,
                                    FileHandle  *fileHandle,
                                    const char  *sectionName,
-                                   uint        i0,
-                                   uint        i1,
+                                   uint        firstValueIndex,
+                                   uint        lastValueIndex,
                                    bool        printInfoFlag,
                                    void        *variable
                                   )
@@ -6677,7 +6714,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
   uint       lineNb;
   String     line;
   String     name,value;
-  StringList commentLineList;
+  StringList commentList;
   long       nextIndex;
   uint       i;
 
@@ -6687,7 +6724,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
   lineNb     = 0;
   name       = String_new();
   value      = String_new();
-  StringList_init(&commentLineList);
+  StringList_init(&commentList);
   while (   (error == ERROR_NONE)
          && File_getLine(fileHandle,line,&lineNb,NULL)
          && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
@@ -6696,13 +6733,13 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
     if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
     {
       // discard comments if separator or empty line
-      StringList_clear(&commentLineList);
+      StringList_clear(&commentList);
     }
     else if (String_startsWithCString(line,"# "))
     {
       // store comment
       String_remove(line,STRING_BEGIN,2);
-      StringList_append(&commentLineList,line);
+      StringList_append(&commentList,line);
     }
     else if (String_startsWithChar(line,'#'))
     {
@@ -6711,34 +6748,37 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
       i = ConfigValue_find(CONFIG_VALUES,
-                           i0,
-                           i1,
+                           firstValueIndex,
+                           lastValueIndex,
                            String_cString(name)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-          (void)ConfigValue_parse(&CONFIG_VALUES[i],
-                                  sectionName,
-                                  String_cString(value),
-                                  CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                  {
-                                    UNUSED_VARIABLE(userData);
+        if (ConfigValue_parse(&CONFIG_VALUES[i],
+                              sectionName,
+                              String_cString(value),
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                                    if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                    printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
-                                    error = ERROR_CONFIG;
-                                  },NULL),
-                                  CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                  {
-                                    UNUSED_VARIABLE(userData);
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
+                                error = ERROR_CONFIG;
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                                    if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                    printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
-                                  },NULL),
-                                  variable,
-                                  &commentLineList
-                                 );
-          assert(StringList_isEmpty(&commentLineList));
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
+                              },NULL),
+                              variable,
+                              &commentList
+                             )
+           )
+        {
+          assert(StringList_isEmpty(&commentList));
+        }
       }
       else
       {
@@ -6786,7 +6826,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   uint       lineNb;
   String     line;
   String     name,value;
-  StringList commentLineList;
+  StringList commentList;
   long       nextIndex;
 
   assert(fileName != NULL);
@@ -6828,415 +6868,420 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   lineNb     = 0;
   name       = String_new();
   value      = String_new();
-  StringList_init(&commentLineList);
-//TODO: remove
-extern Semaphore       consoleLock;            // lock console
-  SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  StringList_init(&commentList);
+  if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
+  while (   (error == ERROR_NONE)
+         && File_getLine(&fileHandle,line,&lineNb,NULL)
+        )
   {
-    if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
-    while (   (error == ERROR_NONE)
-           && File_getLine(&fileHandle,line,&lineNb,NULL)
-          )
-    {
-      // parse line
+    // parse line
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(line));
-      String_trim(line,STRING_WHITE_SPACES);
-      if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
-      {
-        // discard comments if separator or empty line
-        StringList_clear(&commentLineList);
-      }
-      else if (String_startsWithCString(line,"# "))
-      {
-        // store comment
-        String_remove(line,STRING_BEGIN,2);
-        StringList_append(&commentLineList,line);
-      }
-      else if (String_startsWithChar(line,'#'))
-      {
-        // ignore commented values
-      }
-      else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
-      {
-        uint       i,i0,i1;
-        ServerNode *serverNode;
+    String_trim(line,STRING_WHITE_SPACES);
+    if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
+    {
+      // discard comments if separator or empty line
+      StringList_clear(&commentList);
+    }
+    else if (String_startsWithCString(line,"# "))
+    {
+      // store comment
+      String_remove(line,STRING_BEGIN,2);
+      StringList_append(&commentList,line);
+    }
+    else if (String_startsWithChar(line,'#'))
+    {
+      // ignore commented values
+    }
+    else if (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
+    {
+      uint       i,firstValueIndex,lastValueIndex;
+      ServerNode *serverNode;
 
-        // find section
-        i = ConfigValue_findSection(CONFIG_VALUES,
-                                    "file-server",
-                                    &i0,
-                                    &i1
-                                   );
-        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'file-server'");
-
-        // find/allocate server node
-        serverNode = NULL;
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_FILE)
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FILE);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_FILE);
-        StringList_move(&serverNode->commentList,&commentLineList);
-
-        // read config section
-        error = readConfigFileSection(fileName,
-                                      &fileHandle,
-                                      "file-server",
-                                      i0,i1,
-                                      printInfoFlag,
-                                      serverNode
-                                     );
-        if (error == ERROR_NONE)
-        {
-          // add to server list
-          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            List_append(&globalOptions.serverList,serverNode);
-          }
-        }
-        else
-        {
-          Configuration_deleteServerNode(serverNode);
-        }
-      }
-      else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
-      {
-        uint       i,i0,i1;
-        ServerNode *serverNode;
-
-        // find section
-        i = ConfigValue_findSection(CONFIG_VALUES,
-                                    "ftp-server",
-                                    &i0,
-                                    &i1
-                                   );
-        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'ftp-server'");
-
-        // find/allocate server node
-        serverNode = NULL;
-        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_FTP)
-//TODO: port number
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FTP);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_FTP);
-        StringList_move(&serverNode->commentList,&commentLineList);
-
-        // read config section
-        error = readConfigFileSection(fileName,
-                                  &fileHandle,
-                                  "ftp-server",
-                                  i0,i1,
-                                  printInfoFlag,
-                                  serverNode
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "file-server",
+                                  &firstValueIndex,
+                                  &lastValueIndex
                                  );
-        if (error == ERROR_NONE)
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'file-server'");
+      UNUSED_VARIABLE(i);
+
+      // find/allocate server node
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                            serverNode,
+                                               (serverNode->type == SERVER_TYPE_FILE)
+                                            && String_equals(serverNode->name,name)
+                                           );
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+      }
+      if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FILE);
+      assert(serverNode != NULL);
+      assert(serverNode->type == SERVER_TYPE_FILE);
+      StringList_move(&serverNode->commentList,&commentList);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
+                                    "file-server",
+                                    firstValueIndex,lastValueIndex,
+                                    printInfoFlag,
+                                    serverNode
+                                   );
+      if (error == ERROR_NONE)
+      {
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          // add to server list
-          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            List_append(&globalOptions.serverList,serverNode);
-          }
-        }
-        else
-        {
-          Configuration_deleteServerNode(serverNode);
+          List_append(&globalOptions.serverList,serverNode);
         }
       }
-      else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
+      else
       {
-        uint       i,i0,i1;
-        ServerNode *serverNode;
+        Configuration_deleteServerNode(serverNode);
+      }
+    }
+    else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
+    {
+      uint       i,firstValueIndex,lastValueIndex;
+      ServerNode *serverNode;
 
-        // find section
-        i = ConfigValue_findSection(CONFIG_VALUES,
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "ftp-server",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'ftp-server'");
+      UNUSED_VARIABLE(i);
+
+      // find/allocate server node
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                            serverNode,
+                                               (serverNode->type == SERVER_TYPE_FTP)
+//TODO: port number
+                                            && String_equals(serverNode->name,name)
+                                           );
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+      }
+      if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_FTP);
+      assert(serverNode != NULL);
+      assert(serverNode->type == SERVER_TYPE_FTP);
+      StringList_move(&serverNode->commentList,&commentList);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                &fileHandle,
+                                "ftp-server",
+                                firstValueIndex,lastValueIndex,
+                                printInfoFlag,
+                                serverNode
+                               );
+      if (error == ERROR_NONE)
+      {
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.serverList,serverNode);
+        }
+      }
+      else
+      {
+        Configuration_deleteServerNode(serverNode);
+      }
+    }
+    else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
+    {
+      uint       i,firstValueIndex,lastValueIndex;
+      ServerNode *serverNode;
+
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "ssh-server",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'ssh-server'");
+      UNUSED_VARIABLE(i);
+
+      // find/allocate server node
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                            serverNode,
+                                               (serverNode->type == SERVER_TYPE_SSH)
+//TODO: port number
+                                            && String_equals(serverNode->name,name)
+                                           );
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+      }
+      if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_SSH);
+      assert(serverNode != NULL);
+      assert(serverNode->type == SERVER_TYPE_SSH);
+      StringList_move(&serverNode->commentList,&commentList);
+
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
                                     "ssh-server",
-                                    &i0,
-                                    &i1
+                                    firstValueIndex,lastValueIndex,
+                                    printInfoFlag,
+                                    serverNode
                                    );
-        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'ssh-server'");
-
-        // find/allocate server node
-        serverNode = NULL;
+      if (error == ERROR_NONE)
+      {
+        // add to server list
         SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_SSH)
-//TODO: port number
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_SSH);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_SSH);
-        StringList_move(&serverNode->commentList,&commentLineList);
-
-        error = readConfigFileSection(fileName,
-                                      &fileHandle,
-                                      "ssh-server",
-                                      i0,i1,
-                                      printInfoFlag,
-                                      serverNode
-                                     );
-        if (error == ERROR_NONE)
-        {
-          // add to server list
-          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            List_append(&globalOptions.serverList,serverNode);
-          }
-        }
-        else
-        {
-          Configuration_deleteServerNode(serverNode);
+          List_append(&globalOptions.serverList,serverNode);
         }
       }
-      else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
+      else
       {
-        uint       i,i0,i1;
-        ServerNode *serverNode;
+        Configuration_deleteServerNode(serverNode);
+      }
+    }
+    else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
+    {
+      uint       i,firstValueIndex,lastValueIndex;
+      ServerNode *serverNode;
 
-        // find section
-        i = ConfigValue_findSection(CONFIG_VALUES,
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "webdav-server",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'webdav-server'");
+      UNUSED_VARIABLE(i);
+
+      // find/allocate server node
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                            serverNode,
+                                               (serverNode->type == SERVER_TYPE_WEBDAV)
+//TODO: port number
+                                            && String_equals(serverNode->name,name)
+                                           );
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+      }
+      if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_WEBDAV);
+      assert(serverNode != NULL);
+      assert(serverNode->type == SERVER_TYPE_WEBDAV);
+      StringList_move(&serverNode->commentList,&commentList);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
                                     "webdav-server",
-                                    &i0,
-                                    &i1
+                                    firstValueIndex,lastValueIndex,
+                                    printInfoFlag,
+                                    serverNode
                                    );
-        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'webdav-server'");
-
-        // find/allocate server node
-        serverNode = NULL;
+      if (error == ERROR_NONE)
+      {
+        // add to server list
         SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
-                                              serverNode,
-                                                 (serverNode->type == SERVER_TYPE_WEBDAV)
-//TODO: port number
-                                              && String_equals(serverNode->name,name)
-                                             );
-          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-        }
-        if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_WEBDAV);
-        assert(serverNode != NULL);
-        assert(serverNode->type == SERVER_TYPE_WEBDAV);
-        StringList_move(&serverNode->commentList,&commentLineList);
-
-        // read config section
-        error = readConfigFileSection(fileName,
-                                      &fileHandle,
-                                      "webdav-server",
-                                      i0,i1,
-                                      printInfoFlag,
-                                      serverNode
-                                     );
-        if (error == ERROR_NONE)
-        {
-          // add to server list
-          SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            List_append(&globalOptions.serverList,serverNode);
-          }
-        }
-        else
-        {
-          Configuration_deleteServerNode(serverNode);
+          List_append(&globalOptions.serverList,serverNode);
         }
       }
-      else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
+      else
       {
-        uint       i,i0,i1;
-        DeviceNode *deviceNode;
+        Configuration_deleteServerNode(serverNode);
+      }
+    }
+    else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
+    {
+      uint       i,firstValueIndex,lastValueIndex;
+      DeviceNode *deviceNode;
 
-        // find section
-        i = ConfigValue_findSection(CONFIG_VALUES,
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "device",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'device'");
+      UNUSED_VARIABLE(i);
+
+      // find/allocate device node
+      deviceNode = NULL;
+      SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->name,name));
+        if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
+      }
+      if (deviceNode == NULL) deviceNode = Configuration_newDeviceNode(name);
+      StringList_move(&deviceNode->commentList,&commentList);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
                                     "device",
-                                    &i0,
-                                    &i1
+                                    firstValueIndex,lastValueIndex,
+                                    printInfoFlag,
+                                    deviceNode
                                    );
-        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'device'");
-
-        // find/allocate device node
-        deviceNode = NULL;
+      if (error == ERROR_NONE)
+      {
+        // add to device list
         SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->name,name));
-          if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
-        }
-        if (deviceNode == NULL) deviceNode = Configuration_newDeviceNode(name);
-        StringList_move(&deviceNode->commentList,&commentLineList);
-
-        // read config section
-        error = readConfigFileSection(fileName,
-                                      &fileHandle,
-                                      "device",
-                                      i0,i1,
-                                      printInfoFlag,
-                                      deviceNode
-                                     );
-        if (error == ERROR_NONE)
-        {
-          // add to device list
-          SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            List_append(&globalOptions.deviceList,deviceNode);
-          }
-        }
-        else
-        {
-          Configuration_deleteDeviceNode(deviceNode);
+          List_append(&globalOptions.deviceList,deviceNode);
         }
       }
-      else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
+      else
       {
-        uint i,i0,i1;
+        Configuration_deleteDeviceNode(deviceNode);
+      }
+    }
+    else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
+    {
+      uint i,firstValueIndex,lastValueIndex;
 
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-StringList_clear(&commentLineList);
+StringList_clear(&commentList);
 
-        // find section
-        i = ConfigValue_findSection(CONFIG_VALUES,
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "master",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'master'");
+      UNUSED_VARIABLE(i);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
                                     "master",
-                                    &i0,
-                                    &i1
+                                    firstValueIndex,lastValueIndex,
+                                    printInfoFlag,
+                                    NULL  // variable
                                    );
-        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'master'");
+    }
+    else if (String_parse(line,STRING_BEGIN,"[maintenance]",NULL))
+    {
+      uint            i,firstValueIndex,lastValueIndex;
+      MaintenanceNode *maintenanceNode;
 
-        // read config section
-        error = readConfigFileSection(fileName,
-                                      &fileHandle,
-                                      "master",
-                                      i0,i1,
-                                      printInfoFlag,
-                                      NULL  // variable
-                                     );
-      }
-      else if (String_parse(line,STRING_BEGIN,"[maintenance]",NULL))
-      {
-        uint            i,i0,i1;
-        MaintenanceNode *maintenanceNode;
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "maintenance",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'maintenance'");
+      UNUSED_VARIABLE(i);
 
-        // find section
-        i = ConfigValue_findSection(CONFIG_VALUES,
+      // allocate maintenance node
+      maintenanceNode = Configuration_newMaintenanceNode();
+      assert(maintenanceNode != NULL);
+      StringList_move(&maintenanceNode->commentList,&commentList);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
                                     "maintenance",
-                                    &i0,
-                                    &i1
+                                    firstValueIndex,lastValueIndex,
+                                    printInfoFlag,
+                                    maintenanceNode
                                    );
-        assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'maintenance'");
-
-        // allocate maintenance node
-        maintenanceNode = Configuration_newMaintenanceNode();
-        assert(maintenanceNode != NULL);
-        StringList_move(&maintenanceNode->commentList,&commentLineList);
-
-        // read config section
-        error = readConfigFileSection(fileName,
-                                      &fileHandle,
-                                      "maintenance",
-                                      i0,i1,
-                                      printInfoFlag,
-                                      maintenanceNode
-                                     );
-        if (error == ERROR_NONE)
+      if (error == ERROR_NONE)
+      {
+        // add to maintenance list
+        SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          // add to maintenance list
-          SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            List_append(&globalOptions.maintenanceList,maintenanceNode);
-          }
-        }
-        else
-        {
-          Configuration_deleteMaintenanceNode(maintenanceNode);
+          List_append(&globalOptions.maintenanceList,maintenanceNode);
         }
       }
-      else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
+      else
       {
-        // nothing to do
+        Configuration_deleteMaintenanceNode(maintenanceNode);
       }
-      else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
+    }
+    else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
+    {
+      // nothing to do
+    }
+    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+    {
+ uint i = ConfigValue_find(CONFIG_VALUES,
+                           CONFIG_VALUE_INDEX_NONE,
+                           CONFIG_VALUE_INDEX_NONE,
+                           String_cString(name)
+                          );
+      if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        // nothing to do
-      }
-      else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-      {
-   uint i = ConfigValue_find(CONFIG_VALUES,
-                             CONFIG_VALUE_INDEX_NONE,
-                             CONFIG_VALUE_INDEX_NONE,
-                             String_cString(name)
-                            );
-        if (i != CONFIG_VALUE_INDEX_NONE)
-        {
-        (void)ConfigValue_parse(&CONFIG_VALUES[i],
-                                NULL, // section name
-                                String_cString(value),
-                                CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                                {
-                                  UNUSED_VARIABLE(userData);
+        if (ConfigValue_parse(&CONFIG_VALUES[i],
+                              NULL, // section name
+                              String_cString(value),
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                  printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
-                                  error = ERROR_CONFIG;
-                                },NULL),
-                                CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                                {
-                                  UNUSED_VARIABLE(userData);
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                                error = ERROR_CONFIG;
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                  printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
-                                },NULL),
-                                NULL,  // variable
-                                &commentLineList
-                               );
-          assert(StringList_isEmpty(&commentLineList));
-        }
-        else
+                                if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+                                printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                              },NULL),
+                              NULL,  // variable
+                              &commentList
+                             )
+            )
         {
-          if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-          printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
-          error = ERROR_CONFIG;
+          assertx(StringList_isEmpty(&commentList),"%s ",CONFIG_VALUES[i].name);
         }
       }
       else
       {
         if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-        printError(_("Unknown config entry '%s' in %s, line %ld"),
-                   String_cString(line),
-                   String_cString(fileName),
-                   lineNb
-                  );
+        printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
         error = ERROR_CONFIG;
       }
     }
-    if (error == ERROR_NONE)
+    else
     {
-      if (printInfoFlag) { printConsole(stdout,0,"OK\n"); }
+      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+      printError(_("Unknown config entry '%s' in %s, line %ld"),
+                 String_cString(line),
+                 String_cString(fileName),
+                 lineNb
+                );
+      error = ERROR_CONFIG;
     }
   }
-  StringList_done(&commentLineList);
-
-  // free resources
+  if (error == ERROR_NONE)
+  {
+    if (printInfoFlag) { printConsole(stdout,0,"OK\n"); }
+  }
+  StringList_done(&commentList);
   String_delete(value);
   String_delete(name);
   String_delete(line);
 
   // close file
   (void)File_close(&fileHandle);
+
+  // free resources
 
   return error;
 }
@@ -7586,7 +7631,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,1,globalOptions.debug.indexRefreshStorage,          0,                                                             "refresh storage in index database","file name"                            ),
 );
 
-ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_VALUE_SEPARATOR(),
   CONFIG_VALUE_COMMENT("BAR configuration"),
@@ -7647,6 +7692,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("index database"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseFileName,-1,                       "<file name>"),
   CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1,                     "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1,                 "yes|no"),
@@ -7656,6 +7702,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("continuous meta database"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_CSTRING           ("continuous-database",              &globalOptions.continuousDatabaseFileName,-1,                  "<file name>"),
   CONFIG_VALUE_INTEGER64         ("continuous-max-size",              &globalOptions.continuousMaxSize,-1,                           0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS,"<size>"),
   CONFIG_VALUE_INTEGER           ("continuous-min-time-delta",        &globalOptions.continuousMinTimeDelta,-1,                      0,MAX_INT,CONFIG_VALUE_TIME_UNITS,"<n>"),
@@ -7663,6 +7710,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("maintenance"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("maintenance",&globalOptions.maintenanceList,-1,ConfigValue_listSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_SPECIAL  ("date",                             MaintenanceNode,date,                                          configValueMaintenanceDateParse,configValueMaintenanceDateFormat,&globalOptions.maintenanceList),
     CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                         MaintenanceNode,weekDaySet,                                    configValueMaintenanceWeekDaySetParse,configValueMaintenanceWeekDaySetFormat,&globalOptions.maintenanceList),
@@ -7770,6 +7818,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 #if 0
   // ignored schedule settings (server only)
   CONFIG_VALUE_SEPARATOR("schedule"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("schedule",NULL,-1,NULL,NULL,
     CONFIG_VALUE_IGNORE          ("UUID",                                                                                            NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("parentUUID",                                                                                      NULL,FALSE),
@@ -7787,6 +7836,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   // ignored persitence settings (server only)
   CONFIG_VALUE_SEPARATOR("persistence"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("persistence",NULL,-1,NULL,NULL,
     CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
     CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
@@ -7796,6 +7846,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   // commands
   CONFIG_VALUE_SEPARATOR("commands"),
+  CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_STRING            ("pre-command",                      &globalOptions.preProcessScript,-1,                            "<command>"),
   CONFIG_VALUE_STRING            ("post-command",                     &globalOptions.postProcessScript,-1,                           "<command>"),
@@ -7885,6 +7936,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR(),
+  CONFIG_VALUE_SPACE(),
 //  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",            &defaultFileServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SECTION_ARRAY     ("file-server",NULL,-1,NULL,NULL,
     CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",            Server,maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
@@ -7893,6 +7945,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   ),
 
   CONFIG_VALUE_SEPARATOR("ftp settings"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("ftp-login-name",                   &globalOptions.defaultFTPServer.ftp.loginName,-1,                            "<name>"),
   CONFIG_VALUE_SPECIAL           ("ftp-password",                     &globalOptions.defaultFTPServer.ftp.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_VALUE_INTEGER           ("ftp-max-connections",              &globalOptions.defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
@@ -7908,6 +7961,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   ),
 
   CONFIG_VALUE_SEPARATOR("ssh settings"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("ssh-login-name",                   &globalOptions.defaultSSHServer.ssh.loginName,-1,                            "<name>"),
   CONFIG_VALUE_SPECIAL           ("ssh-password",                     &globalOptions.defaultSSHServer.ssh.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                                 0,65535,NULL,"<n>"),
@@ -7929,6 +7983,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   ),
 
   CONFIG_VALUE_SEPARATOR("webDAV settings"),
+  CONFIG_VALUE_SPACE(),
 //  CONFIG_VALUE_INTEGER           ("webdav-port",                      &defaultWebDAVServer.webDAV.port,-1,                           0,65535,NULL,NULL,"<n>),
   CONFIG_VALUE_STRING            ("webdav-login-name",                &globalOptions.defaultWebDAVServer.webDAV.loginName,-1,                      "<name>"),
   CONFIG_VALUE_SPECIAL           ("webdav-password",                  &globalOptions.defaultWebDAVServer.webDAV.password,-1,                       configValuePasswordParse,configValuePasswordFormat,NULL),
@@ -7945,6 +8000,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   ),
 
   CONFIG_VALUE_SEPARATOR("device settings"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("device",                           &globalOptions.defaultDevice.name,-1,                                        "<name>"),
   CONFIG_VALUE_STRING            ("device-request-volume-command",    &globalOptions.defaultDevice.requestVolumeCommand,-1,                        "<command>"),
   CONFIG_VALUE_STRING            ("device-unload-volume-command",     &globalOptions.defaultDevice.unloadVolumeCommand,-1,                         "<command>"),
@@ -7981,6 +8037,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   // server settings
   CONFIG_VALUE_SEPARATOR("server"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SELECT            ("server-mode",                      &globalOptions.serverMode,-1,                                  CONFIG_VALUE_SERVER_MODES,"<mode>"),
   CONFIG_VALUE_INTEGER           ("server-port",                      &globalOptions.serverPort,-1,                                  0,65535,NULL,"<n>"),
   CONFIG_VALUE_INTEGER           ("server-tls-port",                  &globalOptions.serverTLSPort,-1,                               0,65535,NULL,"<n>"),
@@ -7996,6 +8053,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("log"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SET               ("log",                              &globalOptions.logTypes,-1,                                    CONFIG_VALUE_LOG_TYPES,"<type,...>"),
   CONFIG_VALUE_CSTRING           ("log-file",                         &globalOptions.logFileName,-1,                                 "<file name>"),
   CONFIG_VALUE_CSTRING           ("log-format",                       &globalOptions.logFormat,-1,                                   "<file name>"),
@@ -8004,6 +8062,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("miscellaneous"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_BOOLEAN           ("skip-unreadable",                  &globalOptions.skipUnreadableFlag,-1,                          "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("raw-images",                       &globalOptions.rawImagesFlag,-1,                               "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-fragments-check",               &globalOptions.noFragmentsCheckFlag,-1,                        "yes|no"),
@@ -8021,7 +8080,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_VALUE_COMMENT           ("BAR process id file"),
+  CONFIG_VALUE_COMMENT           ("process id file"),
   CONFIG_VALUE_CSTRING           ("pid-file",                         &globalOptions.pidFileName,-1,                                 "<file name>"),
   CONFIG_VALUE_COMMENT("remote BAR executable"),
   CONFIG_VALUE_STRING            ("remote-bar-executable",            &globalOptions.remoteBARExecutable,-1,                         "<executable>"),
@@ -8047,7 +8106,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
 // ----------------------------------------------------------------------
 
-ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ,"<uuid>"),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
@@ -8162,405 +8221,325 @@ ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
 );
 
-void Configuration_initGlobalOptions(void)
+Errors Configuration_initAll(void)
 {
-  uint i;
+  initGlobalOptions();
 
-  memClear(&globalOptions,sizeof(GlobalOptions));
+  return ERROR_NONE;
+}
 
-  // --- program options
-  globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;
-  globalOptions.barExecutable                                   = String_new();
-  globalOptions.niceLevel                                       = 0;
-  globalOptions.maxThreads                                      = 0;
-  globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
-  globalOptions.maxTmpSize                                      = 0LL;
-  globalOptions.jobsDirectory                                   = String_newCString(DEFAULT_JOBS_DIRECTORY);
-  globalOptions.incrementalDataDirectory                        = String_newCString(DEFAULT_INCREMENTAL_DATA_DIRECTORY);
-  globalOptions.masterInfo.pairingFileName                      = DEFAULT_PAIRING_MASTER_FILE_NAME;
-  globalOptions.masterInfo.name                                 = String_new();
-  initHash(&globalOptions.masterInfo.uuidHash);
-  Configuration_initKey(&globalOptions.masterInfo.publicKey);
+void Configuration_doneAll(void)
+{
+  doneGlobalOptions();
+}
 
-  List_init(&globalOptions.maxBandWidthList);
-  globalOptions.maxBandWidthList.n                              = 0L;
-  globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
+void Configuration_initKey(Key *key)
+{
+  assert(key != NULL);
 
-  Semaphore_init(&globalOptions.serverList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&globalOptions.serverList);
-  Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&globalOptions.deviceList);
+  key->data   = NULL;
+  key->length = 0;
+}
 
-  globalOptions.indexDatabaseUpdateFlag                         = TRUE;
-  globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
-  List_init(&globalOptions.indexDatabaseMaxBandWidthList);
-  globalOptions.indexDatabaseMaxBandWidthList.n                 = 0L;
-  globalOptions.indexDatabaseMaxBandWidthList.lastReadTimestamp = 0LL;
-  globalOptions.indexDatabaseKeepTime                           = S_PER_DAY;
+bool Configuration_setKey(Key *key, const void *data, uint length)
+{
+  void *newData;
 
-  Semaphore_init(&globalOptions.maintenanceList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&globalOptions.maintenanceList);
+  assert(key != NULL);
 
-  globalOptions.metaInfoFlag                                    = FALSE;
-  globalOptions.groupFlag                                       = FALSE;
-  globalOptions.allFlag                                         = FALSE;
-  globalOptions.longFormatFlag                                  = FALSE;
-  globalOptions.humanFormatFlag                                 = FALSE;
-  globalOptions.numericUIDGIDFlag                               = FALSE;
-  globalOptions.numericPermissionsFlag                          = FALSE;
-  globalOptions.noHeaderFooterFlag                              = FALSE;
-  globalOptions.deleteOldArchiveFilesFlag                       = FALSE;
-  globalOptions.ignoreNoBackupFileFlag                          = FALSE;
-  globalOptions.noDefaultConfigFlag                             = FALSE;
-  globalOptions.forceDeltaCompressionFlag                       = FALSE;
-  globalOptions.ignoreNoDumpAttributeFlag                       = FALSE;
-  globalOptions.alwaysCreateImageFlag                           = FALSE;
-  globalOptions.blankFlag                                       = FALSE;
-  globalOptions.rawImagesFlag                                   = FALSE;
-  globalOptions.noFragmentsCheckFlag                            = FALSE;
-  globalOptions.noIndexDatabaseFlag                             = FALSE;
-  globalOptions.forceVerifySignaturesFlag                       = FALSE;
-  globalOptions.skipVerifySignaturesFlag                        = FALSE;
-  globalOptions.noSignatureFlag                                 = FALSE;
-  globalOptions.noBAROnMediumFlag                               = FALSE;
-  globalOptions.noStopOnErrorFlag                               = FALSE;
-  globalOptions.noStopOnAttributeErrorFlag                      = FALSE;
-
-  globalOptions.jobUUIDOrName                                   = String_new();
-
-  globalOptions.storageName                                     = String_new();
-  EntryList_init(&globalOptions.includeEntryList);
-  PatternList_init(&globalOptions.excludePatternList);
-
-  globalOptions.changeToDirectory                               = NULL;
-
-  globalOptions.command                                         = COMMAND_NONE;
-
-  globalOptions.generateKeyBits                                 = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
-  globalOptions.generateKeyMode                                 = CRYPT_KEY_MODE_NONE;
-
-  globalOptions.logTypes                                        = LOG_TYPE_NONE;
-  globalOptions.logFileName                                     = NULL;
-  globalOptions.logFormat                                       = DEFAULT_LOG_FORMAT;
-  globalOptions.logPostCommand                                  = NULL;
-
-  globalOptions.pidFileName                                     = NULL;
-
-  globalOptions.quietFlag                                       = FALSE;
-  globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
-  globalOptions.daemonFlag                                      = FALSE;
-  globalOptions.noDetachFlag                                    = FALSE;
-  globalOptions.batchFlag                                       = FALSE;
-  globalOptions.versionFlag                                     = FALSE;
-  globalOptions.helpFlag                                        = FALSE;
-  globalOptions.xhelpFlag                                       = FALSE;
-  globalOptions.helpInternalFlag                                = FALSE;
-
-  globalOptions.serverMode                                      = SERVER_MODE_MASTER;
-  globalOptions.serverPort                                      = DEFAULT_SERVER_PORT;
-  globalOptions.serverTLSPort                                   = DEFAULT_TLS_SERVER_PORT;
-  initCertificate(&globalOptions.serverCA);
-  initCertificate(&globalOptions.serverCert);
-  Configuration_initKey(&globalOptions.serverKey);
-  initHash(&globalOptions.serverPasswordHash);
-  globalOptions.serverMaxConnections                            = DEFAULT_MAX_SERVER_CONNECTIONS;
-
-  // --- job options default values
-  globalOptions.archiveType                                     = ARCHIVE_TYPE_NORMAL;
-
-  globalOptions.storageNameListStdin                            = FALSE;
-  globalOptions.storageNameListFileName                         = String_new();
-  globalOptions.storageNameCommand                              = String_new();
-
-  globalOptions.includeFileListFileName                         = String_new();
-  globalOptions.includeFileCommand                              = String_new();
-  globalOptions.includeImageListFileName                        = String_new();
-  globalOptions.includeImageCommand                             = String_new();
-  globalOptions.excludeListFileName                             = String_new();
-  globalOptions.excludeCommand                                  = String_new();
-
-  List_init(&globalOptions.mountList);
-  globalOptions.mountCommand                                    = String_newCString(MOUNT_COMMAND);
-  globalOptions.mountDeviceCommand                              = String_newCString(MOUNT_DEVICE_COMMAND);
-  globalOptions.unmountCommand                                  = String_newCString(UNMOUNT_COMMAND);
-
-  PatternList_init(&globalOptions.compressExcludePatternList);
-  DeltaSourceList_init(&globalOptions.deltaSourceList);
-
-  globalOptions.archivePartSize                                 = 0LL;
-
-  globalOptions.incrementalListFileName                         = String_new();
-
-  globalOptions.directoryStripCount                             = 0;
-  globalOptions.destination                                     = String_new();
-  globalOptions.owner.userId                                    = FILE_DEFAULT_USER_ID;
-  globalOptions.owner.groupId                                   = FILE_DEFAULT_GROUP_ID;
-  globalOptions.permissions                                     = FILE_DEFAULT_PERMISSION;
-
-  globalOptions.patternType                                     = PATTERN_TYPE_GLOB;
-
-  globalOptions.fragmentSize                                    = DEFAULT_FRAGMENT_SIZE;
-  globalOptions.maxStorageSize                                  = 0LL;
-  globalOptions.volumeSize                                      = 0LL;
-
-  globalOptions.compressMinFileSize                             = DEFAULT_COMPRESS_MIN_FILE_SIZE;
-  globalOptions.continuousMaxSize                               = 0LL;
-  globalOptions.continuousMinTimeDelta                          = 0LL;
-
-  globalOptions.compressAlgorithms.delta                        = COMPRESS_ALGORITHM_NONE;
-  globalOptions.compressAlgorithms.byte                         = COMPRESS_ALGORITHM_NONE;
-
-  globalOptions.cryptType                                       = CRYPT_TYPE_SYMMETRIC;
-  for (i = 0; i < 4; i++)
+  newData = allocSecure(length);
+  if (newData == NULL)
   {
-    globalOptions.cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
+    return FALSE;
   }
-  globalOptions.cryptPasswordMode                               = PASSWORD_MODE_DEFAULT;
-  Password_init(&globalOptions.cryptPassword);
-  Password_init(&globalOptions.cryptNewPassword);
-  Configuration_initKey(&globalOptions.cryptPublicKey);
-  Configuration_initKey(&globalOptions.cryptPrivateKey);
-  Configuration_initKey(&globalOptions.signaturePublicKey);
-  Configuration_initKey(&globalOptions.signaturePrivateKey);
+  memCopyFast(newData,length,data,length);
 
-  Configuration_initServer(&globalOptions.defaultFileServer,NULL,SERVER_TYPE_FILE);
-  Configuration_initServer(&globalOptions.defaultFTPServer,NULL,SERVER_TYPE_FTP);
-  Configuration_initServer(&globalOptions.defaultSSHServer,NULL,SERVER_TYPE_SSH);
-  Configuration_initServer(&globalOptions.defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
-  initDevice(&globalOptions.defaultDevice,NULL);
-  globalOptions.fileServer                                      = &globalOptions.defaultFileServer;
-  globalOptions.ftpServer                                       = &globalOptions.defaultFTPServer;
-  globalOptions.sshServer                                       = &globalOptions.defaultSSHServer;
-  globalOptions.webDAVServer                                    = &globalOptions.defaultWebDAVServer;
-  globalOptions.device                                          = &globalOptions.defaultDevice;
+  if (key->data != NULL) freeSecure(key->data);
+  key->data   = newData;
+  key->length = length;
 
-  globalOptions.comment                                         = NULL;
-
-  globalOptions.remoteBARExecutable                             = NULL;
-
-  globalOptions.file.writePreProcessCommand                     = NULL;
-  globalOptions.file.writePostProcessCommand                    = NULL;
-
-  globalOptions.ftp.writePreProcessCommand                      = NULL;
-  globalOptions.ftp.writePostProcessCommand                     = NULL;
-
-  globalOptions.scp.writePreProcessCommand                      = NULL;
-  globalOptions.scp.writePostProcessCommand                     = NULL;
-
-  globalOptions.sftp.writePreProcessCommand                     = NULL;
-  globalOptions.sftp.writePostProcessCommand                    = NULL;
-
-  globalOptions.cd.deviceName                                   = String_newCString(DEFAULT_CD_DEVICE_NAME);
-  globalOptions.cd.requestVolumeCommand                         = NULL;
-  globalOptions.cd.unloadVolumeCommand                          = String_newCString(CD_UNLOAD_VOLUME_COMMAND);
-  globalOptions.cd.loadVolumeCommand                            = String_newCString(CD_LOAD_VOLUME_COMMAND);
-  globalOptions.cd.volumeSize                                   = DEFAULT_CD_VOLUME_SIZE;
-  globalOptions.cd.imagePreProcessCommand                       = NULL;
-  globalOptions.cd.imagePostProcessCommand                      = NULL;
-  globalOptions.cd.imageCommand                                 = String_newCString(CD_IMAGE_COMMAND);
-  globalOptions.cd.eccPreProcessCommand                         = NULL;
-  globalOptions.cd.eccPostProcessCommand                        = NULL;
-  globalOptions.cd.eccCommand                                   = String_newCString(CD_ECC_COMMAND);
-  globalOptions.cd.blankCommand                                 = String_newCString(CD_BLANK_COMMAND);
-  globalOptions.cd.writePreProcessCommand                       = NULL;
-  globalOptions.cd.writePostProcessCommand                      = NULL;
-  globalOptions.cd.writeCommand                                 = String_newCString(CD_WRITE_COMMAND);
-  globalOptions.cd.writeImageCommand                            = String_newCString(CD_WRITE_IMAGE_COMMAND);
-
-  globalOptions.dvd.deviceName                                  = String_newCString(DEFAULT_DVD_DEVICE_NAME);
-  globalOptions.dvd.requestVolumeCommand                        = NULL;
-  globalOptions.dvd.unloadVolumeCommand                         = String_newCString(DVD_UNLOAD_VOLUME_COMMAND);
-  globalOptions.dvd.loadVolumeCommand                           = String_newCString(DVD_LOAD_VOLUME_COMMAND);
-  globalOptions.dvd.volumeSize                                  = DEFAULT_DVD_VOLUME_SIZE;
-  globalOptions.dvd.imagePreProcessCommand                      = NULL;
-  globalOptions.dvd.imagePostProcessCommand                     = NULL;
-  globalOptions.dvd.imageCommand                                = String_newCString(DVD_IMAGE_COMMAND);
-  globalOptions.dvd.eccPreProcessCommand                        = NULL;
-  globalOptions.dvd.eccPostProcessCommand                       = NULL;
-  globalOptions.dvd.eccCommand                                  = String_newCString(DVD_ECC_COMMAND);
-  globalOptions.dvd.blankCommand                                = String_newCString(DVD_BLANK_COMMAND);
-  globalOptions.dvd.writePreProcessCommand                      = NULL;
-  globalOptions.dvd.writePostProcessCommand                     = NULL;
-  globalOptions.dvd.writeCommand                                = String_newCString(DVD_WRITE_COMMAND);
-  globalOptions.dvd.writeImageCommand                           = String_newCString(DVD_WRITE_IMAGE_COMMAND);
-
-  globalOptions.bd.deviceName                                   = String_newCString(DEFAULT_BD_DEVICE_NAME);
-  globalOptions.bd.requestVolumeCommand                         = NULL;
-  globalOptions.bd.unloadVolumeCommand                          = String_newCString(BD_UNLOAD_VOLUME_COMMAND);
-  globalOptions.bd.loadVolumeCommand                            = String_newCString(BD_LOAD_VOLUME_COMMAND);
-  globalOptions.bd.volumeSize                                   = DEFAULT_BD_VOLUME_SIZE;
-  globalOptions.bd.imagePreProcessCommand                       = NULL;
-  globalOptions.bd.imagePostProcessCommand                      = NULL;
-  globalOptions.bd.imageCommand                                 = String_newCString(BD_IMAGE_COMMAND);
-  globalOptions.bd.eccPreProcessCommand                         = NULL;
-  globalOptions.bd.eccPostProcessCommand                        = NULL;
-  globalOptions.bd.eccCommand                                   = String_newCString(BD_ECC_COMMAND);
-  globalOptions.bd.blankCommand                                 = String_newCString(BD_BLANK_COMMAND);
-  globalOptions.bd.writePreProcessCommand                       = NULL;
-  globalOptions.bd.writePostProcessCommand                      = NULL;
-  globalOptions.bd.writeCommand                                 = String_newCString(BD_WRITE_COMMAND);
-  globalOptions.bd.writeImageCommand                            = String_newCString(BD_WRITE_IMAGE_COMMAND);
-
-  globalOptions.archiveFileMode                                 = ARCHIVE_FILE_MODE_STOP;
-  globalOptions.restoreEntryMode                                = RESTORE_ENTRY_MODE_STOP;
-  globalOptions.skipUnreadableFlag                              = TRUE;
-  globalOptions.errorCorrectionCodesFlag                        = FALSE;
-  globalOptions.waitFirstVolumeFlag                             = FALSE;
-
-  globalOptions.saveConfigurationFileName                       = NULL;
-
-  // debug/test only
-  globalOptions.debug.serverLevel                               = DEFAULT_SERVER_DEBUG_LEVEL;
-  globalOptions.debug.indexWaitOperationsFlag                   = FALSE;
-  globalOptions.debug.indexPurgeDeletedStoragesFlag             = FALSE;
-  globalOptions.debug.indexAddStorage                           = NULL;
-  globalOptions.debug.indexRemoveStorage                        = NULL;
-  globalOptions.debug.indexRefreshStorage                       = NULL;
-
-  VALUESET_CLEAR(globalOptionSet);
+  return TRUE;
 }
 
-void Configuration_doneGlobalOptions(void)
+bool Configuration_setKeyString(Key *key, ConstString string)
 {
-  // debug/test only
-  String_delete(globalOptions.debug.indexRefreshStorage);
-  String_delete(globalOptions.debug.indexRemoveStorage);
-  String_delete(globalOptions.debug.indexAddStorage);
-
-  // --- job options default values
-  String_delete(globalOptions.bd.writeImageCommand);
-  String_delete(globalOptions.bd.writeCommand);
-  String_delete(globalOptions.bd.writePostProcessCommand);
-  String_delete(globalOptions.bd.writePreProcessCommand);
-  String_delete(globalOptions.bd.blankCommand);
-  String_delete(globalOptions.bd.eccCommand);
-  String_delete(globalOptions.bd.eccPostProcessCommand);
-  String_delete(globalOptions.bd.eccPreProcessCommand);
-  String_delete(globalOptions.bd.imageCommand);
-  String_delete(globalOptions.bd.imagePostProcessCommand);
-  String_delete(globalOptions.bd.imagePreProcessCommand);
-  String_delete(globalOptions.bd.loadVolumeCommand);
-  String_delete(globalOptions.bd.unloadVolumeCommand);
-  String_delete(globalOptions.bd.requestVolumeCommand);
-  String_delete(globalOptions.bd.deviceName);
-
-  String_delete(globalOptions.dvd.writeImageCommand);
-  String_delete(globalOptions.dvd.writeCommand);
-  String_delete(globalOptions.dvd.writePostProcessCommand);
-  String_delete(globalOptions.dvd.writePreProcessCommand);
-  String_delete(globalOptions.dvd.blankCommand);
-  String_delete(globalOptions.dvd.eccCommand);
-  String_delete(globalOptions.dvd.eccPostProcessCommand);
-  String_delete(globalOptions.dvd.eccPreProcessCommand);
-  String_delete(globalOptions.dvd.imageCommand);
-  String_delete(globalOptions.dvd.imagePostProcessCommand);
-  String_delete(globalOptions.dvd.imagePreProcessCommand);
-  String_delete(globalOptions.dvd.loadVolumeCommand);
-  String_delete(globalOptions.dvd.unloadVolumeCommand);
-  String_delete(globalOptions.dvd.requestVolumeCommand);
-  String_delete(globalOptions.dvd.deviceName);
-
-  String_delete(globalOptions.cd.writeImageCommand);
-  String_delete(globalOptions.cd.writeCommand);
-  String_delete(globalOptions.cd.writePostProcessCommand);
-  String_delete(globalOptions.cd.writePreProcessCommand);
-  String_delete(globalOptions.cd.blankCommand);
-  String_delete(globalOptions.cd.eccCommand);
-  String_delete(globalOptions.cd.eccPostProcessCommand);
-  String_delete(globalOptions.cd.eccPreProcessCommand);
-  String_delete(globalOptions.cd.imageCommand);
-  String_delete(globalOptions.cd.imagePostProcessCommand);
-  String_delete(globalOptions.cd.imagePreProcessCommand);
-  String_delete(globalOptions.cd.loadVolumeCommand);
-  String_delete(globalOptions.cd.unloadVolumeCommand);
-  String_delete(globalOptions.cd.requestVolumeCommand);
-  String_delete(globalOptions.cd.deviceName);
-
-  String_delete(globalOptions.sftp.writePostProcessCommand);
-  String_delete(globalOptions.sftp.writePreProcessCommand);
-
-  String_delete(globalOptions.scp.writePostProcessCommand);
-  String_delete(globalOptions.scp.writePreProcessCommand);
-
-  String_delete(globalOptions.ftp.writePostProcessCommand);
-  String_delete(globalOptions.ftp.writePreProcessCommand);
-
-  String_delete(globalOptions.file.writePostProcessCommand);
-  String_delete(globalOptions.file.writePreProcessCommand);
-
-  String_delete(globalOptions.remoteBARExecutable);
-
-  String_delete(globalOptions.comment);
-
-  doneDevice(&globalOptions.defaultDevice);
-  Configuration_doneServer(&globalOptions.defaultWebDAVServer);
-  Configuration_doneServer(&globalOptions.defaultSSHServer);
-  Configuration_doneServer(&globalOptions.defaultFTPServer);
-  Configuration_doneServer(&globalOptions.defaultFileServer);
-
-  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
-
-  Configuration_doneKey(&globalOptions.signaturePrivateKey);
-  Configuration_doneKey(&globalOptions.signaturePublicKey);
-  Configuration_doneKey(&globalOptions.cryptPrivateKey);
-  Configuration_doneKey(&globalOptions.cryptPublicKey);
-  Password_done(&globalOptions.cryptNewPassword);
-  Password_done(&globalOptions.cryptPassword);
-
-  String_delete(globalOptions.destination);
-
-  String_delete(globalOptions.incrementalListFileName);
-
-  DeltaSourceList_done(&globalOptions.deltaSourceList);
-  PatternList_done(&globalOptions.compressExcludePatternList);
-
-  String_delete(globalOptions.unmountCommand);
-  String_delete(globalOptions.mountDeviceCommand);
-  String_delete(globalOptions.mountCommand);
-  List_done(&globalOptions.mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
-
-  String_delete(globalOptions.excludeCommand);
-  String_delete(globalOptions.excludeListFileName);
-  String_delete(globalOptions.includeImageCommand);
-  String_delete(globalOptions.includeImageListFileName);
-  String_delete(globalOptions.includeFileCommand);
-  String_delete(globalOptions.includeFileListFileName);
-
-  String_delete(globalOptions.storageNameCommand);
-  String_delete(globalOptions.storageNameListFileName);
-
-  // --- program options
-  doneHash(&globalOptions.serverPasswordHash);
-  Configuration_doneKey(&globalOptions.serverKey);
-  doneCertificate(&globalOptions.serverCert);
-  doneCertificate(&globalOptions.serverCA);
-
-  PatternList_done(&globalOptions.excludePatternList);
-  EntryList_done(&globalOptions.includeEntryList);
-  String_delete(globalOptions.storageName);
-
-  String_delete(globalOptions.jobUUIDOrName);
-
-  List_done(&globalOptions.maintenanceList,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
-  Semaphore_done(&globalOptions.maintenanceList.lock);
-
-  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
-  Semaphore_done(&globalOptions.deviceList.lock);
-  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
-  Semaphore_done(&globalOptions.serverList.lock);
-
-  List_done(&globalOptions.maxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
-
-  Configuration_doneKey(&globalOptions.masterInfo.publicKey);
-  doneHash(&globalOptions.masterInfo.uuidHash);
-  String_delete(globalOptions.masterInfo.name);
-  String_delete(globalOptions.incrementalDataDirectory);
-  String_delete(globalOptions.jobsDirectory);
-  String_delete(globalOptions.tmpDirectory);
-  String_delete(globalOptions.barExecutable);
-
-  List_done(&configFileList,CALLBACK_((ListNodeFreeFunction)freeConfigFileNode,NULL));
+  return Configuration_setKey(key,String_cString(string),String_length(string));
 }
+
+bool Configuration_duplicateKey(Key *key, const Key *fromKey)
+{
+  uint length;
+  void *data;
+
+  assert(key != NULL);
+
+  if ((fromKey != NULL) && (fromKey->length > 0))
+  {
+    length = fromKey->length;
+    data = allocSecure(length);
+    if (data == NULL)
+    {
+      return FALSE;
+    }
+    memCopyFast(data,length,fromKey->data,length);
+  }
+  else
+  {
+    data   = NULL;
+    length = 0;
+  }
+
+  key->data   = data;
+  key->length = length;
+
+  return TRUE;
+}
+
+void Configuration_doneKey(Key *key)
+{
+  assert(key != NULL);
+
+  if (key->data != NULL) freeSecure(key->data);
+  key->data   = NULL;
+  key->length = 0;
+}
+
+void Configuration_clearKey(Key *key)
+{
+  assert(key != NULL);
+
+  Configuration_doneKey(key);
+}
+
+bool Configuration_copyKey(Key *key, const Key *fromKey)
+{
+  uint length;
+  void *data;
+
+  assert(key != NULL);
+
+  if (fromKey != NULL)
+  {
+    length = fromKey->length;
+    data = allocSecure(length);
+    if (data == NULL)
+    {
+      return FALSE;
+    }
+    memCopyFast(data,length,fromKey->data,length);
+  }
+  else
+  {
+    data   = NULL;
+    length = 0;
+  }
+
+  if (key->data != NULL) freeSecure(key->data);
+  key->data   = data;
+  key->length = length;
+
+  return TRUE;
+}
+
+// ----------------------------------------------------------------------
+
+bool Configuration_setHash(Hash *hash, const CryptHash *cryptHash)
+{
+  uint length;
+  void *data;
+
+  assert(hash != NULL);
+  assert(cryptHash != NULL);
+
+  length = Crypt_getHashLength(cryptHash);
+  data   = allocSecure(length);
+  if (data == NULL)
+  {
+    return FALSE;
+  }
+  Crypt_getHash(cryptHash,data,length,NULL);
+
+  if (hash->data != NULL) freeSecure(hash->data);
+  hash->cryptHashAlgorithm = cryptHash->cryptHashAlgorithm;
+  hash->data               = data;
+  hash->length             = length;
+
+  return TRUE;
+}
+
+void Configuration_clearHash(Hash *hash)
+{
+  assert(hash != NULL);
+
+  doneHash(hash);
+}
+
+bool Configuration_equalsHash(Hash *hash, const CryptHash *cryptHash)
+{
+  assert(hash != NULL);
+  assert(cryptHash != NULL);
+
+  return    (hash->cryptHashAlgorithm == cryptHash->cryptHashAlgorithm)
+         && Crypt_equalsHashBuffer(cryptHash,
+                                   hash->data,
+                                   hash->length
+                                  );
+}
+
+// ----------------------------------------------------------------------
+
+bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
+{
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+
+  assert(names != NULL);
+  assert(weekDaySet != NULL);
+
+  if (stringEquals(names,"*"))
+  {
+    (*weekDaySet) = WEEKDAY_SET_ANY;
+  }
+  else
+  {
+    SET_CLEAR(*weekDaySet);
+
+    String_initTokenizerCString(&stringTokenizer,
+                                names,
+                                ",",
+                                STRING_QUOTES,
+                                TRUE
+                               );
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      if      (String_equalsIgnoreCaseCString(token,"mon")) SET_ADD(*weekDaySet,WEEKDAY_MON);
+      else if (String_equalsIgnoreCaseCString(token,"tue")) SET_ADD(*weekDaySet,WEEKDAY_TUE);
+      else if (String_equalsIgnoreCaseCString(token,"wed")) SET_ADD(*weekDaySet,WEEKDAY_WED);
+      else if (String_equalsIgnoreCaseCString(token,"thu")) SET_ADD(*weekDaySet,WEEKDAY_THU);
+      else if (String_equalsIgnoreCaseCString(token,"fri")) SET_ADD(*weekDaySet,WEEKDAY_FRI);
+      else if (String_equalsIgnoreCaseCString(token,"sat")) SET_ADD(*weekDaySet,WEEKDAY_SAT);
+      else if (String_equalsIgnoreCaseCString(token,"sun")) SET_ADD(*weekDaySet,WEEKDAY_SUN);
+      else
+      {
+        String_doneTokenizer(&stringTokenizer);
+        return FALSE;
+      }
+    }
+    String_doneTokenizer(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+bool Configuration_parseDateNumber(ConstString s, int *n)
+{
+  ulong i;
+  long  nextIndex;
+
+  assert(s != NULL);
+  assert(n != NULL);
+
+  // init variables
+  if   (String_equalsCString(s,"*"))
+  {
+    (*n) = DATE_ANY;
+  }
+  else
+  {
+    i = STRING_BEGIN;
+    if (String_length(s) > 0)
+    {
+      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
+      {
+        i++;
+      }
+    }
+    (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
+    if (nextIndex != STRING_END) return FALSE;
+  }
+
+  return TRUE;
+}
+
+bool Configuration_parseDateMonth(ConstString s, int *month)
+{
+  String name;
+  ulong i;
+  long   nextIndex;
+
+  assert(s != NULL);
+  assert(month != NULL);
+
+  name = String_toLower(String_duplicate(s));
+  if      (String_equalsCString(s,"*"))
+  {
+    (*month) = DATE_ANY;
+  }
+  else if (String_equalsIgnoreCaseCString(name,"jan")) (*month) = MONTH_JAN;
+  else if (String_equalsIgnoreCaseCString(name,"feb")) (*month) = MONTH_FEB;
+  else if (String_equalsIgnoreCaseCString(name,"mar")) (*month) = MONTH_MAR;
+  else if (String_equalsIgnoreCaseCString(name,"apr")) (*month) = MONTH_APR;
+  else if (String_equalsIgnoreCaseCString(name,"may")) (*month) = MONTH_MAY;
+  else if (String_equalsIgnoreCaseCString(name,"jun")) (*month) = MONTH_JUN;
+  else if (String_equalsIgnoreCaseCString(name,"jul")) (*month) = MONTH_JUL;
+  else if (String_equalsIgnoreCaseCString(name,"aug")) (*month) = MONTH_AUG;
+  else if (String_equalsIgnoreCaseCString(name,"sep")) (*month) = MONTH_SEP;
+  else if (String_equalsIgnoreCaseCString(name,"oct")) (*month) = MONTH_OCT;
+  else if (String_equalsIgnoreCaseCString(name,"nov")) (*month) = MONTH_NOV;
+  else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
+  else
+  {
+    i = STRING_BEGIN;
+    if (String_length(s) > 0)
+    {
+      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
+      {
+        i++;
+      }
+    }
+    (*month) = (uint)String_toInteger(s,i,&nextIndex,NULL,0);
+    if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
+    {
+      String_delete(name);
+      return FALSE;
+    }
+  }
+  String_delete(name);
+
+  return TRUE;
+}
+
+bool Configuration_parseTimeNumber(ConstString s, int *n)
+{
+  ulong i;
+  long  nextIndex;
+
+  assert(s != NULL);
+  assert(n != NULL);
+
+  // init variables
+  if   (String_equalsCString(s,"*"))
+  {
+    (*n) = TIME_ANY;
+  }
+  else
+  {
+    i = STRING_BEGIN;
+    if (String_length(s) > 0)
+    {
+      while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
+      {
+        i++;
+      }
+    }
+    (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
+    if (nextIndex != STRING_END) return FALSE;
+  }
+
+  return TRUE;
+}
+
+// ----------------------------------------------------------------------
 
 MaintenanceNode *Configuration_newMaintenanceNode(void)
 {
@@ -9257,6 +9236,8 @@ void Configuration_doneDeviceSettings(Device *device)
   UNUSED_VARIABLE(device);
 }
 
+// ----------------------------------------------------------------------
+
 DeviceNode *Configuration_newDeviceNode(ConstString name)
 {
   DeviceNode *deviceNode;
@@ -9279,6 +9260,51 @@ void Configuration_deleteDeviceNode(DeviceNode *deviceNode)
 
   freeDeviceNode(deviceNode,NULL);
   LIST_DELETE_NODE(deviceNode);
+}
+
+MountNode *Configuration_newMountNode(ConstString mountName, ConstString deviceName)
+{
+  assert(mountName != NULL);
+
+  return newMountNodeCString(String_cString(mountName),
+                             String_cString(deviceName)
+                            );
+}
+
+MountNode *Configuration_duplicateMountNode(MountNode *fromMountNode,
+                                            void      *userData
+                                           )
+{
+  MountNode *mountNode;
+
+  assert(fromMountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  mountNode = Configuration_newMountNode(fromMountNode->name,
+                                         fromMountNode->device
+                                        );
+  assert(mountNode != NULL);
+
+  return mountNode;
+}
+
+void Configuration_freeMountNode(MountNode *mountNode, void *userData)
+{
+  assert(mountNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(mountNode->device);
+  String_delete(mountNode->name);
+}
+
+void Configuration_deleteMountNode(MountNode *mountNode)
+{
+  assert(mountNode != NULL);
+
+  Configuration_freeMountNode(mountNode,NULL);
+  LIST_DELETE_NODE(mountNode);
 }
 
 void Configuration_add(ConfigFileTypes configFileType, const char *fileName)
@@ -9304,6 +9330,54 @@ Errors Configuration_readAll(bool printInfoFlag)
   }
 
   return error;
+}
+
+Errors Configuration_readAllServerKeys(void)
+{
+  String fileName;
+  Key    key;
+
+  // init default servers
+  fileName = String_new();
+  Configuration_initKey(&key);
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
+  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  {
+    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
+  }
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
+  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  {
+    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
+    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
+  }
+  Configuration_doneKey(&key);
+  String_delete(fileName);
+
+  // read default server CA, certificate, key
+  (void)readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
+  (void)readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+  (void)readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+
+  return ERROR_NONE;
+}
+
+bool Configuration_validate(void)
+{
+  if (!String_isEmpty(globalOptions.tmpDirectory))
+  {
+    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+  }
+
+  if (!Continuous_isAvailable())
+  {
+    printWarning("Continuous support is not available");
+  }
+
+  return TRUE;
 }
 
 Errors Configuration_update(void)
@@ -9559,6 +9633,7 @@ Errors Configuration_update(void)
     String_delete(configFileName);
     return error;
   }
+
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
              "Updated configuration file '%s'",
@@ -9571,54 +9646,6 @@ Errors Configuration_update(void)
   String_delete(configFileName);
 
   return ERROR_NONE;
-}
-
-Errors Configuration_readAllServerKeys(void)
-{
-  String fileName;
-  Key    key;
-
-  // init default servers
-  fileName = String_new();
-  Configuration_initKey(&key);
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
-  {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
-  }
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
-  {
-    Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
-    Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
-  }
-  Configuration_doneKey(&key);
-  String_delete(fileName);
-
-  // read default server CA, certificate, key
-  (void)readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-  (void)readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
-
-  return ERROR_NONE;
-}
-
-bool Configuration_validate(void)
-{
-  if (!String_isEmpty(globalOptions.tmpDirectory))
-  {
-    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-  }
-
-  if (!Continuous_isAvailable())
-  {
-    printWarning("Continuous support is not available");
-  }
-
-  return TRUE;
 }
 
 #ifdef __cplusplus
