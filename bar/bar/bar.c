@@ -536,7 +536,6 @@ LOCAL Errors initAll(void)
   Semaphore_init(&consoleLock,SEMAPHORE_TYPE_BINARY);
   DEBUG_TESTCODE() { Semaphore_done(&consoleLock); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-  Configuration_initGlobalOptions();
   uuid                                   = String_new();
 
   #ifdef HAVE_NEWLOCALE
@@ -556,7 +555,6 @@ LOCAL Errors initAll(void)
 
   AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
-  AUTOFREE_ADD(&autoFreeList,&globalOptions,{ Configuration_doneGlobalOptions(); });
   AUTOFREE_ADD(&autoFreeList,uuid,{ String_delete(uuid); });
   AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
@@ -578,6 +576,15 @@ LOCAL Errors initAll(void)
   #endif /* HAVE_SETLOCAL && HAVE_TEXTDOMAIN */
 
   // initialize modules
+  error = Configuration_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Configuration_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Configuration_initAll,{ Configuration_doneAll(); });
+
   error = Thread_initAll();
   if (error != ERROR_NONE)
   {
@@ -717,7 +724,7 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
-  // initialize command line options and config values
+  // initialize config values and command line options
   ConfigValue_init(CONFIG_VALUES);
   CmdOption_init(COMMAND_LINE_OPTIONS);
 
@@ -763,6 +770,7 @@ LOCAL void doneAll(void)
   Compress_doneAll();
   Password_doneAll();
   Thread_doneAll();
+  Configuration_doneAll();
 
   // deinitialize variables
   #ifdef HAVE_NEWLOCALE
@@ -777,7 +785,6 @@ LOCAL void doneAll(void)
   Semaphore_done(&mountedList.lock);
 
   String_delete(uuid);
-  Configuration_doneGlobalOptions();
 
   Semaphore_done(&consoleLock);
   String_delete(tmpDirectory);
@@ -1825,73 +1832,6 @@ bool isServerAllocationPending(uint serverId)
   }
 
   return pendingFlag;
-}
-
-MountNode *newMountNode(ConstString mountName, ConstString deviceName)
-{
-  assert(mountName != NULL);
-
-  return newMountNodeCString(String_cString(mountName),
-                             String_cString(deviceName)
-                            );
-}
-
-MountNode *newMountNodeCString(const char *mountName, const char *deviceName)
-{
-  MountNode *mountNode;
-
-  assert(mountName != NULL);
-  assert(!stringIsEmpty(mountName));
-
-  // allocate mount node
-  mountNode = LIST_NEW_NODE(MountNode);
-  if (mountNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  mountNode->id            = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-  mountNode->name          = String_newCString(mountName);
-  mountNode->device        = String_newCString(deviceName);
-  mountNode->mounted       = FALSE;
-  mountNode->mountCount    = 0;
-
-  return mountNode;
-}
-
-MountNode *duplicateMountNode(MountNode *fromMountNode,
-                              void      *userData
-                             )
-{
-  MountNode *mountNode;
-
-  assert(fromMountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  mountNode = newMountNode(fromMountNode->name,
-                           fromMountNode->device
-                          );
-  assert(mountNode != NULL);
-
-  return mountNode;
-}
-
-void deleteMountNode(MountNode *mountNode)
-{
-  assert(mountNode != NULL);
-
-  freeMountNode(mountNode,NULL);
-  LIST_DELETE_NODE(mountNode);
-}
-
-void freeMountNode(MountNode *mountNode, void *userData)
-{
-  assert(mountNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(mountNode->device);
-  String_delete(mountNode->name);
 }
 
 Errors mountAll(const MountList *mountList)
@@ -3304,7 +3244,15 @@ LOCAL Errors runDaemon(void)
   if (String_isEmpty(uuid))
   {
     Misc_getUUID(uuid);
-    (void)Configuration_update();
+    error = Configuration_update();
+    if (error != ERROR_NONE)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Updated configuration file fail (error: %s)",
+                 Error_getText(error)
+                );
+    }
   }
 
   // create pid file
@@ -3332,8 +3280,6 @@ LOCAL Errors runDaemon(void)
 
   // daemon mode -> run server with network
   globalOptions.runMode = RUN_MODE_SERVER;
-
-  // daemon mode -> run server with sockets
   error = Server_socket();
   if (error != ERROR_NONE)
   {
@@ -3346,8 +3292,19 @@ LOCAL Errors runDaemon(void)
   // update config
   if (Configuration_isModified())
   {
-    (void)Configuration_update();
-    Configuration_clearModified();
+    error = Configuration_update();
+    if (error == ERROR_NONE)
+    {
+      Configuration_clearModified();
+    }
+    else
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Updated configuration file fail (error: %s)",
+                 Error_getText(error)
+                );
+    }
   }
 
   // done continouous
@@ -3375,10 +3332,8 @@ LOCAL Errors runBatch(void)
 {
   Errors error;
 
-  // batch mode
-  globalOptions.runMode = RUN_MODE_BATCH;
-
   // batch mode -> run server with standard i/o
+  globalOptions.runMode = RUN_MODE_BATCH;
   error = Server_batch(STDIN_FILENO,STDOUT_FILENO);
   if (error != ERROR_NONE)
   {
@@ -3414,15 +3369,7 @@ LOCAL Errors runJob(ConstString jobUUIDName)
     jobNode = NULL;
     if (jobNode == NULL) jobNode = Job_findByName(jobUUIDName);
     if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
-    if      (jobNode != NULL)
-    {
-//      String_set(jobUUID,jobNode->job.uuid);
-    }
-    else if (String_matchCString(jobUUIDName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
-    {
-//      String_set(jobUUID,jobUUIDName);
-    }
-    else
+    if      (jobNode == NULL)
     {
       printError(_("Cannot find job '%s'!"),
                  String_cString(jobUUIDName)

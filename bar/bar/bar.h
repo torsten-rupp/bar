@@ -21,7 +21,6 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "common/lists.h"
 #include "common/strings.h"
 #include "common/configvalues.h"
 #include "common/patterns.h"
@@ -60,21 +59,6 @@ typedef enum
 
   EXITCODE_UNKNOWN                = 128
 } ExitCodes;
-
-// config values
-extern const ConfigValueUnit   CONFIG_VALUE_BYTES_UNITS[];
-extern const ConfigValueUnit   CONFIG_VALUE_BITS_UNITS[];
-extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_TYPES[];
-extern const ConfigValueSelect CONFIG_VALUE_PATTERN_TYPES[];
-extern const ConfigValueSelect CONFIG_VALUE_COMPRESS_ALGORITHMS[];
-extern const ConfigValueSelect CONFIG_VALUE_CRYPT_ALGORITHMS[];
-extern const ConfigValueSelect CONFIG_VALUE_CRYPT_TYPES[];
-extern const ConfigValueSelect CONFIG_VALUE_PASSWORD_MODES[];
-extern const ConfigValueUnit   CONFIG_VALUE_TIME_UNITS[];
-extern const ConfigValueSet    CONFIG_VALUE_LOG_TYPES[];
-extern const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[];
-extern const ConfigValueSelect CONFIG_VALUE_RESTORE_ENTRY_MODES[];
-extern ConfigValue             CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 
@@ -548,6 +532,7 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 
 // ----------------------------------------------------------------------
 
+#if 0
 /***********************************************************************\
 * Name   : newMaintenanceNode
 * Purpose: create new maintenance node
@@ -640,6 +625,7 @@ void deleteServerNode(ServerNode *serverNode);
 \***********************************************************************/
 
 void freeServerNode(ServerNode *serverNode, void *userData);
+#endif
 
 /***********************************************************************\
 * Name   : getServerSettings
@@ -882,56 +868,6 @@ void freeServer(uint serverId);
 bool isServerAllocationPending(uint serverId);
 
 // ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : newMountNode, newMountNodeCString
-* Purpose: new mount node
-* Input  : mountName  - mount name
-*          deviceName - device name (can be NULL)
-* Output : -
-* Return : mount node
-* Notes  : -
-\***********************************************************************/
-
-MountNode *newMountNode(ConstString mountName, ConstString deviceName);
-MountNode *newMountNodeCString(const char *mountName, const char *deviceName);
-
-/***********************************************************************\
-* Name   : duplicateMountNode
-* Purpose: duplicate schedule node
-* Input  : fromMountNode - from mount node
-*          userData      - user data (not used)
-* Output : -
-* Return : duplicated mount node
-* Notes  : -
-\***********************************************************************/
-
-MountNode *duplicateMountNode(MountNode *fromMountNode,
-                              void      *userData
-                             );
-
-/***********************************************************************\
-* Name   : deleteMountNode
-* Purpose: delete mount node
-* Input  : mountNode - mount node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void deleteMountNode(MountNode *mountNode);
-
-/***********************************************************************\
-* Name   : freeMountNode
-* Purpose: free mount node
-* Input  : mountNode - mount node
-*          userData  - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void freeMountNode(MountNode *mountNode, void *userData);
 
 /***********************************************************************\
 * Name   : mountAll
