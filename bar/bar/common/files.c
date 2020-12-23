@@ -1921,7 +1921,7 @@ Errors __File_openCString(const char *__fileName__,
         fileDescriptor = open(fileName,FLAGS,0);
         if (fileDescriptor == -1)
         {
-          return getLastError(ERROR_CODE_OPEN_FILE,String_cString(fileHandle->name));
+          return getLastError(ERROR_CODE_OPEN_FILE,fileName);
         }
 
         #if   defined(PLATFORM_LINUX)
