@@ -89,13 +89,16 @@ ifneq (@HEAPVIEW_DIR@,)
   LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
 endif
 LD_LIBRARIES              = @LIBRARIES@
-#ubsan
 LD_STATIC_LIBRARIES       = @STATIC_LIBRARIES@
 ifneq (@HEAPVIEW_DIR@,)
   LD_STATIC_LIBRARIES += HeapView
 endif
 LD_STATIC_PREFIX          = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX         = -Wl,-Bdynamic
+
+WINDOWS_DLLS              = /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libgcc_s_sjlj-1.dll \
+                            /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libstdc++-6.dll \
+                            /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
 
 ifneq ($(SANITIZER),)
   CC_FLAGS_DEBUG += -fno-sanitize-recover=all -fstack-protector-all
@@ -822,6 +825,9 @@ ifeq (@HAVE_BREAKPAD@,1)
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 endif
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 bar.sym: bar@EXEEXT@
 	$(OBJCOPY) --only-keep-debug bar@EXEEXT@ $@
@@ -842,6 +848,9 @@ ifeq (@HAVE_BREAKPAD@,1)
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 endif
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 bar-debug.sym: bar-debug@EXEEXT@
 	$(OBJCOPY) --only-keep-debug bar-debug@EXEEXT@ $@
@@ -854,6 +863,9 @@ bar-gcov@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 bar-gprof@EXEEXT@: \
   $(BAR_OBJECTS_GPROF) \
@@ -863,6 +875,9 @@ bar-gprof@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 # Note: a special valgrind version is needed because of a bug in valgrind
 #       reporting false positives when gcc builtin-functions are used.
@@ -875,6 +890,9 @@ bar-valgrind@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 # i18n
 .PHONY: i18n po
@@ -2316,9 +2334,7 @@ install: \
 	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-sqlite3@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(PLATFORM),WINDOWS)
-	$(INSTALL) /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libgcc_s_sjlj-1.dll "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libstdc++-6.dll "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) /usr/i686-w64-mingw32/lib/libwinpthread-1.dll "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) $(WINDOWS_DLLS) "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
