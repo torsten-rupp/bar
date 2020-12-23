@@ -17,6 +17,9 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <pthread.h>
+#ifdef HAVE_REGEX_H
+  #include <regex.h>
+#endif
 #ifdef HAVE_GCRYPT
   #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   #include <gcrypt.h>
@@ -427,7 +430,7 @@ void __dprintf__(const char *__fileName__,
   #if   defined(PLATFORM_LINUX)
     pid_t threadLWPId;
   #elif defined(PLATFORM_WINDOWS)
-    return THREAD_LPW_ID_NONE;
+    pid_t threadLWPId;
   #endif /* PLATFORM_... */
   va_list arguments;
 

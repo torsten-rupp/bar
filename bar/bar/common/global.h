@@ -398,8 +398,8 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
 
 // stringify
-#define STRINGIFY(s) __STRINGIFY(s)
-#define __STRINGIFY(s) #s
+#define STRINGIFY(s) __STRINGIFY__(s)
+#define __STRINGIFY__(s) #s
 
 /***********************************************************************\
 * Name   : EXECUTE_ONCE

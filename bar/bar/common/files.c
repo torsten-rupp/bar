@@ -1128,6 +1128,7 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
     char name[FILE_MAX_PATH_MAX_LENGTH];
     uint n0,n1;
   #elif defined(PLATFORM_WINDOWS)
+    uint n;
   #endif /* PLATFORM_... */
 
   assert(deviceName != NULL);
@@ -1158,23 +1159,24 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
         fclose(handle);
       }
     #elif defined(PLATFORM_WINDOWS)
+      n = stringLength(fileName);
       if      (   (n >= 2)
                && (toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z')
                && (fileName[1] == ':')
               )
       {
-        String_setChar(rootName,toupper(fileName[0]));
-        String_appendChar(rootName,':');
+        String_setChar(deviceName,toupper(fileName[0]));
+        String_appendChar(deviceName,':');
       }
       else if (   (n >= 2)
                && (stringEqualsPrefix(fileName,"\\\\",2) == 0)
               )
       {
-        String_clear(rootName);
+        String_clear(deviceName);
       }
       if ((n >= 3) && (fileName[2] == FILE_PATHNAME_SEPARATOR_CHAR))
       {
-        String_appendChar(rootName,FILE_PATHNAME_SEPARATOR_CHAR);
+        String_appendChar(deviceName,FILE_PATHNAME_SEPARATOR_CHAR);
       }
     #endif /* PLATFORM_... */
   }
@@ -1674,7 +1676,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     // Note: there is a race-condition when mktemp() and mkdir() is used!
     if (stringIsEmpty(mktemp(s)))
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_IO,s);
       free(s);
       return error;
     }
@@ -1683,7 +1685,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       // create directory
       if (mkdir(s) != 0)
       {
-        error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+        error = getLastError(ERROR_CODE_IO,s);
         free(s);
         return error;
       }
@@ -1695,7 +1697,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       // create directory
       if (mkdir(s,0777 & ~currentCreationMask) != 0)
       {
-        error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+        error = getLastError(ERROR_CODE_IO,s);
         free(s);
         return error;
       }
@@ -1825,9 +1827,12 @@ Errors __File_openCString(const char *__fileName__,
   int    fileDescriptor;
   Errors error;
   String directoryName;
-  #ifndef HAVE_O_NOATIME
-    struct stat fileStat;
-  #endif /* not HAVE_O_NOATIME */
+  #if   defined(PLATFORM_LINUX)
+    #ifndef HAVE_O_NOATIME
+      struct stat fileStat;
+    #endif /* not HAVE_O_NOATIME */
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(fileHandle != NULL);
   assert(fileName != NULL);
@@ -4402,7 +4407,7 @@ Errors File_makeDirectory(ConstString    pathName,
   assert(pathName != NULL);
 
   // initialize variables
-  directoryName = File_newFileName();
+  directoryName       = File_newFileName();
   parentDirectoryName = File_newFileName();
 
   // get current umask (get and restore current value)
@@ -4428,7 +4433,7 @@ Errors File_makeDirectory(ConstString    pathName,
     #if   (MKDIR_ARGUMENTS_COUNT == 1)
       if (mkdir(String_cString(directoryName)) != 0)
       {
-        error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+        error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
         File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);
@@ -4535,7 +4540,7 @@ Errors File_makeDirectory(ConstString    pathName,
         #if   (MKDIR_ARGUMENTS_COUNT == 1)
           if (mkdir(String_cString(directoryName)) != 0)
           {
-            error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+            error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
             File_doneSplitFileName(&pathNameTokenizer);
             File_deleteFileName(parentDirectoryName);
             File_deleteFileName(directoryName);
@@ -4694,10 +4699,11 @@ Errors File_readLink(String      fileName,
 
     return ERROR_NONE;
   #else /* not HAVE_READLINK */
-    UNUSED_VARIABLE(fileName);
-    UNUSED_VARIABLE(linkName);
+    UNUSED_VARIABLE(absolutePathFlag);
 
-    return ERROR_FUNCTION_NOT_SUPPORTED;
+    String_set(fileName,linkName);
+
+    return ERROR_NONE;
   #endif /* HAVE_READLINK */
 }
 
