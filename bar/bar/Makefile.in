@@ -341,6 +341,7 @@ valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
 common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/common/$*.c -o common/$*.o
 
 %.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
@@ -883,25 +884,25 @@ i18n po: \
 
 po/bar.pot: $(SOURCE_DIR)/*.c
 	$(INSTALL) -d $(@D)
-	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ *.c
+	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ $(SOURCE_DIR)/*.c
 
 po/german.po: po/bar.pot
 	$(INSTALL) -d $(@D)
-	$(MSGMERGE) -U $@ po/bar.pot
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
 	$(TOUCH) $@
 
 po/japanese.po: po/bar.pot
 	$(INSTALL) -d $(@D)
-	$(MSGMERGE) -U $@ po/bar.pot
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
 	$(TOUCH) $@
 
-po/de/LC_MESSAGES/bar.mo: po/german.po
+po/de/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/german.po
 	$(INSTALL) -d $(@D)
-	$(MSGFMT) -o $@ po/german.po
+	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/german.po
 
-po/jp/LC_MESSAGES/bar.mo: po/japanese.po
+po/jp/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/japanese.po
 	$(INSTALL) -d $(@D)
-	$(MSGFMT) -o $@ po/japanese.po
+	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/japanese.po
 
 # create breakpad symbol files
 ifeq (@HAVE_BREAKPAD@,1)
