@@ -71,6 +71,10 @@
 
 /****************** Conditional compilation switches *******************/
 
+#ifndef NDEBUG
+  #define getLastError(...) __getLastError(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Constants *******************************/
 
 // file types
@@ -136,16 +140,16 @@ LOCAL const struct
   #define FOPEN(fileName,mode) fopen(fileName,mode)
 #endif
 
-#ifdef HAVE__FSEEKI64
-  #define FSEEK(handle,offset,mode) _fseeki64(handle,offset,mode)
+#ifdef HAVE_FSEEKO64
+  #define FSEEK(handle,offset,mode) fseeko64(handle,offset,mode)
 #elif HAVE_FSEEKO
   #define FSEEK(handle,offset,mode) fseeko(handle,offset,mode)
 #else
   #define FSEEK(handle,offset,mode) fseek(handle,offset,mode)
 #endif
 
-#ifdef HAVE__FTELLI64
-  #define FTELL(handle) _ftelli64(handle)
+#ifdef HAVE_FTELLO64
+  #define FTELL(handle) ftello64(handle)
 #elif HAVE_FTELLO
   #define FTELL(handle) ftello(handle)
 #else
@@ -263,32 +267,46 @@ LOCAL void debugFileInit(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getLastError(ErrorCodes errorCode, const char *name)
+#ifdef NDEBUG
+LOCAL Errors getLastError(ErrorCodes errorCode,
+                          const char *name
+                         )
+#else /* not NDEBUG */
+LOCAL Errors __getLastError(const char *__fileName__,
+                            ulong      __lineNb__,
+                            ErrorCodes errorCode,
+                            const char *name
+                           )
+#endif /* NDEBUG */
 {
-  int    lastErrno;
   Errors error;
-  String s;
 
-  // save last errno
-  lastErrno = errno;
-
-  // init variables
-  s = String_new();
-
-  // get error
   switch (errno)
   {
     case ENOSPC:
-      File_getDeviceNameCString(s,name);
-      error = ERRORX_(IO,lastErrno,"no space left on device '%s'",String_cString(s));
+      {
+        String s;
+
+        s = String_new();
+
+        File_getDeviceNameCString(s,name);
+        #ifdef NDEBUG
+          error = Errorx_(ERROR_CODE_IO,ENOSPC,"no space left on device '%s'",String_cString(s));
+        #else /* not NDEBUG */
+          error = Errorx_(__fileName__,__lineNb__,ERROR_CODE_IO,ENOSPC,"no space left on device '%s'",String_cString(s));
+        #endif /* NDEBUG */
+
+        String_delete(s);
+      }
       break;
     default:
-      error = Errorx_(errorCode,errno,"%E",errno);
+      #ifdef NDEBUG
+        error = Errorx_(errorCode,errno,"%E",errno);
+      #else /* not NDEBUG */
+        error = Errorx_(__fileName__,__lineNb__,errorCode,errno,"%E",errno);
+      #endif /* NDEBUG */
       break;
   }
-
-  // free resources
-  String_delete(s);
 
   return error;
 }
