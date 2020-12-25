@@ -162,6 +162,11 @@ rest time
 - scheduler to test archives with report
 - BARControl: test archives function
 - option to local cache of archive before parallel test/compare/diff
+- use libburnia to integrate write cd/dvd/bd
+  https://dev.lovelyhq.com/libburnia/web/wiki
+  https://github.com/svn2github/libburn
+- single input of encrypt password for parallel test/compare
+
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
