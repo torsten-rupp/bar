@@ -1,7 +1,10 @@
 2020-xx-xx 0.22
   * added option --save-configuration: format and
     save configuration file
-  * fix reading cryption keys via config file
+  * fixed reading cryption keys via config file
+  * fixed CD/DVD/BD blank command: use
+    "dvd+rw-format -force" to create medium in
+    restricted overwrite mode
 
 2020-09-27 0.21f
   * fixed auto-index of new archives
