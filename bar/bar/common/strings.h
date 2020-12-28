@@ -171,10 +171,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 
 #ifndef NDEBUG
   #define STRING_CHECKSUM(length,maxLength,data) \
-    ((ulong)((length)^(ulong)(maxLength)^(ulong)(data)))
-
-  #define STRING_CHECKSUM(length,maxLength,data) \
-    ((ulong)((length)^(ulong)(maxLength)^(ulong)(data)))
+    ((ulong)((length)^(ulong)(maxLength)^(ulong)(intptr_t)(data)))
 
   /***********************************************************************\
   * Name   : String_debugCheckValid
