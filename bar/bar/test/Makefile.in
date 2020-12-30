@@ -28,16 +28,22 @@ TEST_DATA_DIR ?= test
 # shell in Makefile must be bash
 SHELL = bash
 
+ifeq ($(PLATFORM),WINDOWS)
+  EXE_PREFIX = $(WINE)
+else
+  EXE_PREFIX = 
+endif
+
 #------------------------------- test commands--------------------------------
 
 # test bar executables
-TEST_BAR          ?= $(BAR_DIR)/bar@EXEEXT@
-TEST_BAR_DEBUG    ?= $(BAR_DIR)/bar-debug@EXEEXT@
-TEST_BAR_GCOV     ?= $(BAR_DIR)/bar-gcov@EXEEXT@
-TEST_BAR_GPROF    ?= $(BAR_DIR)/bar-gprof@EXEEXT@
-TEST_BAR_VALGRIND ?= $(BAR_DIR)/bar-valgrind@EXEEXT@
-TEST_BAR_SQLITE3  ?= $(BAR_DIR)/bar-sqlite3@EXEEXT@
-TEST_DESTROYER    ?= $(BAR_DIR)/destroyer@EXEEXT@
+TEST_BAR          ?= $(EXE_PREFIX) $(BAR_DIR)/bar@EXEEXT@
+TEST_BAR_DEBUG    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-debug@EXEEXT@
+TEST_BAR_GCOV     ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gcov@EXEEXT@
+TEST_BAR_GPROF    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gprof@EXEEXT@
+TEST_BAR_VALGRIND ?= $(EXE_PREFIX) $(BAR_DIR)/bar-valgrind@EXEEXT@
+TEST_BAR_SQLITE3  ?= $(EXE_PREFIX) $(BAR_DIR)/bar-sqlite3@EXEEXT@
+TEST_DESTROYER    ?= $(EXE_PREFIX) $(BAR_DIR)/destroyer@EXEEXT@
 
 #---------------------------------- commands----------------------------------
 
@@ -92,6 +98,7 @@ TIMEOUT        = timeout
 TOUCH          = touch
 ULIMIT         = ulimit
 WAIT           = wait
+WINE           = @WINE@
 WC             = wc
 XARGS          = xargs
 
@@ -877,19 +884,19 @@ test:
 
 test-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test
 
 test-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test
 
 test-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test
 
 test-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_VALGRIND) test
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_VALGRIND)" test
 
 test_win: \
   $(TEST_BAR)
@@ -898,7 +905,7 @@ test_win: \
 
 test-win-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test-win
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test-win
 
 test_keys: \
   $(TEST_KEYS)
@@ -956,19 +963,19 @@ test1 test_basic:
 
 test1-debug test_basic-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_basic
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_basic
 
 test1-gcov test_basic-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_basic
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_basic
 
 test1-gprof test_basic-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_basic
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_basic
 
 test1-valgrind test_basic-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_basic
 
 test2 test_compress:
 	@$(call functionInfoBegin,Test 2: compress)
@@ -1008,19 +1015,19 @@ test2 test_compress:
 
 test2-debug test_compress-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_compress
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_compress
 
 test2-gcov test_compress-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_compress
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_compress
 
 test2-gprof test_compress-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_compress
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_compress
 
 test2-valgrind test_compress-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_compress
 
 test_delta_compress:
 	@$(call functionInfoBegin,Test 2: delta compress)
@@ -1050,19 +1057,19 @@ test_delta_compress:
 
 test_delta_compress-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_delta_compress
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_delta_compress
 
 test_delta_compress-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_delta_compress
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_delta_compress
 
 test_delta_compress-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_delta_compress
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_delta_compress
 
 test_delta_compress-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_delta_compress
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_delta_compress
 
 test3 test_crypt: \
   $(TEST_KEYS)
@@ -1111,19 +1118,19 @@ test3 test_crypt: \
 
 test3-debug test_crypt-debug:  \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_crypt
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_crypt
 
 test3-gcov test_crypt-gcov:  \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_crypt
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)" test_crypt
 
 test3-gprof test_crypt-gprof:  \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_crypt
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) test_crypt
 
 test3-valgrind test_crypt-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_crypt
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_crypt
 
 test4 test_asymmetric_crypt: \
   $(TEST_KEYS)
@@ -1180,19 +1187,19 @@ test4 test_asymmetric_crypt: \
 
 test4-debug test_asymmetric_crypt-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_asymmetric_crypt
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_asymmetric_crypt
 
 test4-gcov test_asymmetric_crypt-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_asymmetric_crypt
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_asymmetric_crypt
 
 test4-gprof test_asymmetric_crypt-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_asymmetric_crypt
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_asymmetric_crypt
 
 test4-valgrind test_asymmetric_crypt-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_asymmetric_crypt
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_asymmetric_crypt
 
 test5 test_signatures: \
   $(TEST_KEYS)
@@ -1228,19 +1235,19 @@ test5 test_signatures: \
 
 test5-debug test_signatures-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_signatures
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_signatures
 
 test5-gcov test_signatures-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_signatures
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_signatures
 
 test5-gprof test_signatures-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_signatures
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_signatures
 
 test5-valgrind test_signatures-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_signatures
 
 test6 test_split: \
   data/zero512k.dat
@@ -1277,19 +1284,19 @@ test6 test_split: \
 
 test6-debug test_split-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_split
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_split
 
 test6-gcov test_split-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_split
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_split
 
 test6-gprof test_split-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_split
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_split
 
 test6-valgrind test_split-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_split
 
 test7 test_convert:
 	@$(call functionInfoBegin,Test 7: convert)
@@ -1303,19 +1310,19 @@ test7 test_convert:
 
 test7-debug test_convert-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_convert
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_convert
 
 test7-gcov test_convert-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_convert
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_convert
 
 test7-gprof test_convert-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_convert
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_convert
 
 test7-valgrind test_convert-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_convert
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_convert
 
 test8 test_image:
 	@$(call functionInfoBegin,Test 8: image)
@@ -1349,19 +1356,19 @@ test8 test_image:
 
 test8-debug test_image-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_image
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_image
 
 test8-gcov test_image-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_image
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_image
 
 test8-gprof test_image-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_image
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_image
 
 test8-valgrind test_image-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_image
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_image
 
 test9 test_storage:
 	@$(ECHO_NO_LF) "Test 9: storage..."
@@ -1373,19 +1380,19 @@ test9 test_storage:
 
 test9-debug test_storage-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage
 
 test9-gcov test_storage-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_storage
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage
 
 test9-gprof test_storage-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_storage
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage
 
 test9-valgrind test_storage-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage
 
 test_storage_file:
 	$(MAKE) \
@@ -1411,19 +1418,19 @@ test_storage_file:
 
 test_storage_file-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_file
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_file
 
 test_storage_file-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_storage_file
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_file
 
 test_storage_file-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_storage_file
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_file
 
 test_storage_file-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_file
 
 test_storage_ftp:
 	@$(ECHO) Info : TEST_HOST_FTP=$(TEST_HOST_FTP)
@@ -1454,19 +1461,19 @@ test_storage_ftp:
 
 test_storage_ftp-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_ftp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_ftp
 
 test_storage_ftp-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_storage_ftp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_ftp
 
 test_storage_ftp-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_storage_ftp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_ftp
 
 test_storage_ftp-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_ftp
 
 test_storage_scp:
 	@$(ECHO) Info : TEST_HOST_SCP=$(TEST_HOST_SCP)
@@ -1492,19 +1499,19 @@ test_storage_scp:
 
 test_storage_scp-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_scp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_scp
 
 test_storage_scp-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_storage_scp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_scp
 
 test_storage_scp-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_storage_scp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_scp
 
 test_storage_scp-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_scp
 
 test_storage_sftp:
 	@$(ECHO) Info : TEST_HOST_SFTP=$(TEST_HOST_SFTP)
@@ -1537,19 +1544,19 @@ test_storage_sftp:
 
 test_storage_sftp-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_sftp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_sftp
 
 test_storage_sftp-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_storage_sftp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_sftp
 
 test_storage_sftp-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_storage_sftp
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_sftp
 
 test_storage_sftp-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_sftp
 
 test_storage_webdav:
 	@$(ECHO) Info : TEST_HOST_WEBDAV=$(TEST_HOST_WEBDAV)
@@ -1580,19 +1587,19 @@ test_storage_webdav:
 
 test_storage_webdav-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_storage_webdav
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_webdav
 
 test_storage_webdav-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_storage_webdav
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_webdav
 
 test_storage_webdav-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_storage_webdav
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_webdav
 
 test_storage_webdav-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_webdav
 
 test10 test_hugefiles:
 	@$(call functionInfoBegin,Test 10: huge files)
@@ -1612,19 +1619,19 @@ test10 test_hugefiles:
 
 test10-debug test_hugefiles-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_hugefiles
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_hugefiles
 
 test10-gcov test_hugefiles-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_hugefiles
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_hugefiles
 
 test10-gprof test_hugefiles-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_hugefiles
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_hugefiles
 
 test10-valgrind test_hugefiles-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_hugefiles
 
 test11 test_optical:
 	@$(call functionInfoBegin,Test 11: optical)
@@ -1638,19 +1645,19 @@ test11 test_optical:
 
 test11-debug test_optical-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_optical
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_optical
 
 test11-gcov test_optical-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_optical
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_optical
 
 test11-gprof test_optical-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_optical
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_optical
 
 test11-valgrind test_optical-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_optical
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_optical
 
 test12 test_device:
 	@$(call functionInfoBegin,Test 12: device)
@@ -1664,19 +1671,19 @@ test12 test_device:
 
 test12-debug test_device-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_device
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_device
 
 test12-gcov test_device-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_device
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_device
 
 test12-gprof test_device-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_device
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_device
 
 test12-valgrind test_device-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_device
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_device
 
 test13 test_index:
 	@$(call functionInfoBegin,Test 13: index)
@@ -1690,19 +1697,19 @@ test13 test_index:
 
 test13-debug test_index-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_index
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_index
 
 test13-gcov test_index-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_index
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_index
 
 test13-gprof test_index-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_index
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_index
 
 test13-valgrind test_index-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_index
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_index
 
 test14 test_server:
 	@$(call functionInfoBegin,Test 14: server)
@@ -1722,19 +1729,19 @@ test14 test_server:
 
 test14-debug test_server-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_server
 
 test14-gcov test_server-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_server
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_server
 
 test14-gprof test_server-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_server
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_server
 
 test14-valgrind test_server-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_server
 
 test15_master test_master: \
   $(TEST_MASTER_CONFIG) \
@@ -1750,19 +1757,19 @@ test15_master test_master: \
 
 test15_master-debug test_master-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_master
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master
 
 test15_master-gcov test_master-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_master
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master
 
 test15_master-gprof test_master-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_master
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master
 
 test15_master-valgrind test_master-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_master
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master
 
 test15_slave test_slave: \
   $(TEST_SLAVE_CONFIG) \
@@ -1778,19 +1785,19 @@ test15_slave test_slave: \
 
 test15_slave-debug test_slave-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_slave
 
 test15_slave-gcov test_slave-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_slave
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_slave
 
 test15_slave-gprof test_slave-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_slave
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_slave
 
 test15_slave-valgrind test_slave-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_slave
 
 test_combined: \
   $(TEST_KEYS)
@@ -1833,19 +1840,19 @@ test_combined: \
 
 test_combined-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_combined
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_combined
 
 test_combined-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_combined
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_combined
 
 test_combined-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_combined
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_combined
 
 test_combined-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_combined
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_combined
 
 test_all:
 	@$(MAKE) QUIET=1 --no-print-directory -s \
@@ -2188,19 +2195,19 @@ endif
 
 test_arguments-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_arguments
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_arguments
 
 test_arguments-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_arguments
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_arguments
 
 test_arguments-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_arguments
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_arguments
 
 test_arguments-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_arguments
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_arguments
 
 test_config: \
   $(TEST_BAR) \
@@ -2228,19 +2235,19 @@ test_config: \
 
 test_config-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_config
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_config
 
 test_config-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_config
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_config
 
 test_config-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_config
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_config
 
 test_config-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_config
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_config
 
 test_misc:
 	@$(call functionInfoBegin,Test miscellaneous)
@@ -2272,19 +2279,19 @@ test_misc:
 
 test_misc-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_misc
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_misc
 
 test_misc-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_misc
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_misc
 
 test_misc-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_misc
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_misc
 
 test_misc-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_misc
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_misc
 
 show_debug_test_code test_code:
 	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
@@ -4498,22 +4505,22 @@ test_index_operations_server: \
 .PHONY: test_index_operations-debug
 test_index_operations-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_index_operations
 
 .PHONY: test_index_operations-gcov
 test_index_operations-gcov: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_index_operations
 
 .PHONY: test_index_operations-gprof
 test_index_operations-gprof: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_index_operations
 
 .PHONY: test_index_operations-valgrind
 test_index_operations-valgrind: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_index_operations
 
 # send command to server
 functionServerCommandSocket = \
