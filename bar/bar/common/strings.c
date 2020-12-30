@@ -64,14 +64,14 @@ const char STRING_ESCAPE_CHARACTERS_MAP_FROM[STRING_ESCAPE_CHARACTER_MAP_LENGTH]
 const char STRING_ESCAPE_CHARACTERS_MAP_TO[STRING_ESCAPE_CHARACTER_MAP_LENGTH] =
 {'0', 'a',   'b', 't', 'n', 'v', 'f', 'r', 'e'   };
 
-struct __String __STRING_EMPTY =
+const struct __String __STRING_EMPTY =
 {
   0,
   0,
   STRING_TYPE_CONST,
   "",
   #ifndef NDEBUG
-    STRING_CHECKSUM(0,0,"")
+    STRING_CHECKSUM(0,0,NULL)
   #endif /* not NDEBUG */
 };
 const struct __String* STRING_EMPTY = &__STRING_EMPTY;
