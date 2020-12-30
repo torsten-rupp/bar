@@ -488,6 +488,11 @@ BAR_OBJECTS_GPROF           = $(addprefix gprof/,$(BAR_OBJECTS))
 
 BAR_OBJECTS_VALGRIND        = $(addprefix valgrind/,$(BAR_OBJECTS))
 
+BAR_PO                      = po/german.po \
+                              po/japanese.po
+
+BAR_MO                      = $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo)
+
 COMMON_SOURCES              = common/arrays.c \
                               common/autofree.c \
                               common/bitmaps.c \
@@ -623,6 +628,7 @@ TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
                               bar-keygen@SHELLEXT@ \
                               bar-sqlite3@EXEEXT@ \
                               $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
+                              $(BAR_MO) \
 
 TARGETS                     = $(TARGETS_INSTALL) \
                               bar-gcov@EXEEXT@ \
@@ -897,19 +903,19 @@ endif
 # i18n
 .PHONY: i18n po
 i18n po: \
-  po/german.po \
-  po/japanese.po
+  $(SOURCE_DIR)/po/german.po \
+  $(SOURCE_DIR)/po/japanese.po
 
-po/bar.pot: $(SOURCE_DIR)/*.c
+$(SOURCE_DIR)/po/bar.pot: $(SOURCE_DIR)/*.c
 	$(INSTALL) -d $(@D)
 	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ $(SOURCE_DIR)/*.c
 
-po/german.po: po/bar.pot
+$(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/bar.pot
 	$(INSTALL) -d $(@D)
 	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
 	$(TOUCH) $@
 
-po/japanese.po: po/bar.pot
+$(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/bar.pot
 	$(INSTALL) -d $(@D)
 	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
 	$(TOUCH) $@
@@ -2324,9 +2330,7 @@ testcode_diff:
 .PHONY: install uninstall
 
 install: \
-  $(TARGETS_INSTALL) \
-  $(SCRIPTS) \
-  $(DOC)
+  $(TARGETS_INSTALL)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
@@ -2338,7 +2342,7 @@ ifeq ($(PLATFORM),WINDOWS)
 endif
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
-          $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
+          $(INSTALL) -m 600 $(SOURCE_DIR)/bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
         else \
           echo "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; \
         fi
