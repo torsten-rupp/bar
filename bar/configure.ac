@@ -873,14 +873,14 @@ AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
 
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)        dnl sudo command chattr +-[ia] *
-AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)  dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)       dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
-AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)         dnl sudo command chmod o+rw /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DD,1)            dnl sudo command dd if=/dev/loop[[01]] of=-
-AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)          dnl sudo command mkfs -t * /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_CP,1)            dnl sudo command cp -r -p data/* test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)          dnl sudo command diff -r test/dev0 test/dev1
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)          dnl sudo command chattr +-[ia] *
+AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)    dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)         dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
+AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)           dnl sudo command chmod o+rw /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DD,1)              dnl sudo command dd if=/dev/loop[[01]] of=-
+AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)            dnl sudo command mkfs -t * /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_CP,1)              dnl sudo command cp -r -p data/* test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)            dnl sudo command diff -r test/dev0 test/dev1
 
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)        dnl sudo command chattr +-i
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)        dnl sudo command chattr +-a
@@ -1520,19 +1520,21 @@ case "$host_os" in
     ;;
 esac
 
-# sudo tests
-AC_PROG_SUDO_COMMAND([chattr \* data/\*],                           [chattr \* data/\*]                           ,,HAVE_SUDO_COMMAND_CHATTR=0      )
-AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                      [chattr \* configure-\*]                      ,,HAVE_SUDO_COMMAND_CHATTR=0      )
-AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] test/dev[[01]]],        [mount /dev/loop[[01]] test/dev[[01]]]        ,,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([umount test/dev[[01]]],                       [umount test/dev[[01]]]                       ,,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                  [losetup -d /dev/loop[[01]]]                  ,,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] test/dev[[01]].dat],  [losetup /dev/loop[[01]] test/dev[[01]]\.dat] ,,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] test/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] test/dev0[[ab]]\.dat],,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                 [chmod o\+rw /dev/loop[[01]]]                 ,,HAVE_SUDO_COMMAND_CHMOD=0       )
-AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                  [dd if=/dev/loop[[01]] of=-]                  ,,HAVE_SUDO_COMMAND_DD=0          )
-AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                  [mkfs -t \* /dev/loop[[01]]]                  ,,HAVE_SUDO_COMMAND_MKFS=0        )
-AC_PROG_SUDO_COMMAND([cp -r -p data/\* test/dev[[01]]],             [cp -r -p data/\* test/dev[[01]]]             ,,HAVE_SUDO_COMMAND_CP=0          )
-AC_PROG_SUDO_COMMAND([diff -r test/dev0 test/dev1],                 [diff -r test/dev0 test/dev1]                 ,,HAVE_SUDO_COMMAND_DIFF=0        )
+# sudo tests (Note: keep "," immediately after "]"!)
+AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR=0      )
+AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,HAVE_SUDO_COMMAND_CHATTR=0      )
+AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
+AC_PROG_SUDO_COMMAND([umount intermediate/dev[[01]]],                       [umount intermediate/dev[[01]]],                       ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
+AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [losetup -d /dev/loop[[01]]],                          ,HAVE_SUDO_COMMAND_LOSETUP=0     )
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,HAVE_SUDO_COMMAND_LOSETUP=0     )
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,HAVE_SUDO_COMMAND_LOSETUP=0     )
+AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,HAVE_SUDO_COMMAND_CHMOD=0       )
+AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                          [dd if=/dev/loop[[01]] of=-],                          ,HAVE_SUDO_COMMAND_DD=0          )
+AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                          [mkfs -t \* /dev/loop[[01]]],                          ,HAVE_SUDO_COMMAND_MKFS=0        )
+AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,HAVE_SUDO_COMMAND_CP=0          )
+AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,HAVE_SUDO_COMMAND_DIFF=0        )
+AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR_I=0    )
+AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR_A=0    )
 
 dnl -------- mandatory headers/functions/definitions/libraries ---------
 
@@ -2518,19 +2520,34 @@ if test $ENABLE_SSH = "yes"; then
             fi
             ;;
           windows*|mingw*)
-            # Note: always compilre for mingw; 64bit is still not suppored
+            # Note: always compile for mingw; 64bit is still not suppored
 #            (cd openssl; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./Configure \
 #              --prefix=$cwd/extern \
 #              no-shared \
+#              mingw64 \
+#            ) 1>$tmpFile 2>&1
+            if test "$host_cpu" = "x86_64"; then
+              (cd openssl; ./Configure \
+                --prefix=$cwd/extern \
+                --cross-compile-prefix=x86_64-w64-mingw32- \
+                no-shared \
+                mingw64 \
+              ) 1>$tmpFile 2>&1
+            else
+              (cd openssl; ./Configure \
+                --prefix=$cwd/extern \
+                --cross-compile-prefix=i686-w64-mingw32- \
+                no-shared \
+                mingw \
+              ) 1>$tmpFile 2>&1
+            fi
+#            (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
+#              --prefix=$cwd/extern \
+#              --cross-compile-prefix=i686-w64-mingw32- \
+#              enable-capieng \
+#              no-shared \
 #              mingw \
 #            ) 1>$tmpFile 2>&1
-            (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
-              --prefix=$cwd/extern \
-              --cross-compile-prefix=i686-w64-mingw32- \
-              enable-capieng \
-              no-shared \
-              mingw \
-            ) 1>$tmpFile 2>&1
             if test $? -ne 0; then
               AC_MSG_RESULT([fail (configure)])
               AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2766,7 +2783,6 @@ if test $ENABLE_TLS = "yes"; then
                 --enable-static \
                 --enable-pic \
                 --enable-fat \
-                ABI=32 \
               ) 1>$tmpFile 2>&1
               ;;
             sunos | solaris*)
