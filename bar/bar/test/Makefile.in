@@ -28,10 +28,11 @@ TEST_DATA_DIR ?= test
 # shell in Makefile must be bash
 SHELL = bash
 
+ifeq ($(PLATFORM),LINUX)
+  EXE_PREFIX = 
+endif
 ifeq ($(PLATFORM),WINDOWS)
   EXE_PREFIX = $(WINE)
-else
-  EXE_PREFIX = 
 endif
 
 #------------------------------- test commands--------------------------------
@@ -740,7 +741,6 @@ TEST_FILE_NAMES_SIMPLE = \
   sub_ignore_dir \
   linkdata.dat \
   link.dat \
-  link_not_existing_file.dat \
   circular_link.dat.marker \
   hardlink.dat hardlink1.dat hardlink2.dat \
   file400.dat \
@@ -749,12 +749,18 @@ TEST_FILE_NAMES_SIMPLE = \
   file664.dat \
   file666.dat \
   nodump.dat \
-  fifo \
   delta1/random512k.dat \
   delta2/random512k.dat \
   delta1/hardlink.dat delta1/hardlink1.dat delta1/hardlink2.dat \
   delta2/hardlink.dat delta2/hardlink1.dat delta2/hardlink2.dat \
   large128M.dat
+
+# special files only on Linux
+ifeq ($(PLATFORM),LINUX)
+TEST_FILE_NAMES_SIMPLE += \
+  link_not_existing_file.dat \
+  fifo
+
 ifneq ($(ATTR)$(SETFATTR),)
 TEST_FILE_NAMES_SIMPLE += \
   extended_attribute.dat \
@@ -770,15 +776,31 @@ ifeq (@HAVE_SUDO_COMMAND_CHATTR_A@,1)
 TEST_FILE_NAMES_SIMPLE += \
   append-only.dat
 endif
-TEST_FILES_SIMPLE = $(foreach z,$(TEST_FILE_NAMES_SIMPLE),data/$z)
+endif
+
+# special files only on Windows
+ifeq ($(PLATFORM),WINDOWS)
+endif
+
+TEST_FILES_SIMPLE = $(addprefix data/,$(TEST_FILE_NAMES_SIMPLE))
 
 TEST_FILE_NAMES_COMPLEX = \
   name\'.dat \
+  name%d%f%s%p.dat
+
+# special files only on Linux
+ifeq ($(PLATFORM),LINUX)
+TEST_FILE_NAMES_COMPLEX += \
   name\".dat \
   name\\.dat \
-  'name'$$'\n''.dat' \
-  name%d%f%s%p.dat \
-TEST_FILES_COMPLEX = $(foreach z,$(TEST_FILE_NAMES_COMPLEX),data/$z)
+  'name'$$'\n''.dat'
+endif
+
+# special files only on Windows
+ifeq ($(PLATFORM),WINDOWS)
+endif
+
+TEST_FILES_COMPLEX = $(addprefix data/,$(TEST_FILE_NAMES_COMPLEX))
 
 TEST_FILE_NAMES = \
   $(TEST_FILE_NAMES_SIMPLE) \
@@ -798,8 +820,8 @@ TEST_HUGEFILE_NAMES2 = \
   hardlink512M1.dat \
   hardlink512M2.dat \
 
-TEST_HUGEFILES1 = $(foreach z,$(TEST_HUGEFILE_NAMES1),data/$z)
-TEST_HUGEFILES2 = $(foreach z,$(TEST_HUGEFILE_NAMES2),data/$z)
+TEST_HUGEFILES1 = $(addprefix data/,$(TEST_HUGEFILE_NAMES1))
+TEST_HUGEFILES2 = $(addprefix data/,$(TEST_HUGEFILE_NAMES2))
 TEST_HUGEFILES  = \
   $(TEST_HUGEFILES1) \
   $(TEST_HUGEFILES2)
@@ -2646,6 +2668,7 @@ test_file_operations_base: \
           -x hardlink512M2.dat \
           -x gmon.out \
           data restore/data
+ifeq ($(PLATFORM),LINUX)
 	$(READLINK) restore/data/link.dat 2>/dev/null $(LOG)
 	test `$(STAT) --format "%a" restore/data/file400.dat 2>/dev/null` = "400" $(LOG)
 	test `$(STAT) --format "%a" restore/data/file640.dat 2>/dev/null` = "640" $(LOG)
@@ -2654,6 +2677,9 @@ test_file_operations_base: \
 	test `$(STAT) --format "%a" restore/data/file666.dat 2>/dev/null` = "666" $(LOG)
 	test `$(STAT) --format "%h" restore/data/hardlink1.dat 2>/dev/null` -eq 3 $(LOG)
 	test `$(STAT) --format "%h" restore/data/hardlink2.dat 2>/dev/null` -eq 3 $(LOG)
+endif
+ifeq ($(PLATFORM),WINDOWS)
+endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
