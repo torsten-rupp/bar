@@ -3892,13 +3892,19 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
     case FILE_TYPE_FILE:
     case FILE_TYPE_DIRECTORY:
     case FILE_TYPE_HARDLINK:
-      // set last access, time modified, user/group id, permissions
-      utimeBuffer.actime  = fileInfo->timeLastAccess;
-      utimeBuffer.modtime = fileInfo->timeModified;
-      if (utime(fileName,&utimeBuffer) != 0)
-      {
-        return getLastError(ERROR_CODE_IO,fileName);
-      }
+      #if   defined(PLATFORM_LINUX)
+        // set last access, time modified, user/group id
+        utimeBuffer.actime  = fileInfo->timeLastAccess;
+        utimeBuffer.modtime = fileInfo->timeModified;
+        if (utime(fileName,&utimeBuffer) != 0)
+        {
+          return getLastError(ERROR_CODE_IO,fileName);
+        }
+      #elif defined(PLATFORM_WINDOWS)
+//TODO: implement
+      #endif /* PLATFORM_... */
+
+      // set last permissions
       #ifdef HAVE_CHMOD
         if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
         {
@@ -4365,41 +4371,52 @@ Errors File_setOwner(ConstString fileName,
                      uint32      groupId
                     )
 {
-  #ifdef HAVE_CHOWN
-    uid_t uid;
-    gid_t gid;
-  #endif /* HAVE_CHOWN */
+  #if   defined(PLATFORM_LINUX)
+    #ifdef HAVE_CHOWN
+      uid_t uid;
+      gid_t gid;
+    #endif /* HAVE_CHOWN */
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(fileName != NULL);
 
-  #ifdef HAVE_CHOWN
-    if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
-    else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
-    else                                      uid = (uid_t)userId;
-    if      (userId == FILE_OWN_GROUP_ID    ) gid = getgid();
-    else if (userId == FILE_DEFAULT_GROUP_ID) gid = -1;
-    else                                      gid = (uid_t)groupId;
+  #if   defined(PLATFORM_LINUX)
+    #ifdef HAVE_CHOWN
+      if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
+      else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
+      else                                      uid = (uid_t)userId;
+      if      (userId == FILE_OWN_GROUP_ID    ) gid = getgid();
+      else if (userId == FILE_DEFAULT_GROUP_ID) gid = -1;
+      else                                      gid = (uid_t)groupId;
 
-    #if   defined(HAVE_LCHMOD)
-      if (lchown(String_cString(fileName),uid,gid) != 0)
-      {
-        return getLastError(ERROR_CODE_IO,String_cString(fileName));
-      }
-    #elif defined(HAVE_CHOWN)
-      if (chown(String_cString(fileName),uid,gid) != 0)
-      {
-        return getLastError(ERROR_CODE_IO,String_cString(fileName));
-      }
-    #endif /* HAVE_LCHMOD, HAVE_CHOWN */
+      #if   defined(HAVE_LCHMOD)
+        if (lchown(String_cString(fileName),uid,gid) != 0)
+        {
+          return getLastError(ERROR_CODE_IO,String_cString(fileName));
+        }
+      #elif defined(HAVE_CHOWN)
+        if (chown(String_cString(fileName),uid,gid) != 0)
+        {
+          return getLastError(ERROR_CODE_IO,String_cString(fileName));
+        }
+      #endif /* HAVE_LCHMOD, HAVE_CHOWN */
+
+      return ERROR_NONE;
+    #else /* not HAVE_CHOWN */
+      UNUSED_VARIABLE(fileName);
+      UNUSED_VARIABLE(userId);
+      UNUSED_VARIABLE(groupId);
+
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+    #endif /* HAVE_CHOWN */
+  #elif defined(PLATFORM_WINDOWS)
+//TODO: implement
+UNUSED_VARIABLE(userId);
+UNUSED_VARIABLE(groupId);
 
     return ERROR_NONE;
-  #else /* not HAVE_CHOWN */
-    UNUSED_VARIABLE(fileName);
-    UNUSED_VARIABLE(userId);
-    UNUSED_VARIABLE(groupId);
-
-    return ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_CHOWN */
+  #endif /* PLATFORM_... */
 }
 
 Errors File_makeDirectory(ConstString    pathName,
