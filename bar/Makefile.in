@@ -57,7 +57,7 @@ CERTTOOL     = @CERTTOOL@
 OPENSSL      = @OPENSSL@
 KEYTOOL      = @KEYTOOL@
 
-DOCKER_RUN_FLAGS = run -i -t --rm
+DOCKER_RUN_FLAGS = run -i -t
 
 TXT2MAN      = @TXT2MAN@
 UNOCONV      = @UNOCONV@
@@ -185,14 +185,16 @@ KEY_FILES            = bar-key.pem \
                        bar-server-key.pem \
                        bar-server-cert.pem \
 
-SCRIPTS              = scripts/barserver-SuSE \
-                       scripts/barserver-Fedora \
-                       scripts/barserver-RedHat \
-                       scripts/barserver-Mandrake \
-                       scripts/barserver-debian \
-                       scripts/barserver-CentOS \
-                       scripts/barserver.service \
-                       scripts/logrotate.conf \
+SCRIPTS              = $(addprefix $(SOURCE_DIR)/,\
+                         scripts/barserver-SuSE \
+                         scripts/barserver-Fedora \
+                         scripts/barserver-RedHat \
+                         scripts/barserver-Mandrake \
+                         scripts/barserver-debian \
+                         scripts/barserver-CentOS \
+                         scripts/barserver.service \
+                         scripts/logrotate.conf \
+                        )
 
 #------------------------------ dependencies ---------------------------------
 
@@ -287,8 +289,15 @@ help:
 	@$(ECHO) "  deb64"
 	@$(ECHO) "  clean_deb"
 	@$(ECHO) ""
+	@$(ECHO) "  win32"
+	@$(ECHO) "  clean_win32"
+	@$(ECHO) ""
 	@$(ECHO) "  update_docker"
 	@$(ECHO) "  purge_docker"
+	@$(ECHO) ""
+	@$(ECHO) "  rpm_docker"
+	@$(ECHO) "  deb_docker"
+	@$(ECHO) "  win32_docker"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test"
 	@$(ECHO) ""
@@ -446,16 +455,18 @@ install_scripts: \
   $(SCRIPTS)
 	$(INSTALL) -d "$(DESTDIR)/var/tmp/bar/etc/init.d"; \
 	$(INSTALL) -t "$(DESTDIR)/var/tmp/bar/etc/init.d" \
-          scripts/barserver-SuSE \
-          scripts/barserver-Fedora \
-          scripts/barserver-RedHat \
-          scripts/barserver-CentOS \
-          scripts/barserver-Mandrake \
-          scripts/barserver-debian
+          $(addprefix $(SOURCE_DIR)/, \
+            scripts/barserver-SuSE \
+            scripts/barserver-Fedora \
+            scripts/barserver-RedHat \
+            scripts/barserver-CentOS \
+            scripts/barserver-Mandrake \
+            scripts/barserver-debian \
+           )
 	$(INSTALL) -d "$(DESTDIR)/var/tmp/bar/lib/systemd/system"; \
-	$(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/var/tmp/bar/lib/systemd/system/barserver.service"; \
+	$(INSTALL) -m 644 $(SOURCE_DIR)/scripts/barserver.service "$(DESTDIR)/var/tmp/bar/lib/systemd/system/barserver.service"; \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
-	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
+	$(INSTALL) -m 644 $(SOURCE_DIR)/scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
 
 # install man-page
 install_man: \
@@ -818,6 +829,50 @@ update_docker:
 purge_docker:
 	$(DOCKER) rm $$($(DOCKER) ps -a -q)
 
+.PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
+rpm_docker:
+	echo TODO
+rpm_docker-x86_64:
+	echo TODO
+
+deb_docker:
+	echo TODO
+deb_docker-x86_64:
+	echo TODO
+
+win32_docker:
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -e CFLAGS="-m32" \
+            -v $(PWD):/media/home \
+            -v $(WINE_C_DRIVE):/media/wine \
+            --name=bar-win32 \
+            bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
+              -s \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(WINE) \
+              $(DISTRIBUTION_NAME)-setup; \
+        )
+win32_docker-x86_64:
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -v $(PWD):/media/home \
+            -v $(WINE_C_DRIVE):/media/wine \
+            --name=bar-win32-x86_64 \
+            bar-mingw32 setarch x86_64 -- /media/home/packages/build_win32.sh \
+              -s \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(WINE) \
+              $(DISTRIBUTION_NAME)-setup; \
+        )
+
+
 # RPM
 .PHONY: rpm clean_rpm
 rpm: \
@@ -841,6 +896,7 @@ $(DISTRIBUTION_NAME).rpm: \
 	@$(call functionPrintInfo,Build RPM on CentOS 6 32bit)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
             -e CFLAGS="-m32" \
             -v $(PWD):/media/home \
             bar-centos:6 setarch i686 -- /media/home/packages/build_rpm.sh \
@@ -857,6 +913,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
 	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
             -v $(PWD):/media/home \
             bar-centos-x86_64:6 setarch x86_64 --  /media/home/packages/build_rpm.sh \
               $(PACKAGE_NAME) \
@@ -896,6 +953,7 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
 	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 32bit)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
             -v $(PWD):/media/home \
             bar-debian:8 setarch i686 -- /media/home/packages/build_deb.sh \
               $(PACKAGE_NAME) \
@@ -912,6 +970,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
 	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 64bit)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
             -v $(PWD):/media/home \
             bar-debian-x86_64:8 setarch x86_64 -- /media/home/packages/build_deb.sh \
               $(PACKAGE_NAME) \
@@ -939,6 +998,7 @@ $(DISTRIBUTION_NAME)-setup.exe: \
 	@$(call functionPrintInfo,Build Win32 on mingw32)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
             -e CFLAGS="-m32" \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
@@ -973,6 +1033,7 @@ install_test_rpm: \
 # call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
 functionInstallTestRPM = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
+      --rm \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_rpm.sh \
@@ -981,6 +1042,7 @@ functionInstallTestRPM = \
 # call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
 functionInstallTestDEB = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
+      --rm \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_deb.sh \
