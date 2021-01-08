@@ -19,7 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/strings.h"
 
 /********************** Conditional compilation ***********************/
 
@@ -209,23 +209,23 @@ typedef struct CommandLineOption
 
 /* example
 
-CMD_OPTION_INTEGER        (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_INTEGER64      (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,<units>,         <description>                       )
-CMD_OPTION_DOUBLE         (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
-CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<variable>,<min>,<max>,                 <description>                       )
-CMD_OPTION_BOOLEAN        (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
-CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
-CMD_OPTION_FLAG           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>                      <description>                       )
-CMD_OPTION_INCREMENT      (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>                       )
-CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<value>,                     <description>                       )
-CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<selects>,                   <description>                       )
-CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<set>,                       <description>                       )
-CMD_OPTION_CSTRING        (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>,<description argument>)
-CMD_OPTION_STRING         (<long name>,<short name>,<help level>,<priority>,<variable>,                             <description>,<description argument>)
-CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,<user data>,<argument count>,<description>,<description argument>)
-CMD_OPTION_DEPRECATED     (<long name>,<short name>,<help level>,<priority>,<function>,<user data>,<argument count>,<description>,<new option name>     )
+CMD_OPTION_INTEGER        (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_INTEGER_RANGE  (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_INTEGER64      (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_INTEGER64_RANGE(<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<min>,<max>,<units>,         <description>                       )
+CMD_OPTION_DOUBLE         (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,                             <description>                       )
+CMD_OPTION_DOUBLE_RANGE   (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<min>,<max>,                 <description>                       )
+CMD_OPTION_BOOLEAN        (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,                             <description>                       )
+CMD_OPTION_BOOLEAN_YESNO  (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,                             <description>                       )
+CMD_OPTION_FLAG           (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<value>                      <description>                       )
+CMD_OPTION_INCREMENT      (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,                             <description>                       )
+CMD_OPTION_ENUM           (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<value>,                     <description>                       )
+CMD_OPTION_SELECT         (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<selects>,                   <description>                       )
+CMD_OPTION_SET            (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,<set>,                       <description>                       )
+CMD_OPTION_CSTRING        (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,                             <description>,<description argument>)
+CMD_OPTION_STRING         (<long name>,<short name>,<help level>,<priority>,<variable>,<setValue>,                             <description>,<description argument>)
+CMD_OPTION_SPECIAL        (<long name>,<short name>,<help level>,<priority>,<function>,<setValue>,<user data>,<argument count>,<description>,<description argument>)
+CMD_OPTION_DEPRECATED     (<long name>,<short name>,<help level>,<priority>,<function>,<setValue>,<user data>,<argument count>,<description>,<new option name>     )
 
 const CommandLineUnit COMMAND_LINE_UNITS[] =
 {
