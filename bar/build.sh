@@ -128,7 +128,7 @@ fi
 $PROJECT_ROOT/download-third-party-packages.sh \
   --no-verbose \
   $ADDITIONAL_DOWNLOAD_FLAGS
-case type in
+case $type in
   linux_32)
     $PROJECT_ROOT/configure \
       ;
@@ -149,7 +149,7 @@ case type in
     ;;
   win32_64)
     $PROJECT_ROOT/configure \
-      --host=x84_64-w64-mingw32 \
+      --host=x86_64-w64-mingw32 \
       --build=x86_64-linux \
       --disable-link-static \
       --enable-link-dynamic \
