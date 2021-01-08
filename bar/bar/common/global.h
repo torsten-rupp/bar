@@ -3363,7 +3363,35 @@ static inline bool stringToDouble(const char *string, double *d)
 }
 
 /***********************************************************************\
-* Name   : stringMatch
+* Name   : stringVScan, stringScan
+* Purpose: scan string
+* Input  : string    - string
+*          format    - format
+*          arguments - arguments
+*          ...       - optional variables, last value have to be NULL!
+* Output : -
+* Return : TRUE iff string scanned with format
+* Notes  :
+\***********************************************************************/
+
+bool stringVScan(const char *string, const char *format, va_list arguments);
+static inline int stringScan(const char *string, const char *format, ...)
+{
+  va_list arguments;
+  bool    result;
+
+  assert(string != NULL);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  result = stringVScan(string,format,arguments);
+  va_end(arguments);
+
+  return result;
+}
+
+/***********************************************************************\
+* Name   : stringVMatch, stringMatch
 * Purpose: match string
 * Input  : string            - string
 *          pattern           - pattern
@@ -3371,6 +3399,7 @@ static inline bool stringToDouble(const char *string, double *d)
 *                              be NULL)
 *          matchedStringSize - size of string matching regular
 *                              expression
+*          arguments         - arguments
 *          ...               - optional matching strings of sub-patterns
 *                              (char*,ulong), last value have to be
 *                              NULL!
@@ -3379,7 +3408,21 @@ static inline bool stringToDouble(const char *string, double *d)
 * Notes  :
 \***********************************************************************/
 
-bool stringMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, ...);
+bool stringVMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, va_list arguments);
+static inline bool stringMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, ...)
+{
+  va_list arguments;
+  bool    result;
+
+  assert(string != NULL);
+  assert(pattern != NULL);
+
+  va_start(arguments,matchedStringSize);
+  result = stringVMatch(string,pattern,matchedString,matchedStringSize,arguments);
+  va_end(arguments);
+
+  return result;
+}
 
 /*---------------------------------------------------------------------*/
 
