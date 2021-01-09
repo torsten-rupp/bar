@@ -920,14 +920,6 @@ typedef struct
   } debug;
 } GlobalOptions;
 
-typedef ValueSet(GlobalOptionSet,32);
-VALUE_SET
-{
-  GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS,
-  GLOBAL_OPTION_SET_CRYPT_ALGORITHMS,
-  GLOBAL_OPTION_SET_COMMENT,
-};
-
 // status info data
 typedef struct
 {
