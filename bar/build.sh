@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -x
-
 BASE_PATH=`dirname $0`
 
 PROJECT_ROOT=$BASE_PATH
