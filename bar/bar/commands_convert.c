@@ -761,8 +761,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert file      '%s' (%s bytes%s)...",String_cString(fileName),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS   )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -985,8 +985,8 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert image     '%s' (%s bytes%s)...",String_cString(deviceName),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS   )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1162,7 +1162,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert directory '%s'...",String_cString(directoryName));
 
   // set new crypt settings
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
@@ -1277,7 +1277,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert link      '%s'...",String_cString(linkName));
 
   // set new crypt settings
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
@@ -1420,8 +1420,8 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert hard link '%s' (%s bytes%s)...",String_cString(StringList_first(&fileNameList,NULL)),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS   )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1591,7 +1591,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert special   '%s'...",String_cString(fileName));
 
   // set new crypt settings
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
 
   // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
@@ -1717,7 +1717,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   if (!String_isEmpty(newJobUUID)) String_set(jobUUID,newJobUUID);
   if (!String_isEmpty(newScheduleUUID)) String_set(scheduleUUID,newScheduleUUID);
   if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
-  if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMMENT)) String_set(comment,newJobOptions->comment);
+  if (CmdOption_isSet(&globalOptions.comment)) String_set(comment,newJobOptions->comment);
 
   // create new meta entry
   error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
