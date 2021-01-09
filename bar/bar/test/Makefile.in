@@ -10,6 +10,7 @@
 #---------------------------------- settings ---------------------------------
 
 PLATFORM                = @PLATFORM@
+CPU                     = @CPU@
 
 VALGRIND_ERROR_EXITCODE = 123
 TESTCODE_EXITCODE       = 124
@@ -847,8 +848,11 @@ TEST_KEYS = $(TEST_KEY_CRYPT_PUBLIC) \
             $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) \
             $(TEST_KEY_SIGNATURE_OTHER_PRIVATE)
 
-# default test options
+# default test options (Note: limit max. number of threads on 32bit due to memory limirations)
 TEST_OPTIONS = --no-default-config
+ifeq ($(CPU),i686)
+  TEST_OPTIONS += --max-threads=4
+endif
 
 # test environment variables
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
