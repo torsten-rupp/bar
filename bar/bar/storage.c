@@ -1679,6 +1679,200 @@ String Storage_getPrintableName(String                 string,
   return string;
 }
 
+uint Storage_getServerSettings(Server                 *server,
+                               const StorageSpecifier *storageSpecifier,
+                               const JobOptions       *jobOptions
+                              )
+{
+  uint             serverId;
+  const ServerNode *existingServerNode;
+
+  assert(server != NULL);
+  assert(storageSpecifier != NULL);
+
+  // get default settings
+  serverId                        = 0;
+  server->type                    = SERVER_TYPE_NONE;
+  server->name                    = NULL;
+  server->maxConnectionCount      = 0;
+  server->maxStorageSize          = (jobOptions != NULL) ? jobOptions->maxStorageSize : 0LL;
+  server->writePreProcessCommand  = NULL;
+  server->writePostProcessCommand = NULL;
+
+  // get server specific settings
+  switch (storageSpecifier->type)
+  {
+    case STORAGE_TYPE_NONE:
+      break;
+    case STORAGE_TYPE_FILESYSTEM:
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+      {
+        // find file server
+        existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                       existingServerNode,
+                                          (existingServerNode->type == SERVER_TYPE_FILE)
+                                       && String_startsWith(existingServerNode->name,storageSpecifier->archiveName)
+                                      );
+
+        if (existingServerNode != NULL)
+        {
+          // get file server settings
+          serverId = existingServerNode->id;
+          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_FILE);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
+                                                               ? existingServerNode->writePreProcessCommand
+                                                               : globalOptions.file.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
+                                                               ? existingServerNode->writePostProcessCommand
+                                                               : globalOptions.file.writePostProcessCommand
+                                                            );
+        }
+      }
+      break;
+    case STORAGE_TYPE_FTP:
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+      {
+        // find file server
+        existingServerNode = LIST_FIND(&globalOptions.serverList,
+                               existingServerNode,
+                                  (existingServerNode->type == SERVER_TYPE_FTP)
+                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                              );
+
+        if (existingServerNode != NULL)
+        {
+          // get FTP server settings
+          serverId  = existingServerNode->id;
+          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_FTP);
+          server->ftp.loginName = String_duplicate(existingServerNode->ftp.loginName);
+          Password_set(&server->ftp.password,&existingServerNode->ftp.password);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
+                                                               ? existingServerNode->writePreProcessCommand
+                                                               : globalOptions.ftp.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
+                                                               ? existingServerNode->writePostProcessCommand
+                                                               : globalOptions.ftp.writePostProcessCommand
+                                                            );
+        }
+      }
+      break;
+    case STORAGE_TYPE_SSH:
+    case STORAGE_TYPE_SCP:
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+      {
+        // find SSH server
+        existingServerNode = LIST_FIND(&globalOptions.serverList,
+                               existingServerNode,
+                                  (existingServerNode->type == SERVER_TYPE_SSH)
+                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                              );
+
+        if (existingServerNode != NULL)
+        {
+          // get file server settings
+          serverId  = existingServerNode->id;
+          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_SSH);
+          server->ssh.loginName = String_duplicate(existingServerNode->ssh.loginName);
+          server->ssh.port      = existingServerNode->ssh.port;
+          Password_set(&server->ssh.password,&existingServerNode->ssh.password);
+          Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->ssh.publicKey);
+          Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->ssh.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
+                                                               ? existingServerNode->writePreProcessCommand
+                                                               : globalOptions.scp.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
+                                                              ? existingServerNode->writePostProcessCommand
+                                                              : globalOptions.scp.writePostProcessCommand
+                                                            );
+        }
+      }
+      break;
+    case STORAGE_TYPE_SFTP:
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+      {
+        // find SSH server
+        existingServerNode = LIST_FIND(&globalOptions.serverList,
+                               existingServerNode,
+                                  (existingServerNode->type == SERVER_TYPE_SSH)
+                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                              );
+
+        if (existingServerNode != NULL)
+        {
+          // get file server settings
+          serverId  = existingServerNode->id;
+          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_SSH);
+          server->ssh.loginName = String_duplicate(existingServerNode->ssh.loginName);
+          server->ssh.port      = existingServerNode->ssh.port;
+          Password_set(&server->ssh.password,&existingServerNode->ssh.password);
+          Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->ssh.publicKey);
+          Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->ssh.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
+                                                               ? existingServerNode->writePreProcessCommand
+                                                               : globalOptions.sftp.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
+                                                               ? existingServerNode->writePostProcessCommand
+                                                               : globalOptions.sftp.writePostProcessCommand
+                                                            );
+        }
+      }
+      break;
+    case STORAGE_TYPE_WEBDAV:
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+      {
+        // find file server
+        existingServerNode = LIST_FIND(&globalOptions.serverList,
+                               existingServerNode,
+                                  (existingServerNode->type == SERVER_TYPE_WEBDAV)
+                               && String_equals(existingServerNode->name,storageSpecifier->hostName)
+                              );
+
+        if (existingServerNode != NULL)
+        {
+          // get WebDAV server settings
+          serverId = existingServerNode->id;
+          Configuration_initServer(server,existingServerNode->name,SERVER_TYPE_WEBDAV);
+          server->webDAV.loginName = String_duplicate(existingServerNode->webDAV.loginName);
+          Password_set(&server->webDAV.password,&existingServerNode->webDAV.password);
+          Configuration_duplicateKey(&server->webDAV.publicKey,&existingServerNode->webDAV.publicKey);
+          Configuration_duplicateKey(&server->webDAV.privateKey,&existingServerNode->webDAV.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->writePreProcessCommand )
+                                                               ? existingServerNode->writePreProcessCommand
+                                                               : globalOptions.webdav.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->writePostProcessCommand)
+                                                               ? existingServerNode->writePostProcessCommand
+                                                               : globalOptions.webdav.writePostProcessCommand
+                                                            );
+        }
+      }
+      break;
+    case STORAGE_TYPE_CD:
+    case STORAGE_TYPE_DVD:
+    case STORAGE_TYPE_BD:
+    case STORAGE_TYPE_DEVICE:
+      // nothing to do
+      break;
+    case STORAGE_TYPE_ANY:
+      // nothing to do
+      break;
+    case STORAGE_TYPE_UNKNOWN:
+      // nothing to do
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; // not reached
+    #endif /* NDEBUG */
+  }
+
+  return serverId;
+}
+
 #ifdef NDEBUG
   Errors Storage_init(StorageInfo                     *storageInfo,
                       ServerIO                        *masterIO,

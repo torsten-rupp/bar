@@ -453,26 +453,6 @@ void Configuration_initServer(Server *server, ConstString name, ServerTypes serv
 void Configuration_doneServer(Server *server);
 
 /***********************************************************************\
-* Name   : Configuration_getServerSettings
-* Purpose: get server settings
-* Input  : server           - server variable
-*          storageSpecifier - storage specifier
-*          jobOptions       - job options
-* Output : server - server
-* Return : unique server id
-* Notes  : -
-\***********************************************************************/
-
-//TODO: move storage.c
-#if 0
-unknown here: StorageSpecifier
-uint Configuration_getServerSettings(Server                 *server,
-                                     const StorageSpecifier *storageSpecifier,
-                                     const JobOptions       *jobOptions
-                                    );
-#endif
-
-/***********************************************************************\
 * Name   : Configuration_initFileServerSettings
 * Purpose: init device settings
 * Input  : fileServer - files server variable

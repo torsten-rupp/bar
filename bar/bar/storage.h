@@ -1041,6 +1041,23 @@ String Storage_getPrintableName(String                 string,
                                );
 
 /***********************************************************************\
+* Name   : Storage_getServerSettings
+* Purpose: get server settings
+* Input  : server           - server variable
+*          storageSpecifier - storage specifier
+*          jobOptions       - job options
+* Output : server - server
+* Return : unique server id
+* Notes  : -
+\***********************************************************************/
+
+uint Storage_getServerSettings(Server                 *server,
+                               const StorageSpecifier *storageSpecifier,
+                               const JobOptions       *jobOptions
+                              );
+
+
+/***********************************************************************\
 * Name   : Storage_prepare
 * Purpose: prepare storage: read password, init files
 * Input  : storageName - storage name:
