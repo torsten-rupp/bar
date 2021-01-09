@@ -84,7 +84,6 @@ typedef struct
 
 /***************************** Variables *******************************/
 extern GlobalOptions   globalOptions;          // global options
-extern GlobalOptionSet globalOptionSet;        // global option set
 extern String          uuid;                   // BAR instance UUID
 
 /****************************** Macros *********************************/
