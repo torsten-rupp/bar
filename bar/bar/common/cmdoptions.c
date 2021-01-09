@@ -1047,15 +1047,6 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
   {
     Array_append(&setOptions,&commandLineOption->variable.pointer);
   }
-#warning remove
-{
-ArrayIterator i;
-void *p;
-  ARRAY_ITERATE(&setOptions,i,p)
-  {
-fprintf(stderr,"%s, %d: %s: %p: %p\n",__FILE__,__LINE__,commandLineOption->name,commandLineOption->variable.pointer,p);
-  }
-}
 
   return TRUE;
 }
