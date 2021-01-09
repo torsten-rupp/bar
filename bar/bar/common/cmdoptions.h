@@ -1087,7 +1087,6 @@ extern "C" {
 *                                    spezification
 *          minPriority,maxPriority - min./max. command line option
 *                                    priority or
-*          optionSet               - option set or NULL
 *          outputHandle            - error/warning output handle or NULL
 *          commandPrioritySet      - priority setCMD_PRIORITY_ANY
 *          errorPrefix             - error prefix or NULL
@@ -1103,7 +1102,6 @@ bool CmdOption_parse(const char              *argv[],
                      const CommandLineOption commandLineOptions[],
                      uint                    minPriority,
                      uint                    maxPriority,
-                     ValueSet                optionSet,
                      FILE                    *outputHandle,
                      const char              *errorPrefix,
                      const char              *warningPrefix
@@ -1187,6 +1185,25 @@ const CommandLineOption *CmdOption_find(const char              *name,
 bool CmdOption_parseString(const CommandLineOption *commandLineOption,
                            const char              *value
                           );
+
+/***********************************************************************
+* Name   : CmdOption_isSet
+* Purpose: check if option is set
+* Input  : variable - variable
+* Output : -
+* Return : TRUE if option variable was set
+* Notes  :
+***********************************************************************/
+
+INLINE ulong CmdOption_isSet(void *variable);
+#if defined(NDEBUG) || defined(__CMDOPTION_IMPLEMENTATION__)
+INLINE ulong CmdOption_isSet(void *variable)
+{
+  extern Array setOptions;
+
+  return Array_contains(&setOptions,&variable,NULL,NULL);
+}
+#endif /* NDEBUG || __CMDOPTION_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : CmdOption_getIntegerOption
