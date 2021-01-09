@@ -730,6 +730,7 @@ AC_SUBST(VERSION_REVISION)                  dnl version revision number (SVN num
 AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
 
 AC_SUBST(PLATFORM)                          dnl platform name
+AC_SUBST(CPU)                               dnl cpu name
 
 AC_SUBST(FILE_SEPARATOR_CHAR)               dnl file separator path character (/ or \\)
 AC_SUBST(FILE_SEPARATOR_STRING)             dnl file separator path character as string (/ or \\)
@@ -950,6 +951,7 @@ dnl AC_WARN([build: $build cpu=$build_cpu os=$build_os])
 case "$host_os" in
   linux-*)
     PLATFORM=LINUX
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     SHELLEXT=""
@@ -962,6 +964,7 @@ case "$host_os" in
     ;;
   windows*|mingw*)
     PLATFORM=WINDOWS
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     SHELLEXT=".cmd"
@@ -974,6 +977,7 @@ case "$host_os" in
     ;;
   sunos | solaris*)
     PLATFORM=SOLARIS
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     SHELLEXT=""
@@ -981,6 +985,7 @@ case "$host_os" in
     ;;
   darwin*)
     PLATFORM=MAC_OSX
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     SHELLEXT=""

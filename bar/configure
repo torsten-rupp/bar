@@ -779,6 +779,7 @@ EXEEXT
 OBJEXT
 FILE_SEPARATOR_STRING
 FILE_SEPARATOR_CHAR
+CPU
 PLATFORM
 COPYRIGHT_DATE
 VERSION_REVISION
@@ -2740,6 +2741,7 @@ SOURCE_DIR=`(cd $srcdir; pwd)`
 case "$host_os" in
   linux-*)
     PLATFORM=LINUX
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     SHELLEXT=""
@@ -2752,6 +2754,7 @@ case "$host_os" in
     ;;
   windows*|mingw*)
     PLATFORM=WINDOWS
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     SHELLEXT=".cmd"
@@ -2764,6 +2767,7 @@ case "$host_os" in
     ;;
   sunos | solaris*)
     PLATFORM=SOLARIS
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     SHELLEXT=""
@@ -2771,6 +2775,7 @@ case "$host_os" in
     ;;
   darwin*)
     PLATFORM=MAC_OSX
+    CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
     SHELLEXT=""
