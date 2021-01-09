@@ -446,6 +446,7 @@ LOCAL void freeMountedNode(MountedNode *mountedNode, void *userData)
 LOCAL void printUsage(const char *programName, uint level)
 {
   assert(programName != NULL);
+
   printf("Usage: %s [<options>] [--] <archive name> [<files>|<device>...]\n",programName);
   printf("       %s [<options>] --generate-keys|--generate-signature-keys [--] [<key file base name>]\n",programName);
   printf("\n");
@@ -4209,7 +4210,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,
                        0,1,
-                       globalOptionSet,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -4230,6 +4230,13 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
   if (globalOptions.helpFlag || globalOptions.xhelpFlag || globalOptions.helpInternalFlag)
   {
+fprintf(stderr,"%s, %d: %p %d  %p %d\n",__FILE__,__LINE__,
+&globalOptions.helpFlag,
+CmdOption_isSet(&globalOptions.helpFlag),
+&globalOptions.versionFlag,
+CmdOption_isSet(&globalOptions.versionFlag)
+);
+exit(2);
     if      (globalOptions.helpInternalFlag) printUsage(argv[0],2);
     else if (globalOptions.xhelpFlag       ) printUsage(argv[0],1);
     else                                     printUsage(argv[0],0);
@@ -4267,7 +4274,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,
                        2,2,
-                       globalOptionSet,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -4297,7 +4303,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,
                        0,2,
-                       globalOptionSet,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -4343,7 +4348,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,
                        CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
-                       globalOptionSet,
                        stderr,"ERROR: ","Warning: "
                       )
      )
@@ -4454,7 +4458,6 @@ int main(int argc, const char *argv[])
     if (!CmdOption_parse(argv,&argc,
                          COMMAND_LINE_OPTIONS,
                          0,0,
-                         globalOptionSet,
                          stderr,"ERROR: ","Warning: "
                         )
        )
