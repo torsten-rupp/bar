@@ -48,11 +48,13 @@ public class BusyDialog
   public final static int NONE               = 0;
   public final static int TEXT0              = 1 <<  0;   // show text line 0
   public final static int TEXT1              = 1 <<  1;   // show text line 1
-  public final static int PROGRESS_BAR0      = 1 <<  2;   // show progress bar 0
-  public final static int PROGRESS_BAR1      = 1 <<  3;   // show progress bar 1
-  public final static int LIST               = 1 <<  4;   // show list
-  public final static int ABORT_CLOSE        = 1 <<  5;   // abort/close button
-  public final static int ENABLE_ABORT_CLOSE = 1 <<  6;   // enable abort/close button
+  public final static int TEXT2              = 1 <<  2;   // show text line 2
+  public final static int PROGRESS_BAR0      = 1 <<  3;   // show progress bar 0
+  public final static int PROGRESS_BAR1      = 1 <<  4;   // show progress bar 1
+  public final static int PROGRESS_BAR2      = 1 <<  5;   // show progress bar 2
+  public final static int LIST               = 1 <<  6;   // show list
+  public final static int ABORT_CLOSE        = 1 <<  7;   // abort/close button
+  public final static int ENABLE_ABORT_CLOSE = 1 <<  8;   // enable abort/close button
 
   public final static int AUTO_ANIMATE       = 1 << 24;   // auto animate
 
@@ -71,7 +73,7 @@ public class BusyDialog
   private Label                               widgetImage;
   private Label                               widgetMessage;
   private Label                               widgetText0,widgetText1,widgetText2;
-  private ProgressBar                         widgetProgressBar0,widgetProgressBar1;
+  private ProgressBar                         widgetProgressBars[] = new ProgressBar[3];
   private List                                widgetList;
   private Button                              widgetAbortCloseButton;
   private int                                 maxListLength;
@@ -220,14 +222,14 @@ public class BusyDialog
 
         if ((flags & PROGRESS_BAR0) != 0)
         {
-          widgetProgressBar0 = new ProgressBar(subComposite,SWT.LEFT);
-          widgetProgressBar0.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
-          widgetProgressBar0.setMinimum(0.0);
-          widgetProgressBar0.setMaximum(100.0);
+          widgetProgressBars[0] = new ProgressBar(subComposite,SWT.LEFT);
+          widgetProgressBars[0].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+          widgetProgressBars[0].setMinimum(0.0);
+          widgetProgressBars[0].setMaximum(100.0);
         }
         else
         {
-          widgetProgressBar0 = null;
+          widgetProgressBars[0] = null;
         }
 
         if ((flags & TEXT1) != 0)
@@ -242,14 +244,36 @@ public class BusyDialog
 
         if ((flags & PROGRESS_BAR1) != 0)
         {
-          widgetProgressBar1 = new ProgressBar(subComposite,SWT.LEFT);
-          widgetProgressBar1.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
-          widgetProgressBar1.setMinimum(0.0);
-          widgetProgressBar1.setMaximum(100.0);
+          widgetProgressBars[1] = new ProgressBar(subComposite,SWT.LEFT);
+          widgetProgressBars[1].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+          widgetProgressBars[1].setMinimum(0.0);
+          widgetProgressBars[1].setMaximum(100.0);
         }
         else
         {
-          widgetProgressBar1 = null;
+          widgetProgressBars[1] = null;
+        }
+
+        if ((flags & TEXT2) != 0)
+        {
+          widgetText2 = new Label(subComposite,SWT.LEFT);
+          widgetText2.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+        }
+        else
+        {
+          widgetText2 = null;
+        }
+
+        if ((flags & PROGRESS_BAR2) != 0)
+        {
+          widgetProgressBars[2] = new ProgressBar(subComposite,SWT.LEFT);
+          widgetProgressBars[2].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+          widgetProgressBars[2].setMinimum(0.0);
+          widgetProgressBars[2].setMaximum(100.0);
+        }
+        else
+        {
+          widgetProgressBars[2] = null;
         }
 
         if ((flags & LIST) != 0)
@@ -596,8 +620,9 @@ public class BusyDialog
         if ((widgetAbortCloseButton != null) && !widgetAbortCloseButton.isDisposed())
         {
           // set progress bars to 100%
-          if (widgetProgressBar0 != null) widgetProgressBar0.setSelection(widgetProgressBar0.getMaximum());
-          if (widgetProgressBar1 != null) widgetProgressBar1.setSelection(widgetProgressBar1.getMaximum());
+          if (widgetProgressBars[0] != null) widgetProgressBars[0].setSelection(widgetProgressBars[0].getMaximum());
+          if (widgetProgressBars[1] != null) widgetProgressBars[1].setSelection(widgetProgressBars[1].getMaximum());
+          if (widgetProgressBars[2] != null) widgetProgressBars[2].setSelection(widgetProgressBars[2].getMaximum());
 
           // change button text
           widgetAbortCloseButton.setText(BusyDialog.tr("Close"));
@@ -666,13 +691,7 @@ public class BusyDialog
    */
   public void setMinimum(int i, double n)
   {
-    ProgressBar widgetProgressBar = null;
-    switch (i)
-    {
-      case 0: widgetProgressBar = widgetProgressBar0; break;
-      case 1: widgetProgressBar = widgetProgressBar1; break;
-    }
-    if (widgetProgressBar != null) widgetProgressBar.setMinimum(n);
+    if (widgetProgressBars[i] != null) widgetProgressBars[i].setMinimum(n);
   }
 
   /** set maximal progress value
@@ -681,13 +700,7 @@ public class BusyDialog
    */
   public void setMaximum(int i, double n)
   {
-    ProgressBar widgetProgressBar = null;
-    switch (i)
-    {
-      case 0: widgetProgressBar = widgetProgressBar0; break;
-      case 1: widgetProgressBar = widgetProgressBar1; break;
-    }
-    if (widgetProgressBar != null) widgetProgressBar.setMaximum(n);
+    if (widgetProgressBars[i] != null) widgetProgressBars[i].setMaximum(n);
   }
 
   /** set minimal progress value
@@ -953,17 +966,11 @@ public class BusyDialog
               if (progressValues[i] != null)
               {
                 // set progress bar value
-                ProgressBar widgetProgressBar = null;
-                switch (i)
-                {
-                  case 0: widgetProgressBar = widgetProgressBar0; break;
-                  case 1: widgetProgressBar = widgetProgressBar1; break;
-                }
-                if (   (widgetProgressBar != null)
-                    && !widgetProgressBar.isDisposed()
+                if (   (widgetProgressBars[i] != null)
+                    && !widgetProgressBars[i].isDisposed()
                    )
                 {
-                  widgetProgressBar.setSelection(progressValues[i]);
+                  widgetProgressBars[i].setSelection(progressValues[i]);
                 }
 
                 progressValues[i] = null;
