@@ -5503,6 +5503,35 @@ Dprintf.dprintf("");
                   boolean isChecked = Widgets.getTreeItemChecked(treeItem);
                   setStorageList(indexData.id,isChecked);
 
+                  // clear sub-entities if checked
+                  if (isChecked)
+                  {
+                    for (TreeItem entityTreeItem : ((TreeItem)selectionEvent.item).getItems())
+                    {
+                      if ((entityTreeItem != null) && !entityTreeItem.isDisposed())
+                      {
+                        IndexData entityIndexData = (IndexData)entityTreeItem.getData();
+                        if ((entityIndexData != null) && (entityIndexData instanceof EntityIndexData))
+                        {
+                          entityTreeItem.setChecked(false);
+                          setStorageList(entityIndexData.id,false);
+
+                          for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                          {
+                            if ((storageTreeItem != null) && !storageTreeItem.isDisposed())
+                            {
+                              IndexData storageIndexData = (IndexData)storageTreeItem.getData();
+                              if ((storageIndexData != null) && (storageIndexData instanceof StorageIndexData))
+                              {
+                                storageTreeItem.setChecked(false);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+
                   // trigger update checked
                   checkedIndexEvent.trigger();
                   updateStorageTreeTableThread.triggerUpdate();
@@ -5515,6 +5544,21 @@ Dprintf.dprintf("");
                   // set/reset entity checked
                   boolean isChecked = Widgets.getTreeItemChecked(treeItem);
                   setStorageList(indexData.id,isChecked);
+
+                  // clear parent UUID if checked
+                  if (isChecked)
+                  {
+                    TreeItem uuidTreeItem = ((TreeItem)selectionEvent.item).getParentItem();
+                    if ((uuidTreeItem != null) && !uuidTreeItem.isDisposed())
+                    {
+                      IndexData uuidIndexData = (IndexData)uuidTreeItem.getData();
+                      if ((uuidIndexData != null) && (uuidIndexData instanceof UUIDIndexData))
+                      {
+                        uuidTreeItem.setChecked(false);
+                        setStorageList(uuidIndexData.id,false);
+                      }
+                    }
+                  }
 
                   // trigger update checked
                   checkedIndexEvent.trigger();
@@ -9519,6 +9563,8 @@ Dprintf.dprintf("");
      */
     class Data
     {
+      long              totalStorageCount;
+      long              totalStorageSize;
       long              totalEntryCount;
       long              totalEntrySize,totalEntryContentSize;
       String            restoreToDirectory;
@@ -9528,6 +9574,8 @@ Dprintf.dprintf("");
 
       Data()
       {
+        this.totalStorageCount     = 0;
+        this.totalStorageSize      = 0L;
         this.totalEntryCount       = 0;
         this.totalEntrySize        = 0L;
         this.totalEntryContentSize = 0L;
@@ -9816,9 +9864,13 @@ Dprintf.dprintf("");
                                          2,  // debugLevel
                                          valueMap
                                         );
+                data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
+                data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
                 data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                assert(data.totalStorageCount >= 0);
+                assert(data.totalStorageSize >= 0);
                 assert(data.totalEntryCount >= 0);
                 assert(data.totalEntrySize >= 0);
                 assert(data.totalEntryContentSize >= 0);
@@ -9885,10 +9937,17 @@ Dprintf.dprintf("");
                                          1,  // debugLevel
                                          valueMap
                                         );
-
+Dprintf.dprintf("valueMap=%s",valueMap);
+                data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
+                data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
                 data.totalEntryCount       = valueMap.getLong("totalEntryCount");
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize");
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                assert(data.totalStorageCount >= 0);
+                assert(data.totalStorageSize >= 0);
+                assert(data.totalEntryCount >= 0);
+                assert(data.totalEntrySize >= 0);
+                assert(data.totalEntryContentSize >= 0);
 
                 display.syncExec(new Runnable()
                 {
@@ -10135,10 +10194,11 @@ Dprintf.dprintf("");
                                                    500,
                                                    300,
                                                    null,
-                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE,
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.TEXT2|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.PROGRESS_BAR2|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE,
                                                    250  // max. lines
                                                   );
-      busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
+      busyDialog.updateText(0,"%s",BARControl.tr("Storages"));
+      busyDialog.updateText(3,"%s",BARControl.tr("Failed entries")+":");
 
       Background.run(new BackgroundRunnable(busyDialog,
                                             indexIdSet,
@@ -10205,6 +10265,7 @@ Dprintf.dprintf("");
                                              );
                 break;
             }
+final int storageCount[] = new int[0];
             BARServer.executeCommand(command,
                                      0,  // debugLevel
                                      new Command.ResultHandler()
@@ -10220,21 +10281,24 @@ Dprintf.dprintf("");
                                          long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
                                          long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
 
+storageCount[0]++;
                                          switch (state)
                                          {
                                            case NONE:
                                              break;
                                            case RUNNING:
-                                             busyDialog.updateText(0,"%s",storageName);
-                                             busyDialog.updateProgressBar(0,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
-                                             busyDialog.updateText(1,"%s",entryName);
-                                             busyDialog.updateProgressBar(1,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
+                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)storageCount[0]*100.0)/(double)data.totalStorageCount : 0.0);
+                                             busyDialog.updateText(1,"%s",storageName);
+                                             busyDialog.updateProgressBar(1,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
+                                             busyDialog.updateText(2,"%s",entryName);
+                                             busyDialog.updateProgressBar(2,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
                                              break;
                                            case RESTORED:
-                                             busyDialog.updateText(0,"%s",storageName);
-                                             busyDialog.updateProgressBar(0,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
-                                             busyDialog.updateText(1,"%s",entryName);
-                                             busyDialog.updateProgressBar(1,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
+                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)storageCount[0]*100.0)/(double)data.totalStorageCount : 0.0);
+                                             busyDialog.updateText(1,"%s",storageName);
+                                             busyDialog.updateProgressBar(1,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
+                                             busyDialog.updateText(2,"%s",entryName);
+                                             busyDialog.updateProgressBar(2,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
                                              break;
                                            case FAILED:
                                              busyDialog.updateList(!entryName.isEmpty() ? entryName : storageName);
