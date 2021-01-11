@@ -27,34 +27,38 @@ WGET_OPTIONS="--tries=5 --timeout=300"
 UNZIP="unzip"
 XZ="xz"
 
-BZIP2_VERSION=1.0.6
+BZIP2_VERSION=1.0.8
 LZO_VERSION=2.10
 LZ4_VERSION=r131
-ZSTD_VERSION=1.3.2
+ZSTD_VERSION=1.4.8
 XDELTA3_VERSION=3.0.11
-MXML_VERSION=2.12
-LIBGPG_ERROR_VERSION=1.25
-LIBGCRYPT_VERSION=1.8.4
-NETTLE_VERSION=3.4
-GMP_VERSION=6.1.2
-LIBIDN2_VERSION=2.0.5
-GNU_TLS_SUB_DIRECTORY=v3.5
-GNU_TLS_VERSION=3.5.19
-LIBICONV_VERSION=1.15
-OPENSSL_VERSION=1.1.1f
+MXML_VERSION=3.2
+LIBGPG_ERROR_VERSION=1.41
+LIBGCRYPT_VERSION=1.8.7
+NETTLE_VERSION=3.7
+GMP_VERSION=6.2.1
+LIBIDN2_VERSION=2.3.0
+GNU_TLS_SUB_DIRECTORY=v3.7
+GNU_TLS_VERSION=3.7.0
+LIBICONV_VERSION=1.16
+OPENSSL_VERSION=1.1.1i
 LIBSSH2_VERSION=1.9.0
-C_ARES_VERSION=1.15.0
-CURL_VERSION=7.67.0
-PCRE_VERSION=8.40
+C_ARES_VERSION=1.17.1
+CURL_VERSION=7.74.0
+PCRE_VERSION=8.44
+#TODO: remove
 SQLITE_YEAR=2019
+SQLITE_YEAR=2020
+#TODO: remove
 SQLITE_VERSION=3270200
+SQLITE_VERSION=3340000
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
 ICU_VERSION=58.3
 MTX_VERSION=1.3.12
 LIBCDIO_VERSION=2.1.0
-BINUTILS_VERSION=2.32
+BINUTILS_VERSION=2.35
 BREAKPAD_REVISION=1430
 EPM_VERSION=4.2
 
@@ -79,7 +83,7 @@ fatalError()
 destination=$PWD
 localDirectory=
 noDecompressFlag=0
-verboseFlag=1
+verboseFlag=0
 cleanFlag=0
 helpFlag=0
 
@@ -501,7 +505,7 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=bzip2-$BZIP2_VERSION.tar.gz
-     url="https://downloads.sourceforge.net/project/bzip2/$fileName"
+     url="https://sourceware.org/pub/bzip2/$fileName"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/bzip2-$BZIP2_VERSION.tar.gz; then
          fileName=$localDirectory/bzip2-$BZIP2_VERSION.tar.gz
@@ -698,7 +702,7 @@ if test $cleanFlag -eq 0; then
        if test -n "$localDirectory" -a -f $localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
          fileName=$localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
        else
-         url="https://www.gnupg.org/ftp/gcrypt/libgpg-error//$fileName"
+         url="https://www.gnupg.org/ftp/gcrypt/libgpg-error/$fileName"
          if test ! -f $fileName; then
            $CURL $curlOptions --output $fileName $url
            if test $? -ne 0; then
@@ -804,12 +808,12 @@ if test $cleanFlag -eq 0; then
     $ECHO_NO_NEW_LINE "Get mxml..."
     (
      cd $destination/extern
-     fileName=mxml-$MXML_VERSION.tar.gz
+     fileName=mxml-$MXML_VERSION.zip
      if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/mxml-$MXML_VERSION.tar.gz; then
-         fileName=$localDirectory/mxml-$MXML_VERSION.tar.gz
+       if test -n "$localDirectory" -a -f $localDirectory/mxml-$MXML_VERSION.zip; then
+         fileName=$localDirectory/mxml-$MXML_VERSION.zip
        else
-         url="https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/$fileName"
+         url="https://github.com/michaelrsweet/mxml/archive/v$MXML_VERSION.zip"
          if test ! -f $fileName; then
            $CURL $curlOptions --output $fileName $url
            if test $? -ne 0; then
@@ -819,7 +823,7 @@ if test $cleanFlag -eq 0; then
        fi
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf $fileName
+       $UNZIP -o -q $fileName
      fi
     )
     if test $? -ne 0; then
@@ -1108,10 +1112,10 @@ if test $cleanFlag -eq 0; then
     $ECHO_NO_NEW_LINE "Get pcre..."
     (
      cd $destination/extern
-     fileName=pcre-$PCRE_VERSION.tar.bz2
+     fileName=pcre-$PCRE_VERSION.zip
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/pcre-$PCRE_VERSION.tar.bz2; then
-         fileName=$localDirectory/pcre-$PCRE_VERSION.tar.bz2
+       if test -n "$localDirectory" -a -f $localDirectory/pcre-$PCRE_VERSION.zip; then
+         fileName=$localDirectory/pcre-$PCRE_VERSION.zip
        else
          url="https://ftp.pcre.org/pub/pcre/$fileName"
          $CURL $curlOptions --output $fileName $url
@@ -1121,7 +1125,7 @@ if test $cleanFlag -eq 0; then
        fi
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xjf $fileName
+       $UNZIP -q -o $fileName
      fi
     )
     if test $? -ne 0; then
