@@ -1222,7 +1222,7 @@ class CommandThread extends Thread
             final String errorData   = command.valueMap.getString("errorData","");
 
             // confirm dialog
-            final String  action[] = new String[]{"ABORT"};
+            final String action[] = new String[]{"ABORT"};
             if (display != null)
             {
               display.syncExec(new Runnable()
