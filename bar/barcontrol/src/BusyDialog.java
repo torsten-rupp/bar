@@ -72,15 +72,15 @@ public class BusyDialog
   private Shell                               dialog;
   private Label                               widgetImage;
   private Label                               widgetMessage;
-  private Label                               widgetText0,widgetText1,widgetText2;
+  private Label                               widgetTexts[] = new Label[4];
   private ProgressBar                         widgetProgressBars[] = new ProgressBar[3];
   private List                                widgetList;
   private Button                              widgetAbortCloseButton;
   private int                                 maxListLength;
 
   private final String                        messageValue[] = new String[]{null};
-  private final String                        textValues[] = new String[]{null,null,null};
-  private final Double                        progressValues[] = new Double[]{0.0,0.0};
+  private final String                        textValues[] = new String[]{null,null,null,null};
+  private final Double                        progressValues[] = new Double[]{0.0,0.0,0.0};
   private final ConcurrentLinkedQueue<String> listValues = new ConcurrentLinkedQueue<String>();
 
   private boolean                             doneFlag;
@@ -165,7 +165,7 @@ public class BusyDialog
       widgetImage.setImage(animateImages[animateImageIndex]);
       widgetImage.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NW,0,0,4,4));
 
-      double[] rowWeights = new double[7];
+      double[] rowWeights = new double[1+2+2+2+2];
       int row = 0;
       if (message != null)
       {
@@ -184,6 +184,14 @@ public class BusyDialog
         rowWeights[row] = ((flags & LIST) == 0) ? 1.0 : 0.0; row++;
       }
       if ((flags & PROGRESS_BAR1) != 0)
+      {
+        rowWeights[row] = 0.0; row++;
+      }
+      if ((flags & TEXT2) != 0)
+      {
+        rowWeights[row] = ((flags & LIST) == 0) ? 1.0 : 0.0; row++;
+      }
+      if ((flags & PROGRESS_BAR2) != 0)
       {
         rowWeights[row] = 0.0; row++;
       }
@@ -212,12 +220,12 @@ public class BusyDialog
 
         if ((flags & TEXT0) != 0)
         {
-          widgetText0 = new Label(subComposite,SWT.LEFT);
-          widgetText0.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+          widgetTexts[0] = new Label(subComposite,SWT.LEFT);
+          widgetTexts[0].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
         }
         else
         {
-          widgetText0 = null;
+          widgetTexts[0] = null;
         }
 
         if ((flags & PROGRESS_BAR0) != 0)
@@ -234,12 +242,12 @@ public class BusyDialog
 
         if ((flags & TEXT1) != 0)
         {
-          widgetText1 = new Label(subComposite,SWT.LEFT);
-          widgetText1.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+          widgetTexts[1] = new Label(subComposite,SWT.LEFT);
+          widgetTexts[1].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
         }
         else
         {
-          widgetText1 = null;
+          widgetTexts[1] = null;
         }
 
         if ((flags & PROGRESS_BAR1) != 0)
@@ -256,12 +264,12 @@ public class BusyDialog
 
         if ((flags & TEXT2) != 0)
         {
-          widgetText2 = new Label(subComposite,SWT.LEFT);
-          widgetText2.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+          widgetTexts[2] = new Label(subComposite,SWT.LEFT);
+          widgetTexts[2].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
         }
         else
         {
-          widgetText2 = null;
+          widgetTexts[2] = null;
         }
 
         if ((flags & PROGRESS_BAR2) != 0)
@@ -278,15 +286,15 @@ public class BusyDialog
 
         if ((flags & LIST) != 0)
         {
-          widgetText2 = new Label(subComposite,SWT.LEFT);
-          widgetText2.setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
+          widgetTexts[3] = new Label(subComposite,SWT.LEFT);
+          widgetTexts[3].setLayoutData(new TableLayoutData(row,0,TableLayoutData.WE)); row++;
           widgetList = new List(subComposite,SWT.BORDER|SWT.V_SCROLL);
           widgetList.setLayoutData(new TableLayoutData(row,0,TableLayoutData.NSWE)); row++;
         }
         else
         {
-          widgetText2 = null;
-          widgetList  = null;
+          widgetTexts[2] = null;
+          widgetList     = null;
         }
       }
     }
@@ -686,7 +694,7 @@ public class BusyDialog
   }
 
   /** set minimal progress value
-   * @param i index 0|1
+   * @param i index 0..2
    * @param n value
    */
   public void setMinimum(int i, double n)
@@ -695,7 +703,7 @@ public class BusyDialog
   }
 
   /** set maximal progress value
-   * @param i index 0|1
+   * @param i index 0..2
    * @param n value
    */
   public void setMaximum(int i, double n)
@@ -720,7 +728,7 @@ public class BusyDialog
   }
 
   /** update busy dialog text
-   * @param i index 0|1
+   * @param i index 0..3
    * @param format format string
    * @param args optional arguments
    * @return true if closed, false otherwise
@@ -741,7 +749,7 @@ public class BusyDialog
   }
 
   /** update busy dialog text
-   * @param i index 0|1
+   * @param i index 0..3
    * @param n number to show
    * @return true if closed, false otherwise
    */
@@ -751,7 +759,7 @@ public class BusyDialog
   }
 
   /** update busy dialog text
-   * @param i index 0|1
+   * @param i index 0..3
    * @return true if closed, false otherwise
    */
   public boolean update(int i)
@@ -778,7 +786,7 @@ public class BusyDialog
   }
 
   /** update busy dialog progress bar
-   * @param i index 0|1
+   * @param i index 0..2
    * @param n progress value
    * @return true if closed, false otherwise
    */
@@ -926,34 +934,27 @@ public class BusyDialog
               messageValue[0] = null;
             }
 
-            for (i = 0; i < 3; i++)
+            for (i = 0; i < 4; i++)
             {
               if (textValues[i] != null)
               {
                 // set text
-                Label widgetText = null;
-                switch (i)
-                {
-                  case 0: widgetText = widgetText0; break;
-                  case 1: widgetText = widgetText1; break;
-                  case 2: widgetText = widgetText2; break;
-                }
-                if (   (widgetText != null)
-                    && !widgetText.isDisposed()
-                    && !textValues[i].equals(widgetText.getText())
+                if (   (widgetTexts[i] != null)
+                    && !widgetTexts[i].isDisposed()
+                    && !textValues[i].equals(widgetTexts[i].getText())
                    )
                 {
                   // set text
-                  widgetText.setText(textValues[i]);
+                  widgetTexts[i].setText(textValues[i]);
 
                   // resize dialog (it not manually changed)
                   if (!resizedFlag)
                   {
-                    GC gc = new GC(widgetText);
+                    GC gc = new GC(widgetTexts[i]);
                     int width = gc.stringExtent(textValues[i]).x;
                     gc.dispose();
 
-                    if (widgetText.getSize().x < width) dialog.pack();
+                    if (widgetTexts[i].getSize().x < width) dialog.pack();
                   }
                 }
 
@@ -961,7 +962,7 @@ public class BusyDialog
               }
             }
 
-            for (i = 0; i < 2; i++)
+            for (i = 0; i < 3; i++)
             {
               if (progressValues[i] != null)
               {
