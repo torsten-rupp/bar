@@ -2734,55 +2734,43 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem menuItem = (MenuItem)selectionEvent.widget;
-
-            if (menuItem.getSelection())
+            Settings.Server defaultServer = Settings.getLastServer();
+            loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                      (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
+                                      !Settings.serverNoTLS && Settings.serverForceTLS,
+                                      Settings.role
+                                     );
+            if (getLoginData(loginData,false))
             {
-              boolean connectOkFlag = false;
-
-              Settings.Server defaultServer = Settings.getLastServer();
-              loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                        (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        !Settings.serverNoTLS && Settings.serverForceTLS,
-                                        Settings.role
-                                       );
-              if (getLoginData(loginData,false))
+              try
               {
-                try
+                connect(loginData.serverName,
+                        loginData.serverPort,
+                        loginData.serverTLSPort,
+                        Settings.serverNoTLS,
+                        loginData.forceTLS,
+                        Settings.serverCAFileName,
+                        Settings.serverCertificateFileName,
+                        Settings.serverKeyFileName,
+                        loginData.password
+                       );
+
+                updateServerMenu();
+
+                // notify new server
+                Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+              }
+              catch (ConnectionError error)
+              {
+                // show error message
+                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
+
+                // revert selection
+                if (serverMenuLastSelectedItem != null)
                 {
-                  connect(loginData.serverName,
-                          loginData.serverPort,
-                          loginData.serverTLSPort,
-                          Settings.serverNoTLS,
-                          loginData.forceTLS,
-                          Settings.serverCAFileName,
-                          Settings.serverCertificateFileName,
-                          Settings.serverKeyFileName,
-                          loginData.password
-                         );
-
-                  updateServerMenu();
-
-                  // notify new server
-                  Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
-                }
-                catch (ConnectionError error)
-                {
-                  // show error message
-                  Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
-
-                  // revert selection
-                  if (serverMenuLastSelectedItem != null)
-                  {
-                    menuItem.setSelection(false);
-                    serverMenuLastSelectedItem.setSelection(true);
-                  }
+                  serverMenuLastSelectedItem.setSelection(true);
                 }
               }
-            }
-            else
-            {
-              serverMenuLastSelectedItem = menuItem;
             }
           }
         });
