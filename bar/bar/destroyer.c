@@ -63,8 +63,8 @@ LOCAL bool helpFlag    = FALSE;
 
 LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 (
-  CMD_OPTION_BOOLEAN("version",0  ,0,0,versionFlag,0,"print version"  ),
-  CMD_OPTION_BOOLEAN("help",   'h',0,0,helpFlag,   0,"print this help"),
+  CMD_OPTION_BOOLEAN("version",0  ,0,0,versionFlag,"print version"  ),
+  CMD_OPTION_BOOLEAN("help",   'h',0,0,helpFlag,   "print this help"),
 );
 
 /****************************** Macros *********************************/
@@ -385,7 +385,6 @@ int main(int argc, const char *argv[])
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,
                        CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
-                       NULL,  // globalOptionSet
                        stderr,NULL,NULL
                       )
      )
