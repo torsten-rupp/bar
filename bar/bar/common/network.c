@@ -934,6 +934,8 @@ Errors Network_connect(SocketHandle *socketHandle,
     #endif /* NDEBUG */
   }
 
+  socketHandle->isConnected = TRUE;
+
   return ERROR_NONE;
 }
 
@@ -1353,17 +1355,22 @@ Errors Network_receive(SocketHandle *socketHandle,
 
         // wait for data
         events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
-        if ((events & HANDLE_EVENT_INPUT) != 0)
+        if      ((events & HANDLE_EVENT_INPUT) != 0)
         {
           // receive
           n = recv(socketHandle->handle,buffer,maxLength,0);
 
           // check if disconected
-          socketHandle->isConnected = (n > 0);
+          if (n <= 0)
+          {
+            shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
+            socketHandle->isConnected = FALSE;
+          }
         }
-        else
+        else if (timeout != NO_WAIT)
         {
           // disconnected
+          shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           socketHandle->isConnected = FALSE;
         }
       }
@@ -1386,17 +1393,21 @@ Errors Network_receive(SocketHandle *socketHandle,
 
           // wait for data
           events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
-          if ((events & HANDLE_EVENT_INPUT) != 0)
+          if      ((events & HANDLE_EVENT_INPUT) != 0)
           {
             // receive
             n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
 
-           // check if disconected
-           socketHandle->isConnected = (n > 0);
+            if (n <= 0)
+            {
+              shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
+              socketHandle->isConnected = FALSE;
+            }
           }
-          else
+          else if (timeout != NO_WAIT)
           {
             // disconnected
+            shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
             socketHandle->isConnected = FALSE;
           }
         }
@@ -1975,6 +1986,8 @@ Errors Network_accept(SocketHandle             *socketHandle,
     #endif /* PLATFORM_... */
   }
 
+  socketHandle->isConnected = TRUE;
+
   return ERROR_NONE;
 }
 
@@ -2549,7 +2562,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
           {
             return error;
           }
-    //fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
+//fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
 
           networkExecuteHandle->stdoutBuffer.index  = 0;
           networkExecuteHandle->stdoutBuffer.length = bytesRead;
@@ -2593,7 +2606,7 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
           {
             return error;
           }
-    //fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
+//fprintf(stderr,"%s,%d: bytesRead=%lu\n",__FILE__,__LINE__,bytesRead);
 
           networkExecuteHandle->stderrBuffer.index  = 0;
           networkExecuteHandle->stderrBuffer.length = bytesRead;
