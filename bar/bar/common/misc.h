@@ -673,7 +673,9 @@ INLINE bool Misc_isTimeout(const TimeoutInfo *timeoutInfo)
 {
   assert(timeoutInfo != NULL);
 
-  return (Misc_getTimestamp() >= timeoutInfo->endTimestamp);
+  return (   (timeoutInfo->timeout != WAIT_FOREVER)
+          && Misc_getTimestamp() >= timeoutInfo->endTimestamp
+         );
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
