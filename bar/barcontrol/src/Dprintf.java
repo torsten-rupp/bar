@@ -17,6 +17,8 @@ import java.lang.reflect.Field;
 
 /****************************** Classes ********************************/
 
+/** debug print functions
+ */
 public class Dprintf
 {
   /** debug group
@@ -106,10 +108,130 @@ public class Dprintf
   /** set output stream
    * @param outputStream output stream
    */
-  static void setOutputStream(PrintStream outputStream)
+  public static void setOutputStream(PrintStream outputStream)
   {
     Dprintf.outputStream = outputStream;
   }
+
+  /** add debug group
+   * @param name group name
+   * @return group
+   */
+  public static Group addGroup(String name)
+  {
+    Group group;
+
+    group = debugGroups.get(name);
+    if (group == null)
+    {
+      group = new Group(name);
+      debugGroups.put(name,group);
+    }
+
+    return group;
+  }
+
+  /** output debug data
+   * @param level debug level
+   * @param group debug group
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  public static void dprintf(int level, Group group, String format, Object... args)
+  {
+    printOutput(3,level,group,format,args);
+  }
+
+  /** output debug data
+   * @param level debug level
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  public static void dprintf(int level, String format, Object... args)
+  {
+    printOutput(3,level,(Group)null,format,args);
+  }
+
+  /** output debug data
+   * @param level debug level
+   * @param object object
+   */
+  public static void dprintf(int level, Object object)
+  {
+    printOutput(3,level,(Group)null,"%s",object);
+  }
+
+  /** output debug data
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  public static void dprintf(String format, Object... args)
+  {
+    printOutput(3,0,(Group)null,format,args);
+  }
+
+  /** output debug data
+   * @param object object
+   */
+  public static void dprintf(Object object)
+  {
+    printOutput(3,0,(Group)null,"%s",object);
+  }
+
+  /** output debug data
+   */
+  public static void dprintf()
+  {
+    printOutput(3,0,GROUP_ANY,"");
+  }
+
+  /** dump memory
+   */
+  public static void dumpMemory(byte[] data)
+  {
+    StringBuilder buffer = new StringBuilder();
+    for (int i = 0; i < data.length; i++)
+    {
+      if (buffer.length() > 0) buffer.append(' ');
+      buffer.append(String.format("%02x",data[i]));
+    }
+    printOutput(3,0,(Group)null,"%s",buffer.toString());
+  }
+
+  /** output debug data and halt
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  public static void halt(String format, Object... args)
+  {
+    printOutput(3,0,GROUP_ANY,"HALT: "+format,args);
+    printStackTrace();
+    System.exit(1);
+  }
+
+  /** output debug data and halt
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  public static void halt(Object object)
+  {
+    printOutput(3,0,GROUP_ANY,"HALT: %s",object);
+    printStackTrace();
+    System.exit(1);
+  }
+
+  /** output debug data and halt
+   * @param format printf-format string
+   * @param args optional arguments
+   */
+  public static void halt()
+  {
+    printOutput(3,0,GROUP_ANY,"HALT");
+    printStackTrace();
+    System.exit(1);
+  }
+
+  // -------------------------------------------------------------------
 
   /** output debug data
    * @param stackLevel stack level to trace back for getting file name, line number
@@ -118,7 +240,7 @@ public class Dprintf
    * @param format printf-format string
    * @param args optional arguments
    */
-  static private void printOutput(int stackLevel, int level, Group group, String format, Object... args)
+  private static void printOutput(int stackLevel, int level, Group group, String format, Object... args)
   {
     if (debugLevel >= level)
     {
@@ -155,115 +277,18 @@ public class Dprintf
         {
           outputStream.print(String.format("%8d ",System.currentTimeMillis()));
         }
-        outputStream.print(stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+": ");
+        outputStream.print(stackTrace[stackLevel].getFileName()+", "+stackTrace[stackLevel].getLineNumber()+", "+stackTrace[stackLevel].getMethodName()+": ");
         outputStream.printf(format,args);
         outputStream.println();
       }
     }
   }
 
-  /** output stack trace
-   * @param stackLevel stack level to trace back
-   */
-  static private void printStackTrace(int stackLevel)
-  {
-    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-    for (int i = stackLevel+1; i < stackTrace.length; i++)
-    {
-      outputStream.println("  "+stackTrace[i]);
-    }
-  }
-
-  /** add debug group
-   * @param name group name
-   * @return group
-   */
-  static public Group addGroup(String name)
-  {
-    Group group;
-
-    group = debugGroups.get(name);
-    if (group == null)
-    {
-      group = new Group(name);
-      debugGroups.put(name,group);
-    }
-
-    return group;
-  }
-
-  /** output debug data
-   * @param level debug level
-   * @param group debug group
-   * @param format printf-format string
-   * @param args optional arguments
-   */
-  static public void dprintf(int level, Group group, String format, Object... args)
-  {
-    printOutput(3,level,group,format,args);
-  }
-
-  /** output debug data
-   * @param level debug level
-   * @param format printf-format string
-   * @param args optional arguments
-   */
-  static public void dprintf(int level, String format, Object... args)
-  {
-    printOutput(3,level,(Group)null,format,args);
-  }
-
-  /** output debug data
-   * @param level debug level
-   * @param object object
-   */
-  static public void dprintf(int level, Object object)
-  {
-    printOutput(3,level,(Group)null,"%s",object);
-  }
-
-  /** output debug data
-   * @param format printf-format string
-   * @param args optional arguments
-   */
-  static public void dprintf(String format, Object... args)
-  {
-    printOutput(3,0,(Group)null,format,args);
-  }
-
-  /** output debug data
-   * @param object object
-   */
-  static public void dprintf(Object object)
-  {
-    printOutput(3,0,(Group)null,"%s",object);
-  }
-
-  /** output debug data
-   */
-  static public void dprintf()
-  {
-    printOutput(3,0,GROUP_ANY,"");
-  }
-
-  /** dump memory
-   */
-  static public void dumpMemory(byte[] data)
-  {
-    StringBuilder buffer = new StringBuilder();
-    for (int i = 0; i < data.length; i++)
-    {
-      if (buffer.length() > 0) buffer.append(' ');
-      buffer.append(String.format("%02x",data[i]));
-    }
-    printOutput(3,0,(Group)null,"%s",buffer.toString());
-  }
-
   /** print a stack trace
    * @param stackLevel stack level
    * @param prefix line prefix
    */
-  static private void printStackTrace(int stackLevel, String prefix)
+  private static void printStackTrace(int stackLevel, String prefix)
   {
     StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
 
@@ -273,52 +298,31 @@ public class Dprintf
     }
   }
 
+  /** output stack trace
+   * @param stackLevel stack level to trace back
+   */
+  private static void printStackTrace(int stackLevel)
+  {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+    for (int i = stackLevel+1; i < stackTrace.length; i++)
+    {
+      outputStream.println("  "+stackTrace[i]);
+    }
+  }
+
   /** print a stack trace
    * @param prefix line prefix
    */
-  static public void printStackTrace(String prefix)
+  public static void printStackTrace(String prefix)
   {
     printStackTrace(3,prefix);
   }
 
   /** print a stack trace
    */
-  static public void printStackTrace()
+  public static void printStackTrace()
   {
     printStackTrace(3,"  ");
-  }
-
-  /** output debug data and halt
-   * @param format printf-format string
-   * @param args optional arguments
-   */
-  static public void halt(String format, Object... args)
-  {
-    printOutput(3,0,GROUP_ANY,"HALT: "+format,args);
-    printStackTrace();
-    System.exit(ExitCodes.INTERNAL_ERROR);
-  }
-
-  /** output debug data and halt
-   * @param format printf-format string
-   * @param args optional arguments
-   */
-  static public void halt(Object object)
-  {
-    printOutput(3,0,GROUP_ANY,"HALT: %s",object);
-    printStackTrace();
-    System.exit(ExitCodes.INTERNAL_ERROR);
-  }
-
-  /** output debug data and halt
-   * @param format printf-format string
-   * @param args optional arguments
-   */
-  static public void halt()
-  {
-    printOutput(3,0,GROUP_ANY,"HALT");
-    printStackTrace();
-    System.exit(ExitCodes.INTERNAL_ERROR);
   }
 }
 
