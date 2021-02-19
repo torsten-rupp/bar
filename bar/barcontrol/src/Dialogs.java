@@ -3165,7 +3165,7 @@ class Dialogs
                            String    cancelText,
                            int       defaultValue)
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,enabled,null,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3189,7 +3189,7 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,null,null,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,message,texts,helpTexts,null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3211,7 +3211,7 @@ class Dialogs
                            int       defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,null,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,helpTexts,null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3233,7 +3233,7 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,message,texts,null,null,null,null,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,message,texts,(String[])null,null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3253,7 +3253,7 @@ class Dialogs
                            int       defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,null,null,null,null,defaultValue);
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,(String[])null,null,(String)null,(String)null,defaultValue);
   }
 
   /** select dialog
@@ -3315,7 +3315,29 @@ class Dialogs
                            int                 defaultValue
                           )
   {
-    return select(parentShell,showAgainFieldFlag,title,message,texts,null,null,defaultValue);
+    return select(parentShell,showAgainFieldFlag,title,message,texts,(String[])null,null,defaultValue);
+  }
+
+  /** select dialog
+   * @param parentShell parent shell
+   * @param title title string
+   * @param message confirmation message
+   * @param texts array with texts
+   * @param okText ok-text
+   * @param cancelText cancel-text
+   * @param defaultValue default value (0..n-1)
+   * @return selection index (0..n-1)
+   */
+  public static int select(Shell    parentShell,
+                           String   title,
+                           String   message,
+                           String[] texts,
+                           String   okText,
+                           String   cancelText,
+                           int      defaultValue
+                          )
+  {
+    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,(String[])null,null,okText,cancelText,defaultValue);
   }
 
   /** select dialog
@@ -3333,7 +3355,7 @@ class Dialogs
                            int      defaultValue
                           )
   {
-    return select(parentShell,(BooleanFieldUpdater)null,title,message,texts,null,null,defaultValue);
+    return select(parentShell,title,message,texts,(String)null,(String)null,defaultValue);
   }
 
   /** multiple select dialog
