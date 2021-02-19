@@ -293,7 +293,7 @@ public class BusyDialog
         }
         else
         {
-          widgetTexts[2] = null;
+          widgetTexts[3] = null;
           widgetList     = null;
         }
       }
