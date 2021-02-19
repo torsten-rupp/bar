@@ -151,7 +151,21 @@ vpath %.java $(SOURCE_DIR)
 classes/%.class: $(SOURCE_DIR)/src/%.java src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
-	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java
+	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java $(SOURCE_DIR)/src/utils/*.java $(SOURCE_DIR)/src/widgets/*.java
+else
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
+endif
+classes/%.class: $(SOURCE_DIR)/src/utils/%.java
+	$(INSTALL) -d classes
+ifneq ($(JAVAC),)
+	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java $(SOURCE_DIR)/src/utils/*.java $(SOURCE_DIR)/src/widgets/*.java
+else
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
+endif
+classes/%.class: $(SOURCE_DIR)/src/widgets/%.java
+	$(INSTALL) -d classes
+ifneq ($(JAVAC),)
+	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java $(SOURCE_DIR)/src/utils/*.java $(SOURCE_DIR)/src/widgets/*.java
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
 endif
