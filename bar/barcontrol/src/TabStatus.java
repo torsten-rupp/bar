@@ -59,7 +59,7 @@ import org.eclipse.swt.widgets.Widget;
 
 /** job data
  */
-class JobData
+class JobData implements Comparable<JobData>
 {
   /** job states
    */
@@ -222,6 +222,15 @@ class JobData
     this.cryptPasswordMode      = cryptPasswordMode;
     this.lastExecutedDateTime   = lastExecutedDateTime;
     this.estimatedRestTime      = estimatedRestTime;
+  }
+
+  /** compare with other job data
+   * @return -1/0+1 iff lower/equals/greater
+   */
+  @Override
+  public int compareTo(JobData other)
+  {
+    return name.compareTo(other.name);
   }
 
   /** format job compress algorithms

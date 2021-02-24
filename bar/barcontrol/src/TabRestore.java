@@ -255,7 +255,7 @@ public class TabRestore
 
   /** index data
    */
-  class IndexData implements Serializable
+  class IndexData implements Serializable, Comparable<IndexData>
   {
     /** tree item update runnable
      */
@@ -298,12 +298,24 @@ public class TabRestore
      * @param object index data
      * @return true iff equals
      */
+// TODO: requried? use comparable?
     @Override
     public boolean equals(Object object)
     {
       IndexData indexData = (IndexData)object;
 
       return (indexData != null) && (id == indexData.id);
+    }
+
+    /** compare with other index data
+     * @return -1/0+1 iff lower/equals/greater
+     */
+    @Override
+    public int compareTo(IndexData other)
+    {
+      if      (id < other.id) return -1;
+      else if (id > other.id) return  1;
+      else                    return  0;
     }
 
     /** get sub-menu reference
@@ -817,7 +829,7 @@ public class TabRestore
 
   /** UUID index data
    */
-  class UUIDIndexData extends IndexData implements Comparable
+  class UUIDIndexData extends IndexData
   {
     public String  jobUUID;                       // job UUID
     public String  scheduleUUID;                  // schedule UUID
@@ -1002,13 +1014,13 @@ public class TabRestore
     }
 
     /** compare index data
-     * @param object index data
+     * @param uuidIndexData index data
      * @return -1/0/1 if less/equals/greater
      */
-    @Override
-    public int compareTo(Object object)
+    public int compareTo(UUIDIndexData uuidIndexData)
     {
-      UUIDIndexData uuidIndexData = (UUIDIndexData)object;
+// TODO remove
+//      UUIDIndexData uuidIndexData = (UUIDIndexData)object;
       int           result;
 
       result = name.compareTo(uuidIndexData.name);
@@ -1036,7 +1048,7 @@ public class TabRestore
 
   /** entity index data
    */
-  class EntityIndexData extends IndexData implements Comparable
+  class EntityIndexData extends IndexData
   {
     public String       jobUUID;
     public String       scheduleUUID;
@@ -1116,6 +1128,25 @@ Dprintf.dprintf("");
       this.expireDateTime   = expireDateTime;
     }
 
+    /** compare index data
+     * @param entityIndexData index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    public int compareTo(EntityIndexData entityIndexData)
+    {
+// TODO remove
+//      EntityIndexData entityIndexData = (EntityIndexData)object;
+      int             result;
+
+      result = jobUUID.compareTo(entityIndexData.jobUUID);
+      if (result == 0)
+      {
+        result = scheduleUUID.compareTo(entityIndexData.scheduleUUID);
+      }
+
+      return result;
+    }
+
     /** get name
      * @return name
      */
@@ -1174,25 +1205,6 @@ Dprintf.dprintf("");
     public String getInfo()
     {
       return String.format("#%d: %s",id,archiveType.toString());
-    }
-
-    /** compare index data
-     * @param object index data
-     * @return -1/0/1 if less/equals/greater
-     */
-    @Override
-    public int compareTo(Object object)
-    {
-      EntityIndexData entityIndexData = (EntityIndexData)object;
-      int             result;
-
-      result = jobUUID.compareTo(entityIndexData.jobUUID);
-      if (result == 0)
-      {
-        result = scheduleUUID.compareTo(entityIndexData.scheduleUUID);
-      }
-
-      return result;
     }
 
     /** write storage index data object to object stream
@@ -3164,7 +3176,7 @@ Dprintf.dprintf("");
 
   /** entry data
    */
-  class EntryIndexData extends IndexData implements Comparable
+  class EntryIndexData extends IndexData
   {
     String       jobName;
     ArchiveTypes archiveType;
@@ -3257,6 +3269,31 @@ Dprintf.dprintf("");
       this(indexId,jobName,archiveType,hostName,entryType,name,dateTime,0L);
     }
 
+    /** compare index data
+     * @param entryIndexData index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    public int compareTo(EntryIndexData entryIndexData)
+    {
+// TODO remove
+//      EntryIndexData entryIndexData = (EntryIndexData)object;
+      int            result;
+
+      result = name.compareTo(entryIndexData.name);
+      if (result == 0)
+      {
+        if      (dateTime < entryIndexData.dateTime) result = -1;
+        else if (dateTime > entryIndexData.dateTime) result =  1;
+        if (result == 0)
+        {
+          if      (size < entryIndexData.size) result = -1;
+          else if (size > entryIndexData.size) result =  1;
+        }
+      }
+
+      return result;
+    }
+
     /** get total size
      * @return size [bytes]
      */
@@ -3279,31 +3316,6 @@ Dprintf.dprintf("");
     public long getTotalEntrySize()
     {
       return size;
-    }
-
-    /** compare index data
-     * @param object index data
-     * @return -1/0/1 if less/equals/greater
-     */
-    @Override
-    public int compareTo(Object object)
-    {
-      EntryIndexData entryIndexData = (EntryIndexData)object;
-      int            result;
-
-      result = name.compareTo(entryIndexData.name);
-      if (result == 0)
-      {
-        if      (dateTime < entryIndexData.dateTime) result = -1;
-        else if (dateTime > entryIndexData.dateTime) result =  1;
-        if (result == 0)
-        {
-          if      (size < entryIndexData.size) result = -1;
-          else if (size > entryIndexData.size) result =  1;
-        }
-      }
-
-      return result;
     }
 
     /** convert data to string

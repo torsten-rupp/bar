@@ -942,7 +942,7 @@ public class TabJobs
 
   /** mount data
    */
-  class MountData implements Cloneable
+  class MountData implements Cloneable, Comparable<MountData>
   {
     int     id;
     String  name;
@@ -985,6 +985,17 @@ public class TabJobs
       return new MountData(name,device);
     }
 
+    /** compare with other job data
+     * @return -1/0+1 iff lower/equals/greater
+     */
+    @Override
+    public int compareTo(MountData other)
+    {
+      if      (id < other.id) return -1;
+      else if (id > other.id) return  1;
+      else                    return  0;
+    }
+
     /** convert data to string
      * @return string
      */
@@ -1019,7 +1030,7 @@ public class TabJobs
 
   /** schedule data
    */
-  class ScheduleData implements Cloneable
+  class ScheduleData implements Cloneable, Comparable<ScheduleData>
   {
     final static int NONE = 0;
     final static int ANY  = -1;
@@ -1170,6 +1181,15 @@ public class TabJobs
                               totalEntryCount,
                               totalEntrySize
                              );
+    }
+
+    /** compare with other schedule data
+     * @return -1/0+1 iff lower/equals/greater
+     */
+    @Override
+    public int compareTo(ScheduleData other)
+    {
+      return uuid.compareTo(other.uuid);
     }
 
     /** get year value
@@ -1906,7 +1926,7 @@ public class TabJobs
     }
   }
 
-  class EntityIndexData implements Comparable
+  class EntityIndexData implements Comparable<EntityIndexData>
   {
     public long         id;
     public String       scheduleUUID;
@@ -1947,6 +1967,31 @@ public class TabJobs
       this.totalEntryCount = totalEntryCount;
       this.totalEntrySize  = totalEntrySize;
       this.inTransit       = inTransit;
+    }
+
+    /** compare index data
+     * @param object index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    @Override
+    public int compareTo(EntityIndexData entityIndexData)
+    {
+// TODO: remove
+//      EntityIndexData entityIndexData = (EntityIndexData)object;
+      int             result;
+
+      if (id == entityIndexData.id)
+      {
+        result = 0;
+      }
+      else
+      {
+        if      (createdDateTime < entityIndexData.createdDateTime) result = -1;
+        else if (createdDateTime > entityIndexData.createdDateTime) result =  1;
+        else                                                        result =  0;
+      }
+
+      return result;
     }
 
     /** get name
@@ -2000,30 +2045,6 @@ public class TabJobs
       int             result;
 
       return (entityIndexData != null) && (id == entityIndexData.id);
-    }
-
-    /** compare index data
-     * @param object index data
-     * @return -1/0/1 if less/equals/greater
-     */
-    @Override
-    public int compareTo(Object object)
-    {
-      EntityIndexData entityIndexData = (EntityIndexData)object;
-      int             result;
-
-      if (id == entityIndexData.id)
-      {
-        result = 0;
-      }
-      else
-      {
-        if      (createdDateTime < entityIndexData.createdDateTime) result = -1;
-        else if (createdDateTime > entityIndexData.createdDateTime) result =  1;
-        else                                                        result =  0;
-      }
-
-      return result;
     }
 
     /** convert data to string
@@ -10255,7 +10276,7 @@ TODO: implement delete entity
                       )
                     {
                       deleteEntity(entityIndexData);
-                      Widgets.removeTreeItem(treeItem,entityIndexData);
+                      Widgets.removeTreeItem(treeItem);
                     }
                   }
                 });
@@ -16348,7 +16369,7 @@ throw new Error("NYI");
             {
               EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
               deleteEntity(entityIndexData);
-              Widgets.removeTreeItem(treeItem,entityIndexData);
+              Widgets.removeTreeItem(widgetPersistenceTree,entityIndexData);
             }
           }
         }

@@ -7140,11 +7140,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     moveTableItem(table,table.indexOf(tableItem),offset);
   }
 
+
   /** remove table item
    * @param table table
    * @param data item data
    */
-  public static void removeTableItem(final Table table, final Object data)
+  public static <T extends Comparable> void removeTableItem(final Table table, final T data)
   {
     if (!table.isDisposed())
     {
@@ -7156,7 +7157,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (data.equals(tableItem.getData()))
+              if (data.compareTo(tableItem.getData()) == 0)
               {
                 table.remove(table.indexOf(tableItem));
                 break;
@@ -7226,11 +7227,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param data table item data
    * @return table item or null if not found
    */
-  public static <T> TableItem getTableItem(Table table, T data)
+  public static <T extends Comparable> TableItem getTableItem(Table table, T data)
   {
     for (TableItem tableItem : table.getItems())
     {
-      if (data.equals((T)tableItem.getData()))
+      if (data.compareTo((T)tableItem.getData()) == 0)
       {
         return tableItem;
       }
@@ -7356,13 +7357,24 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return updated or added table item
    */
-  public static <T> TableItem updateTableItem(final Table     table,
-                                              final T         data,
-                                              final Image     image,
-                                              final Object... values
-                                             )
+  public static <T extends Comparable> TableItem updateTableItem(final Table     table,
+                                                                 final T         data,
+                                                                 final Image     image,
+                                                                 final Object... values
+                                                                )
   {
-    return updateTableItem(table,(Comparator<T>)null,data,image,values);
+    return updateTableItem(table,
+                           new Comparator<T>()
+                           {
+                             public int compare(T data0, T data1)
+                             {
+                               return data0.compareTo(data1);
+                             }
+                           },
+                           data,
+                           image,
+                           values
+                          );
   }
 
   /** update table item
@@ -7372,11 +7384,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return updated or added table item
    */
-  public static <T> TableItem updateTableItem(final Table         table,
-                                              final Comparator<T> comparator,
-                                              final T             data,
-                                              final Object...     values
-                                             )
+  public static <T extends Comparable> TableItem updateTableItem(final Table         table,
+                                                                 final Comparator<T> comparator,
+                                                                 final T             data,
+                                                                 final Object...     values
+                                                                )
   {
     return updateTableItem(table,comparator,data,(Image)null,values);
   }
@@ -7387,10 +7399,10 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return updated or added table item
    */
-  public static <T> TableItem updateTableItem(final Table     table,
-                                              final T         data,
-                                              final Object... values
-                                             )
+  public static <T extends Comparable> TableItem updateTableItem(final Table     table,
+                                                                 final T         data,
+                                                                 final Object... values
+                                                                )
   {
     return updateTableItem(table,data,(Image)null,values);
   }
@@ -7791,7 +7803,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param table item data
    * @param checked checked flag
    */
-  public static void setTableItemChecked(final Table table, final Object data, final boolean checked)
+  public static <T extends Comparable> void setTableItemChecked(final Table table, final T data, final boolean checked)
   {
     if (!table.isDisposed())
     {
@@ -7803,7 +7815,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           {
             for (TableItem tableItem : table.getItems())
             {
-              if (data.equals(tableItem.getData()))
+              if (data.compareTo(tableItem.getData()) == 0)
               {
                 tableItem.setChecked(checked);
                 break;
@@ -7966,7 +7978,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param table table
    * @param data item data
    */
-  public static <T> void setSelectedTableItem(final Table table, final T data)
+  public static <T extends Comparable> void setSelectedTableItem(final Table table, final T data)
   {
     if (!table.isDisposed())
     {
@@ -7980,7 +7992,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             TableItem tableItems[] = table.getItems();
             for (TableItem tableItem : tableItems)
             {
-              if (data.equals(tableItem.getData()))
+              if (data.compareTo(tableItem.getData()) == 0)
               {
                 table.setSelection(tableItem);
                 break;
@@ -8968,7 +8980,6 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           if (   ((comparator == null) && (data == (T)existingTreeItem.getData()))
               || ((comparator != null) && (comparator.compare(data,(T)existingTreeItem.getData()) == 0))
              )
-//          if (data.equals(existingTreeItem.getData()))
           {
             // update
             existingTreeItem.setData(data);
@@ -9030,13 +9041,24 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param values values list
    * @return updated tree item or null
    */
-  public static <T> TreeItem updateTreeItem(final Tree      tree,
-                                            final T         data,
-                                            final int       flags,
-                                            final Object... values
-                                           )
+  public static <T extends Comparable> TreeItem updateTreeItem(final Tree      tree,
+                                                               final T         data,
+                                                               final int       flags,
+                                                               final Object... values
+                                                              )
   {
-    return updateTreeItem(tree,(Comparator<T>)null,data,flags,values);
+    return updateTreeItem(tree,
+                           new Comparator<T>()
+                           {
+                             public int compare(T data0, T data1)
+                             {
+                               return data0.compareTo(data1);
+                             }
+                           },
+                          data,
+                          flags,
+                          values
+                         );
   }
 
   /** update tree item
@@ -9045,10 +9067,10 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param values values list
    * @return updated tree item or null
    */
-  public static <T> TreeItem updateTreeItem(final Tree      tree,
-                                            final T         data,
-                                            final Object... values
-                                           )
+  public static <T extends Comparable> TreeItem updateTreeItem(final Tree      tree,
+                                                               final T         data,
+                                                               final Object... values
+                                                              )
   {
     return updateTreeItem(tree,data,TREE_ITEM_FLAG_NONE,values);
   }
@@ -9060,11 +9082,11 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param values values list
    * @return updated or inserted tree item
    */
-  public static <T> TreeItem updateInsertTreeItem(final Tree      tree,
-                                                  final int       flags,
-                                                  final T         data,
-                                                  final Object... values
-                                                 )
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(final Tree      tree,
+                                                                     final int       flags,
+                                                                     final T         data,
+                                                                     final Object... values
+                                                                    )
   {
     /** tree update runnable
      */
@@ -9089,7 +9111,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
       {
         try
         {
-          if (data.equals(existingTreeItem.getData()))
+          if (data.compareTo(existingTreeItem.getData()) == 0)
           {
             // update
             existingTreeItem.setData(data);
@@ -9293,7 +9315,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           for (TreeItem existingTreeItem : tree.getItems())
           {
             // check if exists
-            if (data.equals(existingTreeItem.getData()))
+            if (comparator.compare(data,(T)existingTreeItem.getData()) == 0)
             {
               existingTreeItem.setData(data);
               for (int i = 0; i < values.length; i++)
@@ -9509,11 +9531,11 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param values values list
    * @return updated or added tree item
    */
-  public static <T> TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
-                                                  final int       flags,
-                                                  final T         data,
-                                                  final Object... values
-                                                 )
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
+                                                                     final int       flags,
+                                                                     final T         data,
+                                                                     final Object... values
+                                                                    )
   {
     /** tree update runnable
      */
@@ -9538,7 +9560,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
       {
         try
         {
-          if (data.equals(existingTreeItem.getData()))
+          if (data.compareTo(existingTreeItem.getData()) == 0)
           {
             // update
             existingTreeItem.setData(data);
@@ -9772,7 +9794,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 //Dprintf.dprintf("  check exists %s",existingTreeItem.getData());
 //Dprintf.dprintf("               %s",data);
 //Dprintf.dprintf("  => %s",data.equals(existingTreeItem.getData()));
-          if (data.equals(existingTreeItem.getData()))
+          if (comparator.compare(data,(T)existingTreeItem.getData()) == 0)
           {
             // update
             existingTreeItem.setData(data);
@@ -9967,17 +9989,16 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     return treeItem;
   }
 
-
   /** remove tree item/sub-tree item
    * @param treeItem tree item
    * @param data item data
    * @return true iff tree item removed
    */
-  private static boolean removeSubTreeItem(TreeItem treeItem, Object data)
+  private static <T extends Comparable> boolean removeSubTreeItem(TreeItem treeItem, T data)
   {
     if (!treeItem.isDisposed())
     {
-      if (data.equals(treeItem.getData()))
+      if (data.compareTo(treeItem.getData()) == 0)
       {
         HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
 
@@ -10015,28 +10036,10 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   }
 
   /** remove tree item
-   * @param treeItem tree item
+   * @param tree item
    * @param data item data
    */
-  public static void removeTreeItem(final TreeItem treeItem, final Object data)
-  {
-    if (!treeItem.isDisposed())
-    {
-      treeItem.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          removeSubTreeItem(treeItem,data);
-        }
-      });
-    }
-  }
-
-  /** remove tree item
-   * @param tree tree
-   * @param data item data
-   */
-  public static void removeTreeItem(final Tree tree, final Object data)
+  public static <T extends Comparable> void removeTreeItem(final Tree tree, final T data)
   {
     if (!tree.isDisposed())
     {
@@ -10044,15 +10047,9 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
       {
         public void run()
         {
-          if (!tree.isDisposed())
+          for (TreeItem treeItem : tree.getItems())
           {
-            for (TreeItem treeItem : tree.getItems())
-            {
-              if (removeSubTreeItem(treeItem,data))
-              {
-                break;
-              }
-            }
+            if (removeSubTreeItem(treeItem,data)) break;
           }
         }
       });
@@ -10246,6 +10243,7 @@ private static void printTree(Tree tree)
    * @param data tree item data
    * @return tree item or null if not found
    */
+// TODO: remove
   public static TreeItem getTreeItem(Tree tree, Object data)
   {
     TreeItem subTreeItem;
@@ -10330,6 +10328,7 @@ private static void printTree(Tree tree)
    * @param data tree item data
    * @return tree item or null if not found
    */
+// TODO: remove
   public static TreeItem getTreeItem(TreeItem parentTreeItem, Object data)
   {
     for (TreeItem treeItem : parentTreeItem.getItems())
@@ -12457,6 +12456,29 @@ Dprintf.dprintf("");
   public static MenuItem insertMenuItem(Menu menu, int index, Object data, String text, boolean isVisible)
   {
     return insertMenuItem(menu,index,data,text,SWT.NONE,isVisible);
+  }
+
+  /** insert new menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param text menu item text
+   * @param isVisible true for visible, false otherwise
+   * @return new menu item
+   */
+  public static MenuItem insertMenuItem(Menu menu, int index, String text, boolean isVisible)
+  {
+    return insertMenuItem(menu,index,(Object)null,text,isVisible);
+  }
+
+  /** insert new menu item
+   * @param menu menu
+   * @param index index [0..n-1] or -1
+   * @param text menu item text
+   * @return new menu item
+   */
+  public static MenuItem insertMenuItem(Menu menu, int index, String text)
+  {
+    return insertMenuItem(menu,index,text,true);
   }
 
   /** insert new menu item
