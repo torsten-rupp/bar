@@ -30,13 +30,18 @@ import java.io.PrintWriter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+
+// graphics
+import org.eclipse.swt.widgets.Display;
 
 /****************************** Classes ********************************/
 
@@ -103,6 +108,34 @@ public class SettingUtils
       {
         add(value);
       }
+      SettingUtils.setModified();
+    }
+
+    @Override
+    public boolean add(T value)
+    {
+      boolean result = super.add(value);
+      SettingUtils.setModified();
+
+      return result;
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends T> values)
+    {
+      boolean result = super.addAll(values);
+      SettingUtils.setModified();
+
+      return result;
+    }
+
+    @Override
+    public boolean remove(Object value)
+    {
+      boolean result = super.remove(value);
+      SettingUtils.setModified();
+
+      return result;
     }
   }
 
@@ -117,6 +150,33 @@ public class SettingUtils
         add(value);
       }
     }
+
+    @Override
+    public boolean add(T value)
+    {
+      boolean result = super.add(value);
+      SettingUtils.setModified();
+
+      return result;
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends T> values)
+    {
+      boolean result = super.addAll(values);
+      SettingUtils.setModified();
+
+      return result;
+    }
+
+    @Override
+    public boolean remove(Object value)
+    {
+      boolean result = super.remove(value);
+      SettingUtils.setModified();
+
+      return result;
+    }
   }
 
   /** hash map
@@ -129,6 +189,31 @@ public class SettingUtils
       {
         put((K)defaultValues[i+0],(T)defaultValues[i+1]);
       }
+    }
+
+    @Override
+    public T put(K key, T value)
+    {
+      T result = super.put(key,value);
+      SettingUtils.setModified();
+
+      return result;
+    }
+
+    @Override
+    public void putAll(Map<? extends K, ? extends T> values)
+    {
+      super.putAll(values);
+      SettingUtils.setModified();
+    }
+
+    @Override
+    public T remove(Object value)
+    {
+      T result = super.remove(value);
+      SettingUtils.setModified();
+
+      return result;
     }
   }
 
@@ -650,7 +735,6 @@ public class SettingUtils
       {
         stringList.add(tokenizer.nextToken());
       }
-
       return new SimpleStringArray(stringList);
     }
 
@@ -670,7 +754,6 @@ public class SettingUtils
           buffer.append((string != null) ? string : "");
         }
       }
-
       return buffer.toString();
     }
   }
@@ -678,7 +761,9 @@ public class SettingUtils
   // --------------------------- constants --------------------------------
 
   // --------------------------- variables --------------------------------
-  private static long lastModified = 0L;
+  private static boolean permitModifyFlag     = false;
+  private static boolean modifiedFlag         = false;
+  private static long    lastExternalModified = 0L;
 
   // ------------------------ native functions ----------------------------
 
@@ -758,9 +843,9 @@ public class SettingUtils
                 if (annotation instanceof SettingValue)
                 {
                   SettingValue settingValue = (SettingValue)annotation;
-                  if (   ((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name)
-                      || nameEquals(settingValue.deprecatedNames(),name)
-                     )
+                    if (   ((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name)
+                        || nameEquals(settingValue.deprecatedNames(),name)
+                       )
                   {
                     try
                     {
@@ -1691,8 +1776,9 @@ public class SettingUtils
       }
     }
 
-    // save last modified time
-    lastModified = file.lastModified();
+    // reset modified, save last external modified time
+    modifiedFlag = false;
+    lastExternalModified = file.lastModified();
   }
 
   /** save program settings
@@ -2286,8 +2372,9 @@ throwable.printStackTrace();
       // close file
       output.close();
 
-      // save last modified time
-      lastModified = file.lastModified();
+      // reset modfied, save last external modified time
+      modifiedFlag = false;
+      lastExternalModified = file.lastModified();
     }
     catch (IOException exception)
     {
@@ -2299,13 +2386,52 @@ throwable.printStackTrace();
     }
   }
 
+  /** permitt program settings will be modified
+   */
+  public static void permitModified()
+  {
+    // process all SWT events (like layouting etc.)
+    Display display = Display.getCurrent();
+    while (display.readAndDispatch())
+    {
+    }
+
+    SettingUtils.permitModifyFlag = true;
+  }
+
+  /** set program setting (if permited) and mark modified
+   */
+  public static <T> void set(T variable, T value)
+  {
+    if (permitModifyFlag)
+    {
+    variable = value;
+    setModified();
+  }
+  }
+
+  /** set program settings are modified
+   */
+  public static void setModified()
+  {
+    SettingUtils.modifiedFlag = true;
+  }
+
+  /** check if program settings are modified
+   * @return true iff modified
+   */
+  public static boolean isModified()
+  {
+    return modifiedFlag;
+  }
+
   /** check if program settings file is modified
    * @param file file
    * @return true iff modified
    */
-  public static boolean isModified(File file)
+  public static boolean isExternalModified(File file)
   {
-    return (lastModified != 0L) && (file.lastModified() > lastModified);
+    return (lastExternalModified != 0L) && (file.lastModified() > lastExternalModified);
   }
 
   //-----------------------------------------------------------------------

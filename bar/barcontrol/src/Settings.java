@@ -581,7 +581,7 @@ public class Settings
    */
   public static boolean isModified()
   {
-    return SettingUtils.isModified(new File(configFileName));
+    return SettingUtils.isExternalModified(new File(configFileName));
   }
 
   /** get server
