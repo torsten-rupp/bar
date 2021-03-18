@@ -183,24 +183,23 @@ SOURCES        = src/BARControl.java \
                  src/Background.java \
                  src/ExitCodes.java \
                  \
-                 src/ArrayListCache.java \
-                 src/BusyDialog.java \
-                 src/Dialogs.java \
-                 src/Dprintf.java \
-                 src/ExitCodes.java \
-                 src/OptionEnumeration.java \
-                 src/Option.java \
-                 src/Options.java \
-                 src/OptionSpecial.java \
-                 src/Pane.java \
-                 src/ProgressBar.java \
-                 src/Separator.java \
-                 src/SettingUtils.java \
-                 src/StringParser.java \
-                 src/StringUtils.java \
-                 src/TableLayoutData.java \
-                 src/TableLayout.java \
-                 src/Widgets.java \
+                 src/utils/ArrayListCache.java \
+                 src/utils/Dprintf.java \
+                 src/utils/Option.java \
+                 src/utils/OptionEnumeration.java \
+                 src/utils/OptionSpecial.java \
+                 src/utils/Options.java \
+                 src/utils/SettingUtils.java \
+                 src/utils/StringParser.java \
+                 src/utils/StringUtils.java \
+                 src/widgets/BusyDialog.java \
+                 src/widgets/Dialogs.java \
+                 src/widgets/Pane.java \
+                 src/widgets/ProgressBar.java \
+                 src/widgets/Separator.java \
+                 src/widgets/TableLayout.java \
+                 src/widgets/TableLayoutData.java \
+                 src/widgets/Widgets.java \
                  \
                  src/DataModel.java \
 
