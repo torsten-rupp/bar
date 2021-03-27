@@ -82,7 +82,7 @@
 
 #define MAX_SCHEDULE_CATCH_TIME                  30                       // max. schedule catch time [days]
 
-#define DEFAULT_PAIRING_MASTER_TIMEOUT           120                      // default timeout pairing new master [s]
+#define DEFAULT_PAIRING_MASTER_TIMEOUT           (10*S_PER_MINUTE)        // default timeout pairing new master [s]
 
 // sleep times [s]
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)
@@ -243,11 +243,12 @@ typedef struct
 {
   Semaphore             lock;
 
+  uint64                connectTimestamp;
+  bool                  quitFlag;
+
   // authization data
   AuthorizationStates   authorizationState;
   AuthorizationFailNode *authorizationFailNode;
-
-  bool                  quitFlag;
 
   // commands
   CommandInfoList       commandInfoList;                   // running command list
@@ -320,6 +321,7 @@ LOCAL String                hostName;
 
 LOCAL ClientList            clientList;                  // list with clients
 LOCAL AuthorizationFailList authorizationFailList;       // list with failed client authorizations
+LOCAL Semaphore             delayThreadTrigger;
 LOCAL Thread                jobThread;                   // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;             // thread for scheduling jobs
 LOCAL Thread                pauseThread;
@@ -368,6 +370,65 @@ LOCAL void deleteClient(ClientNode *clientNode);
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : setQuit
+* Purpose: quit application
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void setQuit()
+{
+  quitFlag = TRUE;
+  Semaphore_signalModified(&delayThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+}
+
+/***********************************************************************\
+* Name   : isQuit
+* Purpose: check if quit application
+* Input  : -
+* Output : -
+* Return : TRUE iff quit
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isQuit()
+{
+  return quitFlag;
+}
+
+/***********************************************************************\
+* Name   : delayThread
+* Purpose: delay thread and check quit flag
+* Input  : sleepTime - sleep time [s]
+*          trigger   - trigger semaphore (can be NULL for delay default
+*                      trigger)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
+{
+  uint n;
+
+  if (trigger == NULL) trigger = &delayThreadTrigger;
+
+  n = 0;
+  SEMAPHORE_LOCKED_DO(trigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    while (   !isQuit()
+           && (n < sleepTime)
+           && !Semaphore_waitModified(trigger,5*MS_PER_SECOND)
+          )
+    {
+      n += 5;
+    }
+  }
+}
 
 /***********************************************************************\
 * Name   : parseMaintenanceDateTime
@@ -782,7 +843,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
         storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
       }
     }
-    while (   !quitFlag
+    while (   !isQuit()
            && (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_NONE)
           );
 
@@ -796,15 +857,15 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 }
 
 /***********************************************************************\
-* Name   : startPairing
-* Purpose: start pairing master (if not already started)
+* Name   : beginPairingMaster
+* Purpose: begin pairing master (if not already started)
 * Input  : timeout - timeout [s]
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
+LOCAL void beginPairingMaster(uint timeout, PairingModes pairingMode)
 {
   ClientNode *clientNode,*disconnectClientNode;
 
@@ -815,8 +876,8 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  (pairingMode == PAIRING_MODE_AUTO)
-                   ? "Start auto pairing master"
-                   : "Start pairing master"
+                   ? "Initialize auto pairing master"
+                   : "Initialize pairing master"
                 );
     }
 
@@ -847,8 +908,8 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 }
 
 /***********************************************************************\
-* Name   : stopPairingMaster
-* Purpose: stop pairing master (if started)
+* Name   : endPairingMaster
+* Purpose: end pairing master (if started)
 * Input  : name     - master name
 *          uuidHash - master UUID hash
 * Output : -
@@ -856,23 +917,36 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
+LOCAL Errors endPairingMaster(ConstString name, const CryptHash *uuidHash)
 {
+  bool   modifiedFlag;
   Errors error;
 
   assert(name != NULL);
   assert(uuidHash != NULL);
 
+  modifiedFlag = FALSE;
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // set/clear paired master
     if (!String_isEmpty(name))
     {
+      modifiedFlag =    !String_equals(globalOptions.masterInfo.name,name)
+                     || !equalsHash(&globalOptions.masterInfo.uuidHash,uuidHash);
       String_set(globalOptions.masterInfo.name,name);
-      if (!Configuration_setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
+      if (!setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
       {
         Semaphore_unlock(&newMaster.lock);
         return ERROR_INSUFFICIENT_MEMORY;
+      }
+      if (modifiedFlag)
+      {
+        error = updateConfig();
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&newMaster.lock);
+          return error;
+        }
       }
       logMessage(NULL,  // logHandle,
                 LOG_TYPE_ALWAYS,
@@ -882,8 +956,18 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
     }
     else
     {
+      modifiedFlag = !String_isEmpty(globalOptions.masterInfo.name);
       String_clear(globalOptions.masterInfo.name);
-      Configuration_clearHash(&globalOptions.masterInfo.uuidHash);
+      clearHash(&globalOptions.masterInfo.uuidHash);
+      if (modifiedFlag)
+      {
+        error = updateConfig();
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&newMaster.lock);
+          return error;
+        }
+      }
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Cleared paired master"
@@ -892,20 +976,6 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
 
     // stop pairing
     newMaster.pairingMode = PAIRING_MODE_NONE;
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               (newMaster.pairingMode == PAIRING_MODE_AUTO)
-                 ? "Stopped auto pairing master"
-                 : "Stopped pairing master"
-              );
-
-    // update config file
-    error = Configuration_update();
-    if (error != ERROR_NONE)
-    {
-      Semaphore_unlock(&newMaster.lock);
-      return error;
-    }
   }
 
   return ERROR_NONE;
@@ -1149,46 +1219,6 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   }
 }
 
-/***********************************************************************\
-* Name   : delayThread
-* Purpose: delay thread and check quit flag
-* Input  : sleepTime - sleep time [s]
-*          trigger   - trigger semaphore (can be NULL)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
-{
-  uint n;
-
-  n = 0;
-  if (trigger != NULL)
-  {
-    SEMAPHORE_LOCKED_DO(trigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      while (   !quitFlag
-             && (n < sleepTime)
-             && !Semaphore_waitModified(trigger,5*MS_PER_SECOND)
-            )
-      {
-        n += 5;
-      }
-    }
-  }
-  else
-  {
-    while (   !quitFlag
-           && (n < sleepTime)
-          )
-    {
-      Misc_udelay(5LL*US_PER_SECOND);
-      n += 5;
-    }
-  }
-}
-
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
@@ -1243,7 +1273,7 @@ LOCAL void pairingThreadCode(void)
   bool       clearPairing;
 
   line = String_new();
-  while (!quitFlag)
+  while (!isQuit())
   {
     switch (globalOptions.serverMode)
     {
@@ -1412,7 +1442,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
         else
         {
           // short sleep
-          Misc_udelay(5LL*US_PER_SECOND);
+          delayThread(5,NULL);
         }
         break;
       case SERVER_MODE_SLAVE:
@@ -1443,7 +1473,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
           {
             if (Misc_getCurrentDateTime() < pairingStopDateTime)
             {
-              startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
+              beginPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
             }
             else
             {
@@ -1468,7 +1498,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
            )
         {
           // short sleep
-          Misc_udelay(5LL*US_PER_SECOND);
+          delayThread(5,NULL);
         }
         else
         {
@@ -1545,7 +1575,7 @@ LOCAL void schedulerThreadCode(void)
   indexHandle = NULL;
   if (Index_isAvailable())
   {
-    while (!quitFlag && (indexHandle == NULL))
+    while (!isQuit() && (indexHandle == NULL))
     {
       indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     }
@@ -1557,7 +1587,7 @@ LOCAL void schedulerThreadCode(void)
 
   Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD*MS_PER_SECOND);
   executeScheduleDateTime = 0LL;
-  while (!quitFlag)
+  while (!isQuit())
   {
     if (Misc_isTimeout(&rereadJobTimeout))
     {
@@ -1577,7 +1607,7 @@ LOCAL void schedulerThreadCode(void)
 //TODO: avoid long running lock
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
-      JOB_LIST_ITERATEX(jobNode,!quitFlag && !jobListPendingFlag)
+      JOB_LIST_ITERATEX(jobNode,!isQuit() && !jobListPendingFlag)
       {
         if (!Job_isActive(jobNode->jobState))
         {
@@ -1590,7 +1620,7 @@ LOCAL void schedulerThreadCode(void)
             {
               dateTime = currentDateTime;
               while (   !jobListPendingFlag
-                     && !quitFlag
+                     && !isQuit()
                      && ((dateTime/60LL) > (jobNode->lastScheduleCheckDateTime/60LL))
                      && ((executeScheduleNode == NULL) || (executeScheduleNode->archiveType != ARCHIVE_TYPE_FULL))
                     )
@@ -1640,7 +1670,7 @@ LOCAL void schedulerThreadCode(void)
               }
             }
           }
-          if (jobListPendingFlag || quitFlag) break;
+          if (jobListPendingFlag || isQuit()) break;
 
           // check if job have to be executed by continuous schedule
           if (executeScheduleNode == NULL)
@@ -1681,7 +1711,7 @@ LOCAL void schedulerThreadCode(void)
               jobListPendingFlag = Job_isListLockPending();
             }
           }
-          if (jobListPendingFlag || quitFlag) break;
+          if (jobListPendingFlag || isQuit()) break;
 
           // trigger job
           if (executeScheduleNode != NULL)
@@ -1705,7 +1735,7 @@ LOCAL void schedulerThreadCode(void)
       }
     }
 
-    if (!quitFlag)
+    if (!isQuit())
     {
       if (!jobListPendingFlag)
       {
@@ -1715,7 +1745,7 @@ LOCAL void schedulerThreadCode(void)
       else
       {
         // short sleep
-        Misc_udelay(1LL*US_PER_SECOND);
+        delayThread(5,NULL);
       }
     }
   }
@@ -1747,7 +1777,7 @@ LOCAL void pauseThreadCode(void)
   SlaveNode *slaveNode;
   Errors    error;
 
-  while (!quitFlag)
+  while (!isQuit())
   {
     // decrement pause time, continue
     SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -2054,7 +2084,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       Storage_doneSpecifier(&storageSpecifier);
     }
   }
-  if (quitFlag)
+  if (isQuit())
   {
     String_delete(string);
     String_delete(storageName);
@@ -2191,7 +2221,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     return error;
   }
   while (   (error == ERROR_NONE)
-         && !quitFlag
+         && !isQuit()
          && Index_getNextStorage(&indexQueryHandle,
                                  NULL,  // uuidId
                                  NULL,  // jobUUID
@@ -2218,7 +2248,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     error = deleteStorage(indexHandle,storageId);
   }
   Index_doneList(&indexQueryHandle);
-  if (quitFlag)
+  if (isQuit())
   {
     String_delete(string);
     String_delete(jobName);
@@ -2327,7 +2357,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
     return error;
   }
   while (   (error == ERROR_NONE)
-         && !quitFlag
+         && !isQuit()
          && !Job_isSomeActive()
          && Index_getNextEntity(&indexQueryHandle,
                                 NULL,  // uuidId
@@ -2351,7 +2381,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
   {
     return error;
   }
-  if (quitFlag || Job_isSomeActive())
+  if (isQuit() || Job_isSomeActive())
   {
     return ERROR_INTERRUPTED;
   }
@@ -2921,7 +2951,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
   while (   !INDEX_ID_IS_NONE(expiredEntityId)
  //TODO: remove
  //               && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
-         && !quitFlag
+         && !isQuit()
         );
 
   // free resources
@@ -2950,7 +2980,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   indexHandle = NULL;
   if (Index_isAvailable())
   {
-    while (!quitFlag && (indexHandle == NULL))
+    while (!isQuit() && (indexHandle == NULL))
     {
       indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     }
@@ -2958,7 +2988,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
 
   if (indexHandle != NULL)
   {
-    while (!quitFlag)
+    while (!isQuit())
     {
       if (   Index_isInitialized()
 //TODO: remove
@@ -2980,7 +3010,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
         else
         {
           // wait a short time and try again
-          Misc_udelay(30*US_PER_SECOND);
+          delayThread(30,NULL);
         }
       }
       else
@@ -3094,7 +3124,7 @@ LOCAL bool indexAbortCallback(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return quitFlag;
+  return isQuit();
 }
 
 /***********************************************************************\
@@ -3109,7 +3139,7 @@ LOCAL bool indexAbortCallback(void *userData)
 LOCAL void pauseIndexUpdate(void)
 {
   while (   pauseFlags.indexUpdate
-         && !quitFlag
+         && !isQuit()
         )
   {
     Misc_udelay(500L*US_PER_MS);
@@ -3151,7 +3181,7 @@ LOCAL void updateIndexThreadCode(void)
   indexHandle = NULL;
   if (Index_isAvailable())
   {
-    while (!quitFlag && (indexHandle == NULL))
+    while (!isQuit() && (indexHandle == NULL))
     {
       indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     }
@@ -3160,11 +3190,11 @@ LOCAL void updateIndexThreadCode(void)
   if (indexHandle != NULL)
   {
     // add/update index database
-    while (!quitFlag)
+    while (!isQuit())
     {
       // pause
       pauseIndexUpdate();
-      if (quitFlag) break;
+      if (isQuit()) break;
 
       if (   Index_isInitialized()
           && globalOptions.indexDatabaseUpdateFlag
@@ -3186,7 +3216,7 @@ LOCAL void updateIndexThreadCode(void)
         addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);  // no password
 
         // update index entries
-        while (   !quitFlag
+        while (   !isQuit()
                && Index_findStorageByState(indexHandle,
                                            INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                            &uuidId,
@@ -3207,7 +3237,7 @@ LOCAL void updateIndexThreadCode(void)
         {
           // pause
           pauseIndexUpdate();
-          if (quitFlag) break;
+          if (isQuit()) break;
 
           // parse storage name, get printable name
           error = Storage_parseName(&storageSpecifier,storageName);
@@ -3269,7 +3299,7 @@ LOCAL void updateIndexThreadCode(void)
             {
               // set password/key
               Password_set(&jobOptions.cryptPassword,indexCryptPasswordNode->cryptPassword);
-              Configuration_setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
+              Configuration_copyKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
 
               // index update
               startTimestamp = Misc_getTimestamp();
@@ -3289,7 +3319,7 @@ LOCAL void updateIndexThreadCode(void)
               // stop if done, interrupted, or quit
               if (   (error == ERROR_NONE)
                   || (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
-                  || quitFlag
+                  || isQuit()
                  )
               {
                 break;
@@ -3377,7 +3407,7 @@ LOCAL void updateIndexThreadCode(void)
         // free resources
         List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
       }
-      if (quitFlag) break;
+      if (isQuit()) break;
 
       // sleep and check quit flag/trigger
       delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
@@ -3491,7 +3521,7 @@ LOCAL void autoIndexThreadCode(void)
   indexHandle = NULL;
   if (Index_isAvailable())
   {
-    while (!quitFlag && (indexHandle == NULL))
+    while (!isQuit() && (indexHandle == NULL))
     {
       indexHandle = Index_open(NULL,30*MS_PER_SECOND);
     }
@@ -3500,11 +3530,11 @@ LOCAL void autoIndexThreadCode(void)
   if (indexHandle != NULL)
   {
     // run continuous check for auto index
-    while (!quitFlag)
+    while (!isQuit())
     {
       // pause
       pauseIndexUpdate();
-      if (quitFlag) break;
+      if (isQuit()) break;
 
       if (Index_isInitialized() && globalOptions.indexDatabaseAutoUpdateFlag)
       {
@@ -3677,7 +3707,7 @@ LOCAL void autoIndexThreadCode(void)
           String_delete(storageDirectoryName);
         }
         Job_doneOptions(&jobOptions);
-        if (quitFlag) break;
+        if (isQuit()) break;
 
         // delete not existing and expired indizes
         error = Index_initListStorages(&indexQueryHandle,
@@ -3703,7 +3733,7 @@ LOCAL void autoIndexThreadCode(void)
         {
           now    = Misc_getCurrentDateTime();
           string = String_new();
-          while (   !quitFlag
+          while (   !isQuit()
                  && Index_getNextStorage(&indexQueryHandle,
                                          NULL,  // uuidId
                                          NULL,  // jobUUID
@@ -3759,9 +3789,9 @@ LOCAL void autoIndexThreadCode(void)
           Index_doneList(&indexQueryHandle);
           String_delete(string);
         }
-        if (quitFlag) break;
+        if (isQuit()) break;
       }
-      if (quitFlag) break;
+      if (isQuit()) break;
 
       // sleep and check quit flag
       delayThread(SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD,&autoIndexThreadTrigger);
@@ -4065,7 +4095,7 @@ LOCAL void jobThreadCode(void)
   storageFlags  = STORAGE_FLAGS_NONE;
   startDateTime = 0LL;
 
-  while (!quitFlag)
+  while (!isQuit())
   {
     // wait and get next job to run
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -4075,7 +4105,7 @@ LOCAL void jobThreadCode(void)
       {
         // first check for a continuous job to run
         jobNode = jobList.head;
-        while (   !quitFlag
+        while (   !isQuit()
                && (jobNode != NULL)
                && (   (jobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
                    || !Job_isWaiting(jobNode->jobState)
@@ -4090,7 +4120,7 @@ LOCAL void jobThreadCode(void)
         {
           // next check for other job types to run
           jobNode = jobList.head;
-          while (   !quitFlag
+          while (   !isQuit()
                  && (jobNode != NULL)
                  && (   !Job_isWaiting(jobNode->jobState)
                      || (Job_isRemote(jobNode) && !isSlavePaired(jobNode))
@@ -4102,10 +4132,10 @@ LOCAL void jobThreadCode(void)
         }
 
         // if no job to execute -> wait
-        if (!quitFlag && (jobNode == NULL)) Job_listWaitModifed(LOCK_TIMEOUT);
+        if (!isQuit() && (jobNode == NULL)) Job_listWaitModifed(LOCK_TIMEOUT);
       }
-      while (!quitFlag && (jobNode == NULL));
-      if (quitFlag)
+      while (!isQuit() && (jobNode == NULL));
+      if (isQuit())
       {
         Job_listUnlock();
         break;
@@ -4200,7 +4230,7 @@ LOCAL void jobThreadCode(void)
     indexHandle = NULL;
     if (Index_isAvailable())
     {
-      while (!quitFlag && (indexHandle == NULL))
+      while (!isQuit() && (indexHandle == NULL))
       {
         indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
       }
@@ -4945,7 +4975,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
   pathName = String_new();
   fileName = String_new();
   if (timedOut != NULL) (*timedOut) = FALSE;
-  while (   !quitFlag
+  while (   !isQuit()
          && (   !StringList_isEmpty(&directoryInfoNode->pathNameList)
              || directoryInfoNode->directoryOpenFlag
             )
@@ -4967,7 +4997,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
     }
 
     // read directory content
-    while (   !quitFlag
+    while (   !isQuit()
            && !File_endOfDirectoryList(&directoryInfoNode->directoryListHandle)
            && ((timedOut == NULL) || !(*timedOut))
           )
@@ -5241,6 +5271,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   {
     // master => verify/pair new master
 
+    if (serverMode == SERVER_MODE_SLAVE)
+    {
     // decrypt UUID
     error = ServerIO_decryptData(&clientInfo->io,
                                  &buffer,
@@ -5293,7 +5325,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
             Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
           }
 
-          error = stopPairingMaster(newMaster.name,&newMaster.uuidHash);
+          error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
           break;
         case PAIRING_MODE_MANUAL:
           // manual pairing -> just store new master name+UUID hash
@@ -5319,7 +5351,19 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Authorization of client %s fail (error: %s)",
+                   "Authorization of master %s fail (error: %s)",
+                   getClientInfo(clientInfo,s,sizeof(s)),
+                   Error_getText(error)
+                  );
+      }
+    }
+    else
+    {
+      error = ERROR_NOT_A_SLAVE;
+
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Authorization of master %s fail (error: %s)",
                  getClientInfo(clientInfo,s,sizeof(s)),
                  Error_getText(error)
                 );
@@ -5426,7 +5470,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
 
   if (globalOptions.debug.serverLevel >= 1)
   {
-    quitFlag = TRUE;
+    setQuit();
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
   }
   else
@@ -5835,7 +5879,7 @@ LOCAL void serverCommand_masterPairingStart(ClientInfo *clientInfo, IndexHandle 
   StringMap_getUInt(argumentMap,"timeout",&timeout,DEFAULT_PAIRING_MASTER_TIMEOUT);
 
   // start pairing
-  startPairingMaster(timeout,PAIRING_MODE_MANUAL);
+  beginPairingMaster(timeout,PAIRING_MODE_MANUAL);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -5874,7 +5918,7 @@ LOCAL void serverCommand_masterPairingStop(ClientInfo *clientInfo, IndexHandle *
 
   if (pairFlag)
   {
-    error = stopPairingMaster(newMaster.name,&newMaster.uuidHash);
+    error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
@@ -9179,7 +9223,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    JOB_LIST_ITERATEX(jobNode,!quitFlag && !isCommandAborted(clientInfo,id))
+    JOB_LIST_ITERATEX(jobNode,!isQuit() && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S estimatedRestTime=%lu",
@@ -15795,6 +15839,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                &archiveType,
                                &entryId,
                                entryName,
+                               NULL,  // storageId
+                               NULL,  // storageName
                                &size,
                                &timeModified,
                                &userId,
@@ -16068,8 +16114,8 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   bool       newestOnly;
   bool       selectedOnly;
   Errors     error;
-  ulong      totalEntryCount;
-  uint64     totalEntrySize,totalEntryContentSize;
+  ulong      totalStorageCount,totalEntryCount;
+  uint64     totalStorageSize,totalEntrySize,totalEntryContentSize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -16114,6 +16160,8 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
                                entryType,
                                name,
                                newestOnly,
+                               &totalStorageCount,
+                               &totalStorageSize,
                                &totalEntryCount,
                                &totalEntrySize,
                                &totalEntryContentSize
@@ -16127,7 +16175,9 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
 
   // send data
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                      "totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",
+                      "totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",
+                      totalStorageCount,
+                      totalStorageSize,
                       totalEntryCount,
                       totalEntrySize,
                       totalEntryContentSize
@@ -17032,6 +17082,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                      NULL,  // archiveType,
                                      &entryId,
                                      entryName,
+                                     NULL,  // storageId
+                                     storageName,
                                      NULL,  // size
                                      NULL,  // timeModified
                                      NULL,  // userId
@@ -17051,28 +17103,38 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
             EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
           }
 
-          error = Index_initListEntryFragments(&indexQueryHandle2,
-                                               indexHandle,
-                                               entryId,
-                                               0,
-                                               INDEX_UNLIMITED
-                                              );
-          if (error == ERROR_NONE)
+          if (   (Index_getType(entryId) == INDEX_TYPE_FILE)
+              || (Index_getType(entryId) == INDEX_TYPE_IMAGE)
+              || (Index_getType(entryId) == INDEX_TYPE_HARDLINK)
+             )
           {
-            while (   !isCommandAborted(clientInfo,id)
-                   && Index_getNextEntryFragment(&indexQueryHandle2,
-                                                 NULL,  // entryFragmentId,
-                                                 NULL,  // storageId,
-                                                 storageName,
-                                                 NULL,  // storageDateTime
-                                                 NULL,  // fragmentOffset
-                                                 NULL  // fragmentSize
-                                                )
-                  )
+            error = Index_initListEntryFragments(&indexQueryHandle2,
+                                                 indexHandle,
+                                                 entryId,
+                                                 0,
+                                                 INDEX_UNLIMITED
+                                                );
+            if (error == ERROR_NONE)
             {
-              StringList_append(&storageNameList,storageName);
+              while (   !isCommandAborted(clientInfo,id)
+                     && Index_getNextEntryFragment(&indexQueryHandle2,
+                                                   NULL,  // entryFragmentId,
+                                                   NULL,  // storageId,
+                                                   storageName,
+                                                   NULL,  // storageDateTime
+                                                   NULL,  // fragmentOffset
+                                                   NULL  // fragmentSize
+                                                  )
+                    )
+              {
+                StringList_append(&storageNameList,storageName);
+              }
+              Index_doneList(&indexQueryHandle2);
             }
-            Index_doneList(&indexQueryHandle2);
+          }
+          else
+          {
+            StringList_append(&storageNameList,storageName);
           }
         }
         Index_doneList(&indexQueryHandle1);
@@ -19504,6 +19566,20 @@ LOCAL Errors newNetworkClient(ClientNode               **clientNode,
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : rejectNetworkClient
+* Purpose: reject network client
+* Input  : serverSocketHandle - server socket handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void rejectNetworkClient(const ServerSocketHandle *serverSocketHandle)
+{
+  ServerIO_rejectNetwork(serverSocketHandle);
+}
+
 #if 0
 /***********************************************************************\
 * Name   : findClient
@@ -19531,6 +19607,42 @@ LOCAL ClientInfo *findClient(const SlaveHost *slaveHost)
   return (clientNode != NULL) ? &clientNode->clientInfo : NULL;
 }
 #endif
+
+/***********************************************************************\
+* Name   : purgeNetworkClient
+* Purpose: find client by name, port
+* Input  : slaveHost - slave host
+* Output : -
+* Return : client info or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void purgeNetworkClient(ClientList *clientList)
+{
+  ClientNode *clientNode;
+  char       s[256];
+
+  assert(clientList != NULL);
+
+  SEMAPHORE_LOCKED_DO(&clientList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    // find incomplete connected client with connection older than 60s
+    clientNode = LIST_FIND(clientList,
+                           clientNode,
+                              (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_WAITING)
+                           && (Misc_getTimestamp() > (clientNode->clientInfo.connectTimestamp+60LL*US_PER_SECOND))
+                          );
+    if (clientNode != NULL)
+    {
+      // remove and disconnect client
+      List_remove(clientList,clientNode);
+      getClientInfo(&clientNode->clientInfo,s,sizeof(s));
+      deleteClient(clientNode);
+
+      printInfo(1,"Disconnected inactive client %s\n",s);
+    }
+  }
+}
 
 // ----------------------------------------------------------------------
 
@@ -19809,6 +19921,15 @@ void Server_doneAll(void)
   #endif /* SIMULATE_PURGE */
 }
 
+LOCAL_INLINE bool isServerHandle(bool serverFlag, const ServerSocketHandle *serverSocketHandle, int handle)
+{
+  return serverFlag && (handle == Network_getServerSocket(serverSocketHandle));
+}
+LOCAL_INLINE bool isServerTLSHandle(bool serverTLSFlag, const ServerSocketHandle *serverTLSSocketHandle, int handle)
+{
+  return serverTLSFlag && (handle == Network_getServerSocket(serverTLSSocketHandle));
+}
+
 Errors Server_socket(void)
 {
   AutoFreeList          autoFreeList;
@@ -19955,18 +20076,19 @@ Errors Server_socket(void)
                                NULL,
                                0
                               );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
+    {
+      printInfo(1,"Opened port %d\n",globalOptions.serverPort);
+      serverFlag = TRUE;
+      AUTOFREE_ADD(&autoFreeList,&serverSocketHandle,{ Network_doneServer(&serverSocketHandle); });
+    }
+    else
     {
       printError("Cannot initialize server at port %u (error: %s)!",
                  globalOptions.serverPort,
                  Error_getText(error)
                 );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
     }
-    printInfo(1,"Opened port %d\n",globalOptions.serverPort);
-    serverFlag = TRUE;
-    AUTOFREE_ADD(&autoFreeList,&serverSocketHandle,{ Network_doneServer(&serverSocketHandle); });
   }
   if (globalOptions.serverTLSPort != 0)
   {
@@ -19986,18 +20108,19 @@ Errors Server_socket(void)
                                    globalOptions.serverKey.data,
                                    globalOptions.serverKey.length
                                   );
-        if (error != ERROR_NONE)
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"Opened TLS/SSL port %u\n",globalOptions.serverTLSPort);
+          serverTLSFlag = TRUE;
+          AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
+        }
+        else
         {
           printError("Cannot initialize TLS/SSL server at port %u (error: %s)!",
                      globalOptions.serverTLSPort,
                      Error_getText(error)
                     );
-          AutoFree_cleanup(&autoFreeList);
-          return FALSE;
         }
-        AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
-        printInfo(1,"Opened TLS/SSL port %u\n",globalOptions.serverTLSPort);
-        serverTLSFlag = TRUE;
       #else /* not HAVE_GNU_TLS */
         UNUSED_VARIABLE(ca);
         UNUSED_VARIABLE(cert);
@@ -20076,6 +20199,7 @@ Errors Server_socket(void)
   doneAggregateInfo(&jobAggregateInfo);
 
   // start threads
+  Semaphore_init(&delayThreadTrigger,SEMAPHORE_TYPE_BINARY);
   if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize job thread!");
@@ -20131,7 +20255,7 @@ Errors Server_socket(void)
         || (globalOptions.debug.serverLevel >= 1)
        )
     {
-      startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
+      beginPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
     }
 
     if (!String_isEmpty(globalOptions.masterInfo.name))
@@ -20152,7 +20276,7 @@ Errors Server_socket(void)
   Misc_initWait(&waitHandle,64);
   name                     = String_new();
   argumentMap              = StringMap_new();
-  while (!quitFlag)
+  while (!isQuit())
   {
     // get active sockets to wait for
     Misc_waitReset(&waitHandle);
@@ -20160,14 +20284,14 @@ Errors Server_socket(void)
     SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // get standard port connection requests
-      if (serverFlag    && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections)))
+      if (serverFlag)
       {
         Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverSocketHandle),HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID);
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverSocketHandle));
       }
 
       // get TLS port connection requests
-      if (serverTLSFlag && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections)))
+      if (serverTLSFlag)
       {
         Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverTLSSocketHandle),HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID);
 //TODO:
@@ -20176,7 +20300,7 @@ Errors Server_socket(void)
 
       // get client connections, calculate min. wait timeout
       nowTimestamp = Misc_getTimestamp();
-      waitTimeout  = 60LL*MS_PER_MINUTE; // wait for network connection max. 60min [ms]
+      waitTimeout  = 60LL*MS_PER_SECOND; // wait for network connection max. 1min [ms]
       LIST_ITERATE(&clientList,clientNode)
       {
         clientDelayFlag = FALSE;
@@ -20211,70 +20335,89 @@ Errors Server_socket(void)
     MISC_HANDLES_ITERATE(&waitHandle,handle,events)
     {
       // connect new clients via plain/standard port
-      if      (   serverFlag
-               && (handle == Network_getServerSocket(&serverSocketHandle))
-               && Misc_isHandleEvent(events,HANDLE_EVENT_INPUT)
-               && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
-              )
+      if      (isServerHandle(serverFlag,&serverSocketHandle,handle))
       {
-        error = newNetworkClient(&clientNode,&serverSocketHandle);
-        if (error == ERROR_NONE)
+        if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
         {
-          SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          // try to disconnect incomplete connected clients iff too many connections
+        if ((globalOptions.serverMaxConnections > 0) && (List_count(&clientList) >= globalOptions.serverMaxConnections))
+        {
+           purgeNetworkClient(&clientList);
+        }
+
+        // connect new client
+        if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
+        {
+          error = newNetworkClient(&clientNode,&serverSocketHandle);
+          if (error == ERROR_NONE)
           {
-            // append to list of connected clients
-            List_append(&clientList,clientNode);
-
-            // find authorization fail node, get client wait rest time
-            clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
-                                                                     authorizationFailNode,
-                                                                     String_equals(authorizationFailNode->clientName,
-                                                                                   clientNode->clientInfo.io.network.name
-                                                                                  )
-                                                                    );
-
-            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-            if (globalOptions.serverMode == SERVER_MODE_MASTER)
+            SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
             {
-              if (clientWaitRestTime > 0)
+              // append to list of connected clients
+              List_append(&clientList,clientNode);
+
+              // find authorization fail node, get client wait rest time
+              clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
+                                                                       authorizationFailNode,
+                                                                       String_equals(authorizationFailNode->clientName,
+                                                                                     clientNode->clientInfo.io.network.name
+                                                                                    )
+                                                                      );
+
+              clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+            if (globalOptions.serverMode == SERVER_MODE_MASTER)
               {
-                printInfo(1,
-                          "Connected %s (delayed %us)\n",
-                          getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
-                          clientWaitRestTime
-                         );
-              }
-              else
-              {
-                printInfo(1,
-                          "Connected %s\n",
-                          getClientInfo(&clientNode->clientInfo,s,sizeof(s))
-                         );
+                if (clientWaitRestTime > 0)
+                {
+                  printInfo(1,
+                            "Connected %s (delayed %us)\n",
+                            getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
+                            clientWaitRestTime
+                           );
+                }
+                else
+                {
+                  printInfo(1,
+                            "Connected %s\n",
+                            getClientInfo(&clientNode->clientInfo,s,sizeof(s))
+                           );
+                }
               }
             }
+          }
+          else
+          {
+            printError("Cannot establish client connection (error: %s)!",
+                       Error_getText(error)
+                      );
           }
         }
         else
         {
-          printError("Cannot establish client connection (error: %s)!",
-                     Error_getText(error)
-                    );
+          printError("Establish client connection rejected (error: too many clients)!");
+          rejectNetworkClient(&serverSocketHandle);
         }
       }
-
-      // connect new clients via TLS port
-      else if (   serverTLSFlag
-               && (handle == Network_getServerSocket(&serverTLSSocketHandle))
-               && Misc_isHandleEvent(events,HANDLE_EVENT_INPUT)
-               && ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
-              )
+      }
+      else if (isServerTLSHandle(serverTLSFlag,&serverTLSSocketHandle,handle))
       {
-        error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
-        if (error == ERROR_NONE)
+        if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
         {
-          // start SSL
-          #ifdef HAVE_GNU_TLS
-            error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
+          // try to disconnect incomplete connected clients iff too many connections
+        if ((globalOptions.serverMaxConnections > 0) && (List_count(&clientList) >= globalOptions.serverMaxConnections))
+        {
+           purgeNetworkClient(&clientList);
+        }
+
+        // connect new clients via TLS port
+        if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
+        {
+          error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
+          if (error == ERROR_NONE)
+          {
+            // start SSL
+            #ifdef HAVE_GNU_TLS
+              error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
                                      globalOptions.serverCA.data,
                                      globalOptions.serverCA.length,
                                      globalOptions.serverCert.data,
@@ -20317,37 +20460,46 @@ Errors Server_socket(void)
                                                                                   )
                                                                     );
 
-            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-            if (clientWaitRestTime > 0)
-            {
-              printInfo(1,
-                        "Connected %s (TLS/SSL, delayed %us)\n",
-                        getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
-                        clientWaitRestTime
-                       );
+              clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+              if (clientWaitRestTime > 0)
+              {
+                printInfo(1,
+                          "Connected %s (TLS/SSL, delayed %us)\n",
+                          getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
+                          clientWaitRestTime
+                         );
+              }
+              else
+              {
+                printInfo(1,
+                          "Connected %s (TLS/SSL)\n",
+                          getClientInfo(&clientNode->clientInfo,s,sizeof(s))
+                         );
+              }
             }
-            else
-            {
-              printInfo(1,
-                        "Connected %s (TLS/SSL)\n",
-                        getClientInfo(&clientNode->clientInfo,s,sizeof(s))
-                       );
-            }
+          }
+          else
+          {
+            printError("Cannot establish client TLS connection (error: %s)!",
+                       Error_getText(error)
+                      );
           }
         }
         else
         {
-          printError("Cannot establish client TLS connection (error: %s)!",
-                     Error_getText(error)
-                    );
+          printError("Establish client connection rejected (error: too many clients)!");
+          rejectNetworkClient(&serverSocketHandle);
         }
       }
       else
       {
         // process client commands/disconnects/results
+        assert(!isServerHandle(serverFlag,&serverSocketHandle,handle));
+        assert(!isServerTLSHandle(serverTLSFlag,&serverTLSSocketHandle,handle));
+
         SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (events != 0)
+          if (Misc_isAnyEvent(events))
           {
             // find client node
             clientNode = LIST_FIND(&clientList,
@@ -20392,14 +20544,15 @@ Errors Server_socket(void)
                       incrementAuthorizationFail(disconnectClientNode);
                       break;
                   }
-
-                  if (globalOptions.serverMode == SERVER_MODE_MASTER)
-                  {
-                    printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
-                  }
+                  getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s));
 
                   // done client and free resources
                   deleteClient(disconnectClientNode);
+
+                  if (globalOptions.serverMode == SERVER_MODE_MASTER)
+                  {
+                    printInfo(1,"Disconnected %s\n",s);
+                  }
                 }
               }
               else if (Misc_isHandleEvent(events,HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID))
@@ -20423,14 +20576,15 @@ Errors Server_socket(void)
                     incrementAuthorizationFail(disconnectClientNode);
                     break;
                 }
-
-                if (globalOptions.serverMode == SERVER_MODE_MASTER)
-                {
-                  printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
-                }
+                getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s));
 
                 // done client and free resources
                 deleteClient(disconnectClientNode);
+
+                if (globalOptions.serverMode == SERVER_MODE_MASTER)
+                {
+                  printInfo(1,"Disconnected %s\n",s);
+                }
               }
               #ifndef NDEBUG
                 else
@@ -20439,6 +20593,16 @@ Errors Server_socket(void)
                 }
               #endif /* NDEBUG */
             }
+            else
+            {
+              // disconnect unknown client
+              Network_disconnectDescriptor(handle);
+            }
+          }
+          else
+          {
+            // disconnect client with unknown event
+            Network_disconnectDescriptor(handle);
           }
 
           // disconnect clients because of authorization failure
@@ -20454,13 +20618,15 @@ Errors Server_socket(void)
               // increment authorization failure
               incrementAuthorizationFail(disconnectClientNode);
 
-              if (globalOptions.serverMode == SERVER_MODE_MASTER)
-              {
-                printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
-              }
+              getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s));
 
               // done client and free resources
               deleteClient(disconnectClientNode);
+
+              if (globalOptions.serverMode == SERVER_MODE_MASTER)
+              {
+                printInfo(1,"Disconnected %s\n",s);
+              }
             }
             else
             {
@@ -20536,7 +20702,7 @@ Errors Server_socket(void)
         // set paired master
         if (!String_isEmpty(newMaster.name))
         {
-          error = stopPairingMaster(newMaster.name,&newMaster.uuidHash);
+          error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
           if (error != ERROR_NONE)
           {
             logMessage(NULL,  // logHandle,
@@ -20610,6 +20776,7 @@ Errors Server_socket(void)
     HALT_INTERNAL_ERROR("Cannot stop job thread!");
   }
   Thread_done(&jobThread);
+  Semaphore_done(&delayThreadTrigger);
 
   // done server
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
@@ -20712,6 +20879,7 @@ Errors Server_batch(int inputDescriptor,
   }
 
   // start threads
+  Semaphore_init(&delayThreadTrigger,SEMAPHORE_TYPE_BINARY);
   if (Index_isAvailable())
   {
 //TODO: required?
@@ -20770,7 +20938,7 @@ Errors Server_batch(int inputDescriptor,
   argumentMap = StringMap_new();
 #if 1
 #if 0
-  while (   1//!quitFlag
+  while (   1//!isQuit()
          && !File_eof(&clientInfo.io.file.inputHandle)
          && 1
         )
@@ -20786,7 +20954,7 @@ Errors Server_batch(int inputDescriptor,
     }
   }
 #else
-  while (!quitFlag)
+  while (!isQuit())
   {
     if      (ServerIO_getCommand(&clientInfo.io,
                                  &id,
@@ -20803,7 +20971,7 @@ Errors Server_batch(int inputDescriptor,
     }
     else
     {
-      quitFlag = TRUE;
+      setQuit();
     }
   }
 #endif
@@ -20843,6 +21011,7 @@ processCommand(&clientInfo,commandString);
     // done database pause callbacks
     Index_setPauseCallback(CALLBACK_(NULL,NULL));
   }
+  Semaphore_done(&delayThreadTrigger);
 
   // done index
   if (Index_isAvailable())
