@@ -8270,7 +8270,7 @@ bool Configuration_duplicateKey(Key *key, const Key *fromKey)
 
   assert(key != NULL);
 
-  if ((fromKey != NULL) && (fromKey->length > 0))
+  if ((fromKey != NULL) && (fromKey->data != NULL) && (fromKey->length > 0))
   {
     length = fromKey->length;
     data = allocSecure(length);
@@ -8315,7 +8315,7 @@ bool Configuration_copyKey(Key *key, const Key *fromKey)
 
   assert(key != NULL);
 
-  if (fromKey != NULL)
+  if ((fromKey != NULL) && (fromKey->data != NULL) && (fromKey->length > 0))
   {
     length = fromKey->length;
     data = allocSecure(length);
@@ -9210,13 +9210,20 @@ Errors Configuration_update(void)
   }
 
   // read config file lines
-  error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
-  if (error != ERROR_NONE)
+  if (File_exists(configFileName))
   {
-    String_delete(line);
-    StringList_done(&configLinesList);
-    String_delete(configFileName);
-    return error;
+     error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
+    if (error != ERROR_NONE)
+    {
+      String_delete(line);
+      StringList_done(&configLinesList);
+      String_delete(configFileName);
+      return error;
+    }
+  }
+  else
+  {
+    StringList_init(&configLinesList);
   }
 
   // update config entries
