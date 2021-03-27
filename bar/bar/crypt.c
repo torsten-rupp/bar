@@ -3392,54 +3392,54 @@ bool Crypt_equalsHash(const CryptHash *cryptHash0,
   assert(cryptHash0 != NULL);
   assert(cryptHash1 != NULL);
 
-  equalsFlag = FALSE;
-  switch (cryptHash1->cryptHashAlgorithm)
+  equalsFlag = (cryptHash0->cryptHashAlgorithm == cryptHash1->cryptHashAlgorithm);
+  if (equalsFlag)
   {
-    case CRYPT_HASH_ALGORITHM_NONE:
-      equalsFlag =    (cryptHash0->cryptHashAlgorithm == cryptHash1->cryptHashAlgorithm)
-                   && memEquals(cryptHash0->none.data,
-                                cryptHash0->none.dataLength,
-                                cryptHash1->none.data,
-                                cryptHash1->none.dataLength
-                               );
-      break;
-    case CRYPT_HASH_ALGORITHM_SHA2_224:
-    case CRYPT_HASH_ALGORITHM_SHA2_256:
-    case CRYPT_HASH_ALGORITHM_SHA2_384:
-    case CRYPT_HASH_ALGORITHM_SHA2_512:
-      #ifdef HAVE_GCRYPT
-        gcryAlgo = GCRY_MD_NONE;
-        switch (cryptHash1->cryptHashAlgorithm)
-        {
-          case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
-          case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
-          case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
-          case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
-          default:
-            #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            #endif /* NDEBUG */
-            break; /* not reached */
-        }
+    switch (cryptHash1->cryptHashAlgorithm)
+    {
+      case CRYPT_HASH_ALGORITHM_NONE:
+        equalsFlag = memEquals(cryptHash0->none.data,
+                               cryptHash0->none.dataLength,
+                               cryptHash1->none.data,
+                               cryptHash1->none.dataLength
+                              );
+        break;
+      case CRYPT_HASH_ALGORITHM_SHA2_224:
+      case CRYPT_HASH_ALGORITHM_SHA2_256:
+      case CRYPT_HASH_ALGORITHM_SHA2_384:
+      case CRYPT_HASH_ALGORITHM_SHA2_512:
+        #ifdef HAVE_GCRYPT
+          gcryAlgo = GCRY_MD_NONE;
+          switch (cryptHash1->cryptHashAlgorithm)
+          {
+            case CRYPT_HASH_ALGORITHM_SHA2_224: gcryAlgo = GCRY_MD_SHA224; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_256: gcryAlgo = GCRY_MD_SHA256; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_384: gcryAlgo = GCRY_MD_SHA384; break;
+            case CRYPT_HASH_ALGORITHM_SHA2_512: gcryAlgo = GCRY_MD_SHA512; break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break; /* not reached */
+          }
 
-        equalsFlag =    (cryptHash0->cryptHashAlgorithm == cryptHash1->cryptHashAlgorithm)
-                     && Crypt_equalsHashBuffer(cryptHash0,
-                                               gcry_md_read(cryptHash1->gcry_md_hd,gcryAlgo),
-                                               gcry_md_get_algo_dlen(gcryAlgo)
-                                              );
+          equalsFlag = Crypt_equalsHashBuffer(cryptHash0,
+                                              gcry_md_read(cryptHash1->gcry_md_hd,gcryAlgo),
+                                              gcry_md_get_algo_dlen(gcryAlgo)
+                                             );
+        #else /* not HAVE_GCRYPT */
+          UNUSED_VARIABLE(cryptHash0);
+          UNUSED_VARIABLE(cryptHash1);
 
-      #else /* not HAVE_GCRYPT */
-        UNUSED_VARIABLE(cryptHash0);
-        UNUSED_VARIABLE(cryptHash1);
-
-        return FALSE;
-      #endif /* HAVE_GCRYPT */
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break;
+          return FALSE;
+        #endif /* HAVE_GCRYPT */
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
   }
 
   return equalsFlag;
@@ -3488,9 +3488,9 @@ bool Crypt_equalsHashBuffer(const CryptHash *cryptHash,
           }
 
           equalsFlag =    (gcry_md_get_algo_dlen(gcryAlgo) == bufferLength)
-                       && memEquals(buffer,
+                       && memEquals(gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo),
                                     bufferLength,
-                                    gcry_md_read(cryptHash->gcry_md_hd,gcryAlgo),
+                                    buffer,
                                     bufferLength
                                    );
         }
@@ -3977,8 +3977,12 @@ void Crypt_dumpHash(const CryptHash *cryptHash)
 
   assert(cryptHash != NULL);
 
+  fprintf(stderr,"'%s':\n",Crypt_algorithmToString(cryptHash->cryptHashAlgorithm,NULL));
   hashData = Crypt_getHash(cryptHash,NULL,0,&hashLength);
-  debugDumpMemory(hashData,hashLength,FALSE);
+  if (hashData != NULL)
+  {
+    debugDumpMemory(hashData,hashLength,FALSE);
+  }
 }
 
 void Crypt_dumpMAC(const CryptMAC *cryptMAC)
