@@ -3696,6 +3696,8 @@ bool File_isWritable(ConstString fileName)
 
 bool File_isWritableCString(const char *fileName)
 {
+  bool   isWriteable;
+  String directoryPath;
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
     DWORD fileAttributes;
@@ -3703,20 +3705,40 @@ bool File_isWritableCString(const char *fileName)
 
   assert(fileName != NULL);
 
+  isWriteable = FALSE;
+
+  directoryPath = String_new();
+  if (!stringIsEmpty(fileName))
+  {
+    File_getDirectoryNameCString(directoryPath,fileName);
+  }
+  else
+  {
+    fileName = ".";
+    String_setCString(directoryPath,".");
+  }
   #if   defined(PLATFORM_LINUX)
-    return access(!stringIsEmpty(fileName) ? fileName : ".",W_OK) == 0;
+    isWriteable =    (File_existsCString(fileName) && (access(fileName,W_OK) == 0))
+                  || (access(String_cString(directoryPath),W_OK) == 0);
   #elif defined(PLATFORM_WINDOWS)
     // Note: access() does not return correct values on MinGW
 
-    fileAttributes = GetFileAttributes(!stringIsEmpty(fileName) ? fileName : ".");
-    if (fileAttributes == INVALID_FILE_ATTRIBUTES)
+    if (File_existsCString(fileName))
     {
-      return FALSE;
+      fileAttributes = GetFileAttributes(fileName);
     }
-
-    return    ((fileAttributes & (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_NORMAL)
-           || ((fileAttributes & (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_DIRECTORY);
+    else
+    {
+      fileAttributes = GetFileAttributes(String_cString(directoryPath);
+    }
+    isWriteable =    (fileAttributes != INVALID_FILE_ATTRIBUTES)
+                  && (   ((fileAttributes & (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_NORMAL)
+                      || ((fileAttributes & (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_DIRECTORY)
+                     );
   #endif /* PLATFORM_... */
+  String_delete(directoryPath);
+
+  return isWriteable;
 }
 
 bool File_isNetworkFileSystem(ConstString fileName)
