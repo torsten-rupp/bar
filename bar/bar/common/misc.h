@@ -94,7 +94,7 @@ typedef enum
     #define HANDLE_EVENT_INVALID (1 << 3)
   #endif /* HAVE_WSAPOLL */
 #endif /* PLATFORM_... */
-#define HANDLE_EVENT_ALL (  HANDLE_EVENT_INPUT \
+#define HANDLE_EVENT_ANY (  HANDLE_EVENT_INPUT \
                           | HANDLE_EVENT_OUTPUT \
                           | HANDLE_EVENT_ERROR \
                           | HANDLE_EVENT_INPUT \
@@ -1074,6 +1074,23 @@ INLINE uint Misc_handleIterate(const WaitHandle *waitHandle, uint i, int *handle
   #endif /* PLATFORM_... */
 
   return i;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Misc_isAnyEvent
+* Purpose: check if any event occured
+* Input  : events - events
+* Output : -
+* Return : TRUE iff event occured
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Misc_isAnyEvent(uint events);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE bool Misc_isAnyEvent(uint events)
+{
+  return events != 0;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 

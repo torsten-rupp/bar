@@ -352,6 +352,7 @@ LOCAL Errors execute(const char        *command,
       String_delete(text);
       return ERROR_UNKNOWN;
     }
+// TODO: use PLATFORM_WINDOWS instead WIN32
   #elif defined(WIN32)
 #if 0
 HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
