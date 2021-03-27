@@ -5253,8 +5253,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (error != ERROR_NONE)
         {
           (void)Storage_close(&storageHandle);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(storageMsg.archiveName));
           (void)Storage_delete(&createInfo->storageInfo,storageMsg.archiveName);
 
           if (retryCount < MAX_RETRIES)
