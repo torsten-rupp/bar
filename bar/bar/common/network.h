@@ -293,6 +293,17 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
 void Network_disconnect(SocketHandle *socketHandle);
 
 /***********************************************************************\
+* Name   : Network_disconnectDescriptor
+* Purpose: disconnect from host via socket descriptor only
+* Input  : socketDescriptor - socket descriptor
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Network_disconnectDescriptor(int socketDescriptor);
+
+/***********************************************************************\
 * Name   : Network_isConnected
 * Purpose: check if connected
 * Input  : socketHandle - socket handle
@@ -488,7 +499,7 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle);
 * Notes  : -
 \***********************************************************************/
 
-int Network_getServerSocket(ServerSocketHandle *serverSocketHandle);
+int Network_getServerSocket(const ServerSocketHandle *serverSocketHandle);
 
 /***********************************************************************\
 * Name   : Network_accept
@@ -504,6 +515,17 @@ Errors Network_accept(SocketHandle             *socketHandle,
                       const ServerSocketHandle *serverSocketHandle,
                       SocketFlags              socketFlags
                      );
+
+/***********************************************************************\
+* Name   : Network_reject
+* Purpose: reject client connection
+* Input  : serverSocketHandle - server socket handle
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors Network_reject(const ServerSocketHandle *serverSocketHandle);
 
 /***********************************************************************\
 * Name   : Network_startTLS
