@@ -146,10 +146,9 @@ typedef struct
     {
       FileHandle inputHandle;
       FileHandle outputHandle;
+      bool       isConnected;
     }                  file;
-
   };
-  bool                 isConnected;
 
   // globad command id counter
   uint                 commandId;
@@ -283,6 +282,17 @@ bool ServerIO_parseAction(const char      *actionText,
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : ServerIO_rejectNetwork
+* Purpose: reject server network i/o
+* Input  : serverSocketHandle - server socket handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_rejectNetwork(const ServerSocketHandle *serverSocketHandle);
+
+/***********************************************************************\
 * Name   : ServerIO_connectBatch
 * Purpose: connect server batch i/o
 * Input  : serverIO - server i/o
@@ -347,9 +357,29 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO);
 #if defined(NDEBUG) || defined(__SERVER_IO_IMPLEMENTATION__)
 INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 {
+  bool isConnected;
+
   assert(serverIO != NULL);
 
-  return serverIO->isConnected;
+  isConnected = FALSE;
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      isConnected = Network_isConnected(&serverIO->network.socketHandle);
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      isConnected = serverIO->file.isConnected;
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
+
+  return isConnected;
 }
 #endif /* NDEBUG || __SERVER_IO_IMPLEMENTATION__ */
 

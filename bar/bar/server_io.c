@@ -188,7 +188,6 @@ LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
   serverIO->line              = String_new();
   serverIO->lineFlag          = FALSE;
 
-  serverIO->isConnected       = FALSE;
   serverIO->commandId         = 1;
   Semaphore_init(&serverIO->resultList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&serverIO->resultList);
@@ -201,6 +200,7 @@ LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
       serverIO->network.name = String_new();
       break;
     case SERVER_IO_TYPE_BATCH:
+      serverIO->file.isConnected = FALSE;
       break;
     #ifndef NDEBUG
       default:
@@ -228,18 +228,9 @@ LOCAL void doneIO(ServerIO *serverIO)
     case SERVER_IO_TYPE_NONE:
       break;
     case SERVER_IO_TYPE_NETWORK:
-      if (serverIO->isConnected)
-      {
-        Network_disconnect(&serverIO->network.socketHandle);
-      }
       String_delete(serverIO->network.name);
       break;
     case SERVER_IO_TYPE_BATCH:
-      if (serverIO->isConnected)
-      {
-        File_close(&serverIO->file.outputHandle);
-        File_close(&serverIO->file.inputHandle);
-      }
       break;
     #ifndef NDEBUG
       default:
@@ -247,7 +238,6 @@ LOCAL void doneIO(ServerIO *serverIO)
         break;
     #endif /* NDEBUG */
   }
-  serverIO->isConnected = FALSE;
 
   List_done(&serverIO->resultList,CALLBACK_((ListNodeFreeFunction)freeResultNode,NULL));
   Semaphore_done(&serverIO->resultList.lock);
@@ -390,9 +380,8 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 
 LOCAL bool receiveData(ServerIO *serverIO)
 {
-  uint   maxBytes;
-  ulong  readBytes;
-  Errors error;
+  uint  maxBytes;
+  ulong readBytes;
 
   assert(serverIO != NULL);
   assert(serverIO->inputBufferLength <= serverIO->inputBufferSize);
@@ -417,20 +406,29 @@ LOCAL bool receiveData(ServerIO *serverIO)
 //fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
         if (readBytes > 0)
         {
+          // read as much as possible
           do
           {
 //fprintf(stderr,"%s, %d: readBytes=%d: %d\n",__FILE__,__LINE__,readBytes,serverIO->inputBufferLength); debugDumpMemory(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,0);
             serverIO->inputBufferLength += (uint)readBytes;
 
+fprintf(stderr,"%s:%d: c index=%d length=%d size=%d\n",__FILE__,__LINE__,serverIO->inputBufferIndex,serverIO->inputBufferLength,serverIO->inputBufferSize);
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = Network_receive(&serverIO->network.socketHandle,
+            if (maxBytes > 0)
+            {
+              (void)Network_receive(&serverIO->network.socketHandle,
                                     &serverIO->inputBuffer[serverIO->inputBufferLength],
                                     maxBytes,
                                     NO_WAIT,
                                     &readBytes
                                    );
+            }
+            else
+            {
+              readBytes = 0L;
+            }
           }
-          while ((error == ERROR_NONE) && (readBytes > 0));
+          while (readBytes > 0);
         }
         else
         {
@@ -447,18 +445,26 @@ LOCAL bool receiveData(ServerIO *serverIO)
 //fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
         if (readBytes > 0)
         {
+          // read as much as possible
           do
           {
             serverIO->inputBufferLength += (uint)readBytes;
 
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            error = File_read(&serverIO->file.inputHandle,
+            if (maxBytes > 0)
+            {
+              (void)File_read(&serverIO->file.inputHandle,
                               &serverIO->inputBuffer[serverIO->inputBufferLength],
                               maxBytes,
                               &readBytes
                              );
+            }
+            else
+            {
+              readBytes = 0L;
+            }
           }
-          while ((error == ERROR_NONE) && (readBytes > 0));
+          while (readBytes > 0);
         }
         else
         {
@@ -723,9 +729,6 @@ SOCKET_TYPE_PLAIN,
                         NULL  // socketAddress
                        );
 
-  // set connected
-  serverIO->isConnected = TRUE;
-
   #ifndef NDEBUG
     if (globalOptions.debug.serverLevel >= 1)
     {
@@ -828,6 +831,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(e);
     String_delete(n);
     String_delete(encodedId);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return error;
   }
@@ -851,9 +855,6 @@ SOCKET_TYPE_PLAIN,
                         NULL  // socketAddress
                        );
 
-  // set connected
-  serverIO->isConnected = TRUE;
-
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(serverIO,ServerIO);
   #else /* NDEBUG */
@@ -861,6 +862,13 @@ SOCKET_TYPE_PLAIN,
   #endif /* not NDEBUG */
 
   return ERROR_NONE;
+}
+
+Errors ServerIO_rejectNetwork(const ServerSocketHandle *serverSocketHandle)
+{
+  assert(serverSocketHandle != NULL);
+
+  return Network_reject(serverSocketHandle);
 }
 
 #ifdef NDEBUG
@@ -904,7 +912,7 @@ SOCKET_TYPE_PLAIN,
   }
 
   // set connected
-  serverIO->isConnected = TRUE;
+  serverIO->file.isConnected = TRUE;
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(serverIO,ServerIO);
@@ -938,12 +946,32 @@ SOCKET_TYPE_PLAIN,
   // signal disconnect to wait result
   SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,10*MS_PER_SECOND)
   {
-    serverIO->isConnected = FALSE;
     Semaphore_signalModified(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
   }
 #endif
 
   // done i/o
+  switch (serverIO->type)
+  {
+    case SERVER_IO_TYPE_NONE:
+      break;
+    case SERVER_IO_TYPE_NETWORK:
+      Network_disconnect(&serverIO->network.socketHandle);
+      break;
+    case SERVER_IO_TYPE_BATCH:
+      if (ServerIO_isConnected(serverIO))
+      {
+        serverIO->file.isConnected = FALSE;
+        File_close(&serverIO->file.outputHandle);
+        File_close(&serverIO->file.inputHandle);
+      }
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+    #endif /* NDEBUG */
+  }
   doneIO(serverIO);
 }
 
@@ -1926,22 +1954,19 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
         }
       }
 
+      // if not found -> wait a short time
       if (resultNode == NULL)
       {
-        // not found -> wait
-        if (!Semaphore_waitModified(&serverIO->resultList.lock,timeout))
-        {
-          break;
-        }
+        Semaphore_waitModified(&serverIO->resultList.lock,250);
       }
     }
-    while (   serverIO->isConnected
+    while (   ServerIO_isConnected(serverIO)
            && (resultNode == NULL)
            && !Misc_isTimeout(&timeoutInfo)
           );
   }
   Misc_doneTimeout(&timeoutInfo);
-  if      (!serverIO->isConnected)
+  if      (!ServerIO_isConnected(serverIO))
   {
     return ERROR_DISCONNECTED;
   }
