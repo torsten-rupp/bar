@@ -933,7 +933,7 @@ typedef struct
     ulong     count;                                          // total number of entries
     uint64    size;                                           // total size of entries [bytes]
   } total;
-  bool      collectTotalSumDone;                              // TRUE iff all file sums are collected
+  bool   collectTotalSumDone;                                 // TRUE iff all file sums are collected
   struct
   {
     ulong     count;                                          // number of skipped entries
