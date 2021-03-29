@@ -41,7 +41,7 @@
 
 #define SESSION_KEY_SIZE            1024     // number of session key bits
 
-#define LOCK_TIMEOUT                (10*60*MS_PER_SECOND)  // general lock timeout [ms]
+#define LOCK_TIMEOUT                (10LL*MS_PER_MINUTE)  // general lock timeout [ms]
 #define READ_TIMEOUT                (5LL*MS_PER_SECOND)
 
 #define BUFFER_SIZE       (64*1024)
@@ -1739,7 +1739,7 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
     {
       if (globalOptions.debug.serverLevel >= 1)
       {
-        fprintf(stderr,"DEBUG: execute command %s fail: %s\n",format,Error_getText(error));
+        fprintf(stderr,"DEBUG: execute command %u: '%s' fail: %s\n",id,format,Error_getText(error));
       }
     }
   #endif /* not DEBUG */
