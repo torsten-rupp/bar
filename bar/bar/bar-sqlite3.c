@@ -27,6 +27,7 @@
 #include "common/global.h"
 #include "common/strings.h"
 #include "common/files.h"
+#include "common/cmdoptions.h"
 #include "common/database.h"
 #include "common/misc.h"
 
@@ -66,6 +67,8 @@ const char *ARCHIVE_TYPES[] =
   [CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS  ] = "continuous"
 };
 
+#define INDEX_CONST_TYPE_ANY 0
+
 /***************************** Datatypes *******************************/
 // index types
 typedef enum
@@ -103,6 +106,7 @@ LOCAL bool       infoStoragesFlag                     = FALSE;  // output index 
 LOCAL bool       infoLostStoragesFlag                 = FALSE;  // output index database lost storages info
 LOCAL bool       infoEntriesFlag                      = FALSE;  // output index database entries info
 LOCAL bool       infoLostEntriesFlag                  = FALSE;  // output index database lost entries info
+LOCAL uint       entryType                            = INDEX_CONST_TYPE_ANY;
 LOCAL bool       checkIntegrityFlag                   = FALSE;  // check database integrity
 LOCAL bool       checkOrphanedFlag                    = FALSE;  // check database orphaned entries
 LOCAL bool       checkDuplicatesFlag                  = FALSE;  // check database duplicate entries
@@ -112,7 +116,7 @@ LOCAL bool       createFlag                           = FALSE;  // create new in
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
 LOCAL bool       dropTriggersFlag                     = FALSE;  // drop triggers
 LOCAL bool       createIndizesFlag                    = FALSE;  // re-create indizes
-LOCAL bool       createFTSFlag                        = FALSE;  // re-create FTS indizes
+LOCAL bool       createFTSIndizesFlag                 = FALSE;  // re-create FTS indizes
 LOCAL bool       showTableNames                       = FALSE;  // output index database table names
 LOCAL bool       showIndexNames                       = FALSE;  // output index database index names
 LOCAL bool       dropIndizesFlag                      = FALSE;  // drop indizes
@@ -139,12 +143,24 @@ LOCAL bool       timeFlag                             = FALSE;
 LOCAL bool       explainQueryPlanFlag                 = FALSE;
 LOCAL const char *jobUUID                             = NULL;
 LOCAL const char *toFileName                          = NULL;
+LOCAL bool       helpFlag                             = FALSE;
+LOCAL bool       xhelpFlag                            = FALSE;
 
 /****************************** Macros *********************************/
 
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
+
+LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
+(
+  CMD_OPTION_BOOLEAN      ("table-names",                       0  ,1,0,showTableNames,                                                                                        "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("index-names",                       0  ,1,0,showIndexNames,                                                                                        "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("drop-triggers",                     0  ,1,0,dropTriggersFlag,                                                                                        "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0  ,1,0,dropIndizesFlag,                                                                                        "output version"                                                           ),
+  CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,helpFlag,                                                                                           "output this help"                                                         ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                             0,  0,0,xhelpFlag,                                                                                          "output help to extended options"                                          ),
+);
 
 #ifdef __cplusplus
   extern "C" {
@@ -161,57 +177,64 @@ LOCAL const char *toFileName                          = NULL;
 
 LOCAL void printUsage(const char *programName, bool extendedFlag)
 {
-  printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
+  printf("Usage %s: [<options>] <database file> [<SQL command>...|-]\n",programName);
   printf("\n");
-  printf("Options:  -C|--directory=<name>                 - change to directory\n");
-  printf("          --info                                - output index database infos\n");
-  printf("          --info-jobs[=id|UUID,...]             - output index database job infos\n");
-  printf("          --info-entities[=id,...]              - output index database entities infos\n");
-  printf("          --info-storages[=id,...]              - output index database storages infos\n");
-  printf("          --info-lost-storages[=id,...]         - output index database storages infos without an entity\n");
-  printf("          --info-entries[=id,...|name]          - output index database entries infos\n");
-  printf("          --info-lost-entries[=id,...]          - output index database entries infos without an entity\n");
-  printf("          --create                              - create new index database\n");
-  printf("          --create-triggers                     - re-create triggers\n");
-  printf("          --create-indizes                      - re-create indizes\n");
-  printf("          --create-fts                          - re-create FTS indizes (full text search)\n");
-  printf("          --create-newest[=id,...]              - re-create newest data\n");
-  printf("          --create-aggregates                   - re-create aggregated data\n");
-  printf("          --create-aggregates-directory-content - re-create aggregated data directory content\n");
-  printf("          --create-aggregates-entities          - re-create aggregated data entities\n");
-  printf("          --create-aggregates-storages          - re-create aggregated data storages\n");
-  printf("          --optimize                            - optimize database (analyze and collect statistics data)\n");
-  printf("          --reindex                             - re-create all existing indizes\n");
-  printf("          --check                               - check index database\n");
-  printf("          --check-integrity                     - check index database integrity\n");
-  printf("          --check-orphaned                      - check index database for orphaned entries\n");
-  printf("          --check-duplicates                    - check index database for duplicate entries\n");
-  printf("          --clean                               - clean index database\n");
-  printf("          --clean-orphaned                      - clean orphaned in index database\n");
-  printf("          --clean-duplicates                    - clean duplicates in index database\n");
-  printf("          --vacuum [<new file name>]            - collect and free unused file space\n");
-  printf("          -s|--storages [<uuid>]                - print storages\n");
-  printf("          -e|--entries [<uuid>]                 - print entries\n");
-  printf("          --entries-newest [<uuid>]             - print newest entries\n");
-  printf("          -n|--names                            - print values with names\n");
-  printf("          -H|--header                           - print headers\n");
-  printf("          --transaction                         - enable transcations\n");
-  printf("          -f|--no-foreign-keys                  - disable foreign key constraints\n");
-  printf("          --force                               - force operation\n");
-  printf("          --pipe|-                              - read data from stdin and pipe into database\n");
-  printf("          --tmp-directory                       - temporary files directory\n");
-  printf("          -v|--verbose                          - verbose output\n");
-  printf("          -t|--time                             - print execution time\n");
-  printf("          -x|--explain-query                    - explain SQL queries\n");
+  printf("Options:  -C|--directory=<name>                   - change to directory\n");
+  printf("          --info                                  - output index database infos\n");
+  printf("          --info-jobs[=<uuid id>|UUID,...]        - output index database job infos\n");
+  printf("          --info-entities[=<entity id>,...]       - output index database entities infos\n");
+  printf("          --info-storages[=<storage id>,...]      - output index database storages infos\n");
+  printf("          --info-lost-storages[=<storage id>,...] - output index database storages infos without an entity\n");
+  printf("          --info-entries[=<entity id>,...|name]   - output index database entries infos\n");
+  printf("          --info-lost-entries[=<entity id>,...]   - output index database entries infos without an entity\n");
+  printf("          --entry-type=<type>                     - entries type:\n");
+  printf("                                                      file\n");
+  printf("                                                      image\n");
+  printf("                                                      directory\n");
+  printf("                                                      link\n");
+  printf("                                                      harlink\n");
+  printf("                                                      special\n");
+  printf("          --create                                - create new index database\n");
+  printf("          --create-triggers                       - re-create triggers\n");
+  printf("          --create-indizes                        - re-create indizes\n");
+  printf("          --create-fts-indizes                  - re-create FTS indizes (full text search)\n");
+  printf("          --create-newest[=id,...]                - re-create newest data\n");
+  printf("          --create-aggregates                     - re-create aggregated data\n");
+  printf("          --create-aggregates-directory-content   - re-create aggregated data directory content\n");
+  printf("          --create-aggregates-entities            - re-create aggregated data entities\n");
+  printf("          --create-aggregates-storages            - re-create aggregated data storages\n");
+  printf("          --optimize                              - optimize database (analyze and collect statistics data)\n");
+  printf("          --reindex                               - re-create all existing indizes\n");
+  printf("          --check                                 - check index database\n");
+  printf("          --check-integrity                       - check index database integrity\n");
+  printf("          --check-orphaned                        - check index database for orphaned entries\n");
+  printf("          --check-duplicates                      - check index database for duplicate entries\n");
+  printf("          --clean                                 - clean index database\n");
+  printf("          --clean-orphaned                        - clean orphaned in index database\n");
+  printf("          --clean-duplicates                      - clean duplicates in index database\n");
+  printf("          --vacuum [<new file name>]              - collect and free unused file space\n");
+  printf("          -s|--storages [<uuid>]                  - print storages\n");
+  printf("          -e|--entries [<uuid>]                   - print entries\n");
+  printf("          --entries-newest [<uuid>]               - print newest entries\n");
+  printf("          -n|--names                              - print values with names\n");
+  printf("          -H|--header                             - print headers\n");
+  printf("          --transaction                           - enable transcations\n");
+  printf("          -f|--no-foreign-keys                    - disable foreign key constraints\n");
+  printf("          --force                                 - force operation\n");
+  printf("          --pipe|-                                - read data from stdin and pipe into database\n");
+  printf("          --tmp-directory                         - temporary files directory\n");
+  printf("          -v|--verbose                            - verbose output\n");
+  printf("          -t|--time                               - print execution time\n");
+  printf("          -x|--explain-query                      - explain SQL queries\n");
   if (extendedFlag)
   {
-    printf("          --table-names                         - show table names\n");
-    printf("          --index-names                         - show index names\n");
-    printf("          --drop-triggers                       - drop all triggers\n");
-    printf("          --drop-indizes                        - drop all indixes\n");
+    printf("          --table-names                           - show table names\n");
+    printf("          --index-names                           - show index names\n");
+    printf("          --drop-triggers                         - drop all triggers\n");
+    printf("          --drop-indizes                          - drop all indixes\n");
   }
-  printf("          -h|--help                             - print this help\n");
-  printf("          --xhelp                               - print extended help\n");
+  printf("          -h|--help                               - print this help\n");
+  printf("          --xhelp                                 - print extended help\n");
 }
 
 //TODO: remove, not used
@@ -1327,95 +1350,65 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 
   printInfo("Create indizes:\n");
 
-  // delete all existing indizes
-  error = ERROR_UNKNOWN;
+  error = ERROR_NONE;
+
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    printInfo("  Discard indizes...");
-
-    do
+    // drop all existing indizes
+    if (error == ERROR_NONE)
     {
-      stringClear(name);
-      error = Database_execute(databaseHandle,
-                               CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                               {
-                                 assert(count == 1);
-                                 assert(values != NULL);
-                                 assert(values[0] != NULL);
-
-                                 UNUSED_VARIABLE(columns);
-                                 UNUSED_VARIABLE(count);
-                                 UNUSED_VARIABLE(userData);
-
-                                 stringSet(name,sizeof(name),values[0]);
-
-                                 return ERROR_NONE;
-                               },NULL),
-                               NULL,  // changedRowCount
-                               "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
-                              );
-      if ((error == ERROR_NONE) && !stringIsEmpty(name))
+      printInfo("  Discard indizes...");
+      do
       {
+        stringClear(name);
         error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                                 {
+                                   assert(count == 1);
+                                   assert(values != NULL);
+                                   assert(values[0] != NULL);
+
+                                   UNUSED_VARIABLE(columns);
+                                   UNUSED_VARIABLE(count);
+                                   UNUSED_VARIABLE(userData);
+
+                                   stringSet(name,sizeof(name),values[0]);
+
+                                   return ERROR_NONE;
+                                 },NULL),
                                  NULL,  // changedRowCount
-                                 "DROP INDEX %s",
-                                 name
+                                 "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
                                 );
+        if ((error == ERROR_NONE) && !stringIsEmpty(name))
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   "DROP INDEX IF EXISTS %s",
+                                   name
+                                  );
+        }
       }
+      while ((error == ERROR_NONE) && !stringIsEmpty(name));
+      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
     }
-    while ((error == ERROR_NONE) && !stringIsEmpty(name));
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
-    printInfo("OK\n");
-
-    // create new indizes
-    printInfo("  Create new indizes...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             INDEX_INDIZES_DEFINITION
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK  \n");
-
-    // clear FTS names
-    printInfo("  Discard FTS indizes...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM FTS_storages"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM FTS_entries"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK  \n");
-
-    // create FTS names
-    printInfo("  Create new storage FTS index...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO FTS_storages SELECT id,name FROM storages"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK  \n");
-    printInfo("  Create new entries FTS index...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO FTS_entries SELECT id,name FROM entries"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK  \n");
+    // create new indizes (if not exists)
+    if (error == ERROR_NONE)
+    {
+      printInfo("  Collect indizes...");
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               INDEX_INDIZES_DEFINITION
+                              );
+      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    }
   }
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
     printError("recreate indizes fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
@@ -1423,7 +1416,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : createFTS
+* Name   : createFTSIndizes
 * Purpose: create FTS indizes
 * Input  : databaseHandle - database handle
 * Output : -
@@ -1431,56 +1424,79 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createFTS(DatabaseHandle *databaseHandle)
+LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 {
   Errors error;
+  char   name[1024];
 
   printInfo("Create FTS indizes:\n");
 
-  // delete all existing indizes
-  error = ERROR_UNKNOWN;
+  error = ERROR_NONE;
+
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    printInfo("  Discard FTS...");
-
-    // clear FTS names
+    // drop FTS indizes
     printInfo("  Discard FTS indizes...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM FTS_storages"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM FTS_entries"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK  \n");
+    if (error == ERROR_NONE)
+    {
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "DROP TABLE IF EXISTS FTS_storages",
+                               name
+                              );
+    }
+    if (error == ERROR_NONE)
+    {
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "DROP TABLE IF EXISTS FTS_entries",
+                               name
+                              );
+    }
+    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
 
-    // create FTS names
-    printInfo("  Create new storage FTS index...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO FTS_storages SELECT id,name FROM storages"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK  \n");
-    printInfo("  Create new entries FTS index...");
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "INSERT INTO FTS_entries SELECT id,name FROM entries"
-                            );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    printInfo("OK  \n");
+    // create new FTS indizes  (if not exists)
+    if (error == ERROR_NONE)
+    {
+      printInfo("  Create FTS indizes...");
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               INDEX_FTS_INDIZES_DEFINITION
+                              );
+      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    }
+
+    // create FTS index
+    if (error == ERROR_NONE)
+    {
+      printInfo("  Collect storages FTS index...");
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO FTS_storages SELECT id,name FROM storages"
+                              );
+      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    }
+    if (error == ERROR_NONE)
+    {
+      printInfo("  Collect entries FTS index...");
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO FTS_entries SELECT id,name FROM entries"
+                              );
+      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    }
   }
   if (error != ERROR_NONE)
   {
-    printInfo("FAIL\n");
-    printError("recreate FTS fail (error: %s)!",Error_getText(error));
+    printError("recreate FTS indizes fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   (void)Database_flush(databaseHandle);
@@ -1500,85 +1516,76 @@ LOCAL void dropIndizes(DatabaseHandle *databaseHandle)
   Errors error;
   char   name[1024];
 
-  printInfo("Drop indizes:\n");
+  printInfo("Drop indizes...");
+
+  error = ERROR_NONE;
 
   // delete all existing indizes
-  error = ERROR_NONE;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    do
+    // drop all indizes
+    if (error == ERROR_NONE)
     {
-      stringClear(name);
-      error = Database_execute(databaseHandle,
-                               CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                               {
-                                 assert(count == 1);
-                                 assert(values != NULL);
-                                 assert(values[0] != NULL);
-
-                                 UNUSED_VARIABLE(columns);
-                                 UNUSED_VARIABLE(count);
-                                 UNUSED_VARIABLE(userData);
-
-                                 stringSet(name,sizeof(name),values[0]);
-
-                                 return ERROR_NONE;
-                               },NULL),
-                               NULL,  // changedRowCount
-                               "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
-                              );
-      if ((error == ERROR_NONE) && !stringIsEmpty(name))
+      do
       {
-        printInfo("  '%s'",name);
+        stringClear(name);
         error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "DROP INDEX %s",
-                                 name
-                                );
-        printInfo("dropped\n");
-      }
-    }
-    while ((error == ERROR_NONE) && !stringIsEmpty(name));
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+                                 CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                                 {
+                                   assert(count == 1);
+                                   assert(values != NULL);
+                                   assert(values[0] != NULL);
 
-#if 0
-    do
+                                   UNUSED_VARIABLE(columns);
+                                   UNUSED_VARIABLE(count);
+                                   UNUSED_VARIABLE(userData);
+
+                                   stringSet(name,sizeof(name),values[0]);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
+                                );
+        if ((error == ERROR_NONE) && !stringIsEmpty(name))
+        {
+          printInfo("  drop %s...",name);
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   "DROP INDEX IF EXISTS %s",
+                                   name
+                                  );
+          printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+        }
+      }
+      while ((error == ERROR_NONE) && !stringIsEmpty(name));
+      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+    }
+
+    // drop FTS indizes
+    if (error == ERROR_NONE)
     {
-      stringClear(name);
+      printInfo("  drop FTS_storages...");
       error = Database_execute(databaseHandle,
-                               CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                               {
-                                 assert(count == 1);
-                                 assert(values != NULL);
-                                 assert(values[0] != NULL);
-
-                                 UNUSED_VARIABLE(columns);
-                                 UNUSED_VARIABLE(count);
-                                 UNUSED_VARIABLE(userData);
-
-                                 stringSet(name,sizeof(name),values[0]);
-
-                                 return ERROR_NONE;
-                               },NULL),
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
-                               "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'FTS_%%' LIMIT 0,1"
+                               "DROP TABLE IF EXISTS FTS_storages",
+                               name
                               );
-      if ((error == ERROR_NONE) && !stringIsEmpty(name))
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "DELETE FROM %s",
-                                 name
-                                );
-      }
-
-      Database_flush(databaseHandle);
+      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
     }
-    while ((error == ERROR_NONE) && !stringIsEmpty(name));
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-#endif
+    if (error == ERROR_NONE)
+    {
+      printInfo("  drop FTS_entries...");
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "DROP TABLE IF EXISTS FTS_entries",
+                               name
+                              );
+      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    }
   }
   if (error != ERROR_NONE)
   {
@@ -1603,7 +1610,6 @@ LOCAL void dropIndizes(DatabaseHandle *databaseHandle)
 LOCAL void reindex(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  char   name[1024];
 
   printInfo("Reindex...");
 
@@ -4566,81 +4572,220 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
 
 LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 {
-  ulong  n;
-  Errors error;
+  ulong         n;
+  Errors        error;
+  DatabaseId    storageId;
+  Array         entryIds;
+  ArrayIterator arrayIterator;
+  DatabaseId    entryId;
 
   // init variables
 
   printInfo("Purge deleted storages:\n");
 
+  Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   n     = 0L;
   error = ERROR_UNKNOWN;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  do
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                             {
-                               int64 databaseId;
-
-                               assert(count == 1);
-                               assert(values != NULL);
-                               assert(values[0] != NULL);
-
-                               UNUSED_VARIABLE(columns);
-                               UNUSED_VARIABLE(count);
-                               UNUSED_VARIABLE(userData);
-
-                               databaseId  = (int64)atoll(values[0]);
-
-                               printInfo("  %ld...",databaseId);
-                               (void)Database_execute(databaseHandle,
-                                                      CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                                                      {
-                                                        int64 purgeDatabaseId;
-
-                                                        assert(count == 1);
-                                                        assert(values != NULL);
-                                                        assert(values[0] != NULL);
-
-                                                        UNUSED_VARIABLE(columns);
-                                                        UNUSED_VARIABLE(count);
-                                                        UNUSED_VARIABLE(userData);
-
-                                                        purgeDatabaseId = (int64)atoll(values[0]);
-
-                                                        (void)Database_execute(databaseHandle,
-                                                                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                                               NULL,  // changedRowCount,
-                                                                               "DELETE FROM storages \
-                                                                                WHERE id=%lld \
-                                                                               ",
-                                                                               purgeDatabaseId
-                                                                              );
-
-                                                        n++;
-
-                                                        return ERROR_NONE;
-                                                      },NULL),
-                                                      NULL,  // changedRowCount
-                                                      "SELECT id \
-                                                       FROM storages \
-                                                       WHERE id!=%lld \
-                                                      ",
-                                                      databaseId
-                                                     );
-
-                               printInfo("  OK\n");
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             "SELECT id \
-                              FROM storages \
-                              WHERE deletedFlag=1 \
-                             "
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      // get storage to purge
+      error = Database_getId(databaseHandle,
+                             &storageId,
+                             "storages",
+                             "id",
+                             "WHERE deletedFlag=1"
                             );
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+      if ((error == ERROR_NONE) && (storageId != DATABASE_ID_NONE))
+      {
+        printInfo("  %10"PRIi64"...",storageId);
+
+        // collect file/image/hardlink entries to purge
+        Array_clear(&entryIds);
+        if (error == ERROR_NONE)
+        {
+           error = Database_getIds(databaseHandle,
+                                   &entryIds,
+                                   "entryFragments",
+                                   "entryId",
+                                   "WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+
+        // collect directory/link/special entries to purge
+        if (error == ERROR_NONE)
+        {
+           error = Database_getIds(databaseHandle,
+                                   &entryIds,
+                                   "directoryEntries",
+                                   "entryId",
+                                   "WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+        if (error == ERROR_NONE)
+        {
+           error = Database_getIds(databaseHandle,
+                                   &entryIds,
+                                   "linkEntries",
+                                   "entryId",
+                                   "WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+        if (error == ERROR_NONE)
+        {
+           error = Database_getIds(databaseHandle,
+                                   &entryIds,
+                                   "specialEntries",
+                                   "entryId",
+                                   "WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+
+        printPercentage(0,2*Array_length(&entryIds));
+
+        // purge fragments
+        if (error == ERROR_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount,
+                                   "DELETE FROM entryFragments \
+                                    WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+
+        // purge FTS entries
+        if (error == ERROR_NONE)
+        {
+          printPercentage(0*Array_length(&entryIds),2*Array_length(&entryIds));
+          ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
+          {
+            if (!Database_exists(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
+            {
+              error = Database_execute(databaseHandle,
+                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                       &n,
+                                       "DELETE FROM FTS_entries \
+                                        WHERE entryId MATCH %lld \
+                                       ",
+                                       entryId
+                                      );
+            }
+            printPercentage(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+          }
+          printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
+        }
+
+        // purge directory/link/special entries
+        if (error == ERROR_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount,
+                                   "DELETE FROM directoryEntries \
+                                    WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount,
+                                   "DELETE FROM linkEntries \
+                                    WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+        if (error == ERROR_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount,
+                                   "DELETE FROM specialEntries \
+                                    WHERE storageId=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+
+        // purge FTS storages
+        if (error == ERROR_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   &n,
+                                   "DELETE FROM FTS_storages \
+                                    WHERE storageId MATCH %lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+
+        // purge storage
+        if (error == ERROR_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount,
+                                   "DELETE FROM storages \
+                                    WHERE id=%lld \
+                                   ",
+                                   storageId
+                                  );
+        }
+
+        // purge entries
+        if (error == ERROR_NONE)
+        {
+          printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
+          ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
+          {
+            if (!Database_exists(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
+            {
+              error = Database_execute(databaseHandle,
+                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                       &n,
+                                       "DELETE FROM entries \
+                                        WHERE id=%lld \
+                                       ",
+                                       entryId
+                                      );
+            }
+            printPercentage(1*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+          }
+          printPercentage(2*Array_length(&entryIds),2*Array_length(&entryIds));
+        }
+
+        clearPercentage();
+
+        if (error == ERROR_NONE)
+        {
+          printInfo("OK\n");
+          n++;
+        }
+        else
+        {
+          printInfo("FAIL\n");
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+        }
+      }
+    }
   }
+  while ((storageId != DATABASE_ID_NONE) && (error == ERROR_NONE));
   if (error != ERROR_NONE)
   {
     printError("purge deleted fail (error: %s)!",Error_getText(error));
@@ -4649,6 +4794,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
   (void)Database_flush(databaseHandle);
 
   // free resources
+  Array_done(&entryIds);
 }
 
 /***********************************************************************\
@@ -6175,6 +6321,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 * Purpose: print entries index info
 * Input  : databaseHandle - database handle
 *          entityIds      - database entity ids array or empty array
+*          entryType      - entry type; see INDEX_CONST_TYPE_...
 *          name           - name or NULL
 *          lostFlag       - TRUE to print lost entries
 * Output : -
@@ -6182,7 +6329,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityIds, ConstString name, bool lostFlag)
+LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityIds, uint entryType, ConstString name, bool lostFlag)
 {
   const char *TYPE_TEXT[] = {"","uuid","entity","storage","entry","file","image","directory","link","hardlink","special","history"};
 
@@ -6312,9 +6459,11 @@ UNUSED_VARIABLE(lostFlag);
                                                        LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id \
                                                        LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                        WHERE     entries.entityId=%lld \
+                                                             AND ((%u=0) OR (type=%u)) \
                                                              AND (%d OR entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')) \
                                                       ",
                                                       entityId,
+                                                      entryType,entryType,
                                                       String_isEmpty(ftsName) ? 1 : 0,
                                                       ftsName
                                                      );
@@ -6757,6 +6906,24 @@ uint xxxShow=0;
   databaseFileName = NULL;
   command          = String_new();
 
+#if 0
+  if (!CmdOption_parse(argv,&argc,
+                       COMMAND_LINE_OPTIONS,
+                       0,0,
+                       stderr,"ERROR: ","Warning: "
+                      )
+     )
+  {
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuIds);
+    Array_done(&uuidIds);
+    String_delete(command);
+    String_delete(entryName);
+    exit(EXITCODE_INVALID_ARGUMENT);
+  }
+#endif
+
   i = 1;
   n = 0;
   while (i < (uint)argc)
@@ -6879,6 +7046,27 @@ uint xxxShow=0;
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
+    else if (stringStartsWith(argv[i],"--entry-type="))
+    {
+      if      (stringEquals(&argv[i][13],"file"     )) entryType = INDEX_CONST_TYPE_FILE;
+      else if (stringEquals(&argv[i][13],"image"    )) entryType = INDEX_CONST_TYPE_IMAGE;
+      else if (stringEquals(&argv[i][13],"directory")) entryType = INDEX_CONST_TYPE_DIRECTORY;
+      else if (stringEquals(&argv[i][13],"link"     )) entryType = INDEX_CONST_TYPE_LINK;
+      else if (stringEquals(&argv[i][13],"harlink"  )) entryType = INDEX_CONST_TYPE_HARDLINK;
+      else if (stringEquals(&argv[i][13],"special"  )) entryType = INDEX_CONST_TYPE_SPECIAL;
+      else
+      {
+        printError("unknown value '%s' for option '%s'!",&argv[i][13],argv[i]);
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
+        String_delete(command);
+        String_delete(entryName);
+        exit(EXITCODE_INVALID_ARGUMENT);
+      }
+      i++;
+    }
     else if (stringEquals(argv[i],"--info-lost-entries"))
     {
       infoLostEntriesFlag = TRUE;
@@ -6946,9 +7134,9 @@ uint xxxShow=0;
       createIndizesFlag = TRUE;
       i++;
     }
-    else if (stringEquals(argv[i],"--create-fts"))
+    else if (stringEquals(argv[i],"--create-fts-indizes"))
     {
-      createFTSFlag = TRUE;
+      createFTSIndizesFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--drop-indizes"))
@@ -7357,7 +7545,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && !createTriggersFlag
           && !dropTriggersFlag
           && !createIndizesFlag
-          && !createFTSFlag
+          && !createFTSIndizesFlag
           && !dropIndizesFlag
           && !createNewestFlag
           && !createAggregatesDirectoryContentFlag
@@ -7401,11 +7589,11 @@ else if (stringEquals(argv[i],"--xxx"))
 
   if      (infoLostEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entityIds,entryName,TRUE);
+    printEntriesInfo(&databaseHandle,entityIds,entryType,entryName,TRUE);
   }
   else if (infoEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entityIds,entryName,FALSE);
+    printEntriesInfo(&databaseHandle,entityIds,entryType,entryName,FALSE);
   }
 
   if (showTableNames)
@@ -7454,9 +7642,9 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     createIndizes(&databaseHandle);
   }
-  if (createFTSFlag)
+  if (createFTSIndizesFlag)
   {
-    createFTS(&databaseHandle);
+    createFTSIndizes(&databaseHandle);
   }
 
   // clean
@@ -7492,6 +7680,7 @@ else if (stringEquals(argv[i],"--xxx"))
   // purge deleted storages
   if (purgeDeletedFlag)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     purgeDeletedStorages(&databaseHandle);
   }
 
