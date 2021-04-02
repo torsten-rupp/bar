@@ -85,6 +85,7 @@ set -e
 rpm -i $BASE_PATH/backup-archiver-$suffix.rpm
 
 # simple command test
+bar --version
 bar --help >/dev/null
 barcontrol --help >/dev/null
 
