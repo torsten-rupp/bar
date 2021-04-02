@@ -1980,9 +1980,11 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
 *          indexTypes       - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
-* Output : totalEntryCount       - total entry count (can be NULL)
-*          totalEntrySize        - total size [bytes] (can be NULL)
-*          totalEntryContentSize - total size including directory
+* Output : totalStorageCount     - total storage count (can be NULL)
+*          totalStorageSize      - total storage size [bytes] (can be NULL)
+*          totalEntryCount       - total entry count (can be NULL)
+*          totalEntrySize        - total entry size [bytes] (can be NULL)
+*          totalEntryContentSize - total entry size including directory
 *                                  content [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1996,6 +1998,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             IndexTypes    indexType,
                             ConstString   name,
                             bool          newestOnly,
+                            ulong         *totalStorageCount,
+                            uint64        *totalStorageSize,
                             ulong         *totalEntryCount,
                             uint64        *totalEntrySize,
                             uint64        *totalEntryContentSize
@@ -2053,6 +2057,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 *          archiveType     - archive type (can be NULL)
 *          entryId         - index id of entry
 *          entryName       - entry name
+*          storageId       - index id of storage (for directory, link,
+*                            special entries, can be NULL)
+*          storageName     - storage name  (for directory, link,
+*                            special entries, can be NULL)
 *          destinationName - destination name (for link entries)
 *          fileSystemType  - file system type (for image
 *                            entries)
@@ -2077,6 +2085,8 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
                         ArchiveTypes     *archiveType,
                         IndexId          *entryId,
                         String           entryName,
+                        IndexId          *storageId,
+                        String           storageName,
                         uint64           *size,
 //TODO: use timeLastChanged
                         uint64           *timeModified,
