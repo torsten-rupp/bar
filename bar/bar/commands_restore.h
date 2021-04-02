@@ -21,6 +21,7 @@
 #include "common/stringlists.h"
 
 #include "bar.h"
+#include "bar_global.h"
 #include "entrylists.h"
 #include "common/patternlists.h"
 #include "deltasourcelists.h"
