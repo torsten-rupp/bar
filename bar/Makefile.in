@@ -329,6 +329,12 @@ help:
 	@$(ECHO) "  gui"
 	@$(ECHO) "  clean_gui"
 
+# create dependencies
+.PHONY: depend
+depend:
+	$(MAKE) -j1 -C bar depend
+	$(MAKE) -j1 -C barcontrol depend
+
 # ----------------------------------------------------------------------------
 # create bar
 .PHONY: bar bar-debug
