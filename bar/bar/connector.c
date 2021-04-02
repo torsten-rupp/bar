@@ -50,7 +50,7 @@
 
 #define READ_TIMEOUT                ( 5LL*MS_PER_SECOND)
 #define CONNECTOR_DEBUG_LEVEL       1
-#define CONNECTOR_COMMAND_TIMEOUT   (60LL*MS_PER_SECOND)
+#define CONNECTOR_COMMAND_TIMEOUT   (10LL*MS_PER_MINUTE)
 
 /***************************** Datatypes *******************************/
 
@@ -204,8 +204,8 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   if (connectorInfo->storageOpenFlag)
   {
     Storage_close(&connectorInfo->storageHandle);
+    connectorInfo->storageOpenFlag = FALSE;
   }
-  connectorInfo->storageOpenFlag = FALSE;
 
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
@@ -974,8 +974,8 @@ UNUSED_VARIABLE(argumentMap);
   if (connectorInfo->storageOpenFlag)
   {
     Storage_close(&connectorInfo->storageHandle);
+    connectorInfo->storageOpenFlag = FALSE;
   }
-  connectorInfo->storageOpenFlag = FALSE;
 
 //TODO: index
 
@@ -3186,7 +3186,34 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
          && !Thread_isQuit(&connectorInfo->thread)
         )
   {
-    // wait for disconnect, command, or result
+    // process server i/o commands
+    while (ServerIO_getCommand(&connectorInfo->io,
+                               &id,
+                               name,
+                               argumentMap
+                              )
+          )
+    {
+      // find command
+      #ifdef CONNECTOR_DEBUG
+//TODO: enable
+        fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
+        #ifndef NDEBUG
+          StringMap_debugPrint(2,argumentMap);
+        #endif
+      #endif
+      if (!findConnectorCommand(name,&connectorCommandFunction))
+      {
+        sendResult(connectorInfo,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
+        continue;
+      }
+      assert(connectorCommandFunction != NULL);
+
+      // process command
+      connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
+    }
+
+    // wait for disconnect, data, or result
     events = Misc_waitHandle(Network_getSocket(&connectorInfo->io.network.socketHandle),
                              &signalMask,
                              HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID,
@@ -3194,11 +3221,11 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
                             );
     if (events != 0)
     {
-      if      ((events & HANDLE_EVENT_INPUT) != 0)
+      if      (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
       {
-        // process commands
         if (ServerIO_receiveData(&connectorInfo->io))
         {
+          // process server i/o commands
           while (ServerIO_getCommand(&connectorInfo->io,
                                      &id,
                                      name,
@@ -3257,6 +3284,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 * Name   : vexecuteCommand
 * Purpose: execute command on connector host
 * Input  : connectorInfo         - connector info
+*          debugLevel            - debug level
 *          timeout               - timeout [ms] or WAIT_FOREVER
 *          commandResultFunction - command result function (can be NULL)
 *          commandResultUserData - user data for command result function
@@ -3520,8 +3548,8 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo)
   if (connectorInfo->storageOpenFlag)
   {
     Storage_close(&connectorInfo->storageHandle);
+    connectorInfo->storageOpenFlag = FALSE;
   }
-  connectorInfo->storageOpenFlag = FALSE;
 
   // done storage
   connectorInfo->storageInitFlag = FALSE;
@@ -3792,8 +3820,8 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
   if (connectorInfo->storageOpenFlag)
   {
     Storage_close(&connectorInfo->storageHandle);
+    connectorInfo->storageOpenFlag = FALSE;
   }
-  connectorInfo->storageOpenFlag = FALSE;
 
   // free resources
   StringMap_delete(resultMap);
