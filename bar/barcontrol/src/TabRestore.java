@@ -1019,9 +1019,7 @@ public class TabRestore
      */
     public int compareTo(UUIDIndexData uuidIndexData)
     {
-// TODO remove
-//      UUIDIndexData uuidIndexData = (UUIDIndexData)object;
-      int           result;
+      int result;
 
       result = name.compareTo(uuidIndexData.name);
       if (result == 0)
