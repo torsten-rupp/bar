@@ -944,6 +944,7 @@ ERROR DATABASE_TIMEOUT                 TR("timeout accessing index")
 ERROR MASTER_DISCONNECTED              TR("master disconnected")
 ERROR SLAVE_DISCONNECTED               TR("slave disconnected")
 ERROR NOT_PAIRED                       TR("slave is not paired")
+ERROR NOT_A_SLAVE                      TR("instance is not a slave")
 
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
