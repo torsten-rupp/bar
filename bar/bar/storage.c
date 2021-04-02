@@ -601,7 +601,7 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 
   return (Misc_waitHandle(socketHandle->handle,
                           &signalMask,
-                          HANDLE_EVENT_ALL,
+                          HANDLE_EVENT_ANY,
                           60*MS_PER_SECOND
                          ) != 0);
 }
