@@ -26,10 +26,13 @@ RUN apt-get -y install \
   devscripts \
   e2fsprogs \
   gettext \
+  joe \
+  less \
   lua5.3 \
   m4 \
   patch \
   pkg-config \
+  rsync \
   subversion \
   sudo \
   tar \

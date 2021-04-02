@@ -13,6 +13,8 @@ RUN yum -y install \
   e2fsprogs \
   gettext \
   initscripts \
+  joe \
+  less \
   lua \
   m4 \
   openssl \
@@ -20,8 +22,9 @@ RUN yum -y install \
   pkg-config \
   psmisc \
   rpm-build \
-  sudo \
+  rsync \
   subversion \
+  sudo \
   sudo \
   tar \
   tcl \

@@ -13,12 +13,15 @@ RUN yum -y install \
   curl \
   e2fsprogs \
   gettext \
+  joe \
+  less \
   lua \
   m4 \
   patch \
   pkg-config \
   psmisc \
   rpm-build \
+  rsync \
   subversion \
   sudo \
   tar \
