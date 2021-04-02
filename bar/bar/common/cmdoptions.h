@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/arrays.h"
 #include "common/strings.h"
 
 /********************** Conditional compilation ***********************/

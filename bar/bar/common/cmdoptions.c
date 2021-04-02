@@ -1134,20 +1134,20 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
     {
       case CMD_OPTION_TYPE_INTEGER:
         assertx(commandLineOptions[i].variable.i != NULL,"%s",commandLineOptions[i].name);
-        assertx((*commandLineOptions[i].variable.i) >= commandLineOptions[i].integerOption.min,"%s",commandLineOptions[i].name);
-        assertx((*commandLineOptions[i].variable.i) <= commandLineOptions[i].integerOption.max,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.i) >= commandLineOptions[i].integerOption.min,"%s %d >= %d",commandLineOptions[i].name,*commandLineOptions[i].variable.i,commandLineOptions[i].integerOption.min);
+        assertx((*commandLineOptions[i].variable.i) <= commandLineOptions[i].integerOption.max,"%s %d <= %d",commandLineOptions[i].name,*commandLineOptions[i].variable.i,commandLineOptions[i].integerOption.max);
         commandLineOptions[i].defaultValue.i = (*commandLineOptions[i].variable.i);
         break;
       case CMD_OPTION_TYPE_INTEGER64:
         assertx(commandLineOptions[i].variable.l != NULL,"%s",commandLineOptions[i].name);
-        assertx((*commandLineOptions[i].variable.l) >= commandLineOptions[i].integer64Option.min,"%s",commandLineOptions[i].name);
-        assertx((*commandLineOptions[i].variable.l) <= commandLineOptions[i].integer64Option.max,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.l) >= commandLineOptions[i].integer64Option.min,"%s %"PRIi64" >= %"PRIi64,commandLineOptions[i].name,*commandLineOptions[i].variable.l,commandLineOptions[i].integer64Option.min);
+        assertx((*commandLineOptions[i].variable.l) <= commandLineOptions[i].integer64Option.max,"%s %"PRIi64" <= %"PRIi64,commandLineOptions[i].name,*commandLineOptions[i].variable.l,commandLineOptions[i].integer64Option.max);
         commandLineOptions[i].defaultValue.l = (*commandLineOptions[i].variable.l);
         break;
       case CMD_OPTION_TYPE_DOUBLE:
         assertx(commandLineOptions[i].variable.d != NULL,"%s",commandLineOptions[i].name);
-        assertx((*commandLineOptions[i].variable.d) >= commandLineOptions[i].doubleOption.min,"%s",commandLineOptions[i].name);
-        assertx((*commandLineOptions[i].variable.d) <= commandLineOptions[i].doubleOption.max,"%s",commandLineOptions[i].name);
+        assertx((*commandLineOptions[i].variable.d)+EPSILON_DOUBLE >= commandLineOptions[i].doubleOption.min,"%s %lf >= %lf",commandLineOptions[i].name,*commandLineOptions[i].variable.d,commandLineOptions[i].doubleOption.min);
+        assertx((*commandLineOptions[i].variable.d)-EPSILON_DOUBLE <= commandLineOptions[i].doubleOption.max,"%s %lf <= %lf",commandLineOptions[i].name,*commandLineOptions[i].variable.d,commandLineOptions[i].doubleOption.max);
         commandLineOptions[i].defaultValue.d = (*commandLineOptions[i].variable.d);
         break;
       case CMD_OPTION_TYPE_BOOLEAN:
