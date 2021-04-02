@@ -286,6 +286,10 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "  dist"
 
+# create dependencies
+.PHONY: depend
+depend:
+
 # error definition
 src/BARException.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl Makefile
 	$(INSTALL) -d $(@D)
@@ -823,17 +827,13 @@ ifneq ($(DIRECTORY),)
                    -t $(DIRECTORY)/barcontrol \
                    Makefile.in \
                    barcontrol.cfg
-	$(INSTALL) -d $(DIRECTORY)/barcontrol/src
-	$(INSTALL) -m 664 \
-                   -t $(DIRECTORY)/barcontrol/src \
-                   $(sort $(SOURCES)) \
-                   src/Config.java.in
-	$(INSTALL) -d $(DIRECTORY)/barcontrol/classes
 	#
-	$(INSTALL) -m 664 \
-                   -t $(DIRECTORY)/barcontrol \
-                   $(sort $(OTHER_SOURCES) \
-                    )
+	$(INSTALL) -d $(DIRECTORY)/barcontrol
+	$(CP) --parents \
+              $(sort $(SOURCES)) \
+              $(sort $(OTHER_SOURCES)) \
+              src/Config.java.in \
+              $(DIRECTORY)/barcontrol
 	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/images
 	$(INSTALL) -m 664 \
