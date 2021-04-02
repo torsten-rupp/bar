@@ -147,27 +147,43 @@ LANGUAGES = de jp
 # source search paths
 vpath %.java $(SOURCE_DIR)
 
-# compile Java source
+# compile Java sources
+.NOTPARALLEL: classes/%.class
 classes/%.class: $(SOURCE_DIR)/src/%.java src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
-	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java $(SOURCE_DIR)/src/utils/*.java $(SOURCE_DIR)/src/widgets/*.java
+	$(JAVAC) $(JAVAC_FLAGS) \
+          -d classes \
+          -classpath $(CLASSPATH) \
+          $(SOURCE_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/utils/*.java \
+          $(SOURCE_DIR)/src/widgets/*.java
 else
-	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources";
 endif
 classes/%.class: $(SOURCE_DIR)/src/utils/%.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
-	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java $(SOURCE_DIR)/src/utils/*.java $(SOURCE_DIR)/src/widgets/*.java
+	$(JAVAC) $(JAVAC_FLAGS) \
+          -d classes \
+          -classpath $(CLASSPATH) \
+          $(SOURCE_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/utils/*.java \
+          $(SOURCE_DIR)/src/widgets/*.java
 else
-	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources";
 endif
 classes/%.class: $(SOURCE_DIR)/src/widgets/%.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
-	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java $(SOURCE_DIR)/src/utils/*.java $(SOURCE_DIR)/src/widgets/*.java
+	$(JAVAC) $(JAVAC_FLAGS) \
+          -d classes \
+          -classpath $(CLASSPATH) \
+          $(SOURCE_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/utils/*.java \
+          $(SOURCE_DIR)/src/widgets/*.java
 else
-	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources";
 endif
 
 #--------------------------------- objects -----------------------------------
@@ -208,7 +224,7 @@ OTHER_SOURCES  = barcontrol.in \
                  barcontrol.xml \
                  jar.txt \
 
-OBJECTS        = $(foreach z,$(SOURCES),$(basename $(subst src/,classes/,$z)).class) \
+OBJECTS        = $(foreach z,$(SOURCES),$(addprefix classes/,$(basename $(notdir $z)).class)) \
                  classes/BARException.class \
                  classes/Config.class \
                  \
@@ -321,9 +337,11 @@ $(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(TOUCH) $@
 
 classes/app/i18n/Messages_de.class: $(SOURCE_DIR)/po/german.po
+	$(INSTALL) -d classes
 	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l de $(SOURCE_DIR)/po/german.po
 
 classes/app/i18n/Messages_jp.class: $(SOURCE_DIR)/po/japanese.po
+	$(INSTALL) -d classes
 	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l jp $(SOURCE_DIR)/po/japanese.po
 
 .PHONE: poeditde
@@ -389,7 +407,6 @@ clean_jars:
 # create jars
 barcontrol.jar: \
   $(SOURCE_DIR)/jar.txt \
-  $(OBJECTS) \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
@@ -656,11 +673,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundev-basic: $(OBJECTS)
+rundev-basic:
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=basic"
-rundev-normal: $(OBJECTS)
+rundev-normal:
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=normal"
-rundev-expert: $(OBJECTS)
+rundev-expert:
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=expert"
 
 rundevdebug rundevd: $(OBJECTS)
@@ -669,11 +686,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundevdebug-basic rundevd-basic: $(OBJECTS)
+rundevdebug-basic rundevd-basic:
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=basic"
-rundevdebug-normal rundevd-normal: $(OBJECTS)
+rundevdebug-normal rundevd-normal:
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=normal"
-rundevdebug-expert rundevd-expert: $(OBJECTS)
+rundevdebug-expert rundevd-expert:
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=expert"
 
 rundevxdebug: $(OBJECTS)
@@ -682,11 +699,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundevxdebug-basic: $(OBJECTS)
+rundevxdebug-basic:
 	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=basic"
-rundevxdebug-normal: $(OBJECTS)
+rundevxdebug-normal:
 	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=normal"
-rundevxdebug-expert: $(OBJECTS)
+rundevxdebug-expert:
 	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=expert"
 
 rundevxxdebug: $(OBJECTS)
@@ -695,11 +712,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundevxxdebug-basic: $(OBJECTS)
+rundevxxdebug-basic:
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=basic"
-rundevxxdebug-normal: $(OBJECTS)
+rundevxxdebug-normal:
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=normal"
-rundevxxdebug-expert: $(OBJECTS)
+rundevxxdebug-expert:
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --port=39909 --tls-port=0 --role=expert"
 
 rundev_slave: $(OBJECTS)
@@ -708,11 +725,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundev_slave-basic: $(OBJECTS)
+rundev_slave-basic:
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=basic"
-rundev_slave-normal: $(OBJECTS)
+rundev_slave-normal:
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=normal"
-rundev_slave-expert: $(OBJECTS)
+rundev_slave-expert:
 	$(MAKE) rundev OPTIONS="$(OPTIONS) --role=expert"
 
 rundevdebug_slave rundevd_slave: $(OBJECTS)
@@ -721,11 +738,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundevdebug_slave-basic rundevd_slave-basic: $(OBJECTS)
+rundevdebug_slave-basic rundevd_slave-basic:
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=basic"
-rundevdebug_slave-normal rundevd_slave-normal: $(OBJECTS)
+rundevdebug_slave-normal rundevd_slave-normal:
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=normal"
-rundevdebug_slave-expert rundevd_slave-expert: $(OBJECTS)
+rundevdebug_slave-expert rundevd_slave-expert:
 	$(MAKE) rundevdebug OPTIONS="$(OPTIONS) --role=expert"
 
 rundevxdebug_slave: $(OBJECTS)
@@ -734,11 +751,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundevxdebug_slave-basic: $(OBJECTS)
+rundevxdebug_slave-basic:
 	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=basic"
-rundevxdebug_slave-normal: $(OBJECTS)
+rundevxdebug_slave-normal:
 	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=normal"
-rundevxdebug_slave-expert: $(OBJECTS)
+rundevxdebug_slave-expert:
 	$(MAKE) rundevxdebug OPTIONS="$(OPTIONS) --role=expert"
 
 rundevxxdebug_slave: $(OBJECTS)
@@ -747,11 +764,11 @@ ifneq ($(JAVA),)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
-rundevxxdebug_slave-basic: $(OBJECTS)
+rundevxxdebug_slave-basic:
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=basic"
-rundevxxdebug_slave-normal: $(OBJECTS)
+rundevxxdebug_slave-normal:
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=normal"
-rundevxxdebug_slave-expert: $(OBJECTS)
+rundevxxdebug_slave-expert:
 	$(MAKE) rundevxxdebug OPTIONS="$(OPTIONS) --role=expert"
 
 rundev_slave_pairing: $(OBJECTS)
