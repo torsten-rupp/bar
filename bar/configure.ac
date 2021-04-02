@@ -766,7 +766,7 @@ AC_SUBST(HAVE_ZSTD)                         dnl "1" for zstd support, "" otherwi
 AC_SUBST(HAVE_XDELTA3)                      dnl "1" for xdelta3 support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                       dnl "1" for gcrypt support, "" otherwise
 AC_SUBST(HAVE_FTP)                          dnl "1" for ftp support, "" otherwise
-AC_SUBST(HAVE_CARES)                        dnl "1" for c-areas support, "" otherwise
+AC_SUBST(HAVE_CARES)                        dnl "1" for c-ares support, "" otherwise
 AC_SUBST(HAVE_CURL)                         dnl "1" for curl support, "" otherwise
 AC_SUBST(HAVE_MXML)                         dnl "1" for mxml support, "" otherwise
 AC_SUBST(HAVE_SSL)                          dnl "1" for ssl support, "" otherwise
@@ -2525,34 +2525,21 @@ if test $ENABLE_SSH = "yes"; then
             fi
             ;;
           windows*|mingw*)
-            # Note: always compile for mingw; 64bit is still not suppored
-#            (cd openssl; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./Configure \
-#              --prefix=$cwd/extern \
-#              no-shared \
-#              mingw64 \
-#            ) 1>$tmpFile 2>&1
             if test "$host_cpu" = "x86_64"; then
-              (cd openssl; ./Configure \
+              (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
                 --prefix=$cwd/extern \
                 --cross-compile-prefix=x86_64-w64-mingw32- \
                 no-shared \
                 mingw64 \
               ) 1>$tmpFile 2>&1
             else
-              (cd openssl; ./Configure \
+              (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
                 --prefix=$cwd/extern \
                 --cross-compile-prefix=i686-w64-mingw32- \
                 no-shared \
                 mingw \
               ) 1>$tmpFile 2>&1
             fi
-#            (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
-#              --prefix=$cwd/extern \
-#              --cross-compile-prefix=i686-w64-mingw32- \
-#              enable-capieng \
-#              no-shared \
-#              mingw \
-#            ) 1>$tmpFile 2>&1
             if test $? -ne 0; then
               AC_MSG_RESULT([fail (configure)])
               AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2566,7 +2553,6 @@ if test $ENABLE_SSH = "yes"; then
         esac
       fi
       if test $result -eq 1; then
-        # Note: OpenSSL does not support "make -j..."
         (cd openssl; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
@@ -3046,8 +3032,9 @@ if test $ENABLE_CURL = "yes"; then
         esac
       fi
       if test $result1 -eq 1; then
+        # Note: https://github.com/c-ares/c-ares/blob/cares-1_14_0/README.msvc#L133-L138
         install -d c-ares
-        (cd c-ares; CFLAGS= ./configure \
+        (cd c-ares; CFLAGS="-DCARES_STATICLIB" LDFLAGS="" ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
@@ -3377,6 +3364,7 @@ if test $ENABLE_ISO9660 = "yes"; then
 
       cwd=`pwd`
 
+set -x
       AC_MSG_COMPILE([libiconv])
       result1=1
       if test $result1 -eq 1; then
@@ -3479,6 +3467,8 @@ if test $ENABLE_ISO9660 = "yes"; then
           result2=0
         fi
       fi
+set +x
+exit 1
       if test $result2 -eq 1; then
         AC_MSG_RESULT([done])
       fi
