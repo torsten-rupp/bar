@@ -589,6 +589,7 @@ BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
 BAR_SQLITE3_SOURCES         = bar-sqlite3.c \
 
 BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
+                              common/cmdoptions.c \
                               common/lists.c \
                               common/strings.c \
                               common/stringlists.c \
