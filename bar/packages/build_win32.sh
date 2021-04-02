@@ -13,6 +13,7 @@ version=""
 userGroup=""
 testsFlag=0
 debugFlag=0
+fromSourceFlag=0
 helpFlag=0
 n=0
 while test $# != 0; do
@@ -27,6 +28,10 @@ while test $# != 0; do
       ;;
     -d | --debug)
       debugFlag=1
+      shift
+      ;;
+    -s | --from-source)
+      fromSourceFlag=1
       shift
       ;;
     --)
@@ -150,18 +155,24 @@ fi
 trap /bin/bash ERR
 set -e
 
-# extract sources
+# get sources
 cd /tmp
-tar xjf $BASE_PATH/$distributionFileName
-cd $packageName-$version
+if test $fromSourceFlag -eq 1; then
+  PROJECT_ROOT=$BASE_PATH
+else
+  # extract sources
+  tar xjf $BASE_PATH/$distributionFileName
+  cd $packageName-$version
+  PROJECT_ROOT=$PWD
+fi
 
 # build Win32
-./download-third-party-packages.sh \
+$PROJECT_ROOT/download-third-party-packages.sh \
   --clean
-./download-third-party-packages.sh \
+$PROJECT_ROOT/download-third-party-packages.sh \
   --no-verbose \
   $ADDITIONAL_DOWNLOAD_FLAGS
-./configure \
+$PROJECT_ROOT/configure \
   --host=i686-w64-mingw32 \
   --build=x86_64-linux \
   --disable-link-static \
@@ -172,6 +183,7 @@ cd $packageName-$version
 make
 make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
+if test $fromSourceFlag -ne 1; then
 set -x       .
 install packages/backup-archiver.iss backup-archiver.iss
 $wine "$iscc" \
@@ -184,6 +196,7 @@ chown $userGroup $BASE_PATH/${setupName}.exe
 
 # get MD5 hash
 md5sum $BASE_PATH/${setupName}.exe
+fi
 
 # debug
 if test $debugFlag -eq 1; then
