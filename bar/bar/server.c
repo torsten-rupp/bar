@@ -380,7 +380,7 @@ LOCAL void deleteClient(ClientNode *clientNode);
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void setQuit()
+LOCAL void setQuit(void)
 {
   quitFlag = TRUE;
   Semaphore_signalModified(&delayThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
@@ -395,7 +395,7 @@ LOCAL void setQuit()
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool isQuit()
+LOCAL_INLINE bool isQuit(void)
 {
   return quitFlag;
 }
@@ -932,16 +932,16 @@ LOCAL Errors endPairingMaster(ConstString name, const CryptHash *uuidHash)
     if (!String_isEmpty(name))
     {
       modifiedFlag =    !String_equals(globalOptions.masterInfo.name,name)
-                     || !equalsHash(&globalOptions.masterInfo.uuidHash,uuidHash);
+                     || !Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,uuidHash);
       String_set(globalOptions.masterInfo.name,name);
-      if (!setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
+      if (!Configuration_setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
       {
         Semaphore_unlock(&newMaster.lock);
         return ERROR_INSUFFICIENT_MEMORY;
       }
       if (modifiedFlag)
       {
-        error = updateConfig();
+        error = Configuration_update();
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&newMaster.lock);
@@ -958,10 +958,10 @@ LOCAL Errors endPairingMaster(ConstString name, const CryptHash *uuidHash)
     {
       modifiedFlag = !String_isEmpty(globalOptions.masterInfo.name);
       String_clear(globalOptions.masterInfo.name);
-      clearHash(&globalOptions.masterInfo.uuidHash);
+      Configuration_clearHash(&globalOptions.masterInfo.uuidHash);
       if (modifiedFlag)
       {
-        error = updateConfig();
+        error = Configuration_update();
         if (error != ERROR_NONE)
         {
           Semaphore_unlock(&newMaster.lock);
@@ -5271,7 +5271,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   {
     // master => verify/pair new master
 
-    if (serverMode == SERVER_MODE_SLAVE)
+    if (globalOptions.serverMode == SERVER_MODE_SLAVE)
     {
     // decrypt UUID
     error = ServerIO_decryptData(&clientInfo->io,
@@ -20340,23 +20340,119 @@ Errors Server_socket(void)
         if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
         {
           // try to disconnect incomplete connected clients iff too many connections
-        if ((globalOptions.serverMaxConnections > 0) && (List_count(&clientList) >= globalOptions.serverMaxConnections))
-        {
-           purgeNetworkClient(&clientList);
-        }
-
-        // connect new client
-        if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
-        {
-          error = newNetworkClient(&clientNode,&serverSocketHandle);
-          if (error == ERROR_NONE)
+          if ((globalOptions.serverMaxConnections > 0) && (List_count(&clientList) >= globalOptions.serverMaxConnections))
           {
+             purgeNetworkClient(&clientList);
+          }
+
+          // connect new client
+          if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
+          {
+            error = newNetworkClient(&clientNode,&serverSocketHandle);
+            if (error == ERROR_NONE)
+            {
+              SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              {
+                // append to list of connected clients
+                List_append(&clientList,clientNode);
+
+                // find authorization fail node, get client wait rest time
+                clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
+                                                                         authorizationFailNode,
+                                                                         String_equals(authorizationFailNode->clientName,
+                                                                                       clientNode->clientInfo.io.network.name
+                                                                                      )
+                                                                        );
+
+                clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+                if (globalOptions.serverMode == SERVER_MODE_MASTER)
+                {
+                  if (clientWaitRestTime > 0)
+                  {
+                    printInfo(1,
+                              "Connected %s (delayed %us)\n",
+                              getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
+                              clientWaitRestTime
+                             );
+                  }
+                  else
+                  {
+                    printInfo(1,
+                              "Connected %s\n",
+                              getClientInfo(&clientNode->clientInfo,s,sizeof(s))
+                             );
+                  }
+                }
+              }
+            }
+            else
+            {
+              printError("Cannot establish client connection (error: %s)!",
+                         Error_getText(error)
+                        );
+            }
+          }
+          else
+          {
+            printError("Establish client connection rejected (error: too many clients)!");
+            rejectNetworkClient(&serverSocketHandle);
+          }
+        }
+      }
+      else if (isServerTLSHandle(serverTLSFlag,&serverTLSSocketHandle,handle))
+      {
+        if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
+        {
+          // try to disconnect incomplete connected clients iff too many connections
+          if ((globalOptions.serverMaxConnections > 0) && (List_count(&clientList) >= globalOptions.serverMaxConnections))
+          {
+             purgeNetworkClient(&clientList);
+          }
+
+          // connect new clients via TLS port
+          if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
+          {
+            error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
+            if (error == ERROR_NONE)
+            {
+              // start SSL
+              #ifdef HAVE_GNU_TLS
+                error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
+                                       globalOptions.serverCA.data,
+                                       globalOptions.serverCA.length,
+                                       globalOptions.serverCert.data,
+                                       globalOptions.serverCert.length,
+                                       globalOptions.serverKey.data,
+                                       globalOptions.serverKey.length
+                                      );
+              if (error != ERROR_NONE)
+              {
+                printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
+                           String_cString(clientNode->clientInfo.io.network.name),
+                           clientNode->clientInfo.io.network.port,
+                           Error_getText(error)
+                          );
+                deleteClient(clientNode);
+                AutoFree_cleanup(&autoFreeList);
+                return FALSE;
+              }
+            #else /* HAVE_GNU_TLS */
+              printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!",
+                         String_cString(clientNode->clientInfo.io.network.name),
+                         clientNode->clientInfo.io.network.port,
+                         Error_getText(error)
+                        );
+              deleteClient(&clientNode);
+              AutoFree_cleanup(&autoFreeList);
+              return FALSE;
+            #endif /* HAVE_GNU_TLS */
+
             SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
             {
               // append to list of connected clients
               List_append(&clientList,clientNode);
 
-              // find authorization fail node, get client wait rest time
+              // find authorization fail node
               clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
                                                                        authorizationFailNode,
                                                                        String_equals(authorizationFailNode->clientName,
@@ -20364,13 +20460,11 @@ Errors Server_socket(void)
                                                                                     )
                                                                       );
 
-              clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-            if (globalOptions.serverMode == SERVER_MODE_MASTER)
-              {
+                clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
                 if (clientWaitRestTime > 0)
                 {
                   printInfo(1,
-                            "Connected %s (delayed %us)\n",
+                            "Connected %s (TLS/SSL, delayed %us)\n",
                             getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
                             clientWaitRestTime
                            );
@@ -20378,117 +20472,24 @@ Errors Server_socket(void)
                 else
                 {
                   printInfo(1,
-                            "Connected %s\n",
+                            "Connected %s (TLS/SSL)\n",
                             getClientInfo(&clientNode->clientInfo,s,sizeof(s))
                            );
                 }
               }
             }
-          }
-          else
-          {
-            printError("Cannot establish client connection (error: %s)!",
-                       Error_getText(error)
-                      );
-          }
-        }
-        else
-        {
-          printError("Establish client connection rejected (error: too many clients)!");
-          rejectNetworkClient(&serverSocketHandle);
-        }
-      }
-      }
-      else if (isServerTLSHandle(serverTLSFlag,&serverTLSSocketHandle,handle))
-      {
-        if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
-        {
-          // try to disconnect incomplete connected clients iff too many connections
-        if ((globalOptions.serverMaxConnections > 0) && (List_count(&clientList) >= globalOptions.serverMaxConnections))
-        {
-           purgeNetworkClient(&clientList);
-        }
-
-        // connect new clients via TLS port
-        if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
-        {
-          error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
-          if (error == ERROR_NONE)
-          {
-            // start SSL
-            #ifdef HAVE_GNU_TLS
-              error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
-                                     globalOptions.serverCA.data,
-                                     globalOptions.serverCA.length,
-                                     globalOptions.serverCert.data,
-                                     globalOptions.serverCert.length,
-                                     globalOptions.serverKey.data,
-                                     globalOptions.serverKey.length
-                                    );
-            if (error != ERROR_NONE)
+            else
             {
-              printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
-                         String_cString(clientNode->clientInfo.io.network.name),
-                         clientNode->clientInfo.io.network.port,
+              printError("Cannot establish client TLS connection (error: %s)!",
                          Error_getText(error)
                         );
-              deleteClient(clientNode);
-              AutoFree_cleanup(&autoFreeList);
-              return FALSE;
-            }
-          #else /* HAVE_GNU_TLS */
-            printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!",
-                       String_cString(clientNode->clientInfo.io.network.name),
-                       clientNode->clientInfo.io.network.port,
-                       Error_getText(error)
-                      );
-            deleteClient(&clientNode);
-            AutoFree_cleanup(&autoFreeList);
-            return FALSE;
-          #endif /* HAVE_GNU_TLS */
-
-          SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            // append to list of connected clients
-            List_append(&clientList,clientNode);
-
-            // find authorization fail node
-            clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
-                                                                     authorizationFailNode,
-                                                                     String_equals(authorizationFailNode->clientName,
-                                                                                   clientNode->clientInfo.io.network.name
-                                                                                  )
-                                                                    );
-
-              clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-              if (clientWaitRestTime > 0)
-              {
-                printInfo(1,
-                          "Connected %s (TLS/SSL, delayed %us)\n",
-                          getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
-                          clientWaitRestTime
-                         );
-              }
-              else
-              {
-                printInfo(1,
-                          "Connected %s (TLS/SSL)\n",
-                          getClientInfo(&clientNode->clientInfo,s,sizeof(s))
-                         );
-              }
             }
           }
           else
           {
-            printError("Cannot establish client TLS connection (error: %s)!",
-                       Error_getText(error)
-                      );
+            printError("Establish client connection rejected (error: too many clients)!");
+            rejectNetworkClient(&serverSocketHandle);
           }
-        }
-        else
-        {
-          printError("Establish client connection rejected (error: too many clients)!");
-          rejectNetworkClient(&serverSocketHandle);
         }
       }
       else
