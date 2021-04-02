@@ -233,8 +233,8 @@ while ($line=<STDIN>)
       }
       $type =~ s/"/\\"/g;
 
-      $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE VIRTUAL TABLE $table USING $type(\\\n";
-      $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."CREATE VIRTUAL TABLE $table USING $type(\\\n";
+      $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE VIRTUAL TABLE IF NOT EXISTS $table USING $type(\\\n";
+      $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."CREATE VIRTUAL TABLE IF NOT EXISTS $table USING $type(\\\n";
     }
     elsif ($line =~ /^\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
     {
@@ -366,7 +366,7 @@ print "\n";
 print "#define INDEX_INDIZES_DEFINITION \\\n\"\\\n";
 print $allDatabaseIndizesDefinitions;
 print "\"\n";
-print "#define INDEX_FTS_DEFINITION \\\n\"\\\n";
+print "#define INDEX_FTS_INDIZES_DEFINITION \\\n\"\\\n";
 print $allDatabaseFTSDefinitions;
 print "\"\n";
 print "#define INDEX_TRIGGERS_DEFINITION \\\n\"\\\n";
