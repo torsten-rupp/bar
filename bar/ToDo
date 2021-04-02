@@ -166,7 +166,10 @@ rest time
   https://dev.lovelyhq.com/libburnia/web/wiki
   https://github.com/svn2github/libburn
 - single input of encrypt password for parallel test/compare
-
+- maintenance if no schedule pending for x minutes
+- BARControl: restore: show archive for file entry
+- restore: pattern+verbose 4 output "skipped" - should not
+- option --no-auto-pairing
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'

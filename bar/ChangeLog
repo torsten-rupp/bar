@@ -1,10 +1,26 @@
-2020-xx-xx 0.22
+2020-12-31 0.22
   * added option --save-configuration: format and
     save configuration file
   * fixed reading cryption keys via config file
   * fixed CD/DVD/BD blank command: use
     "dvd+rw-format -force" to create medium in
     restricted overwrite mode
+  * upgrade bzip2 1.0.8
+  * upgrade MMXL 3.2
+  * upgrade zStandard 1.4.8
+  * upgrade gpp-error 1.41
+  * upgrade gcrypt 1.8.7
+  * upgrade nettle 3.7
+  * upgrade gmp 6.2.1
+  * upgrade libidn2 2.3.0
+  * upgrade GnuTLS 3.7.0
+  * upgrade libicon 1.16
+  * upgrade OpenSSL 1.1.1i
+  * upgrade c-areas 1.17.1
+  * upgrade curl 7.74.0
+  * upgrade pcre 8.44
+  * upgrade SQLite 3.34
+  * upgrade binutils 2.35
 
 2020-09-27 0.21f
   * fixed auto-index of new archives
