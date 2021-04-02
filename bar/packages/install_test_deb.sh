@@ -76,6 +76,7 @@ trap /bin/bash ERR
 set -e
 
 # simple command test
+bar --version
 bar --help >/dev/null
 barcontrol --help >/dev/null
 
