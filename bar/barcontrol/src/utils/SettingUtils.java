@@ -2399,15 +2399,12 @@ throwable.printStackTrace();
     SettingUtils.permitModifyFlag = true;
   }
 
-  /** set program setting (if permited) and mark modified
+  /** check if program settings modify is permitted
+   * @return true iff permitted
    */
-  public static <T> void set(T variable, T value)
+  public static boolean isPermitModify()
   {
-    if (permitModifyFlag)
-    {
-    variable = value;
-    setModified();
-  }
+    return permitModifyFlag;
   }
 
   /** set program settings are modified
