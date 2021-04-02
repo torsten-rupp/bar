@@ -2109,7 +2109,7 @@ public class BARControl
     System.out.println("                                                        normal");
     System.out.println("                                                        expert");
     System.out.println("");
-    System.out.println("         --geometry=<x>x<y>[+x0+y0]                 - windows geometry");
+    System.out.println("         --geometry=<x>x<y>[+x0+y0]                 - window geometry");
     System.out.println("");
     System.out.println("         --version                                  - output version");
     System.out.println("         -h|--help                                  - print this help");
