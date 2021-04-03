@@ -1361,7 +1361,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue         *entryMsgQueue,
 *          archiveType        - archive type; see ARCHIVE_TYPE_*
 *          scheduleTitle      - schedule title or NULL
 *          scheduleCustomText - schedule custom text or NULL
-*          time               - time
+*          dateTime           - date/time
 *          partNumber         - part number (>=0 for parts,
 *                               ARCHIVE_PART_NUMBER_NONE for single
 *                               part archive)
@@ -1376,7 +1376,7 @@ LOCAL Errors formatArchiveFileName(String           fileName,
                                    ArchiveTypes     archiveType,
                                    ConstString      scheduleTitle,
                                    ConstString      scheduleCustomText,
-                                   uint64           time,
+                                   uint64           dateTime,
                                    int              partNumber
                                   )
 {
@@ -1401,7 +1401,7 @@ LOCAL Errors formatArchiveFileName(String           fileName,
   templateInit(&templateHandle,
                String_cString(templateFileName),
                expandMacroMode,
-               time
+               dateTime
               );
 
   // expand template
