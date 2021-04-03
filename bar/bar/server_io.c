@@ -412,7 +412,7 @@ LOCAL bool receiveData(ServerIO *serverIO)
 //fprintf(stderr,"%s, %d: readBytes=%d: %d\n",__FILE__,__LINE__,readBytes,serverIO->inputBufferLength); debugDumpMemory(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,0);
             serverIO->inputBufferLength += (uint)readBytes;
 
-fprintf(stderr,"%s:%d: c index=%d length=%d size=%d\n",__FILE__,__LINE__,serverIO->inputBufferIndex,serverIO->inputBufferLength,serverIO->inputBufferSize);
+//fprintf(stderr,"%s:%d: c index=%d length=%d size=%d\n",__FILE__,__LINE__,serverIO->inputBufferIndex,serverIO->inputBufferLength,serverIO->inputBufferSize);
             maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
             if (maxBytes > 0)
             {
