@@ -1329,7 +1329,7 @@ String templateDone(TemplateHandle *templateHandle,
   #ifdef HAVE_LOCALTIME_R
     tm = localtime_r((const time_t*)&templateHandle->dateTime,&tmBuffer);
   #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&templateHandle->dateTime);
+    tm = localtime((const time_t*)&templateHandle->dateTime);
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
 
@@ -4230,13 +4230,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
   if (globalOptions.helpFlag || globalOptions.xhelpFlag || globalOptions.helpInternalFlag)
   {
-fprintf(stderr,"%s, %d: %p %d  %p %d\n",__FILE__,__LINE__,
-&globalOptions.helpFlag,
-CmdOption_isSet(&globalOptions.helpFlag),
-&globalOptions.versionFlag,
-CmdOption_isSet(&globalOptions.versionFlag)
-);
-exit(2);
     if      (globalOptions.helpInternalFlag) printUsage(argv[0],2);
     else if (globalOptions.xhelpFlag       ) printUsage(argv[0],1);
     else                                     printUsage(argv[0],0);
