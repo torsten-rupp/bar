@@ -2783,6 +2783,7 @@ void File_closeRootList(RootListHandle *rootListHandle)
     if (rootListHandle->mounts != NULL) fclose(rootListHandle->mounts);
     StringList_done(&rootListHandle->fileSystemNames);
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(rootListHandle);
   #endif /* PLATFORM_... */
 }
 
@@ -3729,7 +3730,7 @@ bool File_isWritableCString(const char *fileName)
     }
     else
     {
-      fileAttributes = GetFileAttributes(String_cString(directoryPath);
+      fileAttributes = GetFileAttributes(String_cString(directoryPath));
     }
     isWriteable =    (fileAttributes != INVALID_FILE_ATTRIBUTES)
                   && (   ((fileAttributes & (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_NORMAL)
