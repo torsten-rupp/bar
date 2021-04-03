@@ -6270,7 +6270,6 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                    &entryIds
                                   );
   }
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,Error_getText(error));
 
   // purge file/image/directory/link/hardlink/special entries
   if (error == ERROR_NONE)
