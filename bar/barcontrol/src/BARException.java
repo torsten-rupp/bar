@@ -224,8 +224,9 @@ class BARException extends Exception
   public final static int MASTER_DISCONNECTED = 219;
   public final static int SLAVE_DISCONNECTED = 220;
   public final static int NOT_PAIRED = 221;
-  public final static int TESTCODE = 222;
-  public final static int UNKNOWN = 223;
+  public final static int NOT_A_SLAVE = 222;
+  public final static int TESTCODE = 223;
+  public final static int UNKNOWN = 224;
 
   public final int    code;
   public final int    errno;
@@ -1377,6 +1378,9 @@ class BARException extends Exception
         break;
       case NOT_PAIRED:
         stringSet(errorText,sizeof(errorText),BARControl.tr("slave is not paired"));
+        break;
+      case NOT_A_SLAVE:
+        stringSet(errorText,sizeof(errorText),BARControl.tr("instance is not a slave"));
         break;
       case TESTCODE:
         stringSet(errorText,sizeof(errorText),"test code");
