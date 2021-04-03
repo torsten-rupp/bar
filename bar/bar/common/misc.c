@@ -2554,13 +2554,16 @@ String Misc_base64Encode(String string, const void *data, uint dataLength)
   void *buffer;
   uint bufferSize;
 
-  bufferSize = Misc_base64EncodeLength(data,dataLength);
-  buffer = malloc(bufferSize);
-  if (buffer != NULL)
+  if ((data != NULL) && (dataLength > 0))
   {
-    base64Encode(buffer,bufferSize,NULL,data,dataLength);
-    String_appendBuffer(string,buffer,bufferSize);
-    free(buffer);
+    bufferSize = Misc_base64EncodeLength(data,dataLength);
+    buffer = malloc(bufferSize);
+    if (buffer != NULL)
+    {
+      base64Encode(buffer,bufferSize,NULL,data,dataLength);
+      String_appendBuffer(string,buffer,bufferSize);
+      free(buffer);
+    }
   }
 
   return string;
@@ -2571,15 +2574,6 @@ void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const void *data,
   base64Encode(buffer,bufferLength,NULL,data,dataLength);
 
   return buffer;
-}
-
-uint Misc_base64EncodeLength(const void *data, uint dataLength)
-{
-  assert(data != NULL);
-
-  UNUSED_VARIABLE(data);
-
-  return ((dataLength+3-1)/3)*4;
 }
 
 bool Misc_base64Decode(void *data, uint maxDataLength, uint *dataLength, ConstString string, ulong index)

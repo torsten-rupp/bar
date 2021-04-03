@@ -1377,7 +1377,17 @@ void *Misc_base64EncodeBuffer(void *buffer, uint bufferLength, const void *data,
 * Notes  : -
 \***********************************************************************/
 
-uint Misc_base64EncodeLength(const void *data, uint dataLength);
+INLINE uint Misc_base64EncodeLength(const void *data, uint dataLength);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE uint Misc_base64EncodeLength(const void *data, uint dataLength)
+{
+  assert(data != NULL);
+
+  UNUSED_VARIABLE(data);
+
+  return ((dataLength+3-1)/3)*4;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Misc_base64Decode, Misc_base64DecodeCString
