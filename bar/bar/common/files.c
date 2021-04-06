@@ -451,7 +451,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       fileHandle->file = fdopen(fileDescriptor,"w+b");
       if (fileHandle->file == NULL)
       {
-        return getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+        return getLastError(ERROR_CODE_CREATE_FILE,fileName);
       }
 
       // truncate and seek to start
@@ -459,11 +459,11 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       {
         if (FTRUNCATE(fileDescriptor,0) != 0)
         {
-          return getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+          return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
         if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
         {
-          return getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+          return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
       }
 
@@ -475,7 +475,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       fileHandle->file = fdopen(fileDescriptor,"rb");
       if (fileHandle->file == NULL)
       {
-        return getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+        return getLastError(ERROR_CODE_CREATE_FILE,fileName);
       }
 
       // get file size
@@ -483,20 +483,20 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       {
         if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
         {
-          error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+          error = getLastError(ERROR_CODE_IO,fileName);
           fclose(fileHandle->file);
           return error;
         }
         n = (int64_t)FTELL(fileHandle->file);
         if (n == (-1LL))
         {
-          error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+          error = getLastError(ERROR_CODE_IO,fileName);
           fclose(fileHandle->file);
           return error;
         }
         if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
         {
-          error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+          error = getLastError(ERROR_CODE_IO,fileName);
           fclose(fileHandle->file);
           return error;
         }
@@ -514,7 +514,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       fileHandle->file = fdopen(fileDescriptor,"w+b");
       if (fileHandle->file == NULL)
       {
-        return getLastError(ERROR_CODE_OPEN_FILE,String_cString(fileHandle->name));
+        return getLastError(ERROR_CODE_OPEN_FILE,fileName);
       }
 
       // seek to start
@@ -522,7 +522,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       {
         if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
         {
-          return getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+          return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
       }
 
@@ -534,7 +534,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       fileHandle->file = fdopen(fileDescriptor,"ab");
       if (fileHandle->file == NULL)
       {
-        return getLastError(ERROR_CODE_OPEN_FILE,String_cString(fileHandle->name));
+        return getLastError(ERROR_CODE_OPEN_FILE,fileName);
       }
 
       // get file size
@@ -542,12 +542,12 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       {
         if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
         {
-          return getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+          return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
         n = (int64_t)FTELL(fileHandle->file);
         if (n == (-1LL))
         {
-          error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+          error = getLastError(ERROR_CODE_IO,fileName);
           fclose(fileHandle->file);
           return error;
         }
@@ -1425,14 +1425,14 @@ Errors __File_getTmpFileCString(const char *__fileName__,
     handle = mkstemp(s);
     if (handle == -1)
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_IO,s);
       free(s);
       return error;
     }
     fileHandle->file = fdopen(handle,"w+b");
     if (fileHandle->file == NULL)
     {
-      error = getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_CREATE_FILE,s);
       close(handle);
       (void)unlink(s);
       free(s);
@@ -1442,14 +1442,14 @@ Errors __File_getTmpFileCString(const char *__fileName__,
     // Note: there is a race-condition when mktemp() and open() is used!
     if (stringIsEmpty(mktemp(s)))
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_IO,s);
       free(s);
       return error;
     }
     fileHandle->file = FOPEN(s,"w+b");
     if (fileHandle->file == NULL)
     {
-      error = getLastError(ERROR_CODE_CREATE_FILE,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_CREATE_FILE,s);
       (void)unlink(s)
       free(s);
       return error;
@@ -1462,7 +1462,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   #ifdef NDEBUG
     if (unlink(s) != 0)
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_IO,s);
       free(s);
       return error;
     }
@@ -1608,14 +1608,14 @@ Errors File_getTmpFileNameCString(String     fileName,
     // Note: there is a race-condition when mktemp() and open() is used!
     if (stringIsEmpty(mktemp(s)))
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_IO,s);
       free(s);
       return error;
     }
     handle = open(s,O_CREAT|O_EXCL|O_BINARY);
     if (handle == -1)
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+      error = getLastError(ERROR_CODE_IO,s);
       free(s);
       return error;
     }
@@ -2075,7 +2075,7 @@ Errors __File_openCString(const char *__fileName__,
       #undef FLAGS
       if (fileDescriptor == -1)
       {
-        return getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+        return getLastError(ERROR_CODE_IO,fileName);
       }
 
       // init handle
@@ -2132,7 +2132,7 @@ Errors __File_openDescriptor(const char *__fileName__,
   newFileDescriptor = dup(fileDescriptor);
   if (newFileDescriptor == -1)
   {
-    return getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
+    return ERROR_CODE_IO;
   }
 
   #ifdef NDEBUG
@@ -2176,7 +2176,7 @@ Errors __File_close(const char *__fileName__,
   #ifndef HAVE_O_NOATIME
     if ((fileHandle->mode & FILE_OPEN_NO_ATIME) != 0)
     {
-      if (!setAccessTime(fileHandle->handle, &fileHandle->atime))
+      if (!setAccessTime(fileHandle->handle,&fileHandle->atime))
       {
         if (error == ERROR_NONE) error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
       }
