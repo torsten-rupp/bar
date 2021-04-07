@@ -248,7 +248,7 @@ SQLITE_FLAGS_DEBUG   = -DSQLITE_DEBUG
 XDELTA3_FLAGS =
 
 # additional options
-OPTIONS ?=
+OPTIONS ?= $(O)
 
 # test settings
 TEST_CONFIG                      = intermediate/bar.cfg
