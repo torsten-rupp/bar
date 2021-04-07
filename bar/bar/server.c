@@ -7683,7 +7683,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
                                              return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                            },NULL),
-                                           "ROOT_LIST",
+                                           "ROOT_LIST allMounts=%y",
                                            allMountsFlag
                                           );
         }
