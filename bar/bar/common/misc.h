@@ -17,6 +17,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#ifdef HAVE_SYSTEMD_SD_ID128_H
+  #include <systemd/sd-id128.h>
+#endif
 #include <assert.h>
 
 // file/socket handle events
@@ -67,6 +70,9 @@ typedef enum
 
 // length of UUID string (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 #define MISC_UUID_STRING_LENGTH 36
+
+// length of machine id
+#define MISC_MACHINE_ID_LENGTH (128/8)
 
 // text macro patterns
 #define TEXT_MACRO_PATTERN_INTEGER   "[+-]{0,1}\\d+"
@@ -124,6 +130,9 @@ typedef struct
   long   timeout;
   uint64 endTimestamp;
 } TimeoutInfo;
+
+// machine/application id
+typedef const byte* MachineId;
 
 // text macros
 typedef enum
@@ -902,6 +911,30 @@ uint Misc_getId(void);
 String Misc_getUUID(String string);
 const char *Misc_getUUIDCString(char *buffer, uint bufferSize);
 
+/***********************************************************************\
+* Name   : Misc_setApplicationId, Misc_setApplicationIdCString
+* Purpose: set application id
+* Input  : data   - application id
+*          length - length of application id data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_setApplicationId(const byte data[], uint length);
+void Misc_setApplicationIdCString(const char *data);
+
+/***********************************************************************\
+* Name   : Misc_getMachineId
+* Purpose: get unique machine id
+* Input  : -
+* Output : -
+* Return : machine id
+* Notes  : -
+\***********************************************************************/
+
+MachineId Misc_getMachineId(void);
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
@@ -1463,6 +1496,21 @@ bool Misc_hexDecodeCString(void *data, uint *dataLength, const char *s, uint max
 
 uint Misc_hexDecodeLength(ConstString string, ulong index);
 uint Misc_hexDecodeLengthCString(const char *s);
+
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+/***********************************************************************\
+* Name   : Misc_getRegistryString
+* Purpose: get string from Windows registry
+* Input  : string - string varibale
+*          name   - registry value name
+* Output : -
+* Return : TRUE iff read
+* Notes  : -
+\***********************************************************************/
+
+bool Misc_getRegistryString(String string, HKEY parentKey, const char *subKey, const char *name);
+#endif /* PLATFORM_... */
 
 #ifdef __cplusplus
   }

@@ -19,6 +19,8 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #ifdef HAVE_SYS_WAIT_H
   #include <sys/wait.h>
 #endif /* HAVE_SYS_WAIT_H */
@@ -38,6 +40,9 @@
 #endif
 #ifdef HAVE_GRP_H
   #include <grp.h>
+#endif
+#ifdef HAVE_SYSTEMD_SD_ID128_H
+  #include <systemd/sd-id128.h>
 #endif
 #include <errno.h>
 #include <assert.h>
@@ -64,6 +69,7 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+LOCAL byte machineId[MISC_MACHINE_ID_LENGTH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 /****************************** Macros *********************************/
 
@@ -74,6 +80,137 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : initMachineId
+* Purpose: init machine id
+* Input  : applicationIdData       - optional application id data
+*          applicationIdDataLength - length of application id data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataLength)
+{
+  static enum {NONE,BASE,COMPLETE} state = NONE;
+
+  uint i;
+  #if   defined(PLATFORM_LINUX)
+    #if   defined(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC) || defined(HAVE_SD_ID128_GET_MACHINE)
+      sd_id128_t sdApplicationId128;
+      sd_id128_t sdId128;
+    #endif
+    int    handle;
+    char   buffer[64];
+    char   s[2+1];
+    uuid_t uuid;
+  #elif defined(PLATFORM_WINDOWS)
+    String value;
+    UUID   uuid;
+  #endif /* PLATFORM_... */
+
+  if (state != COMPLETE)
+  {
+    #if   defined(PLATFORM_LINUX)
+      #ifdef HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC
+        if (state == NONE)
+        {
+          memCopyFast(sdApplicationId128.bytes,sizeof(sdApplicationId128.bytes),&SD_ID128_NULL,sizeof(SD_ID128_NULL));
+          if (applicationIdData != NULL)
+          {
+            memCopyFast(sdApplicationId128.bytes,sizeof(sdApplicationId128.bytes),applicationIdData,applicationIdDataLength);
+          }
+          if (sd_id128_get_machine_app_specific(sdApplicationId128,&sdId128) == 0)
+          {
+            memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,sdId128.bytes,sizeof(sdId128));
+            state = COMPLETE;
+          }
+        }
+      #endif
+
+      #ifdef HAVE_SD_ID128_GET_MACHINE
+        if (state == NONE)
+        {
+          if (sd_id128_get_machine(&sdId128) == 0)
+          {
+            memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,sdId128.bytes,sizeof(sd_id128_t));
+            state = BASE;
+          }
+        }
+      #endif
+
+      if (state == NONE)
+      {
+        // try to read /var/lib/dbus/machine-id
+        handle = open("/var/lib/dbus/machine-id",O_RDONLY);
+        if (handle != -1)
+        {
+          if (read(handle,buffer,2*16) == (2*16))
+          {
+            for (i = 0; i < MISC_MACHINE_ID_LENGTH; i++)
+            {
+              s[0] = buffer[2*i+0];
+              s[1] = buffer[2*i+1];
+              s[2] = '\0';
+              machineId[i] = strtol(s,NULL,16);
+            }
+            state = BASE;
+          }
+          close(handle);
+        }
+      }
+
+      #ifdef HAVE_UUID_PARSE
+        if (state == NONE)
+        {
+          // try to read /sys/class/dmi/id/product_uuid
+          handle = open("/sys/class/dmi/id/product_uuid",O_RDONLY);
+          if (handle != -1)
+          {
+            if (read(handle,buffer,UUID_STR_LEN) == UUID_STR_LEN)
+            {
+              buffer[UUID_STR_LEN-1] = NUL;
+              if (uuid_parse(buffer,uuid) == 0)
+              {
+                memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,uuid,sizeof(uuid_t));
+              }
+              state = BASE;
+            }
+            close(handle);
+          }
+        }
+      #endif
+
+      // integrate application id
+      if (state != COMPLETE)
+      {
+        if (applicationIdData != NULL)
+        {
+          for (i = 0; i < MISC_MACHINE_ID_LENGTH; i++)
+          {
+            machineId[i] = machineId[i] ^ applicationIdData[i];
+          }
+        }
+        state = COMPLETE;
+      }
+    #elif defined(PLATFORM_WINDOWS)
+      if (state != COMPLETE)
+      {
+        value = String_new();
+        if (Misc_getRegistryString(value,HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Cryptography","MachineGuid"))
+        {
+          if (UuidFromString(String_cString(value),&uuid) == RPC_S_OK)
+          {
+            memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,&uuid,sizeof(uuid));
+            state = COMPLETE;
+          }
+        }
+        String_delete(value);
+      }
+    #endif /* PLATFORM_... */
+  }
+}
 
 /***********************************************************************\
 * Name   : readProcessIO
@@ -1523,6 +1660,22 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
   return buffer;
 }
 
+void Misc_setApplicationId(const byte data[], uint length)
+{
+  initMachineId(data,length);
+}
+
+void Misc_setApplicationIdCString(const char *data)
+{
+  initMachineId((const byte*)data,stringLength(data));
+}
+
+MachineId Misc_getMachineId(void)
+{
+  initMachineId(NULL,0);
+  return machineId;
+}
+
 /*---------------------------------------------------------------------*/
 
 String Misc_expandMacros(String           string,
@@ -2711,6 +2864,40 @@ uint Misc_hexDecodeLengthCString(const char *s)
 
   return strlen(s)/2;
 }
+
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+bool Misc_getRegistryString(String string, HKEY parentKey, const char *subKey, const char *name)
+{
+  #define BUFFER_SIZE 256
+
+  HKEY  hKey;
+  DWORD dwType;
+  TCHAR buffer[BUFFER_SIZE];
+  DWORD bufferLength;
+  bool  result;
+
+  if (RegOpenKeyEx(parentKey,subKey,0,KEY_READ|KEY_WOW64_64KEY,&hKey) == ERROR_SUCCESS)
+  {
+    dwType       = REG_SZ;
+    bufferLength = BUFFER_SIZE;
+    if (RegQueryValueEx(hKey,name,NULL, &dwType, (BYTE*)buffer, &bufferLength) == ERROR_SUCCESS)
+                {
+      String_setBuffer(string,buffer,bufferLength);
+      result = TRUE;
+    }
+    else
+    {
+      result = FALSE;
+    }
+    RegCloseKey(hKey);
+  }
+
+  return result;
+
+  #undef BUFFER_SIZE
+}
+#endif /* PLATFORM_... */
 
 #ifdef __cplusplus
   }
