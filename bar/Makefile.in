@@ -53,16 +53,16 @@ INSTALL_TLS_DIR        = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-CERTTOOL     = @CERTTOOL@
-OPENSSL      = @OPENSSL@
-KEYTOOL      = @KEYTOOL@
+CERTTOOL         = @CERTTOOL@
+OPENSSL          = @OPENSSL@
+KEYTOOL          = @KEYTOOL@
 
 DOCKER_RUN_FLAGS = run -i -t
 
-TXT2MAN      = @TXT2MAN@
-UNOCONV      = @UNOCONV@
+TXT2MAN          = @TXT2MAN@
+UNOCONV          = @UNOCONV@
 
-SVNVERSION   = svnversion
+SVNVERSION       = svnversion
 
 #---------------------------------- commands----------------------------------
 
@@ -185,16 +185,14 @@ KEY_FILES            = bar-key.pem \
                        bar-server-key.pem \
                        bar-server-cert.pem \
 
-SCRIPTS              = $(addprefix $(SOURCE_DIR)/,\
-                         scripts/barserver-SuSE \
-                         scripts/barserver-Fedora \
-                         scripts/barserver-RedHat \
-                         scripts/barserver-Mandrake \
-                         scripts/barserver-debian \
-                         scripts/barserver-CentOS \
-                         scripts/barserver.service \
-                         scripts/logrotate.conf \
-                        )
+SCRIPTS              = scripts/barserver-SuSE \
+                       scripts/barserver-Fedora \
+                       scripts/barserver-RedHat \
+                       scripts/barserver-Mandrake \
+                       scripts/barserver-debian \
+                       scripts/barserver-CentOS \
+                       scripts/barserver.service \
+                       scripts/logrotate.conf \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -459,20 +457,17 @@ install_barcontrol:
 # install script files
 install_scripts: \
   $(SCRIPTS)
-	$(INSTALL) -d "$(DESTDIR)/var/tmp/bar/etc/init.d"; \
-	$(INSTALL) -t "$(DESTDIR)/var/tmp/bar/etc/init.d" \
-          $(addprefix $(SOURCE_DIR)/, \
-            scripts/barserver-SuSE \
-            scripts/barserver-Fedora \
-            scripts/barserver-RedHat \
-            scripts/barserver-CentOS \
-            scripts/barserver-Mandrake \
-            scripts/barserver-debian \
-           )
-	$(INSTALL) -d "$(DESTDIR)/var/tmp/bar/lib/systemd/system"; \
-	$(INSTALL) -m 644 $(SOURCE_DIR)/scripts/barserver.service "$(DESTDIR)/var/tmp/bar/lib/systemd/system/barserver.service"; \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
-	$(INSTALL) -m 644 $(SOURCE_DIR)/scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
+	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
+	$(INSTALL) -d "$(DESTDIR)/var/lib/bar/install"; \
+	$(INSTALL) -t "$(DESTDIR)/var/lib/bar/install" \
+          scripts/barserver-SuSE \
+          scripts/barserver-Fedora \
+          scripts/barserver-RedHat \
+          scripts/barserver-CentOS \
+          scripts/barserver-Mandrake \
+          scripts/barserver-debian \
+          scripts/barserver.service
 
 # install man-page
 install_man: \

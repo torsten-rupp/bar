@@ -1549,6 +1549,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
     ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
@@ -3964,6 +3965,7 @@ AC_CHECK_HEADERS(\
                  execinfo.h \
                  grp.h \
                  icu.h \
+                 libiberty/demangle.h \
                  libintl.h \
                  link.h \
                  linux/fs.h \
@@ -3975,7 +3977,6 @@ AC_CHECK_HEADERS(\
                  poll.h \
                  regex.h \
                  stdbool.h \
-                 libiberty/demangle.h \
                  sys/inotify.h \
                  sys/ioctl.h \
                  sys/mount.h \
@@ -3989,6 +3990,7 @@ AC_CHECK_HEADERS(\
                  sys/vfs.h \
                  sys/wait.h \
                  sys/xattr.h \
+                 systemd/sd-id128.h \
                  termios.h \
                  unicode/utypes.h \
                  unicode/uregex.h \
@@ -4208,6 +4210,7 @@ AC_CHECK_FUNCTION(iso9660_ifs_stat_translate,AC_DEFINE(HAVE_ISO9660_IFS_STAT_TRA
 AC_CHECK_FUNCTION(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_READ,     1,[iso9660_iso_seek_read() available]))
 
 AC_CHECK_FUNCTION(uuid_generate,     AC_DEFINE(HAVE_UUID_GENERATE,     1,[uuid_generate() available]))
+AC_CHECK_FUNCTION(uuid_parse,        AC_DEFINE(HAVE_UUID_PARSE,        1,[uuid_parse() available]))
 AC_CHECK_FUNCTION(uuid_unparse_lower,AC_DEFINE(HAVE_UUID_UNPARSE_LOWER,1,[uuid_unparse_lower() available]))
 
 AC_CHECK_FUNCTION(sysconf,          AC_DEFINE(HAVE_SYSCONF,          1,[sysconf() available]))
@@ -4221,6 +4224,9 @@ AC_CHECK_FUNCTION(freelocale,    AC_DEFINE(HAVE_FREELOCALE,    1,[freelocale() a
 AC_CHECK_FUNCTION(textdomain,    AC_DEFINE(HAVE_TEXTDOMAIN,    1,[textdomain() available]))
 AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain() available]))
 AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
+
+AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
+AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
 
 AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]))
 
