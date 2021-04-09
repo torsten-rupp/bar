@@ -63,7 +63,6 @@ creating automated backups in the background.
   --enable-extern-check \
   --disable-crashdump \
   --disable-epm \
-  --enable-extern-check \
   %ADDITIONAL_CONFIGURE_FLAGS
 %{__make} OPTFLAGS="%{optflags}" -C bar %{?_smp_mflags} all
 %{__make} OPTFLAGS="%{optflags}" all
@@ -83,57 +82,89 @@ if test %{testsFlag} -eq 1; then
 fi
 
 %pre
+# try to stop BAR server service
+if test -d %{_prefix}/lib/systemd; then
+  type chkconfig 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    chkconfig barserver off 1>/dev/null 2>/dev/null || true
+  fi
+  type systemctl 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    systemctl stop barserver 1>/dev/null 2>/dev/null || true
+  fi
+  type service 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    service barserver stop 1>/dev/null 2>/dev/null || true
+  fi
+else
+  %{_sysconfdir}/init.d/barserver stop 1>/dev/null 2>/dev/null || true
+fi
 
 %post
+
+# Note: use %posttrans instead of %post as workaround for wrong %preun of old package
+%posttrans
 chmod 700 %{_sysconfdir}/bar
 chmod 600 %{_sysconfdir}/bar/bar.cfg
 
+# install BAR service
 if test -d /lib/systemd; then
   if test ! -f /lib/systemd/system/barserver.service; then
     install -d /lib/systemd/system
-    install -m 644 %{_tmppath}/bar/lib/systemd/system/barserver.service /lib/systemd/system
+    install -m 644 /var/lib/bar/install/barserver.service /lib/systemd/system
   fi
 fi
-if test ! -f %{_sysconfdir}/init.d/barserver; then
-  install -d %{_sysconfdir}/init.d;
-  if   test -f %{_sysconfdir}/SuSE-release -o -d %{_sysconfdir}/SuSEconfig; then
-    install -m 755 %{_tmppath}/bar/etc/init.d/barserver-SuSE %{_sysconfdir}/init.d/barserver
-  elif test -f %{_sysconfdir}/fedora-release; then \
-    install -m 755 %{_tmppath}/bar/etc/init.d/barserver-Fedora %{_sysconfdir}/init.d/barserver
-  elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'Red Hat' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
-    install -m 755 %{_tmppath}/bar/etc/init.d/barserver-RedHat %{_sysconfdir}/init.d/barserver
-  elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'CentOS' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
-    install -m 755 %{_tmppath}/bar/etc/init.d/barserver-CentOS %{_sysconfdir}/init.d/barserver
-  elif test -f %{_sysconfdir}/lsb-release; then
-    install -m 755 %{_tmppath}/bar/etc/init.d/barserver-debian %{_sysconfdir}/init.d/barserver
-  elif test -f %{_sysconfdir}/debian_release; then
-    install -m 755 %{_tmppath}/bar/etc/init.d/barserver-debian %{_sysconfdir}/init.d/barserver
-  else \
-    install -m 755 %{_tmppath}/bar/etc/init.d/barserver-debian %{_sysconfdir}/init.d/barserver
-  fi; \
+
+# install init.d script
+install -d %{_sysconfdir}/init.d;
+if   test -f %{_sysconfdir}/SuSE-release -o -d %{_sysconfdir}/SuSEconfig; then
+  install -m 755 /var/lib/bar/install/barserver-SuSE %{_sysconfdir}/init.d/barserver
+elif test -f %{_sysconfdir}/fedora-release; then
+  install -m 755 /var/lib/bar/install/barserver-Fedora %{_sysconfdir}/init.d/barserver
+elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'Red Hat' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
+  install -m 755 /var/lib/bar/install/barserver-RedHat %{_sysconfdir}/init.d/barserver
+elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'CentOS' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
+  install -m 755 /var/lib/bar/install/barserver-CentOS %{_sysconfdir}/init.d/barserver
+elif test -f %{_sysconfdir}/lsb-release; then
+  install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
+elif test -f %{_sysconfdir}/debian_release; then
+  install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
+else
+  install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
 fi
+
+# info to start BAR server service
 if test -d /lib/systemd; then
   if test -n "`ps -p1|grep systemd`"; then
-    service barserver start 1>/dev/null
+    systemctl daemon-reload
+    systemctl enable barserver
+    echo "Please start BAR server with 'service barserver start'"
   else
-    echo >&2 "Warning: systemd not available or not started with systemd - barserver daemon not started"
+    echo >&2 "Warning: systemd not available or not started with systemd"
   fi
 else
-  %{_sysconfdir}/init.d/barserver start 1>/dev/null
-fi
+  echo "Please start BAR server with '%{_sysconfdir}/init.d/barserver start'"
+ fi
+
+# clean-up
 rm -rf %{_tmppath}/bar
 
 %preun
+# stop BAR server service
 if test -d %{_prefix}/lib/systemd; then
   type chkconfig 1>/dev/null 2>/dev/null
   if test $? -eq 0; then
     chkconfig barserver off
-    chkconfig --del barserver
+    if test $1 -gt 1; then
+      chkconfig --del barserver
+    fi
   fi
   type systemctl 1>/dev/null 2>/dev/null
   if test $? -eq 0; then
     systemctl stop barserver
-    systemctl disable barserver
+    if test $1 -gt 1; then
+      systemctl disable barserver
+    fi
   fi
   type service 1>/dev/null 2>/dev/null
   if test $? -eq 0; then
@@ -143,12 +174,20 @@ else
   %{_sysconfdir}/init.d/barserver stop 1>/dev/null
 fi
 
-if   test -d /lib/systemd/system; then
-  rm -f /lib/systemd/system/barserver.service
-fi
-rm -f /etc/init.d/barserver
-
 %postun
+# remove BAR service/init.d script on uninstall
+if test $1 -lt 1; then
+  if test -d /lib/systemd/system; then
+    if test -f /lib/systemd/system/barserver.service; then
+      mv --backup=numbered /lib/systemd/system/barserver.service /lib/systemd/system/barserver.service.rpmsave
+    fi
+    rm -f /lib/systemd/system/barserver.service
+  fi
+  if test -f /etc/init.d/barserver; then
+    mv --backup=numbered /etc/init.d/barserver /etc/init.d/barserver.rpmsave
+  fi
+  rm -f /etc/init.d/barserver
+fi
 
 %files
 
@@ -164,9 +203,6 @@ rm -f /etc/init.d/barserver
 %{_bindir}/bar-keygen
 %{_bindir}/bar-sqlite3
 
-%config(missingok) %{_tmppath}/bar/etc/init.d/barserver-*
-%config(missingok) %{_tmppath}/bar/lib/systemd/system/barserver.service
-
 %dir %{_sysconfdir}/bar
 %dir %attr(0700,root,root) %{_sysconfdir}/bar/jobs
 
@@ -177,6 +213,9 @@ rm -f /etc/init.d/barserver
 %lang(jp) %dir %{_datadir}/locale/jp/LC_MESSAGES
 %lang(de) %{_datadir}/locale/de/LC_MESSAGES/bar.mo
 %lang(jp) %{_datadir}/locale/jp/LC_MESSAGES/bar.mo
+
+# BAR service/init.d scripts
+/var/lib/bar/install/*
 
 %doc ChangeLog doc/README
 %doc doc/backup-archiver.pdf
