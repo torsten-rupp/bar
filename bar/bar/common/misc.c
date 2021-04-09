@@ -104,7 +104,9 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
     int    handle;
     char   buffer[64];
     char   s[2+1];
-    uuid_t uuid;
+    #ifdef HAVE_UUID_PARSE
+      uuid_t uuid;
+    #endif
   #elif defined(PLATFORM_WINDOWS)
     String value;
     UUID   uuid;
