@@ -3216,7 +3216,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
     // wait for disconnect, data, or result
     events = Misc_waitHandle(Network_getSocket(&connectorInfo->io.network.socketHandle),
                              &signalMask,
-                             HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID,
+                             HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_HANGUP|HANDLE_EVENT_INVALID,
                              TIMEOUT
                             );
     if (events != 0)
@@ -3258,9 +3258,9 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
           setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
         }
       }
-      else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID)) != 0)
+      else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_HANGUP|HANDLE_EVENT_INVALID)) != 0)
       {
-        // error/invalid -> shut down
+        // error/hang-up/invalid -> shut down
         setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
       }
       #ifndef NDEBUG
