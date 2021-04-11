@@ -4492,6 +4492,11 @@ NULL,//                                                        scheduleTitle,
     // get end date/time
     executeEndDateTime = Misc_getCurrentDateTime();
 
+    // store final compress ratio: 100%-totalSum/totalCompressedSum
+    jobNode->statusInfo.compressionRatio = (!storageFlags.dryRun && (jobNode->statusInfo.total.size > 0))
+                                             ? 100.0-(jobNode->statusInfo.storage.totalSize*100.0)/jobNode->statusInfo.total.size
+                                             : 0.0;
+
     // store last executed date/time, last error message
     jobNode->runningInfo.lastExecutedDateTime = executeEndDateTime;
     String_setCString(jobNode->runningInfo.lastErrorMessage,Error_getText(jobNode->runningInfo.error));
