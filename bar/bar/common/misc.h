@@ -86,18 +86,21 @@ typedef enum
   #define HANDLE_EVENT_INPUT   POLLIN
   #define HANDLE_EVENT_OUTPUT  POLLOUT
   #define HANDLE_EVENT_ERROR   POLLERR
+  #define HANDLE_EVENT_HANGUP  POLLHUP
   #define HANDLE_EVENT_INVALID POLLNVAL
 #elif defined(PLATFORM_WINDOWS)
   #ifdef HAVE_WSAPOLL
     #define HANDLE_EVENT_INPUT   POLLIN
     #define HANDLE_EVENT_OUTPUT  POLLOUT
     #define HANDLE_EVENT_ERROR   POLLHUP  // POLLERR: not supported
+    #define HANDLE_EVENT_HANGUP  POLLHUP
     #define HANDLE_EVENT_INVALID 0  // POLLNVAL: not supported
   #else /* not HAVE_WSAPOLL */
     #define HANDLE_EVENT_INPUT   (1 << 0)
     #define HANDLE_EVENT_OUTPUT  (1 << 1)
     #define HANDLE_EVENT_ERROR   (1 << 2)
-    #define HANDLE_EVENT_INVALID (1 << 3)
+    #define HANDLE_EVENT_HANGUP  (1 << 3)
+    #define HANDLE_EVENT_INVALID (1 << 4)
   #endif /* HAVE_WSAPOLL */
 #endif /* PLATFORM_... */
 #define HANDLE_EVENT_ANY (  HANDLE_EVENT_INPUT \
