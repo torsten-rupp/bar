@@ -4002,7 +4002,12 @@ StringNode *ConfigValue_deleteEntries(StringList *stringList,
     }
 
     // parse and match
-    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,STRING_NO_ASSIGN,string,NULL))
+    if      (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*end\\s*]",NULL,NULL,NULL))
+    {
+      // lost [end] -> delete
+      stringNode = StringList_remove(stringList,stringNode);
+    }
+    else if (String_matchCString(line,STRING_BEGIN,"^\\s*\\[\\s*(\\S+).*\\]",NULL,STRING_NO_ASSIGN,string,NULL))
     {
       // keep line: begin section
       stringNode = stringNode->next;
