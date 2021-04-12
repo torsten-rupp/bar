@@ -6,7 +6,7 @@
 #export DH_VERBOSE=1
 
 # This is the debhelper compatibility version to use.
-export DH_COMPAT=4
+export DH_COMPAT=5
 
 CFLAGS = -g
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
@@ -34,15 +34,14 @@ build-stamp:
           --infodir=\$${prefix}/share/info \
           CFLAGS="$(CFLAGS)" \
           LDFLAGS="-Wl,-z,defs" \
-          --enable-extern-check \
+	        --enable-extern-check \
           --disable-crashdump \
           --disable-epm \
-          --enable-extern-check \
           $(ADDITIONAL_CONFIGURE_FLAGS)
+	$(MAKE) -C bar -j8 all
 	$(MAKE) all
 	#$(MAKE) test1-debug test2-debug test3-debug test4-debug test5-debug COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7"
 	# --- end custom part for compiling
-
 	touch build-stamp
 
 build-arch:

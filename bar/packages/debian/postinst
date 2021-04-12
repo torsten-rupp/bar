@@ -6,11 +6,31 @@ chmod 600 /etc/bar/bar.cfg
 if test -d /lib/systemd; then
   if test ! -f /lib/systemd/system/barserver.service; then
     install -d /lib/systemd/system
-    install -m 644 /var/tmp/bar/lib/systemd/system/barserver.service /lib/systemd/system
+    install -m 644 /var/lib/bar/install/barserver.service /lib/systemd/system
   fi
 fi
-install -m 755 /var/tmp/bar/etc/init.d/barserver-debian /etc/init.d/barserver
+install -m 755 /var/lib/bar/install/barserver-debian /etc/init.d/barserver
 
+# info to start BAR server service
+if test -d /lib/systemd; then
+  if test -n "`ps -p1|grep systemd`"; then
+    systemctl daemon-reload
+    systemctl enable barserver
+    echo "Please start BAR server with:"
+    echo "sudo service barserver start"
+  else
+    echo >&2 "Warning: systemd not available or not started with systemd"
+  fi
+else
+  echo "Please start BAR server with"
+  echo "sudo %{_sysconfdir}/init.d/barserver start"
+ fi
+
+# clean-up
+rm -rf %{_tmppath}/bar
+
+#TODO remove
+if false; then
 type chkconfig 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
   chkconfig --add barserver
@@ -19,9 +39,14 @@ fi
 type systemctl 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
   systemctl enable barserver
-  systemctl start barserver
+  echo "Please start BAR server with:"
+  echo "sudo systemctl start barserver"
+else
+  echo >&2 "Warning: systemd not available or not started with systemd"
 fi
 type service 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
-  service barserver start
+  echo "Please start BAR server with:"
+  echo "sudo service barserver start"
+fi
 fi

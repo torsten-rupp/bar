@@ -1,0 +1,17 @@
+# stop BAR server service
+if test -d /lib/systemd; then
+  type chkconfig 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    chkconfig barserver off 1>/dev/null 2>/dev/null || true
+  fi
+  type systemctl 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    systemctl stop barserver 1>/dev/null 2>/dev/null || true
+  fi
+  type service 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    service barserver stop 1>/dev/null 2>/dev/null || true
+  fi
+else
+  /etc/init.d/barserver stop 1>/dev/null
+fi

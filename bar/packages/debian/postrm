@@ -1,0 +1,31 @@
+# remove BAR server service
+if test -d /lib/systemd; then
+  type chkconfig 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    chkconfig barserver off 1>/dev/null
+    chkconfig --del barserver 1>/dev/null
+  fi
+  type systemctl 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    systemctl stop barserver 1>/dev/null
+    systemctl disable barserver 1>/dev/null
+  fi
+  type service 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    service barserver stop 1>/dev/null
+  fi
+else
+  /etc/init.d/barserver stop 1>/dev/null
+fi
+
+# remove BAR service/init.d script on uninstall
+if test -d /lib/systemd/system; then
+  if test -f /lib/systemd/system/barserver.service; then
+    mv --backup=numbered /lib/systemd/system/barserver.service /lib/systemd/system/barserver.service.rpmsave
+  fi
+  rm -f /lib/systemd/system/barserver.service
+fi
+if test -f /etc/init.d/barserver; then
+  mv --backup=numbered /etc/init.d/barserver /etc/init.d/barserver.rpmsave
+fi
+rm -f /etc/init.d/barserver

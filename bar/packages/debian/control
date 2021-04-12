@@ -24,7 +24,7 @@ Description: Archiver program for compressed and encrypted archives.
  * support for several file systems on disk images (ext, fat,
    reiserfs)
  * can split archive files into pieces
- * compress of data with zlib, bzip2 or lzma algorithms
+ * compress of data with zlib, bzip2, lzo, lzma, zstd algorithms
  * encryption with gcrypt algrithms (AES,TWOFISH etc.)
  * asymmetric encryption with RSA
  * direct copy of archives to remote computer via FTP or

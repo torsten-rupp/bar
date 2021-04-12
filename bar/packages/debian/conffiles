@@ -1,1 +1,2 @@
 /etc/bar/bar.cfg
+/etc/logrotate.d/bar
