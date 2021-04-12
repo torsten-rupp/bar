@@ -10504,15 +10504,17 @@ TODO: implement delete entity
       {
         assert(event.text != null);
 
-        for (JobData jobData : (JobData[])Widgets.getOptionMenuItems(widgetJobList,JobData.class))
+        if (!widgetJobList.isDisposed())
         {
-          if (jobData.uuid.equals(event.text))
+          for (JobData jobData : (JobData[])Widgets.getOptionMenuItems(widgetJobList,JobData.class))
           {
-            setSelectedJob(jobData);
-            break;
+            if (jobData.uuid.equals(event.text))
+            {
+              setSelectedJob(jobData);
+              break;
+            }
           }
         }
-
       }
     });
 
