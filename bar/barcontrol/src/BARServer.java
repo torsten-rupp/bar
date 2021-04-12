@@ -978,7 +978,7 @@ class ReadThread extends Thread
           {
             public void run()
             {
-              throw new ConnectionError(BARControl.tr("Lost connection to server ''{0}''",serverName));
+              throw new ConnectionError(BARControl.tr("Lost connection to server ''{0}''.",serverName));
             }
           });
         }
