@@ -51,6 +51,7 @@ import java.util.regex.PatternSyntaxException;
 import java.awt.Desktop;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
+import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
 import org.eclipse.swt.dnd.DragSourceEvent;
@@ -1776,21 +1777,22 @@ public class BARControl
   };
 
   // --------------------------- variables --------------------------------
-  private static I18n     i18n;
-  private static Display  display;
-  private static Shell    shell;
-  private static Cursor   waitCursor;
-  private static int      waitCursorCount = 0;
+  private static I18n      i18n;
+  private static Display   display;
+  private static Shell     shell;
+  private static Clipboard clipboard;
+  private static Cursor    waitCursor;
+  private static int       waitCursorCount = 0;
 
-  private LoginData       loginData;
-  private Menu            serverMenu;
-  private MenuItem        serverMenuLastSelectedItem = null;
-  private MenuItem        masterMenuItem;
-  private TabFolder       tabFolder;
-  private TabStatus       tabStatus;
-  private TabJobs         tabJobs;
-  private TabRestore      tabRestore;
-  private boolean         quitFlag = false;
+  private LoginData        loginData;
+  private Menu             serverMenu;
+  private MenuItem         serverMenuLastSelectedItem = null;
+  private MenuItem         masterMenuItem;
+  private TabFolder        tabFolder;
+  private TabStatus        tabStatus;
+  private TabJobs          tabJobs;
+  private TabRestore       tabRestore;
+  private boolean          quitFlag = false;
 
   // ------------------------ native functions ----------------------------
 
@@ -2652,6 +2654,79 @@ if (false) {
     classWatchDogThread.start();
   }
 
+  /** show about dialog
+   * @param shell parent shell
+   */
+  private void showAbout(Shell shell)
+  {
+    final Image IMAGE_INFO      = Widgets.loadImage(shell.getDisplay(),"info.png");
+    final Image IMAGE_CLIPBOARD = Widgets.loadImage(shell.getDisplay(),"clipboard.png");
+
+    Composite composite;
+    Label     label;
+    Button    button;
+
+    if (!shell.isDisposed())
+    {
+      final Shell dialog = Dialogs.openModal(shell,BARControl.tr("About"),300,70);
+      dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
+
+      // message
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
+      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      {
+        label = new Label(composite,SWT.LEFT);
+        label.setImage(IMAGE_INFO);
+        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+
+        label = new Label(composite,SWT.LEFT|SWT.WRAP);
+        label.setText("BAR control "+Config.VERSION+".\n"+
+                      "\n"+
+                      BARControl.tr("Written by Torsten Rupp")+"\n"
+                     );
+        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NS|TableLayoutData.W,0,0,4));
+
+        button = new Button(composite,SWT.CENTER);
+        button.setToolTipText(BARControl.tr("Copy version info to clipboard."));
+        button.setImage(IMAGE_CLIPBOARD);
+        button.setLayoutData(new TableLayoutData(0,2,TableLayoutData.NE));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Widgets.setClipboard(clipboard,"BAR version "+Config.VERSION);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
+
+      // buttons
+      composite = new Composite(dialog,SWT.NONE);
+      composite.setLayout(new TableLayout(0.0,1.0));
+      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      {
+        button = new Button(composite,SWT.CENTER);
+        button.setText(BARControl.tr("Close"));
+        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Dialogs.close(dialog);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
+
+      Dialogs.run(dialog);
+    }
+  }
+
   /** create main window
    */
   private void createWindow()
@@ -2660,6 +2735,9 @@ if (false) {
     shell = new Shell(display);
     shell.setText("BAR control");
     shell.setLayout(new TableLayout(1.0,1.0));
+
+    // create clipboard
+    clipboard = new Clipboard(display);
 
     // get cursors
     waitCursor = new Cursor(display,SWT.CURSOR_WAIT);
@@ -3146,12 +3224,7 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Dialogs.info(shell,
-                       BARControl.tr("About"),
-                       "BAR control "+Config.VERSION+".\n"+
-                       "\n"+
-                       BARControl.tr("Written by Torsten Rupp")+"\n"
-                      );
+          showAbout(shell);
         }
       });
     }
