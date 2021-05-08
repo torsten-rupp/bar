@@ -3062,8 +3062,6 @@ LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sec
       {
         ServerNode *serverNode = (ServerNode*)List_first((List*)data);
 
-        assert(serverNode != NULL);
-
         while ((serverNode != NULL) && (serverNode->type != serverType))
         {
           serverNode = serverNode->next;
