@@ -5456,7 +5456,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 {
                   if (combo.getItem(i).equals(text))
                   {
-                    dataArray.set(i,data);
+                    combo.setItem(i,text);
                     updatedFlag = true;
                     break;
                   }
