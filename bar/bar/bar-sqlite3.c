@@ -212,6 +212,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --clean                                 - clean index database\n");
   printf("          --clean-orphaned                        - clean orphaned in index database\n");
   printf("          --clean-duplicates                      - clean duplicates in index database\n");
+  printf("          --purge                                 - purge deleted storages\n");
   printf("          --vacuum [<new file name>]              - collect and free unused file space\n");
   printf("          -s|--storages [<uuid>]                  - print storages\n");
   printf("          -e|--entries [<uuid>]                   - print entries\n");
@@ -7516,6 +7517,7 @@ else if (stringEquals(argv[i],"--xxx"))
   }
   if (error != ERROR_NONE)
   {
+    printError("%s",Error_getText(error));
     closeDatabase(&databaseHandle);
     Array_done(&storageIds);
     Array_done(&entityIds);
@@ -7561,7 +7563,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && String_isEmpty(command)
           && !pipeFlag
           && !inputAvailable()
-&& (xxxId==DATABASE_ID_NONE)
+//&& (xxxId==DATABASE_ID_NONE)
          )
      )
   {
@@ -7680,7 +7682,6 @@ else if (stringEquals(argv[i],"--xxx"))
   // purge deleted storages
   if (purgeDeletedFlag)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     purgeDeletedStorages(&databaseHandle);
   }
 
