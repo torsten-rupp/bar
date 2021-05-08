@@ -241,16 +241,16 @@ typedef struct
 
 /* example
 
-CONFIG_VALUE_INTEGER        (<name>,<variable>,<offset>|-1,<min>,<max>,<units>                                  )
-CONFIG_VALUE_INTEGER64      (<name>,<variable>,<offset>|-1,<min>,<max>,<units>                                  )
-CONFIG_VALUE_DOUBLE         (<name>,<variable>,<offset>|-1,                                                     )
-CONFIG_VALUE_BOOLEAN        (<name>,<variable>,<offset>|-1,                                                     )
-CONFIG_VALUE_BOOLEAN_YESNO  (<name>,<variable>,<offset>|-1,                                                     )
-CONFIG_VALUE_ENUM           (<name>,<variable>,<offset>|-1,<value>                                              )
-CONFIG_VALUE_SELECT         (<name>,<variable>,<offset>|-1,<select>                                             )
-CONFIG_VALUE_SET            (<name>,<variable>,<offset>|-1,<set>                                                )
-CONFIG_VALUE_CSTRING        (<name>,<variable>,<offset>|-1,                                                     )
-CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1,                                                     )
+CONFIG_VALUE_INTEGER        (<name>,<variable>,<offset>|-1,<min>,<max>,<units>,<templateText>                   )
+CONFIG_VALUE_INTEGER64      (<name>,<variable>,<offset>|-1,<min>,<max>,<units>,<templateText>                   )
+CONFIG_VALUE_DOUBLE         (<name>,<variable>,<offset>|-1,,<templateText>                                      )
+CONFIG_VALUE_BOOLEAN        (<name>,<variable>,<offset>|-1,,<templateText>                                      )
+CONFIG_VALUE_BOOLEAN_YESNO  (<name>,<variable>,<offset>|-1,,<templateText>                                      )
+CONFIG_VALUE_ENUM           (<name>,<variable>,<offset>|-1,<value>,<templateText>                               )
+CONFIG_VALUE_SELECT         (<name>,<variable>,<offset>|-1,<select> ,<templateText>                             )
+CONFIG_VALUE_SET            (<name>,<variable>,<offset>|-1,<set>,<templateText>                                 )
+CONFIG_VALUE_CSTRING        (<name>,<variable>,<offset>|-1,,<templateText>                                      )
+CONFIG_VALUE_STRING         (<name>,<variable>,<offset>|-1, ,<templateText>                                     )
 CONFIG_VALUE_SPECIAL        (<name>,<function>,<offset>|-1,<parse>,<formatInit>,<formatDone>,<format>,<userData>)
 CONFIG_VALUE_DEPRECATED     (<name>,<function>,<offset>|-1,<parse>,<userData>,<newName>,warningFlag>            )
 
@@ -274,27 +274,27 @@ const ConfigValueSelect CONFIG_VALUE_SELECT_TYPES[] = CONFIG_VALUE_SELECT_ARRAY
 
 const ConfigValue CONFIG_VALUES[] =
 {
-  CONFIG_VALUE_INTEGER      ("integer", &intValue,     offsetof(X,a),0,0,123,NULL,                      ),
-  CONFIG_VALUE_INTEGER      ("unit",    &intValue,     NULL,-1,      0,0,123,COMMAND_LINE_UNITS         ),
+  CONFIG_VALUE_INTEGER      ("integer", &intValue,     offsetof(X,a),0,0,123,NULL,NULL                  ),
+  CONFIG_VALUE_INTEGER      ("unit",    &intValue,     NULL,-1,      0,0,123,COMMAND_LINE_UNITS,NULL    ),
 
-  CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,                      ),
+  CONFIG_VALUE_DOUBLE       ("double",  &doubleValue,  NULL,-1,      0.0,-2.0,4.0,NULL                  ),
 
-  CONFIG_VALUE_BOOLEAN      ("bool",    &boolValue,    NULL,-1,      FALSE,                             ),
-  CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,                             ),
+  CONFIG_VALUE_BOOLEAN      ("bool",    &boolValue,    NULL,-1,      FALSE,NULL                         ),
+  CONFIG_VALUE_BOOLEAN_YESNO("bool",    &boolValue,    NULL,-1,      FALSE,NULL                         ),
 
-  CONFIG_VALUE_SELECT       ("type",    &selectValue,  NULL,-1,      CONFIG_VALUE_SELECT_TYPES          ),
+  CONFIG_VALUE_SELECT       ("type",    &selectValue,  NULL,-1,      CONFIG_VALUE_SELECT_TYPES,NULL     ),
 
-  CONFIG_VALUE_CSTRING      ("string",  &stringValue,  NULL,-1,      "",                                ),
-  CONFIG_VALUE_STRING       ("string",  &stringValue,  NULL,-1,      "",                                ),
+  CONFIG_VALUE_CSTRING      ("string",  &stringValue,  NULL,-1,      "",NULL                            ),
+  CONFIG_VALUE_STRING       ("string",  &stringValue,  NULL,-1,      "",NULL                            ),
 
-  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,                             ),
-  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,                             ),
-  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,                             ),
-  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,                             ),
+  CONFIG_VALUE_ENUM         ("e1",      &enumValue,    NULL,-1,      ENUM1,NULL                         ),
+  CONFIG_VALUE_ENUM         ("e2",      &enumValue,    NULL,-1,      ENUM2,NULL                         ),
+  CONFIG_VALUE_ENUM         ("e3",      &enumValue,    NULL,-1,      ENUM3,NULL                         ),
+  CONFIG_VALUE_ENUM         ("e4",      &enumValue,    NULL,-1,      ENUM4,NULL                         ),
 
-  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,                  ),
+  CONFIG_VALUE_SPECIAL      ("special", &specialValue, NULL,-1,      parseSpecial,123,NULL              ),
 
-  CONFIG_VALUE_BOOLEAN      ("flag",    &helpFlag,     NULL,-1,      FALSE,                             ),
+  CONFIG_VALUE_BOOLEAN      ("flag",    &helpFlag,     NULL,-1,      FALSE,NULL                         ),
 
   CONFIG_VALUE_DEPRECATED   ("foo",     &foo,               -1,      configValueParseFoo,NULL,"new",TRUE),
 
@@ -1346,7 +1346,7 @@ bool ConfigValue_parse(const ConfigValue    *configValue,
                        ConfigReportFunction warningReportFunction,
                        void                 *warningReportUserData,
                        void                 *variable,
-                       StringList           *commentList
+                       const StringList     *commentList
                       );
 
 /***********************************************************************\
@@ -1438,8 +1438,18 @@ bool ConfigValue_parseDeprecatedString(void       *userData,
                                        uint       errorMessageSize
                                       );
 
-void ConfigValue_addComments(ConfigValue *configValue,
-                             StringList  *commentList
+/***********************************************************************\
+* Name   : ConfigValue_setComments
+* Purpose: set config value comments
+* Input  : configValue - config value
+*          commentList - comment list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ConfigValue_setComments(const ConfigValue *configValue,
+                             const StringList  *commentList
                             );
 
 /***********************************************************************\
@@ -1612,6 +1622,30 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
 \***********************************************************************/
 
 void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData);
+
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : ConfigValue_debugDumpComments
+* Purpose: dump comments list
+* Input  : handle - output channel
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ConfigValue_debugDumpComments(FILE *handle);
+
+/***********************************************************************\
+* Name   : ConfigValue_debugPrintComments
+* Purpose: dump comments list to stdout
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ConfigValue_debugPrintComments(void);
+#endif /* not NDEBUG */
 
 #ifdef __GNUG__
 }

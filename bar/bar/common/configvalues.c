@@ -41,11 +41,10 @@ typedef struct CommentsNode
 typedef struct
 {
   LIST_HEADER(CommentsNode);
-
-//  Semaphore lock;
 } CommentsList;
 
 /***************************** Variables ******************************/
+// list with comments to values
 LOCAL CommentsList commentsList;
 
 /******************************* Macros *******************************/
@@ -396,7 +395,9 @@ LOCAL const ConfigValueUnit *findDoubleUnitByValue(const ConfigValueUnit *units,
   }
 }
 
-#pragma GCC pop_options
+#ifdef __GNUC__
+  #pragma GCC pop_options
+#endif /* __GNUC__ */
 
 /***********************************************************************\
 * Name   : findSelectByName
@@ -1673,6 +1674,43 @@ LOCAL bool processValue(const ConfigValue    *configValue,
 }
 
 /***********************************************************************\
+* Name   : setComments
+* Purpose: set comment lines
+* Input  : configValue - config value
+*          commentList - comment lines list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void setComments(const ConfigValue *configValue,
+                       const StringList  *commentList
+                      )
+{
+  CommentsNode     *commentsNode;
+  const StringNode *iteratorVariable;
+  ConstString      comment;
+
+  assert(configValue != NULL);
+
+  commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
+  if (commentsNode == NULL)
+  {
+    commentsNode = LIST_NEW_NODE(CommentsNode);
+
+    commentsNode->configValue = configValue;
+    StringList_init(&commentsNode->commentList);
+    List_append(&commentsList,commentsNode);
+  }
+
+  StringList_clear(&commentsNode->commentList);
+  STRINGLIST_ITERATE(commentList,iteratorVariable,comment)
+  {
+    StringList_append(&commentsNode->commentList,comment);
+  }
+}
+
+/***********************************************************************\
 * Name   : writeCommentLines
 * Purpose: write comment lines
 * Input  : fileHandle  - file handle
@@ -1828,7 +1866,6 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 
         // write value/template
 //TODO: compare with default
-        if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C#%s = %s",indent,' ',configValue->name,configValue->templateText);
         if (value != 0)
         {
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%s = %d%s",indent,' ',configValue->name,value,(unit != NULL) ? unit->name : "");
@@ -2278,6 +2315,9 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         // init variables
         line = String_new();
 
+        // write comments
+        if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
+
         // format init
         ConfigValue_formatInit(&configValueFormat,
                                configValue,
@@ -2289,10 +2329,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
         writtenFlag = FALSE;
         while (ConfigValue_format(&configValueFormat,line))
         {
-          // write
-          if (error == ERROR_NONE) error = writeCommentLines(fileHandle,indent,commentList);
           if (error == ERROR_NONE) error = File_printLine(fileHandle,"%*C%S",indent,' ',line);
-
           writtenFlag = TRUE;
         }
 
@@ -2413,7 +2450,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 
 /***********************************************************************\
 * Name   : writeConfigFile
-* Purpose: write config file valules
+* Purpose: write config file values
 * Input  : fileHandle                     - file handle
 *          indent                         - indention
 *          configValues                   - config values
@@ -2432,9 +2469,9 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                              const void        *variable
                             )
 {
-  Errors       error;
-  uint         index;
-  StringList   commentList;
+  Errors             error;
+  uint               index;
+  StringList         commentList;
   const CommentsNode *commentsNode;
 
   assert(fileHandle != NULL);
@@ -2611,15 +2648,25 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
 
         if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
         break;
+#define XXX1 "UUID"
+#define XXX2 "UUID"
       case CONFIG_VALUE_TYPE_COMMENT:
         if (!stringIsEmpty(configValues[index].comment.text))
         {
           StringList_appendFormat(&commentList,"%s",configValues[index].comment.text);
         }
+if (stringEquals(configValues[index].comment.text,XXX1)) {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+StringList_debugPrint(&commentList);
+}
         break;
       default:
 //fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List_count(&commentList));
 //File_printLine(fileHandle,"a %d %d",List_count(&commentList),(configValues[index].commentList!=0) ? List_count(configValues[index].commentList) : -1);
+if (stringEquals(configValues[index].name,XXX1) || stringEquals(configValues[index].name,XXX2)) {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+StringList_debugPrint(&commentList);
+}
         error = writeValue(fileHandle,
                            indent,
                            &configValues[index],
@@ -3025,14 +3072,13 @@ bool ConfigValue_parse(const ConfigValue    *configValue,
                        ConfigReportFunction warningReportFunction,
                        void                 *warningReportUserData,
                        void                 *variable,
-                       StringList           *commentList
+                       const StringList     *commentList
                       )
 {
-  CommentsNode *commentsNode;
-
   assert(configValue != NULL);
   assert(value != NULL);
 
+  // parse value
   if (!processValue(configValue,
                     sectionName,
                     value,
@@ -3046,20 +3092,10 @@ bool ConfigValue_parse(const ConfigValue    *configValue,
     return FALSE;
   }
 
+  // store comments
   if ((commentList != NULL) && !StringList_isEmpty(commentList))
   {
-    commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
-    if (commentsNode == NULL)
-    {
-      commentsNode = LIST_NEW_NODE(CommentsNode);
-
-      commentsNode->configValue = configValue;
-      StringList_init(&commentsNode->commentList);
-      List_append(&commentsList,commentsNode);
-    }
-
-    StringList_clear(&commentsNode->commentList);
-    StringList_move(&commentsNode->commentList,commentList);
+    setComments(configValue,commentList);
   }
 
   return TRUE;
@@ -3184,25 +3220,13 @@ bool ConfigValue_parseDeprecatedString(void *userData, void *variable, const cha
   return TRUE;
 }
 
-void ConfigValue_addComments(ConfigValue *configValue,
-                             StringList  *commentList
+void ConfigValue_setComments(const ConfigValue *configValue,
+                             const StringList  *commentList
                             )
 {
-  CommentsNode *commentsNode;
-
   assert(configValue != NULL);
 
-  commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
-  if (commentsNode == NULL)
-  {
-    commentsNode = LIST_NEW_NODE(CommentsNode);
-
-    commentsNode->configValue = configValue;
-    StringList_init(&commentsNode->commentList);
-    List_append(&commentsList,commentsNode);
-  }
-
-  StringList_move(&commentsNode->commentList,commentList);
+  setComments(configValue,commentList);
 }
 
 bool ConfigValue_getIntegerValue(int                   *value,
@@ -3958,6 +3982,10 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
   }
 }
 
+#ifdef __GNUC__
+  #pragma GCC pop_options
+#endif /* __GNUC__ */
+
 const char *ConfigValue_selectToString(const ConfigValueSelect selects[],
                                        uint                    value,
                                        const char              *defaultString
@@ -4239,7 +4267,8 @@ Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *c
   return ERROR_NONE;
 }
 
-Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList)
+// TODO: obsolete, remove
+Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const StringList *configLinesList)
 {
   Errors     error;
   FileHandle fileHandle;
@@ -4400,9 +4429,33 @@ void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectio
    return result;
 }
 
-#ifdef __GNUC__
-  #pragma GCC pop_options
-#endif /* __GNUC__ */
+#ifndef NDEBUG
+void ConfigValue_debugDumpComments(FILE *handle)
+{
+  const CommentsNode *commentsNode;
+  const StringNode   *stringNode;
+  ConstString        string;
+
+  LIST_ITERATE(&commentsList,commentsNode)
+  {
+    fprintf(handle,"DEBUG: comments '%s':\n",
+            commentsNode->configValue->name
+           );
+    STRINGLIST_ITERATE(&commentsNode->commentList,stringNode,string)
+    {
+      fprintf(handle,"  %s\n",
+              String_cString(string)
+             );
+    }
+  }
+}
+
+void ConfigValue_debugPrintComments(void)
+{
+  ConfigValue_debugDumpComments(stderr);
+}
+
+#endif /* not NDEBUG */
 
 #ifdef __GNUG__
 }
