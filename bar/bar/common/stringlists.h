@@ -93,7 +93,7 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
 \***********************************************************************/
 
 #define STRINGLIST_ITERATE(stringList,iteratorVariable,variable) \
-  for ((iteratorVariable) = (stringList)->head, variable = ((iteratorVariable) != NULL) ? (stringList)->head->string : NULL; \
+  for ((iteratorVariable) = (stringList)->head, variable = (((stringList)->head) != NULL) ? (stringList)->head->string : NULL; \
        (iteratorVariable) != NULL; \
        (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
       )
