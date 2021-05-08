@@ -6570,7 +6570,7 @@ Dprintf.dprintf("");
                 case 5:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED);                   storageEntityState = EntityStates.ANY;  break;
                 case 6:  jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.ERROR,IndexStates.UPDATE,IndexStates.UPDATE_REQUESTED); storageEntityState = EntityStates.ANY;  break;
                 case 7:  jobUUID = null; storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
-                case 8:  jobUUID = "";   storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.NONE; break;
+                case 8:  jobUUID = "";   storageIndexStateSet = INDEX_STATE_SET_ALL;                                                                  storageEntityState = EntityStates.ANY;  break;
                 default: jobUUID = null; storageIndexStateSet = new IndexStateSet(IndexStates.UNKNOWN);                                               storageEntityState = EntityStates.ANY;  break;
               }
               updateStorageTreeTableThread.triggerUpdateStorageState(jobUUID,storageIndexStateSet,storageEntityState);
