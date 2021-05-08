@@ -841,6 +841,7 @@ void Array_debugCheck(void)
   pthread_mutex_unlock(&debugArrayLock);
 }
 #endif /* not NDEBUG */
+
 #ifdef __cplusplus
   }
 #endif
