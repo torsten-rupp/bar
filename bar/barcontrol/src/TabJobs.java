@@ -10551,11 +10551,26 @@ TODO: implement delete entity
           }
 
           // update job list
+          final Comparator<JobData> jobDataComparator = new Comparator<JobData>()
+          {
+            /** compare job data
+             * @param jobData1, jobData2 file tree data to compare
+             * @return -1 iff jobData1.uuid < jobData2.uuid,
+                        0 iff jobData1.uuid = jobData2.uuid,
+                        1 iff jobData1.uuid > jobData2.uuid
+             */
+            public int compare(JobData jobData1, JobData jobData2)
+            {
+              return jobData1.uuid.compareTo(jobData2.uuid);
+            }
+          };
+
           synchronized(widgetJobList)
           {
             for (JobData jobData : jobData_)
             {
               if (Widgets.updateInsertOptionMenuItem(widgetJobList,
+                                                     jobDataComparator,
                                                      jobData,
                                                      jobData.name
                                                     )
