@@ -2093,7 +2093,6 @@ public class BARControl
     System.out.println("");
     System.out.println("         --index-database-info                      - print index info");
     System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
-    System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
     System.out.println("         --index-database-remove=<text>             - remove matching storage archives from index");
     System.out.println("         --index-database-refresh=<text>            - refresh matching storage archive in index");
     System.out.println("         -n|--index-database-entities-list[=<text>] - list index entities");
@@ -5245,8 +5244,6 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-Dprintf.dprintf("%d %d",valueMap.getLong("totalEntryCount"),valueMap.getLong("totalEntrySize"));
-
                                        }
                                      }
                                     );
@@ -5433,7 +5430,10 @@ Dprintf.dprintf("%d %d",valueMap.getLong("totalEntryCount"),valueMap.getLong("to
                                          long   errorEntryCount   = valueMap.getLong  ("errorEntryCount"    );
                                          long   errorEntrySize    = valueMap.getLong  ("errorEntrySize"     );
 
-                                         System.out.println(String.format("%-32s %-20s %-12s %-14s %02d:%02d:%02d %10d %10d %10d %10d %10d %10d %s",
+                                         // filter error message: replace LF
+                                         errorMessage = errorMessage.replace("\n"," ");
+
+                                         System.out.println(String.format("%-32s %-20s %-12s %-14s %02d:%02d:%02d %8d %12d %8d %12d %8d %12d %s",
                                                                           !jobName.isEmpty() ? jobName : jobUUID,
                                                                           hostName,
                                                                           archiveType,
