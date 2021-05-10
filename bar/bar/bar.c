@@ -3753,10 +3753,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   return error;
 }
 
-//TODO: debug version only
-#ifndef WERROR
-#warning remove/revert
-#endif
+#ifndef NDEBUG
 LOCAL Errors runDebug(void)
 {
   AutoFreeList     autoFreeList;
@@ -3802,6 +3799,7 @@ LOCAL Errors runDebug(void)
   }
   AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 
+  #ifndef NDEBUG
   if (globalOptions.debug.indexWaitOperationsFlag)
   {
     // wait for index opertions
@@ -4175,6 +4173,7 @@ LOCAL Errors runDebug(void)
     AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
     Storage_doneSpecifier(&storageSpecifier);
   }
+  #endif /* NDEBUG */
 
   // done index
   if (Index_isAvailable())
@@ -4188,6 +4187,7 @@ LOCAL Errors runDebug(void)
 
   return error;
 }
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : bar
@@ -4372,6 +4372,23 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_NONE;
   }
 
+  #ifndef NDEBUG
+    if (globalOptions.debug.printConfigurationSHA256)
+    {
+      byte buffer[20];
+      uint i;
+
+      ConfigValue_debugSHA256(CONFIG_VALUES,buffer,sizeof(buffer));
+      for (i = 0; i < sizeof(buffer); i++)
+      {
+        printf("%02x",buffer[i]);
+      }
+      printf("\n");
+
+      return ERROR_NONE;
+    }
+  #endif /* NDEBUG */
+
   // create temporary directory
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
@@ -4397,6 +4414,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     error = runJob(jobUUID);
   }
+  #ifndef NDEBUG
   else if (   globalOptions.debug.indexWaitOperationsFlag
            || globalOptions.debug.indexPurgeDeletedStoragesFlag
            || (globalOptions.debug.indexAddStorage     != NULL)
@@ -4406,6 +4424,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     error = runDebug();
   }
+  #endif /* NDEBUG */
   else
   {
     error = runInteractive(argc,argv);

@@ -26,6 +26,7 @@
 
 /**************************** Constants *******************************/
 #define CONFIG_VALUE_INDEX_NONE MAX_UINT
+#define CONFIG_VALUE_INDEX_MAX  MAX_UINT
 
 typedef enum
 {
@@ -1645,6 +1646,8 @@ void ConfigValue_debugDumpComments(FILE *handle);
 \***********************************************************************/
 
 void ConfigValue_debugPrintComments(void);
+
+void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferLength);
 #endif /* not NDEBUG */
 
 #ifdef __GNUG__

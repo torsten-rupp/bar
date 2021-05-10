@@ -337,7 +337,11 @@ PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  persistenceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    persistenceNode->id        = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    persistenceNode->id        = Misc_getId();
+  #endif
   persistenceNode->archiveType = archiveType;
   persistenceNode->minKeep     = minKeep;
   persistenceNode->maxKeep     = maxKeep;
@@ -361,7 +365,11 @@ PersistenceNode *Job_duplicatePersistenceNode(PersistenceNode *fromPersistenceNo
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  persistenceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    persistenceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    persistenceNode->id          = Misc_getId();
+  #endif
   persistenceNode->archiveType = fromPersistenceNode->archiveType;
   persistenceNode->minKeep     = fromPersistenceNode->minKeep;
   persistenceNode->maxKeep     = fromPersistenceNode->maxKeep;
@@ -2265,6 +2273,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
 
 Errors Job_write(JobNode *jobNode)
 {
+#if 0
   StringList            jobLinesList;
   String                line;
   Errors                error;
@@ -2392,6 +2401,46 @@ Errors Job_write(JobNode *jobNode)
       StringList_done(&jobLinesList);
       return error;
     }
+
+    // save time modified
+    jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
+
+    // free resources
+    String_delete(line);
+    StringList_done(&jobLinesList);
+  }
+#else
+  Errors                error;
+
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  if (String_isSet(jobNode->fileName))
+  {
+    // correct config values
+    switch (jobNode->job.options.cryptPasswordMode)
+    {
+      case PASSWORD_MODE_DEFAULT:
+      case PASSWORD_MODE_ASK:
+        Password_clear(&jobNode->job.options.cryptPassword);
+        break;
+      case PASSWORD_MODE_NONE:
+      case PASSWORD_MODE_CONFIG:
+        // nothing to do
+        break;
+    }
+
+    error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES);
+    if (error != ERROR_NONE)
+    {
+      logMessage(NULL,  // logHandle
+                 LOG_TYPE_ERROR,
+                 "cannot write job '%s' (error: %s)\n",
+                 String_cString(jobNode->fileName),
+                 Error_getText(error)
+                );
+      return error;
+    }
     error = File_setPermission(jobNode->fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
     if (error != ERROR_NONE)
     {
@@ -2407,9 +2456,8 @@ Errors Job_write(JobNode *jobNode)
     jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
 
     // free resources
-    String_delete(line);
-    StringList_done(&jobLinesList);
   }
+#endif
 
   // reset modified flag
   jobNode->modifiedFlag = FALSE;

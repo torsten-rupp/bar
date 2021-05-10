@@ -9,6 +9,8 @@
 ***********************************************************************/
 
 /****************************** Includes ******************************/
+#include <config.h>  // use <...> to support separated build directory
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
@@ -20,6 +22,14 @@
 #include "common/stringlists.h"
 #include "common/files.h"
 
+#if   defined(HAVE_OPENSSL)
+  #include <openssl/sha.h>
+#elif defined(HAVE_GCRYPT)
+  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+  #include <gcrypt.h>
+  #pragma GCC diagnostic warning "-Wdeprecated-declarations"
+#endif /* ... */
+
 #include "configvalues.h"
 
 /********************** Conditional compilation ***********************/
@@ -28,6 +38,37 @@
 #define SEPARATOR "----------------------------------------------------------------------"
 
 /***************************** Datatypes ******************************/
+typedef union
+{
+  void   *pointer;
+  void   **reference;
+  int    *i;
+  int64  *l;
+  double *d;
+  bool   *b;
+  uint   *enumeration;
+  uint   *select;
+  ulong  *set;
+  char   **cString;
+  String *string;
+  void   *special;
+} ConfigVariable;
+
+typedef union
+{
+  const void   *pointer;
+  const void   **reference;
+  const int    *i;
+  const int64  *l;
+  const double *d;
+  const bool   *b;
+  const uint   *enumeration;
+  const uint   *select;
+  const ulong  *set;
+  const char   **cString;
+  ConstString  *string;
+  const void   *special;
+} ConstConfigVariable;
 
 // coments list
 typedef struct CommentsNode
@@ -69,9 +110,11 @@ LOCAL CommentsList commentsList;
 /***********************************************************************\
 * Name   : ITERATE_VALUE
 * Purpose: iterated over config value array
-* Input  : configValues - config values array
-*          sectionName  - section name or NULL
-*          index        - iteration variable
+* Input  : configValues    - config values array
+*          sectionName     - section name or NULL
+*          index           - iteration variable
+*          firstValueIndex - first value index or 0
+*          lastValueIndex  - last value index or CONFIG_VALUE_INDEX_MAX
 * Output : configValue - config value
 * Return : -
 * Notes  : configValue will contain all values
@@ -84,17 +127,19 @@ LOCAL CommentsList commentsList;
 
 #define ITERATE_VALUE(configValues,index,firstValueIndex,lastValueIndex) \
   for ((index) = firstValueIndex; \
-       ((index) != CONFIG_VALUE_INDEX_NONE) && ((index) <= lastValueIndex); \
+       ((configValues[index].type != CONFIG_VALUE_TYPE_END) && ((index) <= (lastValueIndex))); \
        (index)++ \
       )
 
 /***********************************************************************\
 * Name   : ITERATE_VALUEX
 * Purpose: iterated over config value array
-* Input  : configValues - config values array
-*          sectionName  - section name or NULL
-*          index        - iteration variable
-*          condition    - additional condition
+* Input  : configValues    - config values array
+*          sectionName     - section name or NULL
+*          index           - iteration variable
+*          firstValueIndex - first value index or 0
+*          lastValueIndex  - last value index or CONFIG_VALUE_INDEX_MAX
+*          condition       - additional condition
 * Output : -
 * Return : -
 * Notes  : variable will contain all entries in list
@@ -107,7 +152,7 @@ LOCAL CommentsList commentsList;
 
 #define ITERATE_VALUEX(configValues,index,firstValueIndex,lastValueIndex,condition) \
   for ((index) = firstValueIndex; \
-       ((index) != CONFIG_VALUE_INDEX_NONE) && ((index) <= lastValueIndex) && (condition); \
+       ((configValues[index].type != CONFIG_VALUE_TYPE_END) && ((index) <= (lastValueIndex))); \
        (index)++ \
       )
 
@@ -725,25 +770,10 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                         void                 *variable
                        )
 {
-  union
-  {
-    void       *pointer;
-    void       **reference;
-    int        *i;
-    int64      *l;
-    double     *d;
-    bool       *b;
-    uint       *enumeration;
-    uint       *select;
-    ulong      *set;
-    char       **cString;
-    String     *string;
-    void       *special;
-    const char *newName;
-  }          configVariable;
-  char       buffer[256];
-  char       errorMessage[256];
-  const char *message;
+  ConfigVariable configVariable;
+  char           buffer[256];
+  char           errorMessage[256];
+  const char     *message;
 
   assert(configValue != NULL);
   assert(value != NULL);
@@ -1796,24 +1826,9 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
                         const StringList  *commentList
                        )
 {
-  const CommentsNode *commentsNode;
-  Errors error;
-  union
-  {
-    void        *pointer;
-    void        **reference;
-    int         *i;
-    int64       *l;
-    double      *d;
-    bool        *b;
-    uint        *enumeration;
-    uint        *select;
-    ulong       *set;
-    const char  **cString;
-    ConstString *string;
-    void        *special;
-    const char  *newName;
-  }      configVariable;
+  const CommentsNode  *commentsNode;
+  Errors              error;
+  ConstConfigVariable configVariable;
 
   assert(fileHandle != NULL);
   assert(configValue != NULL);
@@ -1987,20 +2002,20 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
           if      (variable != NULL)
           {
             configVariable.b = (bool*)((byte*)variable+configValue->offset);
-            value = (*configVariable.b);
+            value = *configVariable.b;
           }
           else if (configValue->variable.reference != NULL)
           {
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.b = (bool*)((byte*)(*configValue->variable.reference)+configValue->offset);
-              value = (*configVariable.b);
+              value = *configVariable.b;
             }
           }
         }
         else if (configValue->variable.b != NULL)
         {
-          value = (*configValue->variable.b);
+          value = *configValue->variable.b;
         }
 
         // write comments
@@ -2648,25 +2663,13 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
 
         if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
         break;
-#define XXX1 "UUID"
-#define XXX2 "UUID"
       case CONFIG_VALUE_TYPE_COMMENT:
         if (!stringIsEmpty(configValues[index].comment.text))
         {
           StringList_appendFormat(&commentList,"%s",configValues[index].comment.text);
         }
-if (stringEquals(configValues[index].comment.text,XXX1)) {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-StringList_debugPrint(&commentList);
-}
         break;
       default:
-//fprintf(stderr,"%s, %d: %s %d\n",__FILE__,__LINE__,configValues[index].name,List_count(&commentList));
-//File_printLine(fileHandle,"a %d %d",List_count(&commentList),(configValues[index].commentList!=0) ? List_count(configValues[index].commentList) : -1);
-if (stringEquals(configValues[index].name,XXX1) || stringEquals(configValues[index].name,XXX2)) {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-StringList_debugPrint(&commentList);
-}
         error = writeValue(fileHandle,
                            indent,
                            &configValues[index],
@@ -3469,22 +3472,7 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
     assert(line != NULL);
   }
 
-  union
-  {
-    void       *pointer;
-    void       **reference;
-    int        *i;
-    int64      *l;
-    double     *d;
-    bool       *b;
-    uint       *enumeration;
-    uint       *select;
-    ulong      *set;
-    char       **cString;
-    String     *string;
-    void       *special;
-    const char *newName;
-  }                       configVariable;
+  ConfigVariable          configVariable;
   const char              *unitName;
   const ConfigValueUnit   *unit;
   ulong                   factor;
@@ -4268,6 +4256,7 @@ Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *c
 }
 
 // TODO: obsolete, remove
+Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const StringList *configLinesList);
 Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const StringList *configLinesList)
 {
   Errors     error;
@@ -4414,13 +4403,11 @@ void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectio
         Node   *node = (Node*)(*sectionDataIterator);
         String name  = (String)data;
 
-        assert(name != NULL);
-
         if (node != NULL)
         {
           (*sectionDataIterator) = node->next;
         }
-        String_clear(name);
+        if (name != NULL) String_clear(name);
 
         result = node;
       }
@@ -4430,6 +4417,7 @@ void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectio
 }
 
 #ifndef NDEBUG
+
 void ConfigValue_debugDumpComments(FILE *handle)
 {
   const CommentsNode *commentsNode;
@@ -4453,6 +4441,595 @@ void ConfigValue_debugDumpComments(FILE *handle)
 void ConfigValue_debugPrintComments(void)
 {
   ConfigValue_debugDumpComments(stderr);
+}
+
+#if   defined(HAVE_OPENSSL)
+  typedef SHA256_CTX SHA256;
+#elif defined(HAVE_GCRYPT)
+  typedef gcry_md_hd_t SHA256;
+#endif
+
+/***********************************************************************\
+* Name   : updateSHA256
+* Purpose: update SHA256
+* Input  : sha256     - SHA256
+*          data       - data
+*          dateLength - length of data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateSHA256(SHA256 sha256, const void *data, uint dateLength)
+{
+  #if   defined(HAVE_OPENSSL)
+  #elif defined(HAVE_GCRYPT)
+    gcry_md_write(sha256,data,dateLength);
+  #endif
+}
+
+/***********************************************************************\
+* Name   : updateSHA256StringList
+* Purpose: update SHA256 with string list
+* Input  : sha256     - SHA256
+*          stringList - string list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateSHA256StringList(SHA256 sha256, const StringList *stringList)
+{
+  const StringNode *stringNode;
+  ConstString      line;
+
+  assert (stringList != NULL);
+
+  STRINGLIST_ITERATE(stringList,stringNode,line)
+  {
+    updateSHA256(sha256,String_cString(line),String_length(line));
+  }
+}
+
+/***********************************************************************\
+* Name   : updateSHA256Value
+* Purpose: update SHA256 value
+* Input  : sha256      - SHA256
+*          configValue - config valule
+*          variable    - variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateSHA256Value(SHA256            sha256,
+                             const ConfigValue *configValue,
+                             const void        *variable
+                            )
+{
+  const CommentsNode  *commentsNode;
+  ConstConfigVariable configVariable;
+
+  assert(configValue != NULL);
+
+  commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
+  if (commentsNode != NULL)
+  {
+    updateSHA256StringList(sha256,&commentsNode->commentList);
+  }
+
+  switch (configValue->type)
+  {
+    case CONFIG_VALUE_TYPE_NONE:
+      break;
+    case CONFIG_VALUE_TYPE_INTEGER:
+      {
+        int                   value;
+
+        // get value
+        value = 0;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.i = (int*)((byte*)variable+configValue->offset);
+            value = *configVariable.i;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.i = ((int*)((byte*)(*configValue->variable.reference)+configValue->offset));
+              value = *configVariable.i;
+            }
+          }
+        }
+        else if (configValue->variable.i != NULL)
+        {
+          value = *configValue->variable.i;
+        }
+
+        // update
+        updateSHA256(sha256,&value,sizeof(int));
+      }
+      break;
+    case CONFIG_VALUE_TYPE_INTEGER64:
+      {
+        int64                 value;
+
+        // get value
+        value = 0;
+        if        (configValue->offset >= 0)
+        {
+          if (variable != NULL)
+          {
+            configVariable.l = ((int64*)((byte*)variable+configValue->offset));
+            value = *configVariable.l;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.l = ((int64*)((byte*)(*configValue->variable.reference)+configValue->offset));
+              value = *configVariable.l;
+            }
+          }
+        }
+        else if (configValue->variable.l != NULL)
+        {
+          value = *configValue->variable.l;
+        }
+
+        // update
+        updateSHA256(sha256,&value,sizeof(int64));
+      }
+      break;
+    case CONFIG_VALUE_TYPE_DOUBLE:
+      {
+        double                value;
+
+        // get value
+        value = 0.0;
+        if (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.d = ((double*)((byte*)variable+configValue->offset));
+            value = *configVariable.d;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.d = ((double*)((byte*)(*configValue->variable.reference)+configValue->offset));
+              value = *configVariable.d;
+            }
+          }
+        }
+        else if (configValue->variable.d != NULL)
+        {
+          value = *configValue->variable.d;
+        }
+
+        // update
+        updateSHA256(sha256,&value,sizeof(double));
+      }
+      break;
+    case CONFIG_VALUE_TYPE_BOOLEAN:
+      {
+        bool value;
+
+        // get value
+        value = FALSE;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.b = (bool*)((byte*)variable+configValue->offset);
+            value = (*configVariable.b);
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.b = (bool*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              value = (*configVariable.b);
+            }
+          }
+        }
+        else if (configValue->variable.b != NULL)
+        {
+          value = *configValue->variable.b;
+        }
+
+        // update
+        updateSHA256(sha256,&value,sizeof(bool));
+      }
+      break;
+    case CONFIG_VALUE_TYPE_ENUM:
+      {
+        uint                    value;
+
+        // get value
+        value = 0;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.enumeration = (uint*)((byte*)variable+configValue->offset);
+            value = *configVariable.enumeration;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            configVariable.enumeration = (uint*)((byte*)(*configValue->variable.reference)+configValue->offset);
+            value = *configVariable.enumeration;
+          }
+          else
+          {
+            return;
+          }
+        }
+        else if (configValue->variable.enumeration != NULL)
+        {
+          value = *configValue->variable.enumeration;
+        }
+        else
+        {
+          return;
+        }
+
+        // update
+        updateSHA256(sha256,&value,sizeof(uint));
+      }
+      break;
+    case CONFIG_VALUE_TYPE_SELECT:
+      {
+        uint value;
+
+        // get value
+        value = 0;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.select = (uint*)((byte*)variable+configValue->offset);
+            value = *configVariable.select;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.select = (uint*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              value = *configVariable.select;
+            }
+          }
+        }
+        else if (configValue->variable.select != NULL)
+        {
+          value = *configValue->variable.select;
+        }
+
+        // update
+        updateSHA256(sha256,&value,sizeof(uint));
+      }
+      break;
+    case CONFIG_VALUE_TYPE_SET:
+      {
+        ulong value;
+
+        // get value
+        value = 0L;
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.set = (ulong*)((byte*)variable+configValue->offset);
+            value = *configVariable.set;
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.set = (ulong*)((byte*)(*configValue->variable.reference)+configValue->offset);
+              value = *configVariable.set;
+            }
+          }
+        }
+        else if (configValue->variable.set != NULL)
+        {
+          value = *configValue->variable.set;
+        }
+        else
+        {
+          return;
+        }
+
+        // update
+        updateSHA256(sha256,&value,sizeof(ulong));
+
+        // free resources
+      }
+      break;
+    case CONFIG_VALUE_TYPE_CSTRING:
+      {
+        String value;
+
+        // init variables
+        value = String_new();
+
+        // get value
+        if     (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.cString = (const char**)((const byte*)variable+configValue->offset);
+            String_setCString(value,*configVariable.cString);
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.cString = (const char**)((const byte*)(*configValue->variable.reference)+configValue->offset);
+              String_setCString(value,*configVariable.cString);
+            }
+          }
+        }
+        else if (configValue->variable.cString != NULL)
+        {
+          String_setCString(value,*configValue->variable.cString);
+        }
+
+        // update
+        updateSHA256(sha256,String_cString(value),String_length(value));
+
+        // free resources
+        String_delete(value);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_STRING:
+      {
+        String value;
+
+        // init variables
+        value = String_new();
+
+        // get value
+        if      (configValue->offset >= 0)
+        {
+          if      (variable != NULL)
+          {
+            configVariable.string = (ConstString*)((const byte*)variable+configValue->offset);
+            String_set(value,*configVariable.string);
+          }
+          else if (configValue->variable.reference != NULL)
+          {
+            if ((*configValue->variable.reference) != NULL)
+            {
+              configVariable.string = (ConstString*)((const byte*)(*configValue->variable.reference)+configValue->offset);
+              String_set(value,*configVariable.string);
+            }
+          }
+        }
+        else if (configValue->variable.string != NULL)
+        {
+          String_set(value,*configValue->variable.string);
+        }
+
+        // update
+        updateSHA256(sha256,String_cString(value),String_length(value));
+
+        // free resources
+        String_delete(value);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_SPECIAL:
+      {
+        String            value;
+        ConfigValueFormat configValueFormat;
+
+        // init variables
+        value = String_new();
+
+        // format init
+        ConfigValue_formatInit(&configValueFormat,
+                               configValue,
+                               CONFIG_VALUE_FORMAT_MODE_VALUE,
+                               variable
+                              );
+
+        // update
+        while (ConfigValue_format(&configValueFormat,value))
+        {
+          updateSHA256(sha256,String_cString(value),String_length(value));
+        }
+
+        // TODO:
+
+        // format done
+        ConfigValue_formatDone(&configValueFormat);
+
+        // free resources
+        String_delete(value);
+      }
+      break;
+    case CONFIG_VALUE_TYPE_IGNORE:
+      // nothing to do
+      break;
+    case CONFIG_VALUE_TYPE_DEPRECATED:
+      // nothing to do
+      break;
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif /* NDEBUG */
+      break;
+  }
+}
+
+/***********************************************************************\
+* Name   : updateSHA256Section
+* Purpose: update SHA256 with section
+* Input  : sha256                         - SHA256
+*          configValues                   - config values
+*          firstValueIndex,lastValueIndex - first/last value index
+*          variable                       - variable (can be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateSHA256Section(SHA256            sha256,
+                               const ConfigValue configValues[],
+                               uint              firstValueIndex,
+                               uint              lastValueIndex,
+                               const void        *variable
+                              )
+{
+  uint index;
+
+  assert(configValues != NULL);
+
+  ITERATE_VALUE(configValues,index,firstValueIndex,lastValueIndex)
+  {
+//fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,index,configValues[index].name);
+    switch (configValues[index].type)
+    {
+      case CONFIG_VALUE_TYPE_BEGIN_SECTION:
+        {
+          uint   sectionFirstValueIndex,sectionLastValueIndex;
+          void   *sectionIterator;
+          void   *data;
+
+          if (   (configValues[index+1].type != CONFIG_VALUE_TYPE_END_SECTION)
+              && (configValues[index+1].type != CONFIG_VALUE_TYPE_END)
+             )
+          {
+            // find section
+            sectionFirstValueIndex = index+1;
+            sectionLastValueIndex  = sectionFirstValueIndex;
+            while (   (configValues[sectionLastValueIndex+1].type != CONFIG_VALUE_TYPE_END_SECTION)
+                   && (configValues[sectionLastValueIndex+1].type != CONFIG_VALUE_TYPE_END)
+                  )
+            {
+              sectionLastValueIndex++;
+            }
+
+            // init iterator
+            if (configValues[index].section.sectionIterator != NULL)
+            {
+              configValues[index].section.sectionIterator(&sectionIterator,
+                                                          CONFIG_VALUE_OPERATION_INIT,
+                                                          configValues[index].variable.pointer,
+                                                          configValues[index].section.userData
+                                                         );
+            }
+
+            if (configValues[index].section.sectionIterator != NULL)
+            {
+              // iterate
+              do
+              {
+                const StringList *commentList = configValues[index].section.sectionIterator(&sectionIterator,
+                                                                                            CONFIG_VALUE_OPERATION_COMMENTS,
+                                                                                            NULL,  // data,
+                                                                                            configValues[index].section.userData
+                                                                                           );
+                if (commentList != NULL)
+                {
+                  updateSHA256StringList(sha256,commentList);
+                }
+
+                data = configValues[index].section.sectionIterator(&sectionIterator,
+                                                                   CONFIG_VALUE_OPERATION_FORMAT,
+                                                                   NULL,  // data,
+                                                                   configValues[index].section.userData
+                                                                  );
+                if (data != NULL)
+                {
+                  updateSHA256Section(sha256,configValues,sectionFirstValueIndex,sectionLastValueIndex,data);
+                }
+              }
+              while (data != NULL);
+            }
+            else
+            {
+              updateSHA256Section(sha256,configValues,sectionFirstValueIndex,sectionLastValueIndex,NULL);
+            }
+
+            // done iterator
+            if (configValues[index].section.sectionIterator != NULL)
+            {
+              configValues[index].section.sectionIterator(&sectionIterator,
+                                                          CONFIG_VALUE_OPERATION_DONE,
+                                                          NULL, // data
+                                                          configValues[index].section.userData
+                                                         );
+            }
+          }
+
+          // done section
+          index = sectionLastValueIndex+1;
+        }
+        break;
+      case CONFIG_VALUE_TYPE_END_SECTION:
+        // nothing to do
+        break;
+      case CONFIG_VALUE_TYPE_SEPARATOR:
+      case CONFIG_VALUE_TYPE_SPACE:
+      case CONFIG_VALUE_TYPE_COMMENT:
+        // nothing to do
+        break;
+      default:
+        updateSHA256Value(sha256,&configValues[index],variable);
+        break;
+    }
+  }
+}
+
+void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferSize)
+{
+  SHA256 sha256;
+  #if   defined(HAVE_OPENSSL)
+    char       sha256[SHA256_DIGEST_LENGTH];
+  #elif defined(HAVE_GCRYPT)
+  #endif
+
+  #if   defined(HAVE_OPENSSL)
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+    if (SHA256_Init(&sha256CTX) != 1)
+    {
+      return;
+    }
+
+    ITERATE_VALUE(configValues,index,0,CONFIG_VALUE_INDEX_MAX)
+    {
+  fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,index);
+    }
+
+    if (SHA256_Final(sha256,sha356CTX) != 1)
+    {
+      return;
+    }
+
+    memCopyFast(buffer,bufferSize,
+                sha256,SHA256_DIGEST_LENGTH
+               );
+  #elif defined(HAVE_GCRYPT)
+    if (gcry_md_open(&sha256,GCRY_MD_SHA256,0) != 0)
+    {
+      return;
+    }
+
+    updateSHA256Section(sha256,configValues,0,CONFIG_VALUE_INDEX_MAX,NULL);
+
+    memCopyFast(buffer,bufferSize,
+                gcry_md_read(sha256,GCRY_MD_SHA256),gcry_md_get_algo_dlen(GCRY_MD_SHA256)
+               );
+
+    gcry_md_close(sha256);
+  #else
+    HALT_INTERNAL_ERROR("no SHA256 implementation");
+  #endif /* ... */
 }
 
 #endif /* not NDEBUG */

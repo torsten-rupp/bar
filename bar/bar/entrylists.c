@@ -95,7 +95,11 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
   }
 
   // create entry
-  newEntryNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    newEntryNode->id        = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    newEntryNode->id        = Misc_getId();
+  #endif
   newEntryNode->type        = entryNode->type;
   newEntryNode->string      = String_duplicate(entryNode->string);
   newEntryNode->patternType = entryNode->patternType;
@@ -316,7 +320,11 @@ Errors EntryList_appendCString(EntryList    *entryList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  entryNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    entryNode->id        = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    entryNode->id        = Misc_getId();
+  #endif
   entryNode->type        = type;
   entryNode->string      = String_newCString(string);
   entryNode->patternType = patternType;

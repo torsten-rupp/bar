@@ -30,7 +30,7 @@ TEST_DATA_DIR ?= test
 SHELL = bash
 
 ifeq ($(PLATFORM),LINUX)
-  EXE_PREFIX = 
+  EXE_PREFIX =
 endif
 ifeq ($(PLATFORM),WINDOWS)
   EXE_PREFIX = $(WINE)
@@ -2243,19 +2243,27 @@ test_config: \
 	$(call functionCleanTestFiles)
 	@#
 	# format configuration file
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --config test.cfg --config $(TEST_CONFIG)) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=intermediate/test.cfg) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=intermediate/test1.cfg) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --config intermediate/test1.cfg --save-configuration=intermediate/test2.cfg) $(LOG)
+	$(call functionTestCheckExitcode,0,0,set -x; test \
+	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --config intermediate/test1.cfg --debug-print-configuration-sha256)` \
+	  = \
+	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --config intermediate/test2.cfg --debug-print-configuration-sha256)`\
+	 )
 	@#
 	# test configuration data
 	( \
-          echo "crypt-public-key = $(TEST_KEY_CRYPT_PUBLIC)"; \
-          echo "crypt-private-key = $(TEST_KEY_CRYPT_PRIVATE)"; \
-        ) > $(TEST_CONFIG)
+		$(ECHO) "crypt-public-key = $(TEST_KEY_CRYPT_PUBLIC)"; \
+		$(ECHO) "crypt-private-key = $(TEST_KEY_CRYPT_PRIVATE)"; \
+	) > $(TEST_CONFIG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
 	( \
-          echo "signature-public-key = $(TEST_KEY_SIGNATURE_PUBLIC)"; \
-          echo "signature-private-key = $(TEST_KEY_SIGNATURE_PRIVATE)"; \
-        ) > $(TEST_CONFIG)
+		$(ECHO) "signature-public-key = $(TEST_KEY_SIGNATURE_PUBLIC)"; \
+		$(ECHO) "signature-private-key = $(TEST_KEY_SIGNATURE_PRIVATE)"; \
+	) > $(TEST_CONFIG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config $(TEST_CONFIG) $(LOG)
+#	@$(RMF) intermediate/test.cfg
 	$(call functionDoneTestFiles)
 	$(call functionInfoEnd,OK)
 

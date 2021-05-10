@@ -908,6 +908,7 @@ typedef struct
   const char                  *saveConfigurationFileName;     // configuration save file name
 
   // debug/test only
+  #ifndef NDEBUG
   struct
   {
     uint                      serverLevel;                    // server debug level (for debug only)
@@ -917,7 +918,10 @@ typedef struct
     String                    indexAddStorage;                // add storage to index
     String                    indexRemoveStorage;             // remove storage from index
     String                    indexRefreshStorage;            // refresh storage index
+
+    bool                      printConfigurationSHA256;
   } debug;
+  #endif /* NDEBUG */
 } GlobalOptions;
 
 // status info data

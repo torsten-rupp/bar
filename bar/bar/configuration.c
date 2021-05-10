@@ -579,7 +579,11 @@ LOCAL MountNode *newMountNodeCString(const char *mountName, const char *deviceNa
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  mountNode->id            = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    mountNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    mountNode->id          = Misc_getId();
+  #endif
   mountNode->name          = String_newCString(mountName);
   mountNode->device        = String_newCString(deviceName);
   mountNode->mounted       = FALSE;
@@ -1805,12 +1809,14 @@ LOCAL void initGlobalOptions(void)
   globalOptions.saveConfigurationFileName                       = NULL;
 
   // debug/test only
-  globalOptions.debug.serverLevel                               = DEFAULT_SERVER_DEBUG_LEVEL;
-  globalOptions.debug.indexWaitOperationsFlag                   = FALSE;
-  globalOptions.debug.indexPurgeDeletedStoragesFlag             = FALSE;
-  globalOptions.debug.indexAddStorage                           = NULL;
-  globalOptions.debug.indexRemoveStorage                        = NULL;
-  globalOptions.debug.indexRefreshStorage                       = NULL;
+  #ifndef NDEBUG
+    globalOptions.debug.serverLevel                             = DEFAULT_SERVER_DEBUG_LEVEL;
+    globalOptions.debug.indexWaitOperationsFlag                 = FALSE;
+    globalOptions.debug.indexPurgeDeletedStoragesFlag           = FALSE;
+    globalOptions.debug.indexAddStorage                         = NULL;
+    globalOptions.debug.indexRemoveStorage                      = NULL;
+    globalOptions.debug.indexRefreshStorage                     = NULL;
+  #endif
 }
 
 /***********************************************************************\
@@ -1825,9 +1831,11 @@ LOCAL void initGlobalOptions(void)
 LOCAL void doneGlobalOptions(void)
 {
   // debug/test only
-  String_delete(globalOptions.debug.indexRefreshStorage);
-  String_delete(globalOptions.debug.indexRemoveStorage);
-  String_delete(globalOptions.debug.indexAddStorage);
+  #ifndef NDEBUG
+    String_delete(globalOptions.debug.indexRefreshStorage);
+    String_delete(globalOptions.debug.indexRemoveStorage);
+    String_delete(globalOptions.debug.indexAddStorage);
+  #endif
 
   // --- job options default values
   String_delete(globalOptions.bd.writeImageCommand);
@@ -7653,6 +7661,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_DEPRECATED   ("mount-device",                      0,  1,2,&globalOptions.mountList,                            cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                    cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
 
+  #ifndef NDEBUG
   CMD_OPTION_INCREMENT    ("debug-server",                      0,  2,1,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),
   CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,1,globalOptions.debug.serverFixedIdsFlag,                                                                           "fixed server ids"                                                         ),
   CMD_OPTION_BOOLEAN      ("debug-index-wait-operations",       0,  2,1,globalOptions.debug.indexWaitOperationsFlag,                                                                      "wait for index operations"                                                ),
@@ -7660,6 +7669,9 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,1,globalOptions.debug.indexAddStorage,                                                                              "add storage to index database","file name"                                ),
   CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,1,globalOptions.debug.indexRemoveStorage,                                                                           "remove storage from index database","file name"                           ),
   CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,1,globalOptions.debug.indexRefreshStorage,                                                                          "refresh storage in index database","file name"                            ),
+
+  CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,1,globalOptions.debug.printConfigurationSHA256,                                                                           "fixed server ids"                                                   ),
+  #endif
 );
 
 const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
@@ -8624,7 +8636,11 @@ MaintenanceNode *Configuration_newMaintenanceNode(void)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  maintenanceNode->id               = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    maintenanceNode->id             = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    maintenanceNode->id             = Misc_getId();
+  #endif
   maintenanceNode->date.year        = DATE_ANY;
   maintenanceNode->date.month       = DATE_ANY;
   maintenanceNode->date.day         = DATE_ANY;
@@ -8976,7 +8992,11 @@ ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  serverNode->id                                  = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    serverNode->id                                = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    serverNode->id                                = Misc_getId();
+  #endif
   Configuration_initServer(serverNode,name,serverType);
   serverNode->connection.lowPriorityRequestCount  = 0;
   serverNode->connection.highPriorityRequestCount = 0;
@@ -9128,7 +9148,11 @@ DeviceNode *Configuration_newDeviceNode(ConstString name)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  deviceNode->id = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    deviceNode->id = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    deviceNode->id = Misc_getId();
+  #endif
   initDevice(deviceNode,name);
 
   return deviceNode;

@@ -79,7 +79,11 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  newDeltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #ifndef NDEBUG
+    newDeltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+  #else
+    newDeltaSourceNode->id          = Misc_getId();
+  #endif
   newDeltaSourceNode->storageName = String_duplicate(deltaSourceNode->storageName);
   newDeltaSourceNode->patternType = deltaSourceNode->patternType;
   newDeltaSourceNode->locked      = FALSE;
@@ -253,7 +257,11 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #ifndef NDEBUG
+      deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #else
+      deltaSourceNode->id          = Misc_getId();
+    #endif
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -304,7 +312,11 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+          #ifndef NDEBUG
+            deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+          #else
+            deltaSourceNode->id          = Misc_getId();
+          #endif
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
           deltaSourceNode->locked      = FALSE;
@@ -331,7 +343,11 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #ifndef NDEBUG
+      deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #else
+      deltaSourceNode->id          = Misc_getId();
+    #endif
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -397,7 +413,11 @@ UNUSED_VARIABLE(id);
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #ifndef NDEBUG
+      deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #else
+      deltaSourceNode->id          = Misc_getId();
+    #endif
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -448,7 +468,11 @@ UNUSED_VARIABLE(id);
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+          #ifndef NDEBUG
+            deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+          #else
+            deltaSourceNode->id          = Misc_getId();
+          #endif
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
           deltaSourceNode->locked      = FALSE;
@@ -475,7 +499,11 @@ UNUSED_VARIABLE(id);
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #ifndef NDEBUG
+      deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
+    #else
+      deltaSourceNode->id          = Misc_getId();
+    #endif
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;

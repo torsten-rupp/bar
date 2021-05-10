@@ -5243,7 +5243,11 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   if      (!String_isEmpty(encryptedPassword))
   {
     // client => verify password
-    if (globalOptions.debug.serverLevel == 0)
+    #ifndef NDEBUG
+      if (globalOptions.debug.serverLevel == 0)
+    #else
+      if (TRUE)
+    #endif
     {
       if (ServerIO_verifyPassword(&clientInfo->io,
                                   encryptedPassword,
@@ -5473,7 +5477,11 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  if (globalOptions.debug.serverLevel >= 1)
+  #ifndef NDEBUG
+    if (globalOptions.debug.serverLevel >= 1)
+  #else
+    if (FALSE)
+  #endif
   {
     setQuit();
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -19154,7 +19162,11 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         )
   {
     // check authorization (if not in server debug mode)
-    if ((globalOptions.debug.serverLevel >= 1) || IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
+    #ifndef NDEBUG
+      if ((globalOptions.debug.serverLevel >= 1) || IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
+    #else
+      if (IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
+    #endif
     {
       // add command info
       commandInfoNode = NULL;
@@ -19843,7 +19855,11 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   {
     case SERVER_IO_TYPE_BATCH:
       // check authorization (if not in server debug mode)
-      if ((globalOptions.debug.serverLevel >= 1) || IS_SET(authorizationStateSet,clientInfo->authorizationState))
+      #ifndef NDEBUG
+        if ((globalOptions.debug.serverLevel >= 1) || IS_SET(authorizationStateSet,clientInfo->authorizationState))
+      #else
+        if (IS_SET(authorizationStateSet,clientInfo->authorizationState))
+      #endif
       {
         // execute
         serverCommandFunction(clientInfo,
@@ -19863,8 +19879,12 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       switch (clientInfo->authorizationState)
       {
         case AUTHORIZATION_STATE_WAITING:
-          // check authorization (if not in server debug mode)
-          if ((globalOptions.debug.serverLevel >= 1) || IS_SET(authorizationStateSet,AUTHORIZATION_STATE_WAITING))
+          // check authorization
+          #ifndef NDEBUG
+            if ((globalOptions.debug.serverLevel >= 1) || IS_SET(authorizationStateSet,AUTHORIZATION_STATE_WAITING))
+          #else
+            if (IS_SET(authorizationStateSet,AUTHORIZATION_STATE_WAITING))
+          #endif
           {
             // execute command
             serverCommandFunction(clientInfo,
@@ -20248,20 +20268,29 @@ Errors Server_socket(void)
   }
 
   // run as server
-  if (globalOptions.debug.serverLevel >= 1)
-  {
-    printWarning("Server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
-  }
+  #ifndef NDEBUG
+    if (globalOptions.debug.serverLevel >= 1)
+    {
+      printWarning("Server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
+    }
+  #endif
 
   // auto-start pairing if unpaired slave or debug mode
   if (globalOptions.serverMode == SERVER_MODE_SLAVE)
   {
-    if (   String_isEmpty(globalOptions.masterInfo.name)
-        || (globalOptions.debug.serverLevel >= 1)
-       )
-    {
-      beginPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
-    }
+    #ifndef NDEBUG
+      if (   String_isEmpty(globalOptions.masterInfo.name)
+          || (globalOptions.debug.serverLevel >= 1)
+         )
+      {
+        beginPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
+      }
+    #else
+      if (String_isEmpty(globalOptions.masterInfo.name))
+      {
+        beginPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
+      }
+    #endif
 
     if (!String_isEmpty(globalOptions.masterInfo.name))
     {
@@ -20909,10 +20938,12 @@ Errors Server_batch(int inputDescriptor,
   }
 
   // run in batch mode
-  if (globalOptions.debug.serverLevel >= 1)
-  {
-    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
-  }
+  #ifndef NDEBUG
+    if (globalOptions.debug.serverLevel >= 1)
+    {
+      printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
+    }
+  #endif
 
   // initialize client
   initClient(&clientInfo);
