@@ -170,6 +170,9 @@ rest time
 - BARControl: restore: show archive for file entry
 - restore: pattern+verbose 4 output "skipped" - should not
 - option --no-auto-pairing
+- slave: send log file mail on master
+- BARControl: list index without header/footer lines
+
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
