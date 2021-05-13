@@ -4372,6 +4372,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_NONE;
   }
 
+  // debug options
   #ifndef NDEBUG
     if (globalOptions.debug.printConfigurationSHA256)
     {
