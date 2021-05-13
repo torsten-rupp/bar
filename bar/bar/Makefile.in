@@ -40,12 +40,14 @@ INSTALL_TLS_DIR    = @TLS_DIR@
 
 TEST_DATA_DIR      ?= test
 
+WINE_C_DRIVE       = @WINE_C_DRIVE@
+
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
 SHELL                     = bash
 
-CTAGS_FLAGS               = 
+CTAGS_FLAGS               =
 
 CC                        = @CC@
 CC_FLAGS                  = @CC_FLAGS@ -g
@@ -189,6 +191,7 @@ TIME            = @TIME@
 TIMEOUT         = timeout
 TOUCH           = touch
 ULIMIT          = ulimit
+WINE            = @WINE@
 XARGS           = xargs
 
 LCOV            = @LCOV@
@@ -708,7 +711,8 @@ help:
 	@$(ECHO) "  rundev_slave                              run development server slave"
 	@$(ECHO) "  rundevd_slave                             run development server slave (debug version)"
 	@$(ECHO) "  rundevgdb_slave                           run development server slave with GDB"
-	@$(ECHO) "  rundevddd_slave                           run development server slave with DDD"
+	@$(ECHO) "  rund_wine                                 run development server with wine"
+	@$(ECHO) "  rund_slave_wine                           run development server slave with wine"
 	@$(ECHO) "  rundev_en"
 	@$(ECHO) "  rundev_de"
 	@$(ECHO) "  rundev_jp"
@@ -1108,7 +1112,7 @@ bar-sqlite3@EXEEXT@: \
 	$(MAKE) -C .. keys
 
 # run server
-.PHONY: rund runserverd run_ssl runserver_ssl
+.PHONY: run runserver rund runserverd run_ssl runserver_ssl
 .PHONY: run_slave runserver_slave rund_slave runserverd_slave
 run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
@@ -1138,6 +1142,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           $(OPTIONS)
 
+.PHONY: run_slave runserver_slave rund_slave runserverd_slave
 run_slave runserver_slave: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	touch /tmp/pairing
@@ -1160,6 +1165,27 @@ rund_slave runserverd_slave: bar-debug@EXEEXT@
           --incremental-data-directory=/tmp \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+.PHONY: rund_wine runserverd_wine rund_slave_wine runserverd_slave_wine
+rund_wine runserverd_wine:
+	nice $(WINE) "$(WINE_C_DRIVE)/Program Files/BAR/bar-debug@EXEEXT@" --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=C:/tmp \
+          --pairing-master-file=C:/tmp/pairing \
+          --log-file=C:/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rund_slave_wine runserverd_slave_wine:
+	nice $(WINE) "$(WINE_C_DRIVE)/Program Files/BAR/bar-debug@EXEEXT@" --daemon -D \
+          --server-mode=slave \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=C:/tmp \
+          --pairing-master-file=C:/tmp/pairing \
+          --log-file=C:/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
 .PHONY: run_en runserver_en run_de runserver_de run_ssl runserver_ssl
@@ -2398,7 +2424,7 @@ ifneq ($(DIRECTORY),)
                           $(BAR_MINIDUMP_HEADERS) \
                           $(BAR_SQLITE3_SOURCES) \
                           $(BAR_SQLITE3_HEADERS) \
-                   )                   
+                   )
 	$(INSTALL) -d $(DIRECTORY)/bar/common
 	$(INSTALL) -m 644 \
                    -t $(DIRECTORY)/bar/common \
