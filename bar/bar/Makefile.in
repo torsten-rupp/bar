@@ -261,7 +261,7 @@ TEST_KEY_SIGNATURE_PUBLIC        = intermediate/signature-key.public
 TEST_KEY_SIGNATURE_PRIVATE       = intermediate/signature-key.private
 
 TEST_SERVER_PORT                 = 39909
-TEST_SERVER_SSL_PORT             = 39910
+TEST_SERVER_TLS_PORT             = 39910
 TEST_SERVER_DIRECTORY            = test
 TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
 TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/barserver.pid
@@ -301,6 +301,7 @@ TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
 
 TEST_SLAVE_HOST                  =
 TEST_SLAVE_PORT                  = 39911
+TEST_SLAVE_TLS_PORT              = 39912
 TEST_SLAVE_USERNAME              ?= test
 TEST_SLAVE_PASSWORD              ?= test
 TEST_SLAVE_DIRECTORY             = slave
@@ -699,7 +700,7 @@ help:
 	@$(ECHO) "  run_jp"
 	@$(ECHO) "  run_ssl                                   run server with SSL"
 	@$(ECHO) ""
-	@$(ECHO) "  rundev                                    run development server"
+	@$(ECHO) "  rundev                                    run server"
 	@$(ECHO) "  rundevd, rundevd1                         run development server (debug version)"
 	@$(ECHO) "  rundevd2                                  run development server 2 (debug version)"
 	@$(ECHO) "  rundevgdb                                 run development server with GDB"
@@ -711,8 +712,9 @@ help:
 	@$(ECHO) "  rundev_slave                              run development server slave"
 	@$(ECHO) "  rundevd_slave                             run development server slave (debug version)"
 	@$(ECHO) "  rundevgdb_slave                           run development server slave with GDB"
-	@$(ECHO) "  rund_wine                                 run development server with wine"
-	@$(ECHO) "  rund_slave_wine                           run development server slave with wine"
+	@$(ECHO) "  rundev_wine                               run server with wine"
+	@$(ECHO) "  rundevd_wine                              run development server with wine"
+	@$(ECHO) "  rundevd_slave_wine                        run development server slave with wine"
 	@$(ECHO) "  rundev_en"
 	@$(ECHO) "  rundev_de"
 	@$(ECHO) "  rundev_jp"
@@ -1121,6 +1123,7 @@ run runserver: bar@EXEEXT@
           --index-database=bar-index.db \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           $(OPTIONS)
 
 rund runserverd: bar-debug@EXEEXT@
@@ -1130,6 +1133,7 @@ rund runserverd: bar-debug@EXEEXT@
           --index-database=bar-index.db \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           $(OPTIONS)
 
 run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1139,6 +1143,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
           --index-database=bar-index.db \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           $(OPTIONS)
 
@@ -1151,6 +1156,7 @@ run_slave runserver_slave: bar@EXEEXT@
           --index-database=bar-index-slave.db \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
@@ -1167,23 +1173,25 @@ rund_slave runserverd_slave: bar-debug@EXEEXT@
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
-.PHONY: rund_wine runserverd_wine rund_slave_wine runserverd_slave_wine
-rund_wine runserverd_wine:
-	nice $(WINE) "$(WINE_C_DRIVE)/Program Files/BAR/bar-debug@EXEEXT@" --daemon -D \
+.PHONY: rundevd_wine rundevd_slave_wine
+rundevd_wine:
+	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=master \
           --index-database=bar-index-slave.db \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=C:/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --pairing-master-file=C:/tmp/pairing \
           --log-file=C:/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
-rund_slave_wine runserverd_slave_wine:
-	nice $(WINE) "$(WINE_C_DRIVE)/Program Files/BAR/bar-debug@EXEEXT@" --daemon -D \
+rundevd_slave_wine:
+	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=slave \
           --index-database=bar-index-slave.db \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=C:/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --pairing-master-file=C:/tmp/pairing \
           --log-file=C:/tmp/bar-slave.log --log=all \
           $(OPTIONS)
@@ -1196,6 +1204,7 @@ run_en runserver_en: bar@EXEEXT@
           --index-database=bar-index.db \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           $(OPTIONS)
 
 run_de runserver_de: bar@EXEEXT@
@@ -1205,6 +1214,7 @@ run_de runserver_de: bar@EXEEXT@
           --index-database=bar-index.db \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           $(OPTIONS)
 
 run_jp runserver_jp: bar@EXEEXT@
@@ -1214,8 +1224,8 @@ run_jp runserver_jp: bar@EXEEXT@
           --index-database=bar-index.db \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           $(OPTIONS)
-
 
 .PHONY: rundev rundevd rundevd1 rundevd2 rundevgdb rundevddd rundevvalgrind rundevcallgrind rundevgcov rundevgprof rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
 .PHONY: rundev_slave rundevd_slave rundevgdb_slave rundevddd_slave
@@ -1226,8 +1236,8 @@ rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
-          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
           --log-file=/tmp/bar.log --log=all \
@@ -1240,7 +1250,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
@@ -1254,7 +1264,7 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
           --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
           --jobs-directory=jobs2 \
           --incremental-data-directory=/tmp \
-          --server-port=39999 --server-tls-port=0 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=0 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
@@ -1268,8 +1278,8 @@ rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
-          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command="$(SUDO) /bin/umount %directory" \
           --verbose=0 \
           --log-file=/tmp/bar.log --log=all \
@@ -1282,8 +1292,8 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
-          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
           --log-file=/tmp/bar.log --log=all \
@@ -1296,7 +1306,7 @@ rundevgcov: bar-gcov@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1310,7 +1320,7 @@ rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1324,7 +1334,7 @@ rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-ce
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1338,7 +1348,7 @@ rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-c
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
@@ -1353,7 +1363,7 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=39911 --server-tls-port=39912 \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1369,7 +1379,7 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=39911 --server-tls-port=39912 \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1385,7 +1395,7 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=39911 --server-tls-port=39912 \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1401,7 +1411,7 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
           --incremental-data-directory=/tmp \
-          --server-port=39911 --server-tls-port=39912 \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
           --unmount-command='$(SUDO) /bin/umount %directory' \
@@ -1416,7 +1426,7 @@ rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=39909$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1428,7 +1438,7 @@ rundev_de: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --index-database=bar-index.db \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1440,7 +1450,7 @@ rundev_jp: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1452,7 +1462,7 @@ rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
@@ -1464,8 +1474,8 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
           --index-database=intermediate/index.db \
           --jobs-directory=intermediate/jobs \
           --incremental-data-directory=/tmp \
-          --server-port=39909 --server-tls-port=39910 \
-          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --unmount-command='$(SUDO) /bin/umount %directory' \
           --verbose=0 \
           $(OPTIONS)
