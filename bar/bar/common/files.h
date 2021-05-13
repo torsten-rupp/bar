@@ -40,13 +40,19 @@
 // max. length of a path
 #define FILE_MAX_PATH_MAX_LENGTH PATH_MAX
 
-// temporary directory
-#define FILE_TMP_DIRECTORY File_getSystemTmpDirectory()
-
 // Note: always use '/' and never brain dead '\'
 #define FILE_PATHNAME_SEPARATOR_CHAR   '/'
 #define FILE_PATHNAME_SEPARATOR_CHARS  "/"
 #define FILE_PATHNAME_SEPARATOR_STRING "/"
+
+// system directories
+typedef enum
+{
+  FILE_SYSTEM_PATH_TMP,
+  FILE_SYSTEM_PATH_CONFIGURATION,
+  FILE_SYSTEM_PATH_RUNTIME,
+  FILE_SYSTEM_PATH_TLS
+} FileSystemPathTypes;
 
 #define FILE_CAST_SIZE (sizeof(time_t)+sizeof(time_t))
 
@@ -581,15 +587,20 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *na
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : File_getSystemTmpDirectory
-* Purpose: get system temporary directory name
-* Input  : -
+* Name   : File_getSystemDirectory,
+*          File_getSystemDirectoryCString
+* Purpose: get system directory name
+* Input  : path               - path variable
+*          fileSystemPathType - file system path type; see
+*                               FILE_SYSTEM_PATH_TYPE_...
+* *        subDirectory       - sub-directory (can be NULL)
 * Output : -
-* Return : temporary directory name
+* Return : configuration directory path (e. g. /etc/foo)
 * Notes  : -
 \***********************************************************************/
 
-const char *File_getSystemTmpDirectory(void);
+String File_getSystemDirectory(String path, FileSystemPathTypes fileSystemPathType, ConstString subDirectory);
+String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSystemPathType, const char *subDirectory);
 
 /***********************************************************************\
 * Name   : File_getTmpFile, File_getTmpFileCString
