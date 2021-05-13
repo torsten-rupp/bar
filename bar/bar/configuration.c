@@ -1392,7 +1392,7 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
 }
 
 /***********************************************************************\
-* Name   : readCertificateFile
+* Name   : readCertificateFileCString
 * Purpose: read certificate file
 * Input  : certificate - certificate variable
 *          fileName    - file name
@@ -1401,7 +1401,7 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
+LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
@@ -1462,7 +1462,22 @@ LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
 }
 
 /***********************************************************************\
-* Name   : readKeyFile
+* Name   : readCertificateFile
+* Purpose: read certificate file
+* Input  : certificate - certificate variable
+*          fileName    - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readCertificateFile(Certificate *certificate, ConstString fileName)
+{
+  return readCertificateFile(certificate,String_cString(fileName));
+}
+
+/***********************************************************************\
+* Name   : readKeyFileCString
 * Purpose: read public/private key file
 * Input  : key      - key variable
 *          fileName - file name
@@ -1471,7 +1486,7 @@ LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readKeyFile(Key *key, const char *fileName)
+LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
 {
   Errors     error;
   FileHandle fileHandle;
@@ -1531,6 +1546,21 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
 }
 
 /***********************************************************************\
+* Name   : readKeyFile
+* Purpose: read public/private key file
+* Input  : key      - key variable
+*          fileName - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readKeyFile(Key *key, ConstString fileName)
+{
+  return readKeyFileCString(key,String_cString(fileName));
+}
+
+/***********************************************************************\
 * Name   : freeBandWidthNode
 * Purpose: free band width node
 * Input  : bandWidthNode - band width node
@@ -1572,11 +1602,12 @@ LOCAL void initGlobalOptions(void)
   globalOptions.barExecutable                                   = String_new();
   globalOptions.niceLevel                                       = 0;
   globalOptions.maxThreads                                      = 0;
-  globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
+//  globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
+  globalOptions.tmpDirectory                                    = File_getSystemDirectory(String_new(),FILE_SYSTEM_PATH_TMP,NULL);
   globalOptions.maxTmpSize                                      = 0LL;
-  globalOptions.jobsDirectory                                   = String_newCString(DEFAULT_JOBS_DIRECTORY);
-  globalOptions.incrementalDataDirectory                        = String_newCString(DEFAULT_INCREMENTAL_DATA_DIRECTORY);
-  globalOptions.masterInfo.pairingFileName                      = DEFAULT_PAIRING_MASTER_FILE_NAME;
+  globalOptions.jobsDirectory                                   = File_getSystemDirectoryCString(String_new(),FILE_SYSTEM_PATH_CONFIGURATION,DEFAULT_JOBS_SUB_DIRECTORY);
+  globalOptions.incrementalDataDirectory                        = File_getSystemDirectoryCString(String_new(),FILE_SYSTEM_PATH_RUNTIME,DEFAULT_INCREMENTAL_DATA_SUB_DIRECTORY);
+  globalOptions.masterInfo.pairingFileName                      = File_getSystemDirectoryCString(String_new(),FILE_SYSTEM_PATH_RUNTIME,DEFAULT_PAIRING_MASTER_FILE_NAME);
   globalOptions.masterInfo.name                                 = String_new();
   initHash(&globalOptions.masterInfo.uuidHash);
   Configuration_initKey(&globalOptions.masterInfo.publicKey);
@@ -1964,6 +1995,7 @@ LOCAL void doneGlobalOptions(void)
   Configuration_doneKey(&globalOptions.masterInfo.publicKey);
   doneHash(&globalOptions.masterInfo.uuidHash);
   String_delete(globalOptions.masterInfo.name);
+  String_delete(globalOptions.masterInfo.pairingFileName);
   String_delete(globalOptions.incrementalDataDirectory);
   String_delete(globalOptions.jobsDirectory);
   String_delete(globalOptions.tmpDirectory);
@@ -2222,7 +2254,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = readCertificateFile(certificate,value);
+  error = readCertificateFileCString(certificate,value);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -2253,7 +2285,7 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
 
-  error = readKeyFile(key,value);
+  error = readKeyFileCString(key,value);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -2289,7 +2321,7 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
   if (File_existsCString(value))
   {
     // read key data from file
-    error = readKeyFile(key,value);
+    error = readKeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -6010,7 +6042,7 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
   if      (File_existsCString(value))
   {
     // read certificate from file
-    error = readCertificateFile(certificate,value);
+    error = readCertificateFileCString(certificate,value);
     if (error != ERROR_NONE)
     {
       return FALSE;
@@ -6193,7 +6225,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
   {
     // read key data from file
 
-    error = readKeyFile(key,value);
+    error = readKeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -7542,7 +7574,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   CMD_OPTION_CSTRING      ("pid-file",                          0,  1,1,globalOptions.pidFileName,                                                                                        "process id file name","file name"                                         ),
 
-  CMD_OPTION_CSTRING      ("pairing-master-file",               0,  1,1,globalOptions.masterInfo.pairingFileName,                                                                         "pairing master enable file name","file name"                              ),
+  CMD_OPTION_STRING       ("pairing-master-file",               0,  1,1,globalOptions.masterInfo.pairingFileName,                                                                         "pairing master enable file name","file name"                              ),
 
   CMD_OPTION_BOOLEAN      ("info",                              0  ,0,1,globalOptions.metaInfoFlag,                                                                                       "show meta info"                                                           ),
 
@@ -7638,7 +7670,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueKeyParse,configValueKeyFormat,NULL),
   ),
   CONFIG_VALUE_COMMENT           ("pairing master trigger/clear file"),
-  CONFIG_VALUE_CSTRING           ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1,                  "<file name>"),
+  CONFIG_VALUE_STRING            ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1,                  "<file name>"),
 
   CONFIG_VALUE_SPACE(),
 
@@ -9176,28 +9208,53 @@ Errors Configuration_readAllServerKeys(void)
   String fileName;
   Key    key;
 
-  // init default servers
+  // init variables
   fileName = String_new();
+
+  // init default servers
   Configuration_initKey(&key);
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  if (File_exists(fileName) && (readKeyFile(&key,fileName) == ERROR_NONE))
   {
     Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.publicKey,&key);
     Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.publicKey,&key);
   }
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
-  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
+  if (File_exists(fileName) && (readKeyFile(&key,fileName) == ERROR_NONE))
   {
     Configuration_duplicateKey(&globalOptions.defaultSSHServer.ssh.privateKey,&key);
     Configuration_duplicateKey(&globalOptions.defaultWebDAVServer.webDAV.privateKey,&key);
   }
   Configuration_doneKey(&key);
-  String_delete(fileName);
 
   // read default server CA, certificate, key
-  (void)readCertificateFile(&globalOptions.serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)readCertificateFile(&globalOptions.serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-  (void)readKeyFile(&globalOptions.serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+  (void)readCertificateFile(&globalOptions.serverCA,
+                            File_appendFileName(File_getSystemDirectory(fileName,
+                                                                        FILE_SYSTEM_PATH_TLS,
+                                                                        NULL
+                                                                       ),
+                                                DEFAULT_TLS_SERVER_CA_FILE
+                                               )
+                           );
+  (void)readCertificateFile(&globalOptions.serverCert,
+                            File_appendFileName(File_getSystemDirectory(fileName,
+                                                                        FILE_SYSTEM_PATH_TLS,
+                                                                        NULL
+                                                                        ),
+                                                DEFAULT_TLS_SERVER_CERTIFICATE_FILE
+                                               )
+                           );
+  (void)readKeyFile(&globalOptions.serverKey,
+                    File_appendFileName(File_getSystemDirectory(fileName,
+                                                                FILE_SYSTEM_PATH_TLS,
+                                                                NULL
+                                                                ),
+                                        DEFAULT_TLS_SERVER_KEY_FILE
+                                       )
+                   );
+
+  // free resources
+  String_delete(fileName);
 
   return ERROR_NONE;
 }

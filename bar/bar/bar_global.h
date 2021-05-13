@@ -40,16 +40,15 @@
 /***************************** Constants *******************************/
 
 #define DEFAULT_CONFIG_FILE_NAME                  "bar.cfg"
-#define DEFAULT_TMP_DIRECTORY                     FILE_TMP_DIRECTORY
 #define DEFAULT_LOG_FORMAT                        "%Y-%m-%d %H:%M:%S"
 #define DEFAULT_FRAGMENT_SIZE                     (64LL*MB)
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE            32
 #define DEFAULT_SERVER_PORT                       38523
 #ifdef HAVE_GNU_TLS
   #define DEFAULT_TLS_SERVER_PORT                 38524
-  #define DEFAULT_TLS_SERVER_CA_FILE              TLS_DIR "/certs/bar-ca.pem"
-  #define DEFAULT_TLS_SERVER_CERTIFICATE_FILE     TLS_DIR "/certs/bar-server-cert.pem"
-  #define DEFAULT_TLS_SERVER_KEY_FILE             TLS_DIR "/private/bar-server-key.pem"
+  #define DEFAULT_TLS_SERVER_CA_FILE              "certs/bar-ca.pem"
+  #define DEFAULT_TLS_SERVER_CERTIFICATE_FILE     "certs/bar-server-cert.pem"
+  #define DEFAULT_TLS_SERVER_KEY_FILE             "private/bar-server-key.pem"
 #else /* not HAVE_GNU_TLS */
   #define DEFAULT_TLS_SERVER_PORT                 0
   #define DEFAULT_TLS_SERVER_CA_FILE              ""
@@ -58,9 +57,9 @@
 #endif /* HAVE_GNU_TLS */
 #define DEFAULT_MAX_SERVER_CONNECTIONS            8
 
-#define DEFAULT_JOBS_DIRECTORY                    CONFIG_DIR "/jobs"
-#define DEFAULT_INCREMENTAL_DATA_DIRECTORY        RUNTIME_DIR
-#define DEFAULT_PAIRING_MASTER_FILE_NAME          RUNTIME_DIR "/pairing"
+#define DEFAULT_JOBS_SUB_DIRECTORY                "jobs"
+#define DEFAULT_INCREMENTAL_DATA_SUB_DIRECTORY    ""
+#define DEFAULT_PAIRING_MASTER_FILE_NAME          "pairing"
 
 #define DEFAULT_CD_DEVICE_NAME                    "/dev/cdrw"
 #define DEFAULT_DVD_DEVICE_NAME                   "/dev/dvd"
@@ -71,8 +70,6 @@
 #define DEFAULT_DVD_VOLUME_SIZE                   0LL
 #define DEFAULT_BD_VOLUME_SIZE                    0LL
 #define DEFAULT_DEVICE_VOLUME_SIZE                0LL
-
-#define DEFAULT_DATABASE_INDEX_FILE               RUNTIME_DIR "/index.db"
 
 #define DEFAULT_VERBOSE_LEVEL                     1
 #define DEFAULT_VERBOSE_LEVEL_INTERACTIVE         1
@@ -630,7 +627,7 @@ typedef struct
 // master info
 typedef struct
 {
-  const char *pairingFileName;                                // name of file to start/clear pairing
+  String     pairingFileName;                                 // name of file to start/clear pairing
   String     name;                                            // name of paired master
   Hash       uuidHash;                                        // master UUID hash
 //TODO: required?
