@@ -1178,7 +1178,7 @@ rundevd_wine:
 	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=master \
           --index-database=bar-index-slave.db \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=jobs \
           --incremental-data-directory=C:/tmp \
           --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --pairing-master-file=C:/tmp/pairing \
@@ -1189,7 +1189,7 @@ rundevd_slave_wine:
 	nice $(WINE) ./bar-debug.exe --daemon -D \
           --server-mode=slave \
           --index-database=bar-index-slave.db \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=jobs \
           --incremental-data-directory=C:/tmp \
           --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
           --pairing-master-file=C:/tmp/pairing \
