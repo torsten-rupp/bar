@@ -1473,7 +1473,7 @@ LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fi
 
 LOCAL Errors readCertificateFile(Certificate *certificate, ConstString fileName)
 {
-  return readCertificateFile(certificate,String_cString(fileName));
+  return readCertificateFileCString(certificate,String_cString(fileName));
 }
 
 /***********************************************************************\
@@ -9229,28 +9229,28 @@ Errors Configuration_readAllServerKeys(void)
 
   // read default server CA, certificate, key
   (void)readCertificateFile(&globalOptions.serverCA,
-                            File_appendFileName(File_getSystemDirectory(fileName,
-                                                                        FILE_SYSTEM_PATH_TLS,
-                                                                        NULL
-                                                                       ),
-                                                DEFAULT_TLS_SERVER_CA_FILE
-                                               )
+                            File_appendFileNameCString(File_getSystemDirectory(fileName,
+                                                                               FILE_SYSTEM_PATH_TLS,
+                                                                               NULL
+                                                                              ),
+                                                       DEFAULT_TLS_SERVER_CA_FILE
+                                                      )
                            );
   (void)readCertificateFile(&globalOptions.serverCert,
-                            File_appendFileName(File_getSystemDirectory(fileName,
-                                                                        FILE_SYSTEM_PATH_TLS,
-                                                                        NULL
-                                                                        ),
-                                                DEFAULT_TLS_SERVER_CERTIFICATE_FILE
-                                               )
+                            File_appendFileNameCString(File_getSystemDirectory(fileName,
+                                                                               FILE_SYSTEM_PATH_TLS,
+                                                                               NULL
+                                                                               ),
+                                                       DEFAULT_TLS_SERVER_CERTIFICATE_FILE
+                                                      )
                            );
   (void)readKeyFile(&globalOptions.serverKey,
-                    File_appendFileName(File_getSystemDirectory(fileName,
-                                                                FILE_SYSTEM_PATH_TLS,
-                                                                NULL
-                                                                ),
-                                        DEFAULT_TLS_SERVER_KEY_FILE
-                                       )
+                    File_appendFileNameCString(File_getSystemDirectory(fileName,
+                                                                       FILE_SYSTEM_PATH_TLS,
+                                                                       NULL
+                                                                       ),
+                                               DEFAULT_TLS_SERVER_KEY_FILE
+                                              )
                    );
 
   // free resources
