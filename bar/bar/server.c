@@ -1448,12 +1448,12 @@ Connector_isConnected(&slaveNode->connectorInfo)
       case SERVER_MODE_SLAVE:
         // check if pairing/clear master requested
         pairingStopDateTime = 0LL;
-        if (File_openCString(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
+        if (File_open(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
           clearPairing = FALSE;
 
           // get modified time
-          if (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
+          if (File_getInfo(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
           {
             pairingStopDateTime = fileInfo.timeModified+DEFAULT_PAIRING_MASTER_TIMEOUT;
           }
@@ -1466,7 +1466,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
 
           // close and delete file
           File_close(&fileHandle);
-          (void)File_deleteCString(globalOptions.masterInfo.pairingFileName,FALSE);
+          (void)File_delete(globalOptions.masterInfo.pairingFileName,FALSE);
 
           // check if clear/start/stop pairing
           if (!clearPairing)
