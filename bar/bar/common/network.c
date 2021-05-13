@@ -1452,7 +1452,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           ) != 0
      )
   {
-    error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+    error = ERRORX_(BIND_FAIL,errno,"%E",errno);
     disconnectDescriptor(serverSocketHandle->handle);
     return error;
   }

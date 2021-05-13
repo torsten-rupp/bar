@@ -55,6 +55,13 @@ ERROR HOST_NOT_FOUND
     stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
 
+ERROR BIND_FAIL
+  stringSet(errorText,sizeof(errorText),TR("bind fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR CONNECT_FAIL
   stringSet(errorText,sizeof(errorText),TR("connect fail"));
   if (!stringIsEmpty(ERROR_DATA))
