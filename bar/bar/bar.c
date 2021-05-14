@@ -4395,7 +4395,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (error != ERROR_NONE)
   {
     printError(_("Cannot create temporary directory in '%s' (error: %s)!"),
-               String_cString(tmpDirectory),
+               String_cString(globalOptions.tmpDirectory),
                Error_getText(error)
               );
     return error;
