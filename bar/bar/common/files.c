@@ -282,9 +282,12 @@ LOCAL Errors __getLastError(const char *__fileName__,
                            )
 #endif /* NDEBUG */
 {
+  int    n;
   Errors error;
 
-  switch (errno)
+  n = errno;
+
+  switch (n)
   {
     case ENOSPC:
       {
@@ -304,9 +307,9 @@ LOCAL Errors __getLastError(const char *__fileName__,
       break;
     default:
       #ifdef NDEBUG
-        error = Errorx_(errorCode,errno,"%E",errno);
+        error = Errorx_(errorCode,n,"%E",errno);
       #else /* not NDEBUG */
-        error = Errorx_(__fileName__,__lineNb__,errorCode,errno,"%E",errno);
+        error = Errorx_(__fileName__,__lineNb__,errorCode,n,"%E",errno);
       #endif /* NDEBUG */
       break;
   }
@@ -1731,6 +1734,8 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
         free(name);
         return error;
       }
+    #else
+      #error unknown number of arguments for mkdir()
     #endif /* MKDIR_ARGUMENTS_COUNT == ... */
   #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
     #error mkstemp() nor mktemp() available
