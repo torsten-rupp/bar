@@ -1033,10 +1033,10 @@ WeekDays Misc_getWeekDay(uint year, uint month, uint day)
   assert(day <= 31);
 
   // Orignal from: https://rosettacode.org/wiki/Day_of_the_week#C
-	d = (14 - month) / 12;
-	m = month + 12 * d - 2;
-	y = year - d;
-	return  ((day + (13 * m - 1)/5 + y + y/4 - y/100 + y/400)+6) % 7;
+  d = (14 - month) / 12;
+  m = month + 12 * d - 2;
+  y = year - d;
+  return  ((day + (13 * m - 1)/5 + y + y/4 - y/100 + y/400)+6) % 7;
 }
 
 uint Misc_getLastDayOfMonth(uint year, uint month)
