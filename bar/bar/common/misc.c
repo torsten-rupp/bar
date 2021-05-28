@@ -994,7 +994,8 @@ void Misc_splitDateTime(uint64   dateTime,
                         uint     *hour,
                         uint     *minute,
                         uint     *second,
-                        WeekDays *weekDay
+                        WeekDays *weekDay,
+                        bool     *isDayLightSaving
                        )
 {
   time_t    n;
@@ -1011,13 +1012,108 @@ void Misc_splitDateTime(uint64   dateTime,
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
 
-  if (year    != NULL) (*year)    = tm->tm_year + 1900;
-  if (month   != NULL) (*month)   = tm->tm_mon + 1;
-  if (day     != NULL) (*day)     = tm->tm_mday;
-  if (hour    != NULL) (*hour)    = tm->tm_hour;
-  if (minute  != NULL) (*minute)  = tm->tm_min;
-  if (second  != NULL) (*second)  = tm->tm_sec;
-  if (weekDay != NULL) (*weekDay) = (tm->tm_wday + WEEKDAY_SUN) % 7;
+  if (year             != NULL) (*year)             = tm->tm_year + 1900;
+  if (month            != NULL) (*month)            = tm->tm_mon + 1;
+  if (day              != NULL) (*day)              = tm->tm_mday;
+  if (hour             != NULL) (*hour)             = tm->tm_hour;
+  if (minute           != NULL) (*minute)           = tm->tm_min;
+  if (second           != NULL) (*second)           = tm->tm_sec;
+  if (weekDay          != NULL) (*weekDay)          = (tm->tm_wday + WEEKDAY_SUN) % 7;
+  if (isDayLightSaving != NULL) (*isDayLightSaving) = (tm->tm_isdst > 0);;
+}
+
+WeekDays Misc_getWeekDay(uint year, uint month, uint day)
+{
+  uint d,m,y;
+
+  assert(year >= 1900);
+  assert(month >= 1);
+  assert(month <= 12);
+  assert(day >= 1);
+  assert(day <= 31);
+
+  // Orignal from: https://rosettacode.org/wiki/Day_of_the_week#C
+	d = (14 - month) / 12;
+	m = month + 12 * d - 2;
+	y = year - d;
+	return  ((day + (13 * m - 1)/5 + y + y/4 - y/100 + y/400)+6) % 7;
+}
+
+uint Misc_getLastDayOfMonth(uint year, uint month)
+{
+  const uint DAYS_IN_MONTH[2][12] =
+  {
+    {31,28,31,30,31,30,31,31,30,31,30,31},
+    {31,29,31,30,31,30,31,31,30,31,30,31}
+  };
+
+  assert(year >= 1900);
+  assert(month >= 1);
+  assert(month <= 12);
+
+  return DAYS_IN_MONTH[Misc_isLeapYear(year) ? 1 : 0][month-1];
+}
+
+uint64 Misc_makeDateTime(uint year,
+                         uint month,
+                         uint day,
+                         uint hour,
+                         uint minute,
+                         uint second,
+                         bool isDayLightSaving
+                        )
+{
+  struct tm tm;
+
+  assert(year >= 1900);
+  assert(month >= 1);
+  assert(month <= 12);
+  assert(day >= 1);
+  assert(day <= 31);
+  assert(hour <= 23);
+  assert(minute <= 59);
+  assert(second <= 59);
+
+  tm.tm_year  = year - 1900;
+  tm.tm_mon   = month - 1;
+  tm.tm_mday  = day;
+  tm.tm_hour  = hour;
+  tm.tm_min   = minute;
+  tm.tm_sec   = second;
+  tm.tm_isdst = isDayLightSaving ? 1 : 0;
+
+  return (uint64)mktime(&tm);
+}
+
+void Misc_udelay(uint64 time)
+{
+  #if   defined(PLATFORM_LINUX)
+    #if   defined(HAVE_USLEEP)
+    #elif defined(HAVE_NANOSLEEP)
+      struct timespec ts;
+    #endif /* HAVE_NANOSLEEP */
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  // Note: usleep() seems not work on MinGW
+  #if   defined(PLATFORM_LINUX)
+    #if   defined(HAVE_USLEEP)
+      usleep(time);
+    #elif defined(HAVE_NANOSLEEP)
+      ts.tv_sec  = (ulong)(time/1000000LL);
+      ts.tv_nsec = (ulong)((time%1000000LL)*1000);
+      while (   (nanosleep(&ts,&ts) == -1)
+             && (errno == EINTR)
+            )
+      {
+        // nothing to do
+      }
+    #else
+      #error usleep()/nanosleep() not available nor Windows system!
+    #endif
+  #elif defined(PLATFORM_WINDOWS)
+    Sleep((time+1000L-1L)/1000LL);
+  #endif /* PLATFORM_... */
 }
 
 uint64 Misc_parseDateTime(const char *string)
@@ -1202,66 +1298,6 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   buffer[length] = '\0';
 
   return buffer;
-}
-
-uint64 Misc_makeDateTime(uint year,
-                         uint month,
-                         uint day,
-                         uint hour,
-                         uint minute,
-                         uint second
-                        )
-{
-  struct tm tmStruct;
-
-  assert(year >= 1900);
-  assert(month >= 1);
-  assert(month <= 12);
-  assert(day >= 1);
-  assert(day <= 31);
-  assert(hour <= 23);
-  assert(minute <= 59);
-  assert(second <= 59);
-
-  tmStruct.tm_year = year - 1900;
-  tmStruct.tm_mon  = month - 1;
-  tmStruct.tm_mday = day;
-  tmStruct.tm_hour = hour;
-  tmStruct.tm_min  = minute;
-  tmStruct.tm_sec  = second;
-
-  return (uint64)mktime(&tmStruct);
-}
-
-void Misc_udelay(uint64 time)
-{
-  #if   defined(PLATFORM_LINUX)
-    #if   defined(HAVE_USLEEP)
-    #elif defined(HAVE_NANOSLEEP)
-      struct timespec ts;
-    #endif /* HAVE_NANOSLEEP */
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  // Note: usleep() seems not work on MinGW
-  #if   defined(PLATFORM_LINUX)
-    #if   defined(HAVE_USLEEP)
-      usleep(time);
-    #elif defined(HAVE_NANOSLEEP)
-      ts.tv_sec  = (ulong)(time/1000000LL);
-      ts.tv_nsec = (ulong)((time%1000000LL)*1000);
-      while (   (nanosleep(&ts,&ts) == -1)
-             && (errno == EINTR)
-            )
-      {
-        // nothing to do
-      }
-    #else
-      #error usleep()/nanosleep() not available nor Windows system!
-    #endif
-  #elif defined(PLATFORM_WINDOWS)
-    Sleep((time+1000L-1L)/1000LL);
-  #endif /* PLATFORM_... */
 }
 
 /*---------------------------------------------------------------------*/

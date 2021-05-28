@@ -728,13 +728,15 @@ uint32 Misc_getCurrentTime(void);
 * Name   : Misc_splitDateTime
 * Purpose: split date/time into parts
 * Input  : dateTime - date/time (seconds since 1970-1-1 00:00:00)
-* Output : year    - year, YYYY (could be NULL)
-*          month   - month, 1..12 (could be NULL)
-*          day     - day, 1..31 (could be NULL)
-*          hour    - hour, 0..23 (could be NULL)
-*          minute  - minute, 0..59 (could be NULL)
-*          second  - second, 0..59 (could be NULL)
-*          weekDay - week day, DAY_* (could be NULL)
+* Output : year             - year, YYYY (could be NULL)
+*          month            - month, 1..12 (could be NULL)
+*          day              - day, 1..31 (could be NULL)
+*          hour             - hour, 0..23 (could be NULL)
+*          minute           - minute, 0..59 (could be NULL)
+*          second           - second, 0..59 (could be NULL)
+*          weekDay          - week day, DAY_* (could be NULL)
+*          isDayLightSaving - TRUE iff day light saving active (can be
+*                             NULL)
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -746,18 +748,62 @@ void Misc_splitDateTime(uint64   dateTime,
                         uint     *hour,
                         uint     *minute,
                         uint     *second,
-                        WeekDays *weekDay
+                        WeekDays *weekDay,
+                        bool     *isDayLightSaving
                        );
+
+/***********************************************************************\
+* Name   : Misc_getWeekDay
+* Purpose: get week day
+* Input  : year  - year
+*          month - month
+*          day   - day
+* Output : -
+* Return : week day
+* Notes  : -
+\***********************************************************************/
+
+WeekDays Misc_getWeekDay(uint year, uint month, uint day);
+
+/***********************************************************************\
+* Name   : Misc_getLastDayOfMonth
+* Purpose: get last day of month
+* Input  : year  - year
+*          month - month
+* Output : -
+* Return : last day in month [1..31]
+* Notes  : -
+\***********************************************************************/
+
+uint Misc_getLastDayOfMonth(uint year, uint month);
+
+/***********************************************************************\
+* Name   : Misc_isLeapYear
+* Purpose: check if year is a leap year
+* Input  : year - year
+* Output : -
+* Return : TRUE iff year is a leap year
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Misc_isLeapYear(uint year);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE bool Misc_isLeapYear(uint year)
+{
+  return ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0));
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Misc_makeDateTime
 * Purpose: create date/time from parts
-* Input  : year    - year, YYYY
-*          month   - month, 1..12
-*          day     - day, 1..31
-*          hour    - hour, 0..23
-*          minute  - minute, 0..59
-*          second  - second, 0..59
+* Input  : year             - year, YYYY
+*          month            - month, 1..12
+*          day              - day, 1..31
+*          hour             - hour, 0..23
+*          minute           - minute, 0..59
+*          second           - second, 0..59
+*          isDayLightSaving - TRUE iff day light saving is active
 * Return : date/time (seconds since 1970-1-1 00:00:00)
 * Return : -
 * Notes  : -
@@ -768,7 +814,8 @@ uint64 Misc_makeDateTime(uint year,
                          uint day,
                          uint hour,
                          uint minute,
-                         uint second
+                         uint second,
+                         bool isDayLightSaving
                         );
 
 /***********************************************************************\
