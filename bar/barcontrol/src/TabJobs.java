@@ -1976,9 +1976,7 @@ public class TabJobs
     @Override
     public int compareTo(EntityIndexData entityIndexData)
     {
-// TODO: remove
-//      EntityIndexData entityIndexData = (EntityIndexData)object;
-      int             result;
+      int result;
 
       if (id == entityIndexData.id)
       {
@@ -15942,7 +15940,7 @@ throw new Error("NYI");
 
                                    if      (entityId != 0L)
                                    {
-                                     // add entity
+                                     // add/update entity
                                      TreeItem persistenceTreeItem = persistenceTreeItemMap.get(persistenceId);
                                      if (persistenceTreeItem != null)
                                      {
@@ -15973,7 +15971,7 @@ throw new Error("NYI");
                                    }
                                    else if (persistenceId != 0L)
                                    {
-                                     // add persistence entry
+                                     // add/update persistence entry
                                      PersistenceData persistenceData = new PersistenceData(persistenceId,
                                                                                            archiveType,
                                                                                            minKeep,
