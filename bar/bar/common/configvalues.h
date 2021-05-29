@@ -227,7 +227,7 @@ typedef struct
   } ignoreValue;
   struct
   {
-    ConfigSectionIteratorFunction sectionIterator;  // section iterator
+    ConfigSectionIteratorFunction iteratorFunction;  // section iterator
     void                          *userData;      // user data for parse special
   } section;
   struct
@@ -429,11 +429,15 @@ typedef struct
 }; \
 
 /***********************************************************************\
-* Name   : CONFIG_VALUE_SECTION_ARRAY
+* Name   : CONFIG_VALUE_SECTION_ARRAY, CONFIG_STRUCT_VALUE_SECTION_ARRAY
 * Purpose: define config value section array
-* Input  : name   - name
-*          offset - offset in structure or -1
-*          ...    - config values
+* Input  : name            - name
+*          offset          - offset in structure or -1
+*          type            - structure type
+*          member          - structure memory name
+*          sectionIterator - section iterator function
+*          userData        - user data for section iterator function
+*          ...             - config values
 * Output : -
 * Return : -
 * Notes  : -
@@ -485,6 +489,8 @@ typedef struct
     {NULL},\
     {NULL}\
   }
+#define CONFIG_STRUCT_VALUE_SECTION_ARRAY(name,type,member,sectionIterator,userData,...) \
+  CONFIG_VALUE_SECTION_ARRAY(name,NULL,offsetof(type,member),sectionIterator,userData,__VA_ARGS__)
 
 /***********************************************************************\
 * Name   : CONFIG_VALUE_INTEGER, CONFIG_STRUCT_VALUE_INTEGER
@@ -1601,15 +1607,16 @@ Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const String
 * Name   : ConfigValue_updateConfigFile
 * Purpose: i[date config file from template
 * Input  : configFileName - config file name
-*          configValue    - config value definition
-*          configTemplate - config template
+*          configValues   - config values definition
+*          variable       - variable or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors ConfigValue_writeConfigFile(ConstString       configFileName,
-                                   const ConfigValue configValues[]
+                                   const ConfigValue configValues[],
+                                   const void        *variable
                                   );
 
 /***********************************************************************\

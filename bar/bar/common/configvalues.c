@@ -2470,7 +2470,7 @@ LOCAL Errors writeValue(FileHandle        *fileHandle,
 *          indent                         - indention
 *          configValues                   - config values
 *          firstValueIndex,lastValueIndex - first/last value index
-*          variable                       - variable
+*          variable                       - variable or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2511,6 +2511,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
           void   *sectionIterator;
           String name;
           void   *data;
+          uint   n;
 
           if (   (configValues[index+1].type != CONFIG_VALUE_TYPE_END_SECTION)
               && (configValues[index+1].type != CONFIG_VALUE_TYPE_END)
@@ -2530,28 +2531,65 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             error = flushCommentLines(fileHandle,indent,&commentList);
             error = writeCommentLines(fileHandle,indent,(commentsNode != NULL) ? &commentsNode->commentList : NULL);
 
+            // write a single commented section if there are no sections
+            if (error == ERROR_NONE) error = File_printLine(fileHandle,"#[%s]",configValues[index].name);
+            if (error == ERROR_NONE) error = writeConfigFile(fileHandle,
+                                                             indent+2,
+                                                             configValues,
+                                                             sectionFirstValueIndex,
+                                                             sectionLastValueIndex,
+                                                             NULL  // variable
+                                                            );
+            if (error == ERROR_NONE) error = File_printLine(fileHandle,"#[end]");
+            if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
+
             // init iterator
-            if (configValues[index].section.sectionIterator != NULL)
+            if (configValues[index].section.iteratorFunction != NULL)
             {
-              configValues[index].section.sectionIterator(&sectionIterator,
-                                                          CONFIG_VALUE_OPERATION_INIT,
-                                                          configValues[index].variable.pointer,
-                                                          configValues[index].section.userData
-                                                         );
+              if      (configValues[index].offset >= 0)
+              {
+                if      (variable != NULL)
+                {
+                  data = (void*)((byte*)variable+configValues[index].offset);
+                }
+                else if (configValues[index].variable.reference != NULL)
+                {
+                  if ((*configValues[index].variable.reference) != NULL)
+                  {
+                    data = ((void*)((byte*)(*configValues[index].variable.reference)+configValues[index].offset));
+                  }
+                }
+              }
+              else if (configValues[index].variable.pointer != NULL)
+              {
+                data = configValues[index].variable.pointer;
+              }
+
+              configValues[index].section.iteratorFunction(&sectionIterator,
+                                                           CONFIG_VALUE_OPERATION_INIT,
+                                                           data,
+                                                           configValues[index].section.userData
+                                                          );
             }
 
-            if (configValues[index].section.sectionIterator != NULL)
+            // iterate
+            n = 0;
+            if (configValues[index].section.iteratorFunction != NULL)
             {
-              // iterate
               name = String_new();
-              do
+              data = configValues[index].section.iteratorFunction(&sectionIterator,
+                                                                  CONFIG_VALUE_OPERATION_FORMAT,
+                                                                  name,
+                                                                  configValues[index].section.userData
+                                                                 );
+              while ((data != NULL) && (error == ERROR_NONE))
               {
-                // write section comments
-                const StringList *commentList = configValues[index].section.sectionIterator(&sectionIterator,
-                                                                                            CONFIG_VALUE_OPERATION_COMMENTS,
-                                                                                            name,
-                                                                                            configValues[index].section.userData
-                                                                                           );
+                // write comments before section
+                const StringList *commentList = configValues[index].section.iteratorFunction(&sectionIterator,
+                                                                                             CONFIG_VALUE_OPERATION_COMMENTS,
+                                                                                             NULL,  // data
+                                                                                             configValues[index].section.userData
+                                                                                            );
                 if (commentList != NULL)
                 {
                   StringNode *stringNode;
@@ -2563,68 +2601,49 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                   }
                 }
 
-                // get section data
-                data = configValues[index].section.sectionIterator(&sectionIterator,
-                                                                   CONFIG_VALUE_OPERATION_FORMAT,
-                                                                   name,
-                                                                   configValues[index].section.userData
-                                                                  );
-                if (data != NULL)
+                // write section begin
+                if (!String_isEmpty(name))
                 {
-                  // write section begin
-                  if (!String_isEmpty(name))
-                  {
-                    if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s '%S']",configValues[index].name,name);
-                  }
-                  else
-                  {
-                    if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s]",configValues[index].name);
-                  }
-
-                  // write section
-                  if (error == ERROR_NONE) error = writeConfigFile(fileHandle,
-                                                                   indent+2,
-                                                                   configValues,
-                                                                   sectionFirstValueIndex,
-                                                                   sectionLastValueIndex,
-                                                                   data
-                                                                  );
-
-                  // write section end
-                  if (error == ERROR_NONE) error = File_printLine(fileHandle,"[end]");
-                  if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
+                  if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s '%S']",configValues[index].name,name);
                 }
+                else
+                {
+                  if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s]",configValues[index].name);
+                }
+
+                // write section
+                if (error == ERROR_NONE) error = writeConfigFile(fileHandle,
+                                                                 indent+2,
+                                                                 configValues,
+                                                                 sectionFirstValueIndex,
+                                                                 sectionLastValueIndex,
+                                                                 data
+                                                                );
+
+                // write section end
+                if (error == ERROR_NONE) error = File_printLine(fileHandle,"[end]");
+                if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
+
+                n++;
+
+                // get next section data
+                data = configValues[index].section.iteratorFunction(&sectionIterator,
+                                                                    CONFIG_VALUE_OPERATION_FORMAT,
+                                                                    name,
+                                                                    configValues[index].section.userData
+                                                                   );
               }
-              while ((data != NULL) && (error == ERROR_NONE));
               String_delete(name);
-            }
-            else
-            {
-              // write section begin
-              if (error == ERROR_NONE) error = File_printLine(fileHandle,"[%s]",configValues[index].name);
-
-              // write section
-              if (error == ERROR_NONE) error = writeConfigFile(fileHandle,
-                                                               indent+2,
-                                                               configValues,
-                                                               sectionFirstValueIndex,
-                                                               sectionLastValueIndex,
-                                                               NULL  // variable
-                                                              );
-
-              // write section end
-              if (error == ERROR_NONE) error = File_printLine(fileHandle,"[end]");
-              if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
             }
 
             // done iterator
-            if (configValues[index].section.sectionIterator != NULL)
+            if (configValues[index].section.iteratorFunction != NULL)
             {
-              configValues[index].section.sectionIterator(&sectionIterator,
-                                                          CONFIG_VALUE_OPERATION_DONE,
-                                                          NULL, // data
-                                                          configValues[index].section.userData
-                                                         );
+              configValues[index].section.iteratorFunction(&sectionIterator,
+                                                           CONFIG_VALUE_OPERATION_DONE,
+                                                           NULL, // data
+                                                           configValues[index].section.userData
+                                                          );
             }
           }
 
@@ -4287,7 +4306,8 @@ Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const Str
 }
 
 Errors ConfigValue_writeConfigFile(ConstString       configFileName,
-                                   const ConfigValue configValues[]
+                                   const ConfigValue configValues[],
+                                   const void        *variable
                                   )
 {
   Errors     error;
@@ -4316,7 +4336,7 @@ Errors ConfigValue_writeConfigFile(ConstString       configFileName,
                           configValues,
                           firstValueIndex,
                           lastValueIndex,
-                          NULL  // variable
+                          variable
                          );
   if (error != ERROR_NONE)
   {
@@ -4915,35 +4935,35 @@ LOCAL void updateSHA256Section(SHA256            sha256,
             }
 
             // init iterator
-            if (configValues[index].section.sectionIterator != NULL)
+            if (configValues[index].section.iteratorFunction != NULL)
             {
-              configValues[index].section.sectionIterator(&sectionIterator,
-                                                          CONFIG_VALUE_OPERATION_INIT,
-                                                          configValues[index].variable.pointer,
-                                                          configValues[index].section.userData
-                                                         );
+              configValues[index].section.iteratorFunction(&sectionIterator,
+                                                           CONFIG_VALUE_OPERATION_INIT,
+                                                           configValues[index].variable.pointer,
+                                                           configValues[index].section.userData
+                                                          );
             }
 
-            if (configValues[index].section.sectionIterator != NULL)
+            // iterate
+            if (configValues[index].section.iteratorFunction != NULL)
             {
-              // iterate
               do
               {
-                const StringList *commentList = configValues[index].section.sectionIterator(&sectionIterator,
-                                                                                            CONFIG_VALUE_OPERATION_COMMENTS,
-                                                                                            NULL,  // data,
-                                                                                            configValues[index].section.userData
-                                                                                           );
+                const StringList *commentList = configValues[index].section.iteratorFunction(&sectionIterator,
+                                                                                             CONFIG_VALUE_OPERATION_COMMENTS,
+                                                                                             NULL,  // data,
+                                                                                             configValues[index].section.userData
+                                                                                            );
                 if (commentList != NULL)
                 {
                   updateSHA256StringList(sha256,commentList);
                 }
 
-                data = configValues[index].section.sectionIterator(&sectionIterator,
-                                                                   CONFIG_VALUE_OPERATION_FORMAT,
-                                                                   NULL,  // data,
-                                                                   configValues[index].section.userData
-                                                                  );
+                data = configValues[index].section.iteratorFunction(&sectionIterator,
+                                                                    CONFIG_VALUE_OPERATION_FORMAT,
+                                                                    NULL,  // data,
+                                                                    configValues[index].section.userData
+                                                                   );
                 if (data != NULL)
                 {
                   updateSHA256Section(sha256,configValues,sectionFirstValueIndex,sectionLastValueIndex,data);
@@ -4957,13 +4977,13 @@ LOCAL void updateSHA256Section(SHA256            sha256,
             }
 
             // done iterator
-            if (configValues[index].section.sectionIterator != NULL)
+            if (configValues[index].section.iteratorFunction != NULL)
             {
-              configValues[index].section.sectionIterator(&sectionIterator,
-                                                          CONFIG_VALUE_OPERATION_DONE,
-                                                          NULL, // data
-                                                          configValues[index].section.userData
-                                                         );
+              configValues[index].section.iteratorFunction(&sectionIterator,
+                                                           CONFIG_VALUE_OPERATION_DONE,
+                                                           NULL, // data
+                                                           configValues[index].section.userData
+                                                          );
             }
           }
 
