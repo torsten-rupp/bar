@@ -2888,6 +2888,16 @@ does not work on Windows? Even cursor keys trigger traversal event?
     return value;
   }
 
+  /** get data from widget
+   * @param widget widget
+   * @param type return type
+   * @return data value
+   */
+  public static <T> T getData(Widget widget, Class<T> type)
+  {
+    return getData(widget,(T)null);
+  }
+
   //-----------------------------------------------------------------------
 
   /** create empty space
@@ -6102,6 +6112,16 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   /** get selected option menu item
    * @param combo option menu combo
+   * @param type return type
+   * @return selected option menu item data or null
+   */
+  public static <T> T getSelectedOptionMenuItem(Combo combo, Class<T> type)
+  {
+    return getSelectedOptionMenuItem(combo,(T)null);
+  }
+
+  /** get selected option menu item
+   * @param combo option menu combo
    * @return selected option menu item data or null
    */
   public static <T> T getSelectedOptionMenuItem(Combo combo)
@@ -6435,7 +6455,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     tableColumns[index].setWidth(width);
   }
 
-  /** set width of table columns
+  /** adjust width of table columns to optimal width
    * @param table table
    */
   public static void adjustTableColumnWidth(Table table)
@@ -6882,7 +6902,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new table item
    */
-  public static TableItem insertTableItem(final Table table, final int index, final Object data, final Image image, final Object... values)
+  public static TableItem insertTableItem(final Table     table,
+                                          final int       index,
+                                          final Object    data,
+                                          final Image     image,
+                                          final Object... values
+                                         )
   {
     /** table insert runnable
      */
@@ -6967,7 +6992,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new table item
    */
-  public static <T> TableItem insertTableItem(final Table table, final Comparator<T> comparator, final T data, final Image image, final Object... values)
+  public static <T> TableItem insertTableItem(final Table         table,
+                                              final Comparator<T> comparator,
+                                              final T             data,
+                                              final Image         image,
+                                              final Object...     values
+                                             )
   {
     /** table insert runnable
      */
@@ -7194,11 +7224,27 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param table table
    * @param tableItems table items to remove
    */
-  public static void removeTableEntries(Table table, TableItem[] tableItems)
+  public static void removeTableItems(Table table, Collection<TableItem> tableItems)
   {
     for (TableItem tableItem : tableItems)
     {
       removeTableItem(table,tableItem);
+    }
+  }
+
+  /** remove not existing table entries
+   * @param table table
+   * @param existingTableItems still existing table items
+   */
+  public static void removeObsoleteTableItems(Table table, Collection<TableItem> existingTableItems)
+  {
+    TableItem tableItems[] = table.getItems();
+    for (TableItem tableItem : tableItems)
+    {
+      if (!existingTableItems.contains(tableItem))
+      {
+        removeTableItem(table,tableItem);
+      }
     }
   }
 
@@ -7227,11 +7273,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param data table item data
    * @return table item or null if not found
    */
-  public static <T extends Comparable> TableItem getTableItem(Table table, T data)
+  public static <T> TableItem getTableItem(Table table, Comparator<T> comparator, T data)
   {
     for (TableItem tableItem : table.getItems())
     {
-      if (data.compareTo((T)tableItem.getData()) == 0)
+      assert tableItem.getData() != null;
+      if (comparator.compare((T)tableItem.getData(),data) == 0)
       {
         return tableItem;
       }
@@ -7245,12 +7292,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param data table item data
    * @return table item or null if not found
    */
-  public static <T> TableItem getTableItem(Table table, Comparator<T> comparator, T data)
+  public static <T extends Comparable> TableItem getTableItem(Table table, T data)
   {
     for (TableItem tableItem : table.getItems())
     {
-      assert tableItem.getData() != null;
-      if (comparator.compare((T)tableItem.getData(),data) == 0)
+      if (data.compareTo((T)tableItem.getData()) == 0)
       {
         return tableItem;
       }
@@ -7562,6 +7608,47 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                                                    )
   {
     return updateInsertTableItem(table,comparator,data,(Image)null,values);
+  }
+
+  /** update/insert table item
+   * @param table table
+   * @param data item data
+   * @param image image (can be null)
+   * @param values values list
+   * @return updated or added table item
+   */
+  public static <T extends Comparable> TableItem updateInsertTableItem(Table         table,
+                                                                       T             data,
+                                                                       Image         image,
+                                                                       Object...     values
+                                                                      )
+  {
+    return updateInsertTableItem(table,
+                                 new Comparator<T>()
+                                 {
+                                   public int compare(T data0, T data1)
+                                   {
+                                     return data0.compareTo(data1);
+                                   }
+                                 },
+                                 data,
+                                 image,
+                                 values
+                                );
+  }
+
+  /** update/insert table item
+   * @param table table
+   * @param data item data
+   * @param values values list
+   * @return updated or added table item
+   */
+  public static <T extends Comparable> TableItem updateInsertTableItem(Table         table,
+                                                                       T             data,
+                                                                       Object...     values
+                                                                      )
+  {
+    return updateInsertTableItem(table,data,(Image)null,values);
   }
 
   /** update table item
@@ -9076,217 +9163,6 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
   }
 
   /** update or insert tree item
-   * @param tree tree
-   * @param flags flags; see TREE_ITEM_FLAG_...
-   * @param data item data
-   * @param values values list
-   * @return updated or inserted tree item
-   */
-  public static <T extends Comparable> TreeItem updateInsertTreeItem(final Tree      tree,
-                                                                     final int       flags,
-                                                                     final T         data,
-                                                                     final Object... values
-                                                                    )
-  {
-    /** tree update runnable
-     */
-    class UpdateRunnable implements Runnable
-    {
-      TreeItem treeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!tree.isDisposed())
-        {
-          updateTreeItem(tree.getItems());
-        }
-      }
-
-      /** update tree item
-       * @param existingTreeItem existing tree item
-       */
-      private void updateTreeItem(TreeItem existingTreeItem)
-      {
-        try
-        {
-          Object existingData = existingTreeItem.getData();
-          if ((existingData!=null) && (data.compareTo(existingData) == 0))
-          {
-            // update
-            existingTreeItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  existingTreeItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  existingTreeItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  existingTreeItem.setText(i,values[i].toString());
-                }
-              }
-            }
-            treeItem = existingTreeItem;
-          }
-        }
-        catch (ClassCastException exception)
-        {
-          // ignored
-        }
-      }
-
-      /** find and update tree item
-       * @param existingTreeItems existing tree items
-       */
-      private void updateTreeItem(TreeItem existingTreeItems[])
-      {
-        for (TreeItem existingTreeItem : existingTreeItems)
-        {
-          updateTreeItem(existingTreeItem);
-          if (treeItem == null)
-          {
-            // update sub-tree item
-            updateTreeItem(existingTreeItem.getItems());
-          }
-          if (treeItem != null) break;
-        }
-      }
-    }
-
-    /** tree add runnable
-     */
-    class AddRunnable implements Runnable
-    {
-      TreeItem treeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!tree.isDisposed())
-        {
-          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
-
-          treeItem = new TreeItem(tree,SWT.NONE);
-          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
-          {
-            Button checked = new Button(tree,SWT.CHECK);
-            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
-            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
-            checked.pack();
-
-            TreeEditor treeEditor = new TreeEditor(tree);
-            treeEditor.minimumWidth = checked.getSize().x;
-            treeEditor.horizontalAlignment = SWT.LEFT;
-            treeEditor.setEditor(checked,treeItem,0);
-
-            widgetCheckedMap.put(treeItem,treeEditor);
-
-            checked.addSelectionListener(new SelectionListener()
-            {
-              @Override
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
-              @Override
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                Button widget = (Button)selectionEvent.widget;
-
-                Event treeEvent = new Event();
-                treeEvent.item   = treeItem;
-                treeEvent.detail = SWT.CHECK;
-                tree.notifyListeners(SWT.Selection,treeEvent);
-              }
-            });
-          }
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
-          treeItem.setData(data);
-          for (int i = 0; i < values.length; i++)
-          {
-            if (values[i] != null)
-            {
-              if      (values[i] instanceof String)
-              {
-                treeItem.setText(i,(String)values[i]);
-              }
-              else if (values[i] instanceof Integer)
-              {
-                treeItem.setText(i,Integer.toString((Integer)values[i]));
-              }
-              else if (values[i] instanceof Long)
-              {
-                treeItem.setText(i,Long.toString((Long)values[i]));
-              }
-              else if (values[i] instanceof Double)
-              {
-                treeItem.setText(i,Double.toString((Double)values[i]));
-              }
-              else if (values[i] instanceof Image)
-              {
-                treeItem.setImage(i,(Image)values[i]);
-              }
-              else
-              {
-                treeItem.setText(i,values[i].toString());
-              }
-            }
-          }
-
-          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
-             Thus force a relayout by column change
-          */
-          for (TreeEditor treeEditor : widgetCheckedMap.values())
-          {
-            treeEditor.setColumn(treeEditor.getColumn());
-          }
-        }
-      }
-    };
-
-    TreeItem treeItem = null;
-    if (!tree.isDisposed())
-    {
-      Display display = tree.getDisplay();
-
-      // try update existing tree item
-      UpdateRunnable updateRunnable = new UpdateRunnable();
-      display.syncExec(updateRunnable);
-      treeItem = updateRunnable.treeItem;
-
-      if (treeItem == null)
-      {
-        // insert new tree item
-        AddRunnable addRunnable = new AddRunnable();
-        display.syncExec(addRunnable);
-        treeItem = addRunnable.treeItem;
-      }
-    }
-
-    return treeItem;
-  }
-
-  /** update or insert tree item
    * @param tree tree widget
    * @param comparator tree item comperator
    * @param flags flags; see TREE_ITEM_FLAG_...
@@ -9316,7 +9192,10 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           for (TreeItem existingTreeItem : tree.getItems())
           {
             // check if exists
-            if (comparator.compare(data,(T)existingTreeItem.getData()) == 0)
+            T existingData = (T)existingTreeItem.getData();
+            if (   (existingData != null)
+                && (comparator.compare(data,(T)existingTreeItem.getData()) == 0)
+               )
             {
               existingTreeItem.setData(data);
               for (int i = 0; i < values.length; i++)
@@ -9470,6 +9349,33 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     return treeItem;
   }
 
+  /** update or insert tree item
+   * @param tree tree
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param data item data
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(final Tree      tree,
+                                                                     final int       flags,
+                                                                     final T         data,
+                                                                     final Object... values
+                                                                    )
+  {
+    return updateInsertTreeItem(tree,
+                                new Comparator<T>()
+                                {
+                                  public int compare(T data0, T data1)
+                                  {
+                                    return data0.compareTo(data1);
+                                  }
+                                },
+                                flags,
+                                data,
+                                values
+                               );
+  }
+
   /** update tree item
    * @param treeItem tree item to update
    * @param data item data
@@ -9527,236 +9433,6 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param parentTreeItem parent tree item
-   * @param flags flags; see TREE_ITEM_FLAG_...
-   * @param data item data
-   * @param values values list
-   * @return updated or added tree item
-   */
-  public static <T extends Comparable> TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
-                                                                     final int       flags,
-                                                                     final T         data,
-                                                                     final Object... values
-                                                                    )
-  {
-    /** tree update runnable
-     */
-    class UpdateRunnable implements Runnable
-    {
-      TreeItem treeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!parentTreeItem.isDisposed())
-        {
-          updateTreeItem(parentTreeItem.getItems());
-        }
-      }
-
-      /** update tree item
-       * @param existingTreeItem existing tree item
-       */
-      private void updateTreeItem(TreeItem existingTreeItem)
-      {
-        try
-        {
-          Object existingData = existingTreeItem.getData();
-          if ((existingData!=null) && (data.compareTo(existingData) == 0))
-          {
-            // update
-            existingTreeItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  existingTreeItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  existingTreeItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  existingTreeItem.setText(i,values[i].toString());
-                }
-              }
-            }
-            treeItem = existingTreeItem;
-          }
-        }
-        catch (ClassCastException exception)
-        {
-          // ignored
-        }
-      }
-
-      /** find and update tree item
-       * @param existingTreeItems existing tree items
-       */
-      private void updateTreeItem(TreeItem existingTreeItems[])
-      {
-        for (TreeItem existingTreeItem : existingTreeItems)
-        {
-          updateTreeItem(existingTreeItem);
-          if (treeItem == null)
-          {
-            // update sub-tree item
-            updateTreeItem(existingTreeItem.getItems());
-          }
-          if (treeItem != null) break;
-        }
-      }
-    }
-
-    /** tree add runnable
-     */
-    class AddRunnable implements Runnable
-    {
-      TreeItem treeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!parentTreeItem.isDisposed())
-        {
-          final Tree                   tree             = parentTreeItem.getParent();
-          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
-
-          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
-          {
-            if (!parentTreeItem.getExpanded())
-            {
-              parentTreeItem.removeAll();
-            }
-          }
-          treeItem = new TreeItem(parentTreeItem,SWT.NONE);
-          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
-          {
-            Button checked = new Button(tree,SWT.CHECK);
-            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
-            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
-            checked.pack();
-
-            TreeEditor treeEditor = new TreeEditor(tree);
-            treeEditor.minimumWidth = checked.getSize().x;
-            treeEditor.horizontalAlignment = SWT.LEFT;
-            treeEditor.setEditor(checked,treeItem,0);
-
-            widgetCheckedMap.put(treeItem,treeEditor);
-
-            checked.addSelectionListener(new SelectionListener()
-            {
-              @Override
-              public void widgetDefaultSelected(SelectionEvent selectionEvent)
-              {
-              }
-              @Override
-              public void widgetSelected(SelectionEvent selectionEvent)
-              {
-                Button widget = (Button)selectionEvent.widget;
-
-                Event treeEvent = new Event();
-                treeEvent.item   = treeItem;
-                treeEvent.detail = SWT.CHECK;
-                tree.notifyListeners(SWT.Selection,treeEvent);
-              }
-            });
-          }
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
-          treeItem.setData(data);
-          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
-          {
-            if (!parentTreeItem.getExpanded())
-            {
-              parentTreeItem.setExpanded(true);
-            }
-          }
-          else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
-          {
-            new TreeItem(treeItem,SWT.NONE);
-          }
-          for (int i = 0; i < values.length; i++)
-          {
-            if (values[i] != null)
-            {
-              if      (values[i] instanceof String)
-              {
-                treeItem.setText(i,(String)values[i]);
-              }
-              else if (values[i] instanceof Integer)
-              {
-                treeItem.setText(i,Integer.toString((Integer)values[i]));
-              }
-              else if (values[i] instanceof Long)
-              {
-                treeItem.setText(i,Long.toString((Long)values[i]));
-              }
-              else if (values[i] instanceof Double)
-              {
-                treeItem.setText(i,Double.toString((Double)values[i]));
-              }
-              else if (values[i] instanceof Image)
-              {
-                treeItem.setImage(i,(Image)values[i]);
-              }
-              else
-              {
-                treeItem.setText(i,values[i].toString());
-              }
-            }
-          }
-
-          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
-             Thus force a relayout by column change
-          */
-          for (TreeEditor treeEditor : widgetCheckedMap.values())
-          {
-            treeEditor.setColumn(treeEditor.getColumn());
-          }
-        }
-      }
-    };
-
-    TreeItem subTreeItem = null;
-    if (!parentTreeItem.isDisposed())
-    {
-      Display display = parentTreeItem.getDisplay();
-
-      // try update existing tree item
-      UpdateRunnable updateRunnable = new UpdateRunnable();
-      display.syncExec(updateRunnable);
-      subTreeItem = updateRunnable.treeItem;
-
-      if (subTreeItem == null)
-      {
-        // add new tree item
-        AddRunnable addRunnable = new AddRunnable();
-        display.syncExec(addRunnable);
-        subTreeItem = addRunnable.treeItem;
-      }
-    }
-
-    return subTreeItem;
-  }
-
-  /** update or insert tree item
-   * @param parentTreeItem parent tree item
    * @param comparator tree item comperator
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param data item data
@@ -9796,7 +9472,11 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 //Dprintf.dprintf("  check exists %s",existingTreeItem.getData());
 //Dprintf.dprintf("               %s",data);
 //Dprintf.dprintf("  => %s",data.equals(existingTreeItem.getData()));
-          if (comparator.compare(data,(T)existingTreeItem.getData()) == 0)
+          // check if exists
+          T existingData = (T)existingTreeItem.getData();
+          if (   (existingData != null)
+              && (comparator.compare(data,(T)existingTreeItem.getData()) == 0)
+             )
           {
             // update
             existingTreeItem.setData(data);
@@ -9991,6 +9671,33 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     return treeItem;
   }
 
+  /** update or insert tree item
+   * @param parentTreeItem parent tree item
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param data item data
+   * @param values values list
+   * @return updated or added tree item
+   */
+  public static <T extends Comparable> TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
+                                                                     final int       flags,
+                                                                     final T         data,
+                                                                     final Object... values
+                                                                    )
+  {
+    return updateInsertTreeItem(parentTreeItem,
+                                new Comparator<T>()
+                                {
+                                  public int compare(T data0, T data1)
+                                  {
+                                    return data0.compareTo(data1);
+                                  }
+                                },
+                                flags,
+                                data,
+                                values
+                               );
+  }
+
   /** remove tree item/sub-tree item
    * @param treeItem tree item
    * @param data item data
@@ -10108,7 +9815,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
    * @param tree tree
    * @param treeItems tree items to remove
    */
-  public static void removeTreeItems(HashSet<TreeItem> treeItems)
+  public static void removeTreeItems(Collection<TreeItem> treeItems)
   {
     for (TreeItem treeItem : treeItems)
     {
@@ -11180,10 +10887,10 @@ Dprintf.dprintf("");
 
   /** get selected tree items data
    * @param tree tree
-   * @param clazz class
+   * @param type return type
    * @return selected tree items data or null
    */
-  public static <T> T[] getSelectedTreeItemsData(final Tree tree, Class<T> clazz)
+  public static <T> T[] getSelectedTreeItemsData(final Tree tree, Class<T> type)
   {
     final ArrayList<T> dataList = new ArrayList<T>();
 
@@ -11204,7 +10911,7 @@ Dprintf.dprintf("");
       });
     }
 
-    return (T[])dataList.toArray((T[])Array.newInstance(clazz,dataList.size()));
+    return (T[])dataList.toArray((T[])Array.newInstance(type,dataList.size()));
   }
 
   /** clearSelected tree items
