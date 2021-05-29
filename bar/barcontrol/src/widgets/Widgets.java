@@ -9111,7 +9111,8 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
       {
         try
         {
-          if (data.compareTo(existingTreeItem.getData()) == 0)
+          Object existingData = existingTreeItem.getData();
+          if ((existingData!=null) && (data.compareTo(existingData) == 0))
           {
             // update
             existingTreeItem.setData(data);
@@ -9560,7 +9561,8 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
       {
         try
         {
-          if (data.compareTo(existingTreeItem.getData()) == 0)
+          Object existingData = existingTreeItem.getData();
+          if ((existingData!=null) && (data.compareTo(existingData) == 0))
           {
             // update
             existingTreeItem.setData(data);
