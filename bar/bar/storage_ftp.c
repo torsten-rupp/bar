@@ -582,7 +582,8 @@ LOCAL bool parseFTPDirectoryLine(String         line,
       default:  (*type) = FILE_TYPE_FILE;      break;
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
-                                        hour,minute,0
+                                        hour,minute,0,
+                                        TRUE
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
@@ -619,11 +620,12 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     Misc_splitDateTime(Misc_getCurrentDateTime(),
                        &year,
                        &month,
-                       NULL,   // day,
-                       NULL,   // hour,
-                       NULL,   // minute,
-                       NULL,
-                       NULL
+                       NULL,  // day,
+                       NULL,  // hour,
+                       NULL,  // minute,
+                       NULL,  // second
+                       NULL,  // weekDay
+                       NULL  // isDayLightSaving
                       );
     s = monthName;
     while (((*s) == '0'))
@@ -646,7 +648,8 @@ LOCAL bool parseFTPDirectoryLine(String         line,
       default:  (*type) = FILE_TYPE_FILE; break;
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
-                                        hour,minute,0
+                                        hour,minute,0,
+                                        TRUE
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
@@ -680,13 +683,14 @@ LOCAL bool parseFTPDirectoryLine(String         line,
 
     // get month
     Misc_splitDateTime(Misc_getCurrentDateTime(),
-                       NULL,   // year
+                       NULL,  // year
                        &month,
-                       NULL,   // day,
-                       NULL,   // hour,
-                       NULL,   // minute,
-                       NULL,
-                       NULL
+                       NULL,  // day,
+                       NULL,  // hour,
+                       NULL,  // minute,
+                       NULL,  // second
+                       NULL,  // weekDay
+                       NULL  // isDayLightSaving
                       );
     s = monthName;
     while (((*s) == '0'))
@@ -708,7 +712,8 @@ LOCAL bool parseFTPDirectoryLine(String         line,
       default:  (*type) = FILE_TYPE_FILE; break;
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
-                                        0,0,0
+                                        0,0,0,
+                                        TRUE
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
