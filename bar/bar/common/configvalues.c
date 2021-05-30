@@ -2511,7 +2511,6 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
           void   *sectionIterator;
           String name;
           void   *data;
-          uint   n;
 
           if (   (configValues[index+1].type != CONFIG_VALUE_TYPE_END_SECTION)
               && (configValues[index+1].type != CONFIG_VALUE_TYPE_END)
@@ -2573,7 +2572,6 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             }
 
             // iterate
-            n = 0;
             if (configValues[index].section.iteratorFunction != NULL)
             {
               name = String_new();
@@ -2623,8 +2621,6 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                 // write section end
                 if (error == ERROR_NONE) error = File_printLine(fileHandle,"[end]");
                 if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
-
-                n++;
 
                 // get next section data
                 data = configValues[index].section.iteratorFunction(&sectionIterator,
