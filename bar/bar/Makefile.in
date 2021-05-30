@@ -45,62 +45,64 @@ WINE_C_DRIVE       = @WINE_C_DRIVE@
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
-SHELL                     = bash
+SHELL                      = bash
 
-CTAGS_FLAGS               =
+CTAGS_FLAGS                =
 
-CC                        = @CC@
-CC_FLAGS                  = @CC_FLAGS@ -g
-CC_WARN_FLAGS             = @CC_WARN_FLAGS@
-CXX                       = @CXX@
-CXX_FLAGS                 = @CXX_FLAGS@ -g
-CXX_WARN_FLAGS            = @CXX_WARN_FLAGS@
-CC_FLAGS_RELEASE          = @CC_FLAGS_RELEASE@
-CC_FLAGS_DEBUG            = @CC_FLAGS_DEBUG@ -finstrument-functions
+CC                         = @CC@
+CC_FLAGS                   = @CC_FLAGS@ -g
+CC_WARN_FLAGS              = @CC_WARN_FLAGS@
+CXX                        = @CXX@
+CXX_FLAGS                  = @CXX_FLAGS@ -g
+CXX_WARN_FLAGS             = @CXX_WARN_FLAGS@
+CC_FLAGS_RELEASE           = @CC_FLAGS_RELEASE@
+CC_FLAGS_DEBUG             = @CC_FLAGS_DEBUG@ -finstrument-functions
+CC_FLAGS_VALGRIND          = @CC_FLAGS_DEBUG@
 #-fno-sanitize-recover=all -fstack-protector-all -fsanitize=undefined
-CC_FLAGS_OPTIMIZE         = @CC_FLAGS_OPTIMIZE@
-CC_FLAGS_OPTIMIZE_RELEASE = @CC_FLAGS_OPTIMIZE_RELEASE@
-CC_FLAGS_OPTIMIZE_DEBUG   = @CC_FLAGS_OPTIMIZE_DEBUG@
-CC_FLAGS_GCOV             = @CC_FLAGS_GCOV@ -DGCOV -fprofile-arcs -ftest-coverage
-CC_FLAGS_GPROF            = @CC_FLAGS_GPROF@ -DGPROF -pg
-CC_FLAGS_VALGRIND         = @CC_FLAGS_VALGRIND@ -fno-builtin
-CC_DEFINES                = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
-CC_DEFINES_RELEASE        = @CC_DEFINES_RELEASE@
-CC_DEFINES_DEBUG          = @CC_DEFINES_DEBUG@
+CC_FLAGS_OPTIMIZE          = @CC_FLAGS_OPTIMIZE@
+CC_FLAGS_OPTIMIZE_RELEASE  = @CC_FLAGS_OPTIMIZE_RELEASE@
+CC_FLAGS_OPTIMIZE_DEBUG    = @CC_FLAGS_OPTIMIZE_DEBUG@
+CC_FLAGS_OPTIMIZE_VALGRIND = @CC_FLAGS_OPTIMIZE_DEBUG@
+CC_FLAGS_GCOV              = @CC_FLAGS_GCOV@ -DGCOV -fprofile-arcs -ftest-coverage
+CC_FLAGS_GPROF             = @CC_FLAGS_GPROF@ -DGPROF -pg
+CC_FLAGS_VALGRIND          = @CC_FLAGS_VALGRIND@ -fno-builtin
+CC_DEFINES                 = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
+CC_DEFINES_RELEASE         = @CC_DEFINES_RELEASE@
+CC_DEFINES_DEBUG           = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
-CC_INCLUDES               = . @CC_INCLUDES@ extern $(SOURCE_DIR)
+CC_INCLUDES                = . @CC_INCLUDES@ extern $(SOURCE_DIR)
 ifdef WERROR
   CC_FLAGS   += -Werror
   CC_DEFINES += WERROR
 endif
 
-LD                        = $(if @CXX@,@CXX@,@CC@)
-LD_FLAGS                  = @LD_FLAGS@
-LD_FLAGS_RELEASE          = @LD_FLAGS_RELEASE@
-LD_FLAGS_DEBUG            = @LD_FLAGS_DEBUG@ -Wl,-wrap,pthread_create
+LD                         = $(if @CXX@,@CXX@,@CC@)
+LD_FLAGS                   = @LD_FLAGS@
+LD_FLAGS_RELEASE           = @LD_FLAGS_RELEASE@
+LD_FLAGS_DEBUG             = @LD_FLAGS_DEBUG@ -Wl,-wrap,pthread_create
 ifneq (@HEAPVIEW_DIR@,)
-LD_FLAGS_DEBUG            += -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
+LD_FLAGS_DEBUG             += -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
 else
-LD_FLAGS_DEBUG            +=
+LD_FLAGS_DEBUG             +=
 endif
-LD_FLAGS_GCOV             = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -fprofile-arcs
-LD_FLAGS_GPROF            = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -pg
-LD_FLAGS_VALGRIND         = @LD_FLAGS_VALGRIND@
-LD_LIBRARY_PATHS          = @LIBRARY_PATHS@
+LD_FLAGS_GCOV              = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -fprofile-arcs
+LD_FLAGS_GPROF             = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -pg
+LD_FLAGS_VALGRIND          = @LD_FLAGS_VALGRIND@
+LD_LIBRARY_PATHS           = @LIBRARY_PATHS@
 ifneq (@HEAPVIEW_DIR@,)
   LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
 endif
-LD_LIBRARIES              = @LIBRARIES@
-LD_STATIC_LIBRARIES       = @STATIC_LIBRARIES@
+LD_LIBRARIES               = @LIBRARIES@
+LD_STATIC_LIBRARIES        = @STATIC_LIBRARIES@
 ifneq (@HEAPVIEW_DIR@,)
   LD_STATIC_LIBRARIES += HeapView
 endif
-LD_STATIC_PREFIX          = -Wl,-Bstatic
-LD_DYNAMIC_PREFIX         = -Wl,-Bdynamic
+LD_STATIC_PREFIX           = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 
-WINDOWS_DLLS              = /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libgcc_s_sjlj-1.dll \
-                            /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libstdc++-6.dll \
-                            /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
+WINDOWS_DLLS               = /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libgcc_s_sjlj-1.dll \
+                             /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libstdc++-6.dll \
+                             /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
 
 ifneq ($(SANITIZER),)
   CC_FLAGS_DEBUG += -fno-sanitize-recover=all -fstack-protector-all
@@ -128,18 +130,18 @@ ifneq ($(SANITIZER),)
   endif
 endif
 
-STRIP                  = @STRIP@
-OBJDUMP                = @OBJDUMP@
-OBJCOPY                = @OBJCOPY@
+STRIP                      = @STRIP@
+OBJDUMP                    = @OBJDUMP@
+OBJCOPY                    = @OBJCOPY@
 
-XGETTEXT               = @XGETTEXT@
-XGETTEXT_FLAGS         = -L C -k -ktr
-MSGMERGE               = @MSGMERGE@
-MSGFMT                 = @MSGFMT@
+XGETTEXT                   = @XGETTEXT@
+XGETTEXT_FLAGS             = -L C -k -ktr
+MSGMERGE                   = @MSGMERGE@
+MSGFMT                     = @MSGFMT@
 
-SVNVERSION             = @SVNVERSION@
+SVNVERSION                 = @SVNVERSION@
 
-DUMP_SYMS              = @DUMP_SYMS@
+DUMP_SYMS                  = @DUMP_SYMS@
 
 #---------------------------------- commands----------------------------------
 
@@ -345,7 +347,7 @@ gprof/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h 
 
 valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
 common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
@@ -372,7 +374,7 @@ gprof/%.o: %.c
 
 valgrind/%.o: %.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
 %.o: %.c
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
@@ -391,7 +393,7 @@ gprof/%.o: $(SOURCE_DIR)/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gprof/$*.o
 
 valgrind/%.o: $(SOURCE_DIR)/%.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o valgrind/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o valgrind/$*.o
 
 common/%.o: common/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c common/$*.cpp -o common/$*.o

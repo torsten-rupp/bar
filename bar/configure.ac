@@ -806,6 +806,7 @@ AC_SUBST(CXX_WARN_FLAGS)                    dnl C++ compiler warning flags
 AC_SUBST(CC_FLAGS_OPTIMIZE)                 dnl C compiler optimization flags
 AC_SUBST(CC_FLAGS_OPTIMIZE_RELEASE)         dnl additional C compiler optimization flags for release version
 AC_SUBST(CC_FLAGS_OPTIMIZE_DEBUG)           dnl addtiional C compiler optimization flags for debug version
+AC_SUBST(CC_FLAGS_OPTIMIZE_VALGRIND)        dnl addtiional C compiler optimization flags for valgrind version
 AC_SUBST(CC_DEFINES)                        dnl C compiler defines
 AC_SUBST(CC_DEFINES_RELEASE)                dnl additional C compiler defines for debug version
 AC_SUBST(CC_DEFINES_DEBUG)                  dnl addtioonal C compiler defines for debug version
@@ -898,6 +899,7 @@ CXX_WARN_FLAGS=""
 CC_FLAGS_OPTIMIZE=""
 CC_FLAGS_OPTIMIZE_RELEASE=""
 CC_FLAGS_OPTIMIZE_DEBUG=""
+CC_FLAGS_OPTIMIZE_VALGRIND=""
 CC_DEFINES="_GNU_SOURCE"
 CC_DEFINES_RELEASE=""
 CC_DEFINES_DEBUG=""
@@ -1476,6 +1478,7 @@ dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-i
 dnl        not given, the program either crashes or parsing a string with %y seems to fail.
 AC_CC_OPTION(-fno-schedule-insns2,CC_FLAGS_OPTIMIZE_RELEASE)
 CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
+CC_FLAGS_OPTIMIZE_VALGRIND="$CC_FLAGS_OPTIMIZE_VALGRIND -O2"
 
 CC_DEFINES="$CC_DEFINES"
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"

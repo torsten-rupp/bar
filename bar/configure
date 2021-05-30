@@ -712,6 +712,7 @@ CC_INCLUDES
 CC_DEFINES_DEBUG
 CC_DEFINES_RELEASE
 CC_DEFINES
+CC_FLAGS_OPTIMIZE_VALGRIND
 CC_FLAGS_OPTIMIZE_DEBUG
 CC_FLAGS_OPTIMIZE_RELEASE
 CC_FLAGS_OPTIMIZE
@@ -2698,6 +2699,7 @@ CXX_WARN_FLAGS=""
 CC_FLAGS_OPTIMIZE=""
 CC_FLAGS_OPTIMIZE_RELEASE=""
 CC_FLAGS_OPTIMIZE_DEBUG=""
+CC_FLAGS_OPTIMIZE_VALGRIND=""
 CC_DEFINES="_GNU_SOURCE"
 CC_DEFINES_RELEASE=""
 CC_DEFINES_DEBUG=""
@@ -7573,6 +7575,7 @@ eval ac_res=\$ac_cv_c_option_`echo -fno-schedule-insns2|tr -c -d a-zA-Z0-9_`
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
+CC_FLAGS_OPTIMIZE_VALGRIND="$CC_FLAGS_OPTIMIZE_VALGRIND -O2"
 
 CC_DEFINES="$CC_DEFINES"
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
@@ -8448,6 +8451,64 @@ else
   as_fn_error $? "pthread library not found" "$LINENO" 5
 fi
 
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sd_id128_get_machine" >&5
+$as_echo_n "checking for library containing sd_id128_get_machine... " >&6; }
+if ${ac_cv_search_libraries_sd_id128_get_machine+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in systemd ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
+                                         return (int)sd_id128_get_machine;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_sd_id128_get_machine=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_sd_id128_get_machine+:} false; then :
+
+else
+  ac_cv_search_libraries_sd_id128_get_machine=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_sd_id128_get_machine" >&5
+$as_echo "$ac_cv_search_libraries_sd_id128_get_machine" >&6; }
+  ac_result=$ac_cv_search_libraries_sd_id128_get_machine
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES systemd"
+fi
+
     ;;
   windows*|mingw*)
 
@@ -8688,6 +8749,186 @@ $as_echo "$ac_cv_search_static_UuidCreate" >&6; }
   ac_result=$ac_cv_search_static_UuidCreate
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES rpcrt4"
+fi
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing SHGetKnownFolderPath" >&5
+$as_echo_n "checking for static library containing SHGetKnownFolderPath... " >&6; }
+if ${ac_cv_search_static_SHGetKnownFolderPath+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in uuid ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo shlobj_core.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "shlobj_core.h"; then echo "extern void SHGetKnownFolderPath();"; fi`
+                                         return (int)SHGetKnownFolderPath;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_SHGetKnownFolderPath=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_SHGetKnownFolderPath+:} false; then :
+
+else
+  ac_cv_search_static_SHGetKnownFolderPath=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_SHGetKnownFolderPath" >&5
+$as_echo "$ac_cv_search_static_SHGetKnownFolderPath" >&6; }
+  ac_result=$ac_cv_search_static_SHGetKnownFolderPath
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"
+fi
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing CoTaskMemFree" >&5
+$as_echo_n "checking for static library containing CoTaskMemFree... " >&6; }
+if ${ac_cv_search_static_CoTaskMemFree+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in ole32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo combaseapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "combaseapi.h"; then echo "extern void CoTaskMemFree();"; fi`
+                                         return (int)CoTaskMemFree;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_CoTaskMemFree=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_CoTaskMemFree+:} false; then :
+
+else
+  ac_cv_search_static_CoTaskMemFree=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_CoTaskMemFree" >&5
+$as_echo "$ac_cv_search_static_CoTaskMemFree" >&6; }
+  ac_result=$ac_cv_search_static_CoTaskMemFree
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"
+fi
+
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing FOLDERID_LocalAppData" >&5
+$as_echo_n "checking for static library containing FOLDERID_LocalAppData... " >&6; }
+if ${ac_cv_search_static_FOLDERID_LocalAppData+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in uuid ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo knownfolders.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "knownfolders.h"; then echo "extern void FOLDERID_LocalAppData();"; fi`
+                                         return (int)FOLDERID_LocalAppData;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_FOLDERID_LocalAppData=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_FOLDERID_LocalAppData+:} false; then :
+
+else
+  ac_cv_search_static_FOLDERID_LocalAppData=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_FOLDERID_LocalAppData" >&5
+$as_echo "$ac_cv_search_static_FOLDERID_LocalAppData" >&6; }
+  ac_result=$ac_cv_search_static_FOLDERID_LocalAppData
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"
 fi
 
     ;;
@@ -13310,6 +13551,7 @@ $as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fai
         esac
       fi
       if test $result1 -eq 1; then
+        # Note: https://github.com/c-ares/c-ares/blob/cares-1_14_0/README.msvc#L133-L138
         install -d c-ares
         (cd c-ares; CFLAGS="-DCARES_STATICLIB" LDFLAGS="" ./configure \
           --host=$host \
@@ -14585,6 +14827,7 @@ if test $ENABLE_ISO9660 = "yes"; then
 
       cwd=`pwd`
 
+set -x
 
   $as_echo_n "compile libiconv... " >&6
 
@@ -14733,6 +14976,8 @@ $as_echo "fail (install)" >&6; }
           result2=0
         fi
       fi
+set +x
+exit 1
       if test $result2 -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
@@ -16651,6 +16896,7 @@ for ac_header in \
                  execinfo.h \
                  grp.h \
                  icu.h \
+                 libiberty/demangle.h \
                  libintl.h \
                  link.h \
                  linux/fs.h \
@@ -16662,7 +16908,6 @@ for ac_header in \
                  poll.h \
                  regex.h \
                  stdbool.h \
-                 libiberty/demangle.h \
                  sys/inotify.h \
                  sys/ioctl.h \
                  sys/mount.h \
@@ -16676,6 +16921,7 @@ for ac_header in \
                  sys/vfs.h \
                  sys/wait.h \
                  sys/xattr.h \
+                 systemd/sd-id128.h \
                  termios.h \
                  unicode/utypes.h \
                  unicode/uregex.h \
@@ -22977,6 +23223,56 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for uuid_parse" >&5
+$as_echo_n "checking for uuid_parse... " >&6; }
+if ${ac_cv_func_uuid_parse+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_uuid_parse="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void uuid_parse();"; fi`
+                                         #ifdef uuid_parse
+                                         #else
+                                           return (int)uuid_parse;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_uuid_parse=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_uuid_parse" >&5
+$as_echo "$ac_cv_func_uuid_parse" >&6; }
+  if test "$ac_cv_func_uuid_parse" != no; then :
+
+$as_echo "#define HAVE_UUID_PARSE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for uuid_unparse_lower" >&5
 $as_echo_n "checking for uuid_unparse_lower... " >&6; }
 if ${ac_cv_func_uuid_unparse_lower+:} false; then :
@@ -23522,6 +23818,107 @@ $as_echo "$ac_cv_func_gettext" >&6; }
   if test "$ac_cv_func_gettext" != no; then :
 
 $as_echo "#define HAVE_GETTEXT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sd_id128_get_machine" >&5
+$as_echo_n "checking for sd_id128_get_machine... " >&6; }
+if ${ac_cv_func_sd_id128_get_machine+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_sd_id128_get_machine="no"
+      echo > conftest.log
+
+      for ac_headers in systemd/sd-id128.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void sd_id128_get_machine();"; fi`
+                                         #ifdef sd_id128_get_machine
+                                         #else
+                                           return (int)sd_id128_get_machine;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_sd_id128_get_machine=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_sd_id128_get_machine" >&5
+$as_echo "$ac_cv_func_sd_id128_get_machine" >&6; }
+  if test "$ac_cv_func_sd_id128_get_machine" != no; then :
+
+$as_echo "#define HAVE_SD_ID128_GET_MACHINE 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sd_id128_get_machine_app_specific" >&5
+$as_echo_n "checking for sd_id128_get_machine_app_specific... " >&6; }
+if ${ac_cv_func_sd_id128_get_machine_app_specific+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_sd_id128_get_machine_app_specific="no"
+      echo > conftest.log
+
+      for ac_headers in systemd/sd-id128.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void sd_id128_get_machine_app_specific();"; fi`
+                                         #ifdef sd_id128_get_machine_app_specific
+                                         #else
+                                           return (int)sd_id128_get_machine_app_specific;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_sd_id128_get_machine_app_specific=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_sd_id128_get_machine_app_specific" >&5
+$as_echo "$ac_cv_func_sd_id128_get_machine_app_specific" >&6; }
+  if test "$ac_cv_func_sd_id128_get_machine_app_specific" != no; then :
+
+$as_echo "#define HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC 1" >>confdefs.h
 
 elif :; then :
 
@@ -24897,8 +25294,8 @@ _ACEOF
 fi
   fi
 
-  if test $VERSION_CURL_NUMBER -lt 7660; then
-    as_fn_error $? "Required libcurl 7.66 (0x076600) or newer - found $VERSION_CURL" "$LINENO" 5
+  if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7660; then
+    as_fn_error $? "Required libcurl 7.66 (0x076600) or newer - found '$VERSION_CURL'" "$LINENO" 5
   fi
 fi
 if test $ENABLE_ISO9660 = "yes"; then
@@ -26573,4 +26970,3 @@ fi
 
 
 rm -f $tmpFile
-
