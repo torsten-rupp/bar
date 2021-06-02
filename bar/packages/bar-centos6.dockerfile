@@ -33,6 +33,7 @@ RUN yum -y install \
   wget \
   xz \
   ;
+# Note: no valgrind available
 RUN yum -y install \
   gcc \
   gcc-c++ \

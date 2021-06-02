@@ -39,6 +39,7 @@ RUN yum -y install \
   rpm-build \
   unoconv \
   txt2man \
+  valgrind \
   ;
 
 # fix systemd

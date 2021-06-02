@@ -56,6 +56,7 @@ RUN apt-get -y install \
   make \
   unoconv \
   txt2man \
+  valgrind \
   ;
 
 # fix systemd

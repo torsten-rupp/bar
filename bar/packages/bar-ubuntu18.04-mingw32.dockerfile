@@ -58,6 +58,7 @@ RUN apt-get -y install \
   g++-mingw-w64-x86-64 \
   unoconv \
   txt2man \
+  valgrind \
   wine32 \
   ;
 

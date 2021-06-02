@@ -43,6 +43,7 @@ RUN yum -y install \
   jre \
   make \
   rpm-build \
+  valgrind \
   ;
 
 # fix systemd
