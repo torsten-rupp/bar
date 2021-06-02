@@ -8753,9 +8753,9 @@ fi
 
 
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing SHGetKnownFolderPath" >&5
-$as_echo_n "checking for static library containing SHGetKnownFolderPath... " >&6; }
-if ${ac_cv_search_static_SHGetKnownFolderPath+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing SHGetFolderPath" >&5
+$as_echo_n "checking for static library containing SHGetFolderPath... " >&6; }
+if ${ac_cv_search_static_SHGetFolderPath+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
@@ -8763,7 +8763,7 @@ else
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in uuid ""; do
+      for ac_library in shell32 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -8773,12 +8773,12 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo shlobj_core.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+`echo shlobj.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-`if test -z "shlobj_core.h"; then echo "extern void SHGetKnownFolderPath();"; fi`
-                                         return (int)SHGetKnownFolderPath;
+`if test -z "shlobj.h"; then echo "extern void SHGetFolderPath();"; fi`
+                                         return (int)SHGetFolderPath;
 
 
   ;
@@ -8787,16 +8787,16 @@ main ()
 
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_SHGetKnownFolderPath=$ac_result; break
+  ac_cv_search_static_SHGetFolderPath=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
       done
-      if ${ac_cv_search_static_SHGetKnownFolderPath+:} false; then :
+      if ${ac_cv_search_static_SHGetFolderPath+:} false; then :
 
 else
-  ac_cv_search_static_SHGetKnownFolderPath=no
+  ac_cv_search_static_SHGetFolderPath=no
 fi
 
             LIBS=$ac_func_search_static_libraries_save_LIBS
@@ -8804,9 +8804,9 @@ fi
 
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_SHGetKnownFolderPath" >&5
-$as_echo "$ac_cv_search_static_SHGetKnownFolderPath" >&6; }
-  ac_result=$ac_cv_search_static_SHGetKnownFolderPath
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_SHGetFolderPath" >&5
+$as_echo "$ac_cv_search_static_SHGetFolderPath" >&6; }
+  ac_result=$ac_cv_search_static_SHGetFolderPath
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"
 fi
@@ -8893,11 +8893,11 @@ else
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo knownfolders.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main ()
 {
-`if test -z "knownfolders.h"; then echo "extern void FOLDERID_LocalAppData();"; fi`
+`if test -z ""; then echo "extern void FOLDERID_LocalAppData();"; fi`
                                          return (int)FOLDERID_LocalAppData;
 
 
@@ -14827,7 +14827,6 @@ if test $ENABLE_ISO9660 = "yes"; then
 
       cwd=`pwd`
 
-set -x
 
   $as_echo_n "compile libiconv... " >&6
 
@@ -14976,8 +14975,6 @@ $as_echo "fail (install)" >&6; }
           result2=0
         fi
       fi
-set +x
-exit 1
       if test $result2 -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
@@ -26970,3 +26967,4 @@ fi
 
 
 rm -f $tmpFile
+

@@ -1559,9 +1559,9 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
     AC_SEARCH_STATIC_LIBRARIES(getaddrinfo,ws2_32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ws2_32"],,ws2tcpip.h)
     AC_SEARCH_STATIC_LIBRARIES(UuidCreate,rpcrt4,[STATIC_LIBRARIES="$STATIC_LIBRARIES rpcrt4"],,windows.h rpcdce.h)
-    AC_SEARCH_STATIC_LIBRARIES(SHGetKnownFolderPath,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"],,shlobj_core.h)
+    AC_SEARCH_STATIC_LIBRARIES(SHGetFolderPath,shell32,[STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"],,shlobj.h)
     AC_SEARCH_STATIC_LIBRARIES(CoTaskMemFree,ole32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"],,combaseapi.h)
-    AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,knownfolders.h)
+    AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
     ;;
   sunos | solaris*)
     ;;
@@ -3371,7 +3371,6 @@ if test $ENABLE_ISO9660 = "yes"; then
 
       cwd=`pwd`
 
-set -x
       AC_MSG_COMPILE([libiconv])
       result1=1
       if test $result1 -eq 1; then
@@ -3474,8 +3473,6 @@ set -x
           result2=0
         fi
       fi
-set +x
-exit 1
       if test $result2 -eq 1; then
         AC_MSG_RESULT([done])
       fi
