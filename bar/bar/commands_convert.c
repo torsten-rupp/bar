@@ -51,9 +51,9 @@
 typedef struct
 {
   StorageInfo             storageInfo;
-  ConstString             jobUUID;
-  ConstString             scheduleUUID;
-  uint64                  createdDateTime;
+  ConstString             newJobUUID;
+  ConstString             newScheduleUUID;
+  uint64                  newCreatedDateTime;
   const JobOptions        *jobOptions;
   GetNamePasswordFunction getNamePasswordFunction;
   void                    *getNamePasswordUserData;
@@ -67,7 +67,7 @@ typedef struct
   MsgQueue                storageMsgQueue;                    // queue with waiting storage files
   bool                    storageThreadExitFlag;
 
-  Errors                  failError;                          // failure error|||
+  Errors                  failError;                          // failure error
 } ConvertInfo;
 
 // entry message send to convert threads
@@ -142,9 +142,9 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Name   : initConvertInfo
 * Purpose: initialize convert info
 * Input  : convertInfo             - convert info variable
-*          jobUUID                 - job UUID
-*          scheduleUUID            - schedule UUID
-*          createdDateTime         - created date/time
+*          newJobUUID              - new job UUID or NULL
+*          newScheduleUUID         - new schedule UUID or NULL
+*          newCreatedDateTime      - new created date/time or 0
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password call back
@@ -155,9 +155,9 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 \***********************************************************************/
 
 LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
-                           ConstString             jobUUID,
-                           ConstString             scheduleUUID,
-                           uint64                  createdDateTime,
+                           ConstString             newJobUUID,
+                           ConstString             newScheduleUUID,
+                           uint64                  newCreatedDateTime,
                            const JobOptions        *jobOptions,
                            GetNamePasswordFunction getNamePasswordFunction,
                            void                    *getNamePasswordUserData,
@@ -167,9 +167,9 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
   assert(convertInfo != NULL);
 
   // init variables
-  convertInfo->jobUUID                 = jobUUID;
-  convertInfo->scheduleUUID            = scheduleUUID;
-  convertInfo->createdDateTime         = createdDateTime;
+  convertInfo->newJobUUID              = newJobUUID;
+  convertInfo->newScheduleUUID         = newScheduleUUID;
+  convertInfo->newCreatedDateTime      = newCreatedDateTime;
   convertInfo->jobOptions              = jobOptions;
   convertInfo->getNamePasswordFunction = getNamePasswordFunction;
   convertInfo->getNamePasswordUserData = getNamePasswordUserData;
@@ -180,11 +180,20 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
   convertInfo->storageThreadExitFlag   = FALSE;
 
   // init entry name queue, storage queue
-  if (!MsgQueue_init(&convertInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
+  if (!MsgQueue_init(&convertInfo->entryMsgQueue,
+                     MAX_ENTRY_MSG_QUEUE,
+                     CALLBACK_((MsgQueueMsgFreeFunction)freeEntryMsg,NULL)
+                    )
+     )
   {
     HALT_FATAL_ERROR("Cannot initialize entry message queue!");
   }
-  if (!MsgQueue_init(&convertInfo->storageMsgQueue,0))
+  if (!MsgQueue_init(&convertInfo->storageMsgQueue,
+// TODO: 0?
+                     0,
+                     CALLBACK_((MsgQueueMsgFreeFunction)freeStorageMsg,NULL)
+                    )
+     )
   {
     HALT_FATAL_ERROR("Cannot initialize storage message queue!");
   }
@@ -215,8 +224,8 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(convertInfo,ConvertInfo);
 
-  MsgQueue_done(&convertInfo->storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
-  MsgQueue_done(&convertInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
+  MsgQueue_done(&convertInfo->storageMsgQueue);
+  MsgQueue_done(&convertInfo->entryMsgQueue);
   String_delete(convertInfo->newArchiveName);
   String_delete(convertInfo->archiveName);
 }
@@ -1902,9 +1911,9 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
       case ARCHIVE_ENTRY_TYPE_META:
         error = convertMetaEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
-                                 convertInfo->jobUUID,
-                                 convertInfo->scheduleUUID,
-                                 convertInfo->createdDateTime,
+                                 convertInfo->newJobUUID,
+                                 convertInfo->newScheduleUUID,
+                                 convertInfo->newCreatedDateTime,
                                  convertInfo->jobOptions
                                 );
         break;
@@ -1952,22 +1961,15 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
-                            ConstString             archiveName,
-                            ConstString             jobUUID,
-                            ConstString             scheduleUUID,
-                            uint64                  createdDateTime,
-                            JobOptions              *jobOptions,
-                            GetNamePasswordFunction getNamePasswordFunction,
-                            void                    *getNamePasswordUserData,
-                            LogHandle               *logHandle
+LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
+                            StorageSpecifier *storageSpecifier,
+                            ConstString      archiveName
                            )
 {
   AutoFreeList           autoFreeList;
   String                 printableStorageName;
   Thread                 *convertThreads;
   uint                   convertThreadCount;
-  ConvertInfo            convertInfo;
   Errors                 error;
   CryptSignatureStates   allCryptSignatureState;
   String                 baseName;
@@ -1980,48 +1982,30 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   uint64                 offset;
   EntryMsg               entryMsg;
 
+  assert(convertInfo != NULL);
   assert(storageSpecifier != NULL);
-  assert(jobOptions != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
   printableStorageName = String_new();
-  convertThreadCount   = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  convertThreads       = (Thread*)malloc(convertThreadCount*sizeof(Thread));
-  if (convertThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,convertThreads,{ free(convertThreads); });
 
   // Note: still not supported
-  if (jobOptions->archivePartSize > 0LL)
+  if (convertInfo->jobOptions->archivePartSize > 0LL)
   {
     printWarning(_("Archive part size not supported for convert - ignored"));
   }
 //TODO
-  jobOptions->archivePartSize = 0LL;
-
-  // init convert info
-  initConvertInfo(&convertInfo,
-                  jobUUID,
-                  scheduleUUID,
-                  createdDateTime,
-                  jobOptions,
-                  CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                  logHandle
-                 );
-  AUTOFREE_ADD(&autoFreeList,&convertInfo,{ (void)doneConvertInfo(&convertInfo); });
+//  convertInfo->jobOptions->archivePartSize = 0LL;
 
   // set printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
 
   // init storage
-  error = Storage_init(&convertInfo.storageInfo,
+  error = Storage_init(&convertInfo->storageInfo,
                        NULL,  // masterIO
                        storageSpecifier,
-                       jobOptions,
+                       convertInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
@@ -2042,10 +2026,10 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
     return error;
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&convertInfo.storageInfo,{ (void)Storage_done(&convertInfo.storageInfo); });
+  AUTOFREE_ADD(&autoFreeList,&convertInfo->storageInfo,{ (void)Storage_done(&convertInfo->storageInfo); });
 
   // check if storage exists
-  if (!Storage_exists(&convertInfo.storageInfo,archiveName))
+  if (!Storage_exists(&convertInfo->storageInfo,archiveName))
   {
     printError("Archive not found '%s'!",
                String_cString(printableStorageName)
@@ -2056,11 +2040,11 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
 
   // open source archive
   error = Archive_open(&sourceArchiveHandle,
-                       &convertInfo.storageInfo,
+                       &convertInfo->storageInfo,
                        archiveName,
                        NULL,  // deltaSourceList,
-                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                       logHandle
+                       CALLBACK_(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
+                       convertInfo->logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -2075,14 +2059,14 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle); });
 
   // check signatures
-  if (!jobOptions->skipVerifySignaturesFlag)
+  if (!convertInfo->jobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&sourceArchiveHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
     {
-      if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
+      if (!convertInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
       {
         allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
       }
@@ -2095,7 +2079,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
-      if (jobOptions->forceVerifySignaturesFlag)
+      if (convertInfo->jobOptions->forceVerifySignaturesFlag)
       {
         // signature error
         printError("Invalid signature in '%s'!",
@@ -2116,22 +2100,22 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
 
   // create destination archive name
   baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
-  if (!String_isEmpty(jobOptions->destination))
+  if (!String_isEmpty(convertInfo->jobOptions->destination))
   {
-    File_setFileName(convertInfo.archiveName,jobOptions->destination);
-    File_appendFileName(convertInfo.archiveName,baseName);
+    File_setFileName(convertInfo->archiveName,convertInfo->jobOptions->destination);
+    File_appendFileName(convertInfo->archiveName,baseName);
   }
   else
   {
-    File_setFileName(convertInfo.archiveName,(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
+    File_setFileName(convertInfo->archiveName,(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
   }
   String_delete(baseName);
 
   // create new archive
-  error = Archive_create(&convertInfo.destinationArchiveHandle,
+  error = Archive_create(&convertInfo->destinationArchiveHandle,
                          NULL,  // hostName
                          NULL,  // userName
-                         &convertInfo.storageInfo,
+                         &convertInfo->storageInfo,
                          NULL,  // archiveName,
                          INDEX_ID_NONE,  // uuidId,
                          INDEX_ID_NONE,  // entityId,
@@ -2148,8 +2132,8 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
 CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&convertInfo),
                          CALLBACK_(archiveStore,&convertInfo),
-                         CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                         logHandle
+                         CALLBACK_(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
+                         convertInfo->logHandle
                         );
   if (error != ERROR_NONE)
   {
@@ -2160,8 +2144,8 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_close(&convertInfo.destinationArchiveHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  AUTOFREE_ADD(&autoFreeList,&convertInfo.destinationArchiveHandle,{ Archive_close(&convertInfo.destinationArchiveHandle); });
+  DEBUG_TESTCODE() { Archive_close(&convertInfo->destinationArchiveHandle); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,&convertInfo->destinationArchiveHandle,{ Archive_close(&convertInfo->destinationArchiveHandle); });
 
 //TODO: really required? If convert is done for each archive storage can be done as the final step without a separated thread
   // start storage thread
@@ -2169,16 +2153,24 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
   {
     HALT_FATAL_ERROR("Cannot initialize storage thread!");
   }
-  AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&convertInfo.storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
+  AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&convertInfo->storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
   // start convert threads
+  MsgQueue_reset(&convertInfo->entryMsgQueue);
+  convertThreadCount   = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  convertThreads       = (Thread*)malloc(convertThreadCount*sizeof(Thread));
+  if (convertThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  AUTOFREE_ADD(&autoFreeList,convertThreads,{ free(convertThreads); });
   for (i = 0; i < convertThreadCount; i++)
   {
-    if (!Thread_init(&convertThreads[i],"BAR convert",globalOptions.niceLevel,convertThreadCode,&convertInfo))
+    if (!Thread_init(&convertThreads[i],"BAR convert",globalOptions.niceLevel,convertThreadCode,convertInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize convertthread #%d!",i);
     }
-    AUTOFREE_ADD(&autoFreeList,&convertThreads[i],{ MsgQueue_setEndOfMsg(&convertInfo.entryMsgQueue); Thread_join(&convertThreads[i]); Thread_done(&convertThreads[i]); });
+    AUTOFREE_ADD(&autoFreeList,&convertThreads[i],{ MsgQueue_setEndOfMsg(&convertInfo->entryMsgQueue); Thread_join(&convertThreads[i]); Thread_done(&convertThreads[i]); });
   }
 
   // read archive entries
@@ -2219,7 +2211,7 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
     entryMsg.archiveEntryType = archiveEntryType;
     entryMsg.archiveCryptInfo = archiveCryptInfo;
     entryMsg.offset           = offset;
-    if (!MsgQueue_put(&convertInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    if (!MsgQueue_put(&convertInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       HALT_INTERNAL_ERROR("Send message to convert threads fail!");
     }
@@ -2235,7 +2227,7 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
   if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // wait for convert threads
-  MsgQueue_setEndOfMsg(&convertInfo.entryMsgQueue);
+  MsgQueue_setEndOfMsg(&convertInfo->entryMsgQueue);
   for (i = 0; i < convertThreadCount; i++)
   {
     AUTOFREE_REMOVE(&autoFreeList,&convertThreads[i]);
@@ -2245,10 +2237,12 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
     }
     Thread_done(&convertThreads[i]);
   }
+  AUTOFREE_REMOVE(&autoFreeList,convertThreads);
+  free(convertThreads);
 
   // close destination archive
-  AUTOFREE_REMOVE(&autoFreeList,&convertInfo.destinationArchiveHandle);
-  error = Archive_close(&convertInfo.destinationArchiveHandle);
+  AUTOFREE_REMOVE(&autoFreeList,&convertInfo->destinationArchiveHandle);
+  error = Archive_close(&convertInfo->destinationArchiveHandle);
   if (error != ERROR_NONE)
   {
     printError("Cannot close archive '%s' (error: %s)",
@@ -2262,7 +2256,7 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
 
   // wait for storage thread
   AUTOFREE_REMOVE(&autoFreeList,&storageThread);
-  MsgQueue_setEndOfMsg(&convertInfo.storageMsgQueue);
+  MsgQueue_setEndOfMsg(&convertInfo->storageMsgQueue);
   if (!Thread_join(&storageThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop storage thread!");
@@ -2274,13 +2268,9 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
   (void)Archive_close(&sourceArchiveHandle);
 
   // done storage
-  (void)Storage_done(&convertInfo.storageInfo);
-
-  // done convert info
-  doneConvertInfo(&convertInfo);
+  (void)Storage_done(&convertInfo->storageInfo);
 
   // free resources
-  free(convertThreads);
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
@@ -2300,6 +2290,7 @@ Errors Command_convert(const StringList        *storageNameList,
                       )
 {
   StorageSpecifier           storageSpecifier;
+  ConvertInfo                convertInfo;
   StringNode                 *stringNode;
   String                     storageName;
   Errors                     failError;
@@ -2314,6 +2305,16 @@ Errors Command_convert(const StringList        *storageNameList,
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
+
+  // init convert info
+  initConvertInfo(&convertInfo,
+                  newJobUUID,
+                  newScheduleUUID,
+                  newCreatedDateTime,
+                  newJobOptions,
+                  CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                  logHandle
+                 );
 
   failError        = ERROR_NONE;
   someStorageFound = FALSE;
@@ -2339,14 +2340,9 @@ Errors Command_convert(const StringList        *storageNameList,
       if (String_isEmpty(storageSpecifier.archivePatternString))
       {
         // convert archive content
-        error = convertArchive(&storageSpecifier,
-                               NULL,
-                               newJobUUID,
-                               newScheduleUUID,
-                               newCreatedDateTime,
-                               newJobOptions,
-                               CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                               logHandle
+        error = convertArchive(&convertInfo,
+                               &storageSpecifier,
+                               NULL
                               );
         someStorageFound = TRUE;
       }
@@ -2386,14 +2382,9 @@ Errors Command_convert(const StringList        *storageNameList,
               || (fileInfo.type == FILE_TYPE_HARDLINK)
              )
           {
-            error = convertArchive(&storageSpecifier,
-                                   fileName,
-                                   newJobUUID,
-                                   newScheduleUUID,
-                                   newCreatedDateTime,
-                                   newJobOptions,
-                                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                   logHandle
+            error = convertArchive(&convertInfo,
+                                   &storageSpecifier,
+                                   fileName
                                   );
             if (error != ERROR_NONE)
             {
@@ -2420,6 +2411,9 @@ Errors Command_convert(const StringList        *storageNameList,
     printError("No matching storage files found!");
     failError = ERROR_FILE_NOT_FOUND_;
   }
+
+  // done convert info
+  doneConvertInfo(&convertInfo);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);

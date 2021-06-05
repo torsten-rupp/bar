@@ -59,19 +59,23 @@
 // compare info
 typedef struct
 {
-  Semaphore           fragmentListLock;
-  FragmentList        *fragmentList;
-  const EntryList     *includeEntryList;                  // list of included entries
-  const PatternList   *excludePatternList;                // list of exclude patterns
-  const JobOptions    *jobOptions;
-  LogHandle           *logHandle;                         // log handle
+  const EntryList         *includeEntryList;                  // list of included entries
+  const PatternList       *excludePatternList;                // list of exclude patterns
+  const JobOptions        *jobOptions;
+  LogHandle               *logHandle;                         // log handle
 
-  bool                *pauseTestFlag;                     // TRUE for pause creation
-  bool                *requestedAbortFlag;                // TRUE to abort create
+  bool                    *pauseTestFlag;                     // TRUE for pause creation
+  bool                    *requestedAbortFlag;                // TRUE to abort create
 
-  MsgQueue            entryMsgQueue;                      // queue with entries to store
+  GetNamePasswordFunction getNamePasswordFunction;
+  void                    *getNamePasswordUserData;
 
-  Errors              failError;                          // failure error
+  Semaphore               fragmentListLock;
+  FragmentList            *fragmentList;
+
+  MsgQueue                entryMsgQueue;                      // queue with entries to store
+
+  Errors                  failError;                          // failure error
 } CompareInfo;
 
 // entry message send to compare threads
@@ -117,42 +121,53 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 /***********************************************************************\
 * Name   : initCompareInfo
 * Purpose: initialize compare info
-* Input  : compareInfo         - compare info variable
-*          includeEntryList    - include entry list
-*          excludePatternList  - exclude pattern list
-*          archiveHandle       - archive handle
-*          pauseTestFlag       - pause creation flag (can be NULL)
-*          requestedAbortFlag  - request abort flag (can be NULL)
-*          logHandle           - log handle (can be NULL)
+* Input  : compareInfo             - compare info variable
+*          includeEntryList        - include entry list
+*          excludePatternList      - exclude pattern list
+*          archiveHandle           - archive handle
+*          pauseTestFlag           - pause creation flag (can be NULL)
+*          requestedAbortFlag      - request abort flag (can be NULL)
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password
+*          fragmentList            - fragment list
+*          logHandle               - log handle (can be NULL)
 * Output : createInfo - initialized compare info variable
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initCompareInfo(CompareInfo         *compareInfo,
-                           FragmentList        *fragmentList,
-                           const EntryList     *includeEntryList,
-                           const PatternList   *excludePatternList,
-                           const JobOptions    *jobOptions,
-                           bool                *pauseTestFlag,
-                           bool                *requestedAbortFlag,
-                           LogHandle           *logHandle
+LOCAL void initCompareInfo(CompareInfo             *compareInfo,
+                           const EntryList         *includeEntryList,
+                           const PatternList       *excludePatternList,
+                           const JobOptions        *jobOptions,
+                           bool                    *pauseTestFlag,
+                           bool                    *requestedAbortFlag,
+                           GetNamePasswordFunction getNamePasswordFunction,
+                           void                    *getNamePasswordUserData,
+                           FragmentList            *fragmentList,
+                           LogHandle               *logHandle
                           )
 {
   assert(compareInfo != NULL);
 
   // init variables
-  compareInfo->fragmentList        = fragmentList;
-  compareInfo->includeEntryList    = includeEntryList;
-  compareInfo->excludePatternList  = excludePatternList;
-  compareInfo->jobOptions          = jobOptions;
-  compareInfo->pauseTestFlag       = pauseTestFlag;
-  compareInfo->requestedAbortFlag  = requestedAbortFlag;
-  compareInfo->logHandle           = logHandle;
-  compareInfo->failError           = ERROR_NONE;
+  compareInfo->includeEntryList        = includeEntryList;
+  compareInfo->excludePatternList      = excludePatternList;
+  compareInfo->jobOptions              = jobOptions;
+  compareInfo->pauseTestFlag           = pauseTestFlag;
+  compareInfo->requestedAbortFlag      = requestedAbortFlag;
+  compareInfo->getNamePasswordFunction = getNamePasswordFunction;
+  compareInfo->getNamePasswordUserData = getNamePasswordUserData;
+  compareInfo->fragmentList            = fragmentList;
+  compareInfo->logHandle               = logHandle;
+  compareInfo->failError               = ERROR_NONE;
 
   // init entry name queue, storage queue
-  if (!MsgQueue_init(&compareInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
+  if (!MsgQueue_init(&compareInfo->entryMsgQueue,
+                     MAX_ENTRY_MSG_QUEUE,
+                     CALLBACK_((MsgQueueMsgFreeFunction)freeEntryMsg,NULL)
+                    )
+     )
   {
     HALT_FATAL_ERROR("Cannot initialize entry message queue!");
   }
@@ -183,7 +198,7 @@ LOCAL void doneCompareInfo(CompareInfo *compareInfo)
 
   Semaphore_done(&compareInfo->fragmentListLock);
 
-  MsgQueue_done(&compareInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
+  MsgQueue_done(&compareInfo->entryMsgQueue);
 }
 
 /***********************************************************************\
@@ -1896,27 +1911,14 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 * Purpose: compare archive content
 * Input  : storageSpecifier        - storage specifier
 *          archiveName             - archive name (can be NULL)
-*          includeEntryList        - include entry list
-*          excludePatternList      - exclude pattern list
-*          jobOptions              - job options
-*          getNamePasswordFunction - get password call back
-*          getNamePasswordUserData - user data for get password
-*          fragmentList            - fragment list
-*          logHandle               - log handle (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
-                                   ConstString             archiveName,
-                                   const EntryList         *includeEntryList,
-                                   const PatternList       *excludePatternList,
-                                   JobOptions              *jobOptions,
-                                   GetNamePasswordFunction getNamePasswordFunction,
-                                   void                    *getNamePasswordUserData,
-                                   FragmentList            *fragmentList,
-                                   LogHandle               *logHandle
+LOCAL Errors compareArchiveContent(CompareInfo      *compareInfo,
+                                   StorageSpecifier *storageSpecifier,
+                                   ConstString      archiveName
                                   )
 {
   AutoFreeList           autoFreeList;
@@ -1925,7 +1927,6 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
   uint                   compareThreadCount;
   StorageInfo            storageInfo;
   Errors                 error;
-  CompareInfo            compareInfo;
   uint                   i;
   ArchiveHandle          archiveHandle;
   CryptSignatureStates   allCryptSignatureState;
@@ -1935,11 +1936,8 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
   uint64                 offset;
   EntryMsg               entryMsg;
 
+  assert(compareInfo != NULL);
   assert(storageSpecifier != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
-  assert(jobOptions != NULL);
-  assert(fragmentList != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1953,7 +1951,7 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
   error = Storage_init(&storageInfo,
 NULL, // masterSocketHandle
                        storageSpecifier,
-                       jobOptions,
+                       compareInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
@@ -1990,9 +1988,9 @@ NULL, // masterSocketHandle
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
-                       &jobOptions->deltaSourceList,
-                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                       logHandle
+                       &compareInfo->jobOptions->deltaSourceList,
+                       CALLBACK_(compareInfo->getNamePasswordFunction,compareInfo->getNamePasswordUserData),
+                       compareInfo->logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -2007,14 +2005,14 @@ NULL, // masterSocketHandle
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
 
   // check signatures
-  if (!jobOptions->skipVerifySignaturesFlag)
+  if (!compareInfo->jobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&archiveHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
     {
-      if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
+      if (!compareInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
       {
         allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
       }
@@ -2031,7 +2029,7 @@ NULL, // masterSocketHandle
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
-      if (jobOptions->forceVerifySignaturesFlag)
+      if (compareInfo->jobOptions->forceVerifySignaturesFlag)
       {
         // signature error
         printError("Invalid signature in '%s'!",
@@ -2050,20 +2048,8 @@ NULL, // masterSocketHandle
     }
   }
 
-  // init compare info
-  initCompareInfo(&compareInfo,
-                  fragmentList,
-                  includeEntryList,
-                  excludePatternList,
-                  jobOptions,
-//TODO
-NULL,  //               pauseTestFlag,
-NULL,  //               requestedAbortFlag,
-                  logHandle
-                 );
-  AUTOFREE_ADD(&autoFreeList,&compareInfo,{ (void)doneCompareInfo(&compareInfo); });
-
   // start compare threads
+  MsgQueue_reset(&compareInfo->entryMsgQueue);
   compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   compareThreads     = (Thread*)malloc(compareThreadCount*sizeof(Thread));
   if (compareThreads == NULL)
@@ -2074,7 +2060,7 @@ NULL,  //               requestedAbortFlag,
   AUTOFREE_ADD(&autoFreeList,compareThreads,{ free(compareThreads); });
   for (i = 0; i < compareThreadCount; i++)
   {
-    if (!Thread_init(&compareThreads[i],"BAR compare",globalOptions.niceLevel,compareThreadCode,&compareInfo))
+    if (!Thread_init(&compareThreads[i],"BAR compare",globalOptions.niceLevel,compareThreadCode,compareInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize comparethread #%d!",i);
     }
@@ -2091,8 +2077,8 @@ NULL,  //               requestedAbortFlag,
   allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   error                  = ERROR_NONE;
   lastSignatureOffset    = Archive_tell(&archiveHandle);
-  while (   (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
-         && ((compareInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
+  while (   (compareInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
+         && ((compareInfo->failError == ERROR_NONE) || !compareInfo->jobOptions->noStopOnErrorFlag)
          && !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
         )
   {
@@ -2109,10 +2095,10 @@ NULL,  //               requestedAbortFlag,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
+      if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
       break;
     }
-    DEBUG_TESTCODE() { compareInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE() { compareInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
     if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
@@ -2123,7 +2109,7 @@ NULL,  //               requestedAbortFlag,
       entryMsg.archiveEntryType = archiveEntryType;
       entryMsg.archiveCryptInfo = archiveCryptInfo;
       entryMsg.offset           = offset;
-      if (!MsgQueue_put(&compareInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+      if (!MsgQueue_put(&compareInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
       {
         HALT_INTERNAL_ERROR("Send message to compare threads fail!");
       }
@@ -2132,13 +2118,13 @@ NULL,  //               requestedAbortFlag,
       error = Archive_skipNextEntry(&archiveHandle);
       if (error != ERROR_NONE)
       {
-        if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
+        if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
         break;
       }
     }
     else
     {
-      if (!jobOptions->skipVerifySignaturesFlag)
+      if (!compareInfo->jobOptions->skipVerifySignaturesFlag)
       {
         // check signature
         error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&allCryptSignatureState);
@@ -2150,7 +2136,7 @@ NULL,  //               requestedAbortFlag,
       }
       if (error != ERROR_NONE)
       {
-        if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
+        if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
         break;
       }
       lastSignatureOffset = Archive_tell(&archiveHandle);
@@ -2158,7 +2144,7 @@ NULL,  //               requestedAbortFlag,
   }
 
   // wait for compare threads
-  MsgQueue_setEndOfMsg(&compareInfo.entryMsgQueue);
+  MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
   for (i = 0; i < compareThreadCount; i++)
   {
     if (!Thread_join(&compareThreads[i]))
@@ -2173,7 +2159,10 @@ NULL,  //               requestedAbortFlag,
   // output info
   if (!isPrintInfo(1)) printInfo(0,
                                  "%s",
-                                 (compareInfo.failError == ERROR_NONE) && (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
+                                    (compareInfo->failError == ERROR_NONE)
+                                 && (   compareInfo->jobOptions->skipVerifySignaturesFlag
+                                     || Crypt_isValidSignatureState(allCryptSignatureState)
+                                    )
                                    ? "OK\n"
                                    : "FAIL!\n"
                                 );
@@ -2181,12 +2170,12 @@ NULL,  //               requestedAbortFlag,
   // output signature error/warning
   if (!Crypt_isValidSignatureState(allCryptSignatureState))
   {
-    if (jobOptions->forceVerifySignaturesFlag)
+    if (compareInfo->jobOptions->forceVerifySignaturesFlag)
     {
       printError("Invalid signature in '%s'!",
                  String_cString(printableStorageName)
                 );
-      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = ERROR_INVALID_SIGNATURE;
+      if (compareInfo->failError == ERROR_NONE) compareInfo->failError = ERROR_INVALID_SIGNATURE;
     }
     else
     {
@@ -2202,14 +2191,11 @@ NULL,  //               requestedAbortFlag,
   // done storage
   (void)Storage_done(&storageInfo);
 
-  // done compare info
-  doneCompareInfo(&compareInfo);
-
   // free resources
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
-  return compareInfo.failError;
+  return compareInfo->failError;
 }
 
 /*---------------------------------------------------------------------*/
@@ -2225,6 +2211,7 @@ Errors Command_compare(const StringList        *storageNameList,
 {
   FragmentList               fragmentList;
   StorageSpecifier           storageSpecifier;
+  CompareInfo                compareInfo;
   StringNode                 *stringNode;
   String                     storageName;
   Errors                     failError;
@@ -2243,6 +2230,19 @@ Errors Command_compare(const StringList        *storageNameList,
   // init variables
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
+
+  // init compare info
+  initCompareInfo(&compareInfo,
+                  includeEntryList,
+                  excludePatternList,
+                  jobOptions,
+//TODO
+NULL,  //               pauseTestFlag,
+NULL,  //               requestedAbortFlag,
+                  CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                  &fragmentList,
+                  logHandle
+                 );
 
   failError        = ERROR_NONE;
   someStorageFound = FALSE;
@@ -2264,14 +2264,9 @@ Errors Command_compare(const StringList        *storageNameList,
     if (String_isEmpty(storageSpecifier.archivePatternString))
     {
       // compare archive content
-      error = compareArchiveContent(&storageSpecifier,
-                                    NULL,
-                                    includeEntryList,
-                                    excludePatternList,
-                                    jobOptions,
-                                    CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                    &fragmentList,
-                                    logHandle
+      error = compareArchiveContent(&compareInfo,
+                                    &storageSpecifier,
+                                    NULL
                                    );
       someStorageFound = TRUE;
     }
@@ -2310,14 +2305,9 @@ Errors Command_compare(const StringList        *storageNameList,
               || (fileInfo.type == FILE_TYPE_HARDLINK)
              )
           {
-            error = compareArchiveContent(&storageSpecifier,
-                                          fileName,
-                                          includeEntryList,
-                                          excludePatternList,
-                                          jobOptions,
-                                          CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                          &fragmentList,
-                                          logHandle
+            error = compareArchiveContent(&compareInfo,
+                                          &storageSpecifier,
+                                          fileName
                                          );
             if (error != ERROR_NONE)
             {
@@ -2367,6 +2357,9 @@ Errors Command_compare(const StringList        *storageNameList,
       }
     }
   }
+
+  // done compare info
+  doneCompareInfo(&compareInfo);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);

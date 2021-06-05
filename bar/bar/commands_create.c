@@ -360,11 +360,15 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
 //                            || (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS);
 
   // init entry name queue, storage queue
-  if (!MsgQueue_init(&createInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
+  if (!MsgQueue_init(&createInfo->entryMsgQueue,
+                     MAX_ENTRY_MSG_QUEUE,
+                     CALLBACK_((MsgQueueMsgFreeFunction)freeEntryMsg,NULL)
+                    )
+     )
   {
     HALT_FATAL_ERROR("Cannot initialize entry message queue!");
   }
-  if (!MsgQueue_init(&createInfo->storageMsgQueue,0))
+  if (!MsgQueue_init(&createInfo->storageMsgQueue,0,CALLBACK_((MsgQueueMsgFreeFunction)freeStorageMsg,NULL)))
   {
     HALT_FATAL_ERROR("Cannot initialize storage message queue!");
   }
@@ -400,8 +404,8 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
   Semaphore_done(&createInfo->statusInfoLock);
   Semaphore_done(&createInfo->storageInfoLock);
 
-  MsgQueue_done(&createInfo->storageMsgQueue,(MsgQueueMsgFreeFunction)freeStorageMsg,NULL);
-  MsgQueue_done(&createInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
+  MsgQueue_done(&createInfo->storageMsgQueue);
+  MsgQueue_done(&createInfo->entryMsgQueue);
 
   doneStatusInfo(&createInfo->statusInfo);
   FragmentList_done(&createInfo->statusInfoFragmentList);

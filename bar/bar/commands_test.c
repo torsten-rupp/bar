@@ -56,19 +56,24 @@
 // test info
 typedef struct
 {
-  Semaphore           fragmentListLock;
-  FragmentList        *fragmentList;
-  const EntryList     *includeEntryList;                  // list of included entries
-  const PatternList   *excludePatternList;                // list of exclude patterns
-  const JobOptions    *jobOptions;
-  LogHandle           *logHandle;                         // log handle
+  const EntryList         *includeEntryList;                  // list of included entries
+  const PatternList       *excludePatternList;                // list of exclude patterns
+  JobOptions              *jobOptions;
+  LogHandle               *logHandle;                         // log handle
 
-  bool                *pauseTestFlag;                     // TRUE for pause creation
-  bool                *requestedAbortFlag;                // TRUE to abort create
+  bool                    *pauseTestFlag;                     // TRUE for pause creation
+  bool                    *requestedAbortFlag;                // TRUE to abort create
 
-  MsgQueue            entryMsgQueue;                      // queue with entries to store
+  GetNamePasswordFunction getNamePasswordFunction;
+  void                    *getNamePasswordUserData;
 
-  Errors              failError;                          // failure error
+  Semaphore               fragmentListLock;
+  FragmentList            *fragmentList;
+
+  MsgQueue                entryMsgQueue;                      // queue with entries to store
+
+  Errors                  failError;                          // failure error
+
 } TestInfo;
 
 // entry message send to test threads
@@ -114,42 +119,53 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 /***********************************************************************\
 * Name   : initTestInfo
 * Purpose: initialize test info
-* Input  : testInfo            - test info variable
-*          includeEntryList    - include entry list
-*          excludePatternList  - exclude pattern list
-*          jobOptions          - job options
-*          pauseTestFlag       - pause creation flag (can be NULL)
-*          requestedAbortFlag  - request abort flag (can be NULL)
-*          logHandle           - log handle (can be NULL)
+* Input  : testInfo                - test info variable
+*          includeEntryList        - include entry list
+*          excludePatternList      - exclude pattern list
+*          jobOptions              - job options
+*          pauseTestFlag           - pause creation flag (can be NULL)
+*          requestedAbortFlag      - request abort flag (can be NULL)
+*          getNamePasswordFunction - get password call back
+*          getNamePasswordUserData - user data for get password
+*          fragmentList            - fragment list
+*          logHandle               - log handle (can be NULL)
 * Output : createInfo - initialized test info variable
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initTestInfo(TestInfo            *testInfo,
-                        FragmentList        *fragmentList,
-                        const EntryList     *includeEntryList,
-                        const PatternList   *excludePatternList,
-                        const JobOptions    *jobOptions,
-                        bool                *pauseTestFlag,
-                        bool                *requestedAbortFlag,
-                        LogHandle           *logHandle
+LOCAL void initTestInfo(TestInfo                *testInfo,
+                        const EntryList         *includeEntryList,
+                        const PatternList       *excludePatternList,
+                        const JobOptions        *jobOptions,
+                        bool                    *pauseTestFlag,
+                        bool                    *requestedAbortFlag,
+                        GetNamePasswordFunction getNamePasswordFunction,
+                        void                    *getNamePasswordUserData,
+                        FragmentList            *fragmentList,
+                        LogHandle               *logHandle
                        )
 {
   assert(testInfo != NULL);
 
   // init variables
-  testInfo->fragmentList        = fragmentList;
-  testInfo->includeEntryList    = includeEntryList;
-  testInfo->excludePatternList  = excludePatternList;
-  testInfo->jobOptions          = jobOptions;
-  testInfo->pauseTestFlag       = pauseTestFlag;
-  testInfo->requestedAbortFlag  = requestedAbortFlag;
-  testInfo->logHandle           = logHandle;
-  testInfo->failError           = ERROR_NONE;
+  testInfo->includeEntryList        = includeEntryList;
+  testInfo->excludePatternList      = excludePatternList;
+  testInfo->jobOptions              = jobOptions;
+  testInfo->pauseTestFlag           = pauseTestFlag;
+  testInfo->requestedAbortFlag      = requestedAbortFlag;
+  testInfo->getNamePasswordFunction = getNamePasswordFunction;
+  testInfo->getNamePasswordUserData = getNamePasswordUserData;
+  testInfo->fragmentList            = fragmentList;
+  testInfo->logHandle               = logHandle;
+  testInfo->failError               = ERROR_NONE;
 
   // init entry name queue, storage queue
-  if (!MsgQueue_init(&testInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
+  if (!MsgQueue_init(&testInfo->entryMsgQueue,
+                     MAX_ENTRY_MSG_QUEUE,
+                     CALLBACK_((MsgQueueMsgFreeFunction)freeEntryMsg,NULL)
+                    )
+     )
   {
     HALT_FATAL_ERROR("Cannot initialize entry message queue!");
   }
@@ -180,7 +196,7 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 
   Semaphore_done(&testInfo->fragmentListLock);
 
-  MsgQueue_done(&testInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
+  MsgQueue_done(&testInfo->entryMsgQueue);
 }
 
 /***********************************************************************\
@@ -1280,24 +1296,17 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testArchiveContent(StorageSpecifier        *storageSpecifier,
-                                ConstString             archiveName,
-                                const EntryList         *includeEntryList,
-                                const PatternList       *excludePatternList,
-                                JobOptions              *jobOptions,
-                                GetNamePasswordFunction getNamePasswordFunction,
-                                void                    *getNamePasswordUserData,
-                                FragmentList            *fragmentList,
-                                LogHandle               *logHandle
+LOCAL Errors testArchiveContent(TestInfo         *testInfo,
+                                StorageSpecifier *storageSpecifier,
+                                ConstString      archiveName
                                )
 {
   AutoFreeList           autoFreeList;
   String                 printableStorageName;
-  Thread                 *testThreads;
-  uint                   testThreadCount;
   StorageInfo            storageInfo;
   Errors                 error;
-  TestInfo               testInfo;
+  Thread                 *testThreads;
+  uint                   testThreadCount;
   uint                   i;
   ArchiveHandle          archiveHandle;
   CryptSignatureStates   allCryptSignatureState;
@@ -1307,11 +1316,8 @@ LOCAL Errors testArchiveContent(StorageSpecifier        *storageSpecifier,
   uint64                 offset;
   EntryMsg               entryMsg;
 
+  assert(testInfo != NULL);
   assert(storageSpecifier != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
-  assert(jobOptions != NULL);
-  assert(fragmentList != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1325,7 +1331,7 @@ LOCAL Errors testArchiveContent(StorageSpecifier        *storageSpecifier,
   error = Storage_init(&storageInfo,
 NULL, // masterSocketHandle
                        storageSpecifier,
-                       jobOptions,
+                       testInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
@@ -1362,9 +1368,9 @@ NULL, // masterSocketHandle
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
-                       &jobOptions->deltaSourceList,
-                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                       logHandle
+                       &testInfo->jobOptions->deltaSourceList,
+                       CALLBACK_(testInfo->getNamePasswordFunction,testInfo->getNamePasswordUserData),
+                       testInfo->logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -1379,14 +1385,14 @@ NULL, // masterSocketHandle
   AUTOFREE_ADD(&autoFreeList,&archiveHandle,{ (void)Archive_close(&archiveHandle); });
 
   // check signatures
-  if (!jobOptions->skipVerifySignaturesFlag)
+  if (!testInfo->jobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&archiveHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
     {
-      if (!jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
+      if (!testInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
       {
         allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
       }
@@ -1403,7 +1409,7 @@ NULL, // masterSocketHandle
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
-      if (jobOptions->forceVerifySignaturesFlag)
+      if (testInfo->jobOptions->forceVerifySignaturesFlag)
       {
         // signature error
         printError("Invalid signature in '%s'!",
@@ -1422,19 +1428,6 @@ NULL, // masterSocketHandle
     }
   }
 
-  // init test info
-  initTestInfo(&testInfo,
-               fragmentList,
-               includeEntryList,
-               excludePatternList,
-               jobOptions,
-//TODO
-NULL,  //               pauseTestFlag,
-NULL,  //               requestedAbortFlag,
-               logHandle
-              );
-  AUTOFREE_ADD(&autoFreeList,&testInfo,{ (void)doneTestInfo(&testInfo); });
-
   // output info
   printInfo(0,
             "Test storage '%s'%s",
@@ -1443,17 +1436,17 @@ NULL,  //               requestedAbortFlag,
            );
 
   // start test threads
+  MsgQueue_reset(&testInfo->entryMsgQueue);
   testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   testThreads     = (Thread*)malloc(testThreadCount*sizeof(Thread));
   if (testThreads == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,testThreads,{ free(testThreads); });
   for (i = 0; i < testThreadCount; i++)
   {
-    if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,&testInfo))
+    if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,testInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize test thread #%d!",i);
     }
@@ -1463,8 +1456,8 @@ NULL,  //               requestedAbortFlag,
   allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   error                  = ERROR_NONE;
   lastSignatureOffset    = Archive_tell(&archiveHandle);
-  while (   (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
-         && ((testInfo.failError == ERROR_NONE) || !jobOptions->noStopOnErrorFlag)
+  while (   (testInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
+         && ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
          && !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
         )
   {
@@ -1481,10 +1474,10 @@ NULL,  //               requestedAbortFlag,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
+      if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
       break;
     }
-    DEBUG_TESTCODE() { testInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE() { testInfo->failError = DEBUG_TESTCODE_ERROR(); break; }
 
     if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
@@ -1495,7 +1488,7 @@ NULL,  //               requestedAbortFlag,
       entryMsg.archiveEntryType = archiveEntryType;
       entryMsg.archiveCryptInfo = archiveCryptInfo;
       entryMsg.offset           = offset;
-      if (!MsgQueue_put(&testInfo.entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+      if (!MsgQueue_put(&testInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
       {
         HALT_INTERNAL_ERROR("Send message to test threads fail!");
       }
@@ -1504,13 +1497,13 @@ NULL,  //               requestedAbortFlag,
       error = Archive_skipNextEntry(&archiveHandle);
       if (error != ERROR_NONE)
       {
-        if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
+        if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
         break;
       }
     }
     else
     {
-      if (!jobOptions->skipVerifySignaturesFlag)
+      if (!testInfo->jobOptions->skipVerifySignaturesFlag)
       {
         // check signature
         error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&allCryptSignatureState);
@@ -1522,7 +1515,7 @@ NULL,  //               requestedAbortFlag,
       }
       if (error != ERROR_NONE)
       {
-        if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
+        if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
         break;
       }
       lastSignatureOffset = Archive_tell(&archiveHandle);
@@ -1530,7 +1523,7 @@ NULL,  //               requestedAbortFlag,
   }
 
   // wait for test threads
-  MsgQueue_setEndOfMsg(&testInfo.entryMsgQueue);
+  MsgQueue_setEndOfMsg(&testInfo->entryMsgQueue);
   for (i = 0; i < testThreadCount; i++)
   {
     if (!Thread_join(&testThreads[i]))
@@ -1545,7 +1538,10 @@ NULL,  //               requestedAbortFlag,
   // output info
   if (!isPrintInfo(1)) printInfo(0,
                                  "%s",
-                                 (testInfo.failError == ERROR_NONE) && (jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
+                                    (testInfo->failError == ERROR_NONE)
+                                 && (   testInfo->jobOptions->skipVerifySignaturesFlag
+                                     || Crypt_isValidSignatureState(allCryptSignatureState)
+                                    )
                                    ? "OK\n"
                                    : "FAIL!\n"
                                 );
@@ -1553,12 +1549,12 @@ NULL,  //               requestedAbortFlag,
   // output signature error/warning
   if (!Crypt_isValidSignatureState(allCryptSignatureState))
   {
-    if (jobOptions->forceVerifySignaturesFlag)
+    if (testInfo->jobOptions->forceVerifySignaturesFlag)
     {
       printError("Invalid signature in '%s'!",
                  String_cString(printableStorageName)
                 );
-      if (testInfo.failError == ERROR_NONE) testInfo.failError = ERROR_INVALID_SIGNATURE;
+      if (testInfo->failError == ERROR_NONE) testInfo->failError = ERROR_INVALID_SIGNATURE;
     }
     else
     {
@@ -1574,14 +1570,11 @@ NULL,  //               requestedAbortFlag,
   // done storage
   (void)Storage_done(&storageInfo);
 
-  // done test info
-  doneTestInfo(&testInfo);
-
   // free resources
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
-  return testInfo.failError;
+  return testInfo->failError;
 }
 
 /*---------------------------------------------------------------------*/
@@ -1597,6 +1590,7 @@ Errors Command_test(const StringList        *storageNameList,
 {
   FragmentList               fragmentList;
   StorageSpecifier           storageSpecifier;
+  TestInfo                   testInfo;
   StringNode                 *stringNode;
   String                     storageName;
   Errors                     failError;
@@ -1615,6 +1609,19 @@ Errors Command_test(const StringList        *storageNameList,
   // allocate resources
   FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
+
+  // init test info
+  initTestInfo(&testInfo,
+               includeEntryList,
+               excludePatternList,
+               jobOptions,
+//TODO
+NULL,  //               pauseTestFlag,
+NULL,  //               requestedAbortFlag,
+               CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+               &fragmentList,
+               logHandle
+              );
 
   failError        = ERROR_NONE;
   someStorageFound = FALSE;
@@ -1639,14 +1646,9 @@ Errors Command_test(const StringList        *storageNameList,
       if (String_isEmpty(storageSpecifier.archivePatternString))
       {
         // test archive content
-        error = testArchiveContent(&storageSpecifier,
-                                   NULL,  // fileName
-                                   includeEntryList,
-                                   excludePatternList,
-                                   jobOptions,
-                                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                   &fragmentList,
-                                   logHandle
+        error = testArchiveContent(&testInfo,
+                                   &storageSpecifier,
+                                   NULL  // fileName
                                   );
         someStorageFound = TRUE;
       }
@@ -1686,14 +1688,9 @@ Errors Command_test(const StringList        *storageNameList,
               || (fileInfo.type == FILE_TYPE_HARDLINK)
              )
           {
-            error = testArchiveContent(&storageSpecifier,
-                                       fileName,
-                                       includeEntryList,
-                                       excludePatternList,
-                                       jobOptions,
-                                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                       &fragmentList,
-                                       logHandle
+            error = testArchiveContent(&testInfo,
+                                       &storageSpecifier,
+                                       fileName
                                       );
             if (error != ERROR_NONE)
             {
@@ -1738,6 +1735,9 @@ Errors Command_test(const StringList        *storageNameList,
       }
     }
   }
+
+  // done test info
+  doneTestInfo(&testInfo);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);

@@ -28,6 +28,7 @@
 #include "common/autofree.h"
 #include "common/strings.h"
 #include "common/stringlists.h"
+#include "common/msgqueues.h"
 
 #include "errors.h"
 #include "common/patterns.h"
@@ -47,6 +48,9 @@
 // file data buffer size
 #define BUFFER_SIZE (64*1024)
 
+// max. number of entry messages
+#define MAX_ENTRY_MSG_QUEUE 256
+
 /***************************** Datatypes *******************************/
 
 // restore information
@@ -60,8 +64,6 @@ typedef struct
 
   LogHandle                       *logHandle;                           // log handle
 
-  Errors                          failError;                            // restore error
-
   RestoreUpdateStatusInfoFunction updateStatusInfoFunction;             // update status info call-back
   void                            *updateStatusInfoUserData;            // user data for update status info call-back
   RestoreHandleErrorFunction      handleErrorFunction;                  // handle error call-back
@@ -73,6 +75,11 @@ typedef struct
   IsAbortedFunction               isAbortedFunction;                    // check for aborted call-back
   void                            *isAbortedUserData;                   // user data for check for aborted call-back
 
+  MsgQueue                        entryMsgQueue;                        // queue with entries to store
+
+  Errors                          failError;                            // failure error
+
+  Semaphore                       fragmentListLock;
   FragmentList                    fragmentList;                         // entry fragments
 
   Semaphore                       statusInfoLock;                       // status info lock
@@ -80,6 +87,16 @@ typedef struct
   const FragmentNode              *statusInfoCurrentFragmentNode;       // current fragment node in status info
   uint64                          statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
 } RestoreInfo;
+
+// entry message send to restore threads
+typedef struct
+{
+  uint                   archiveIndex;
+  const ArchiveHandle    *archiveHandle;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
+} EntryMsg;
 
 /***************************** Variables *******************************/
 
@@ -92,6 +109,24 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : freeEntryMsg
+* Purpose: free file entry message call back
+* Input  : entryMsg - entry message
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
+{
+  assert(entryMsg != NULL);
+
+  UNUSED_VARIABLE(entryMsg);
+  UNUSED_VARIABLE(userData);
+}
 
 /***********************************************************************\
 * Name   : initRestoreInfo
@@ -170,6 +205,16 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->statusInfoCurrentFragmentNode        = NULL;
   restoreInfo->statusInfoCurrentLastUpdateTimestamp = 0LL;
 
+  // init entry name queue, storage queue
+  if (!MsgQueue_init(&restoreInfo->entryMsgQueue,
+                     MAX_ENTRY_MSG_QUEUE,
+                     CALLBACK_((MsgQueueMsgFreeFunction)freeEntryMsg,NULL)
+                    )
+     )
+  {
+    HALT_FATAL_ERROR("Cannot initialize entry message queue!");
+  }
+
   // init locks
   if (!Semaphore_init(&restoreInfo->statusInfoLock,SEMAPHORE_TYPE_BINARY))
   {
@@ -195,6 +240,7 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
   DEBUG_REMOVE_RESOURCE_TRACE(restoreInfo,RestoreInfo);
 
   Semaphore_done(&restoreInfo->statusInfoLock);
+  MsgQueue_done(&restoreInfo->entryMsgQueue);
 
   doneStatusInfo(&restoreInfo->statusInfo);
 
@@ -3113,6 +3159,180 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
 }
 
 /***********************************************************************\
+* Name   : restoreThreadCode
+* Purpose: restore worker thread
+* Input  : restoreInfo - restore info structure
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
+{
+  byte          *buffer;
+  uint          archiveIndex;
+  ArchiveHandle archiveHandle;
+  Errors        failError;
+  EntryMsg      entryMsg;
+  Errors        error;
+
+  assert(restoreInfo != NULL);
+  assert(restoreInfo->jobOptions != NULL);
+
+  // init variables
+  buffer = (byte*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  archiveIndex = 0;
+
+  // restore entries
+  failError = ERROR_NONE;
+  while (   ((restoreInfo->failError == ERROR_NONE) || !restoreInfo->jobOptions->noStopOnErrorFlag)
+//TODO
+//         && !isAborted(restoreInfo)
+         && MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
+        )
+  {
+    // open archive (only if new archive)
+    if (archiveIndex < entryMsg.archiveIndex)
+    {
+      // close previous archive
+      if (archiveIndex != 0)
+      {
+        Archive_close(&archiveHandle);
+      }
+
+      // open new archive
+      error = Archive_openHandle(&archiveHandle,
+                                 entryMsg.archiveHandle
+                                );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot open archive '%s' (error: %s)!",
+                   String_cString(entryMsg.archiveHandle->printableStorageName),
+                   Error_getText(error)
+                  );
+        if (failError == ERROR_NONE) failError = error;
+        break;
+      }
+
+      // store current archive index
+      archiveIndex = entryMsg.archiveIndex;
+    }
+
+    // set archive crypt info
+    Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
+
+    // seek to start of entry
+    error = Archive_seek(&archiveHandle,entryMsg.offset);
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot read storage '%s' (error: %s)!",
+                 String_cString(entryMsg.archiveHandle->printableStorageName),
+                 Error_getText(error)
+                );
+      if (failError == ERROR_NONE) failError = error;
+      break;
+    }
+
+    switch (entryMsg.archiveEntryType)
+    {
+      case ARCHIVE_ENTRY_TYPE_NONE:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
+        break; /* not reached */
+      case ARCHIVE_ENTRY_TYPE_FILE:
+        error = restoreFileEntry(restoreInfo,
+                                 &archiveHandle,
+                                 entryMsg.archiveHandle->printableStorageName,
+                                 buffer,
+                                 BUFFER_SIZE
+                                );
+        break;
+      case ARCHIVE_ENTRY_TYPE_IMAGE:
+        error = restoreImageEntry(restoreInfo,
+                                  &archiveHandle,
+                                  entryMsg.archiveHandle->printableStorageName,
+                                  buffer,
+                                  BUFFER_SIZE
+                                 );
+        break;
+      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+        error = restoreDirectoryEntry(restoreInfo,
+                                      &archiveHandle,
+                                      entryMsg.archiveHandle->printableStorageName,
+buffer,
+BUFFER_SIZE
+//                                      restoreInfo->includeEntryList,
+//                                      restoreInfo->excludePatternList
+                                     );
+
+        break;
+      case ARCHIVE_ENTRY_TYPE_LINK:
+        error = restoreLinkEntry(restoreInfo,
+                                 &archiveHandle,
+                                 entryMsg.archiveHandle->printableStorageName,
+                                 buffer,
+                                 BUFFER_SIZE
+                                );
+        break;
+      case ARCHIVE_ENTRY_TYPE_HARDLINK:
+        error = restoreHardLinkEntry(restoreInfo,
+                                     &archiveHandle,
+                                     entryMsg.archiveHandle->printableStorageName,
+                                     buffer,
+                                     BUFFER_SIZE
+                                    );
+        break;
+      case ARCHIVE_ENTRY_TYPE_SPECIAL:
+        error = restoreSpecialEntry(restoreInfo,
+                                    &archiveHandle,
+                                    entryMsg.archiveHandle->printableStorageName,
+                                    buffer,
+                                    BUFFER_SIZE
+                                   );
+        break;
+      case ARCHIVE_ENTRY_TYPE_META:
+        error = Archive_skipNextEntry(&archiveHandle);
+        break;
+      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+        error = Archive_skipNextEntry(&archiveHandle);
+        break;
+      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNREACHABLE();
+        #endif /* NDEBUG */
+        break; /* not reached */
+    }
+    if (error != ERROR_NONE)
+    {
+      if (failError == ERROR_NONE) failError = error;
+    }
+
+    // store fail error
+    if (failError != ERROR_NONE)
+    {
+      if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = failError;
+    }
+
+    // free resources
+    freeEntryMsg(&entryMsg,NULL);
+  }
+
+  // close archive
+  if (archiveIndex != 0)
+  {
+    Archive_close(&archiveHandle);
+  }
+
+  // free resources
+  free(buffer);
+}
+
+/***********************************************************************\
 * Name   : restoreArchiveContent
 * Purpose: restore archive content
 * Input  : restoreInfo      - restore info
@@ -3123,20 +3343,26 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors restoreArchiveContent(RestoreInfo      *restoreInfo,
-                                   StorageSpecifier *storageSpecifier,
-                                   ConstString      archiveName
+LOCAL Errors restoreArchiveContent(RestoreInfo            *restoreInfo,
+                                   StorageSpecifier       *storageSpecifier,
+                                   ConstString             archiveName
                                   )
 {
-  AutoFreeList         autoFreeList;
-  String               printableStorageName;
-  byte                 *buffer;
-  StorageInfo          storageInfo;
-  Errors               error;
-  CryptSignatureStates allCryptSignatureState;
-  ArchiveHandle        archiveHandle;
-  Errors               failError;
-  ArchiveEntryTypes    archiveEntryType;
+  AutoFreeList           autoFreeList;
+  String                 printableStorageName;
+  byte                   *buffer;
+  Errors                 error;
+  StorageInfo            storageInfo;
+  Thread                 *restoreThreads;
+  uint                   restoreThreadCount;
+  uint                   i;
+  ArchiveHandle          archiveHandle;
+  CryptSignatureStates   allCryptSignatureState;
+  uint64                 lastSignatureOffset;
+  ArchiveEntryTypes      archiveEntryType;
+  const ArchiveCryptInfo *archiveCryptInfo;
+  uint64                 offset;
+  EntryMsg               entryMsg;
 
   assert(restoreInfo != NULL);
   assert(restoreInfo->includeEntryList != NULL);
@@ -3274,14 +3500,34 @@ NULL, // masterIO
     updateStatusInfo(restoreInfo,TRUE);
   }
 
-  // read archive entries
+  // output info
   printInfo(0,
-            "Restore from '%s'%s",
+            "Restore storage '%s'%s",
             String_cString(printableStorageName),
             !isPrintInfo(1) ? "..." : ":\n"
            );
-  failError = ERROR_NONE;
-  while (   ((failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
+
+  // start restore threads
+  MsgQueue_reset(&restoreInfo->entryMsgQueue);
+  restoreThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  restoreThreads     = (Thread*)malloc(restoreThreadCount*sizeof(Thread));
+  if (restoreThreads == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  AUTOFREE_ADD(&autoFreeList,restoreThreads,{ free(restoreThreads); });
+  for (i = 0; i < restoreThreadCount; i++)
+  {
+    if (!Thread_init(&restoreThreads[i],"BAR restore",globalOptions.niceLevel,restoreThreadCode,restoreInfo))
+    {
+      HALT_FATAL_ERROR("Cannot initialize restore thread #%d!",i);
+    }
+  }
+
+  // read archive entries
+  error               = ERROR_NONE;
+  lastSignatureOffset = Archive_tell(&archiveHandle);
+  while (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
          && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
          && !Archive_eof(&archiveHandle,ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|(isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE))
         )
@@ -3295,9 +3541,9 @@ NULL, // masterIO
     // get next archive entry type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
-                                        NULL,  // archiveCryptInfo
-                                        NULL,  // offset
-                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
+                                        &archiveCryptInfo,
+                                        &offset,
+                                        isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE
                                        );
     if (error != ERROR_NONE)
     {
@@ -3305,7 +3551,7 @@ NULL, // masterIO
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = handleError(restoreInfo,error);
+      if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = handleError(restoreInfo,error);
       break;
     }
 
@@ -3316,87 +3562,47 @@ NULL, // masterIO
       updateStatusInfo(restoreInfo,TRUE);
     }
 
-    // restore entry
-    switch (archiveEntryType)
+    // restore entries
+    if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
-      case ARCHIVE_ENTRY_TYPE_NONE:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-      case ARCHIVE_ENTRY_TYPE_FILE:
-        error = restoreFileEntry(restoreInfo,
-                                 &archiveHandle,
-                                 printableStorageName,
-                                 buffer,
-                                 BUFFER_SIZE
-                                );
-        break;
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
-        error = restoreImageEntry(restoreInfo,
-                                  &archiveHandle,
-                                  printableStorageName,
-                                  buffer,
-                                  BUFFER_SIZE
-                                 );
-        break;
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-        error = restoreDirectoryEntry(restoreInfo,
-                                      &archiveHandle,
-                                      printableStorageName,
-                                      buffer,
-                                      BUFFER_SIZE
-                                     );
-        break;
-      case ARCHIVE_ENTRY_TYPE_LINK:
-        error = restoreLinkEntry(restoreInfo,
-                                 &archiveHandle,
-                                 printableStorageName,
-                                 buffer,
-                                 BUFFER_SIZE
-                                );
-        break;
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
-        error = restoreHardLinkEntry(restoreInfo,
-                                     &archiveHandle,
-                                     printableStorageName,
-                                     buffer,
-                                     BUFFER_SIZE
-                                    );
-        break;
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-        error = restoreSpecialEntry(restoreInfo,
-                                    &archiveHandle,
-                                    printableStorageName,
-                                    buffer,
-                                    BUFFER_SIZE
-                                   );
-        break;
-      case ARCHIVE_ENTRY_TYPE_META:
-        error = Archive_skipNextEntry(&archiveHandle);
-        break;
-      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        error = Archive_skipNextEntry(&archiveHandle);
-        break;
-      case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNREACHABLE();
-        #endif /* NDEBUG */
-        break; /* not reached */
-    }
-    if (error != ERROR_NONE)
-    {
-      // handle error
-      if (Error_getCode(error) != ERROR_CODE_NO_CRYPT_PASSWORD)
+      // send entry to restore threads
+//TODO: increment on multiple archives and when threads are not restarted each time
+      entryMsg.archiveIndex     = 1;
+      entryMsg.archiveHandle    = &archiveHandle;
+      entryMsg.archiveEntryType = archiveEntryType;
+      entryMsg.archiveCryptInfo = archiveCryptInfo;
+      entryMsg.offset           = offset;
+      if (!MsgQueue_put(&restoreInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
       {
-        error = handleError(restoreInfo,error);
+        HALT_INTERNAL_ERROR("Send message to restore threads fail!");
       }
 
-      // set fail error
+      // skip entry
+      error = Archive_skipNextEntry(&archiveHandle);
       if (error != ERROR_NONE)
       {
-        if (failError == ERROR_NONE) failError = error;
+        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+        break;
       }
+    }
+    else
+    {
+      if (!restoreInfo->jobOptions->skipVerifySignaturesFlag)
+      {
+        // check signature
+        error = Archive_verifySignatureEntry(&archiveHandle,lastSignatureOffset,&allCryptSignatureState);
+      }
+      else
+      {
+         // skip signature
+         error = Archive_skipNextEntry(&archiveHandle);
+      }
+      if (error != ERROR_NONE)
+      {
+        if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = error;
+        break;
+      }
+      lastSignatureOffset = Archive_tell(&archiveHandle);
     }
 
     // update storage status
@@ -3406,7 +3612,20 @@ NULL, // masterIO
       updateStatusInfo(restoreInfo,TRUE);
     }
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
+  if (!isPrintInfo(1)) printInfo(0,"%s",(restoreInfo->failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
+
+  // wait for restore threads
+  MsgQueue_setEndOfMsg(&restoreInfo->entryMsgQueue);
+  for (i = 0; i < restoreThreadCount; i++)
+  {
+    if (!Thread_join(&restoreThreads[i]))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop restore thread #%d!",i);
+    }
+    Thread_done(&restoreThreads[i]);
+  }
+  AUTOFREE_REMOVE(&autoFreeList,restoreThreads);
+  free(restoreThreads);
 
   // close archive
   Archive_close(&archiveHandle);
@@ -3419,7 +3638,7 @@ NULL, // masterIO
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
-  return failError;
+  return restoreInfo->failError;
 }
 
 /*---------------------------------------------------------------------*/
@@ -3442,8 +3661,8 @@ Errors Command_restore(const StringList                *storageNameList,
                        LogHandle                       *logHandle
                       )
 {
-  RestoreInfo                restoreInfo;
   StorageSpecifier           storageSpecifier;
+  RestoreInfo                restoreInfo;
   StringNode                 *stringNode;
   String                     storageName;
   Errors                     error;
@@ -3684,8 +3903,10 @@ Errors Command_restore(const StringList                *storageNameList,
     error = ERROR_ABORTED;
   }
 
-  // free resources
+  // done restore info
   doneRestoreInfo(&restoreInfo);
+
+  // free resources
   Storage_doneSpecifier(&storageSpecifier);
 
   return error;
