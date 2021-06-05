@@ -27,25 +27,27 @@
 
 /***************************** Datatypes *******************************/
 
+typedef void(*MsgQueueMsgFreeFunction)(void *msg, void *userData);
+
 typedef struct
 {
-  ulong               maxMsgs;
+  ulong                   maxMsgs;
+  MsgQueueMsgFreeFunction msgQueueMsgFreeFunction;
+  void                    *msgQueueMsgFreeUserData;
 //TODO: use Windows WaitForSingleObject?
 //  #if   defined(PLATFORM_LINUX)              // lock to update request counters, thread info
 #if 1
-    pthread_mutex_t     lock;
-    pthread_mutexattr_t lockAttributes;
+    pthread_mutex_t         lock;
+    pthread_mutexattr_t     lockAttributes;
   #elif defined(PLATFORM_WINDOWS)
-    HANDLE              lock;
+    HANDLE                  lock;
   #endif /* PLATFORM_... */
-  uint                lockCount;
-  pthread_cond_t      modified;
-  bool                modifiedFlag;
-  bool                endOfMsgFlag;
-  List                list;
+  uint                    lockCount;
+  pthread_cond_t          modified;
+  bool                    modifiedFlag;
+  bool                    endOfMsgFlag;
+  List                    list;
 } MsgQueue;
-
-typedef void(*MsgQueueMsgFreeFunction)(void *msg, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -62,13 +64,20 @@ typedef void(*MsgQueueMsgFreeFunction)(void *msg, void *userData);
 /***********************************************************************\
 * Name   : MsgQueue_init
 * Purpose: initialize message queue
-* Input  : maxMsg - max. number of message in queue (0 for unlimited)
+* Input  : maxMsg                  - max. number of message in queue (0
+*                                    for unlimited)
+*          msgQueueMsgFreeFunction - message free function or NULL
+*          msgQueueMsgFreeUserData - user data for free function
 * Output : msgQueue - initialized message queue
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs);
+bool MsgQueue_init(MsgQueue                *msgQueue,
+                   ulong                   maxMsgs,
+                   MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
+                   void                    *msgQueueMsgFreeUserData
+                  );
 
 /***********************************************************************\
 * Name   : MsgQueue_done
@@ -81,18 +90,24 @@ bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs);
 * Notes  : -
 \***********************************************************************/
 
-void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData);
+void MsgQueue_done(MsgQueue *msgQueue);
 
 /***********************************************************************\
 * Name   : MsgQueue_new
 * Purpose: create new message queue
-* Input  : maxMsg - max. number of message in queue (0 for unlimited)
+* Input  : maxMsg                  - max. number of message in queue (0
+*                                    for unlimited)
+*          msgQueueMsgFreeFunction - message free function or NULL
+*          msgQueueMsgFreeUserData - user data for free function
 * Output : -
 * Return : messages queue or NULL if insufficient memory
 * Notes  : -
 \***********************************************************************/
 
-MsgQueue *MsgQueue_new(ulong maxMsgs);
+MsgQueue *MsgQueue_new(ulong                   maxMsgs,
+                       MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
+                       void                    *msgQueueMsgFreeUserData
+                      );
 
 /***********************************************************************\
 * Name   : MsgQueue_delete
@@ -105,7 +120,7 @@ MsgQueue *MsgQueue_new(ulong maxMsgs);
 * Notes  : -
 \***********************************************************************/
 
-void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData);
+void MsgQueue_delete(MsgQueue *msgQueue);
 
 /***********************************************************************\
 * Name   : MsgQueue_clear
@@ -118,7 +133,7 @@ void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFree
 * Notes  : -
 \***********************************************************************/
 
-void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData);
+void MsgQueue_clear(MsgQueue *msgQueue);
 
 /***********************************************************************\
 * Name   : MsgQueue_lock
@@ -229,6 +244,19 @@ void MsgQueue_wait(MsgQueue *msgQueue);
 \***********************************************************************/
 
 void MsgQueue_setEndOfMsg(MsgQueue *msgQueue);
+
+/***********************************************************************\
+* Name   : MsgQueue_reset
+* Purpose: clear and reset end-of-message for queue
+* Input  : msgQueue                - message queue
+*          msgQueueMsgFreeFunction - message free function or NULL
+*          msgQueueMsgFreeUserData - user data for free function
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void MsgQueue_reset(MsgQueue *msgQueue);
 
 #ifdef __cplusplus
   }

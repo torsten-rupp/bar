@@ -75,6 +75,33 @@ typedef bool MsgQueueLock;
 #endif
 
 /***********************************************************************\
+* Name   : clear
+* Purpose: discard all remaining messages in queue
+* Input  : msgQueue - message queue
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clear(MsgQueue *msgQueue)
+{
+  MsgNode *msgNode;
+
+  assert(msgQueue != NULL);
+
+  while (!List_isEmpty(&msgQueue->list))
+  {
+    msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
+
+    if (msgQueue->msgQueueMsgFreeFunction != NULL)
+    {
+      msgQueue->msgQueueMsgFreeFunction(msgNode->data,msgQueue->msgQueueMsgFreeUserData);
+    }
+    free(msgNode);
+  }
+}
+
+/***********************************************************************\
 * Name   : lock
 * Purpose: lock message queue
 * Input  : msgQueue - message queue
@@ -187,11 +214,17 @@ LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
 
 /*---------------------------------------------------------------------*/
 
-bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs)
+bool MsgQueue_init(MsgQueue                *msgQueue,
+                   ulong                   maxMsgs,
+                   MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
+                   void                    *msgQueueMsgFreeUserData
+                  )
 {
   assert(msgQueue != NULL);
 
-  msgQueue->maxMsgs = maxMsgs;
+  msgQueue->maxMsgs                 = maxMsgs;
+  msgQueue->msgQueueMsgFreeFunction = msgQueueMsgFreeFunction;
+  msgQueue->msgQueueMsgFreeUserData = msgQueueMsgFreeUserData;
 //  #if   defined(PLATFORM_LINUX)
 #if 1
     pthread_mutexattr_init(&msgQueue->lockAttributes);
@@ -221,7 +254,7 @@ xxx
   return TRUE;
 }
 
-void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData)
+void MsgQueue_done(MsgQueue *msgQueue)
 {
   MsgNode *msgNode;
 
@@ -235,9 +268,9 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
   {
     msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
 
-    if (msgQueueMsgFreeFunction != NULL)
+    if (msgQueue->msgQueueMsgFreeFunction != NULL)
     {
-      msgQueueMsgFreeFunction(msgNode->data,msgQueueMsgFreeUserData);
+      msgQueue->msgQueueMsgFreeFunction(msgNode->data,msgQueue->msgQueueMsgFreeUserData);
     }
     free(msgNode);
   }
@@ -253,14 +286,17 @@ xxx
   #endif /* PLATFORM_... */
 }
 
-MsgQueue *MsgQueue_new(ulong maxMsgs)
+MsgQueue *MsgQueue_new(ulong                   maxMsgs,
+                       MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
+                       void                    *msgQueueMsgFreeUserData
+                      )
 {
   MsgQueue *msgQueue;
 
   msgQueue = (MsgQueue*)malloc(sizeof(MsgQueue));
   if (msgQueue != NULL)
   {
-    if (!MsgQueue_init(msgQueue,maxMsgs))
+    if (!MsgQueue_init(msgQueue,maxMsgs,CALLBACK_(msgQueueMsgFreeFunction,msgQueueMsgFreeUserData)))
     {
       free(msgQueue);
       return NULL;
@@ -274,34 +310,23 @@ MsgQueue *MsgQueue_new(ulong maxMsgs)
   return msgQueue;
 }
 
-void MsgQueue_delete(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData)
+void MsgQueue_delete(MsgQueue *msgQueue)
 {
   assert(msgQueue != NULL);
 
-  MsgQueue_done(msgQueue,msgQueueMsgFreeFunction,msgQueueMsgFreeUserData);
+  MsgQueue_done(msgQueue);
   free(msgQueue);
 }
 
-void MsgQueue_clear(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFunction, void *msgQueueMsgFreeUserData)
+void MsgQueue_clear(MsgQueue *msgQueue)
 {
   MsgQueueLock msgQueueLock;
-  MsgNode      *msgNode;
 
   assert(msgQueue != NULL);
 
   MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
-    // discard all remaining messages
-    while (!List_isEmpty(&msgQueue->list))
-    {
-      msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
-
-      if (msgQueueMsgFreeFunction != NULL)
-      {
-        msgQueueMsgFreeFunction(msgNode->data,msgQueueMsgFreeUserData);
-      }
-      free(msgNode);
-    }
+    clear(msgQueue);
   }
 }
 
@@ -449,6 +474,21 @@ void MsgQueue_setEndOfMsg(MsgQueue *msgQueue)
   }
 }
 
+void MsgQueue_reset(MsgQueue *msgQueue)
+{
+  MsgQueueLock msgQueueLock;
+
+  assert(msgQueue != NULL);
+
+  MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
+  {
+    clear(msgQueue);
+    msgQueue->endOfMsgFlag = FALSE;
+
+    // signal modify
+    msgQueue->modifiedFlag = TRUE;
+  }
+}
 #ifdef __cplusplus
   }
 #endif
