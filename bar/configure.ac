@@ -2836,6 +2836,7 @@ if test $ENABLE_TLS = "yes"; then
           --with-lib-path=$cwd/extern/lib \
           --disable-shared \
           --enable-static \
+          --enable-fat \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
