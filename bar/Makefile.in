@@ -277,14 +277,14 @@ help:
 	@$(ECHO) "  debian_dist"
 	@$(ECHO) "  clean_debian_dist"
 	@$(ECHO) ""
-	@$(ECHO) "  rpm"
-	@$(ECHO) "  rpm32"
-	@$(ECHO) "  rpm64"
+	@$(ECHO) "  rpm[d]"
+	@$(ECHO) "  rpm32[d]"
+	@$(ECHO) "  rpm64[d]"
 	@$(ECHO) "  clean_rpm"
 	@$(ECHO) ""
-	@$(ECHO) "  deb"
-	@$(ECHO) "  deb32"
-	@$(ECHO) "  deb64"
+	@$(ECHO) "  deb[d]"
+	@$(ECHO) "  deb32[d]"
+	@$(ECHO) "  deb64[d]"
 	@$(ECHO) "  clean_deb"
 	@$(ECHO) ""
 	@$(ECHO) "  win32"
@@ -875,16 +875,23 @@ win32_docker-x86_64:
 
 
 # RPM
-.PHONY: rpm clean_rpm
+.PHONY: rpm rpmd clean_rpm
 rpm: \
   rpm32 \
   rpm64
+rpmd: \
+  rpm32d \
+  rpm64d
 
-.PHONY: rpm32 rpm64
+.PHONY: rpm32 rpm32d rpm64 rpm64d
 rpm32: \
   $(DISTRIBUTION_NAME).rpm
+rpm32d:
+	$(MAKE) $(DISTRIBUTION_NAME).rpm DEBUG=1
 rpm64: \
   $(DISTRIBUTION_NAME)-x86_64.rpm
+rpm64d:
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm DEBUG=1
 
 clean_rpm:
 	$(RMF) $(DISTRIBUTION_NAME).rpm
@@ -894,52 +901,69 @@ clean_rpm:
 
 $(DISTRIBUTION_NAME).rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
+	# Note: scl_source to enable gcc 7
 	@$(call functionPrintInfo,Build RPM on CentOS 6 32bit)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             -e CFLAGS="-m32" \
             -v $(PWD):/media/home \
-            bar-centos:6 setarch i686 -- /media/home/packages/build_rpm.sh \
+            bar-centos:6 setarch i686 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
               $(VERSION) \
               $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME).rpm; \
+              $(DISTRIBUTION_NAME).rpm \
+              $(if $(DEBUG),--debug) \
+              ;" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
 $(DISTRIBUTION_NAME)-x86_64.rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
+	# Note: scl_source to enable gcc 7
 	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             -v $(PWD):/media/home \
-            bar-centos-x86_64:6 setarch x86_64 --  /media/home/packages/build_rpm.sh \
+            bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
               $(VERSION) \
               $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME)-x86_64.rpm; \
+              $(DISTRIBUTION_NAME)-x86_64.rpm \
+              $(if $(DEBUG),--debug) \
+              ;" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
 # DEB
-.PHONY: deb clean_deb
+.PHONY: deb debd clean_deb
 deb: \
   deb32 \
-  deb64 \
+  deb64
+debd: \
+  deb32d \
+  deb64d
 
-.PHONY: deb32 deb-gui32 deb64 deb-gui64
+.PHONY: deb32 deb32d deb-gui32 deb-gui32d deb64 deb64d deb-gui64 deb-gui64d
 deb32: \
   $(DISTRIBUTION_NAME).deb
+deb32d:
+	$(MAKE) $(DISTRIBUTION_NAME).deb DEBUG=1
 deb-gui32: \
   $(DISTRIBUTION_NAME_GUI).deb
+deb-gui32d:
+	$(MAKE) $(DISTRIBUTION_NAME_GUI).deb DEBUG=1
 deb64: \
   $(DISTRIBUTION_NAME)-x86_64.deb
+deb64d:
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb DEBUG=1
 deb-gui64: \
   $(DISTRIBUTION_NAME_GUI)-x86_64.deb
+deb-gui64d:
+	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb DEBUG=1
 
 clean_deb:
 	$(RMF) $(DISTRIBUTION_NAME).deb
@@ -962,7 +986,9 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
               $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(DISTRIBUTION_NAME).deb \
-              $(DISTRIBUTION_NAME_GUI).deb; \
+              $(DISTRIBUTION_NAME_GUI).deb \
+              $(if $(DEBUG),--debug) \
+              ; \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -979,7 +1005,9 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
               $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(DISTRIBUTION_NAME)-x86_64.deb \
-              $(DISTRIBUTION_NAME_GUI)-x86_64.deb; \
+              $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
+              $(if $(DEBUG),--debug) \
+              ; \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
