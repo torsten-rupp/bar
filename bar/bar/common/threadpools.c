@@ -44,6 +44,18 @@ const uint MAX_POOL_RUN_MSG_QUEUE = 8;
 #endif /* NDEBUG */
 
 /***************************** Datatypes *******************************/
+typedef struct
+{
+  sem_t          lock;
+  ThreadPool     *threadPool;
+  ThreadPoolNode *threadPoolNode;
+  const char     *name;
+  int            niceLevel;
+  sem_t          started;
+//  void       (*entryFunction)(void*);
+//  void       *argument;
+} StartInfo;
+
 
 /***************************** Variables *******************************/
 
@@ -58,36 +70,6 @@ const uint MAX_POOL_RUN_MSG_QUEUE = 8;
 #endif
 
 // ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : freeThreadPoolStartInfoMsg
-* Purpose: free thread pool start message call back
-* Input  : poolRunMsg - pool run message
-*          userData   - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeThreadPoolStartInfoMsg(ThreadPoolStartInfoMsg *threadPoolStartInfoMsg, void *userData)
-{
-  assert(threadPoolStartInfoMsg != NULL);
-
-  UNUSED_VARIABLE(threadPoolStartInfoMsg);
-  UNUSED_VARIABLE(userData);
-}
-
-typedef struct
-{
-  sem_t          lock;
-  ThreadPool     *threadPool;
-  ThreadPoolNode *threadPoolNode;
-  const char     *name;
-  int            niceLevel;
-  sem_t          started;
-//  void       (*entryFunction)(void*);
-//  void       *argument;
-} StartInfo;
 
 /***********************************************************************\
 * Name   : threadPoolTerminated
@@ -286,28 +268,28 @@ bool ThreadPool_init(ThreadPool *threadPool,
                      uint       size
                     )
 {
-  int i;
+  StartInfo      startInfo;
+  uint           i;
   ThreadPoolNode *threadPoolNode;
-  StartInfo startInfo;
-  pthread_attr_t  threadAttributes;
-  int result;
+  pthread_attr_t threadAttributes;
+  int            result;
 
   assert(threadPool != NULL);
 
   // init
   pthread_mutex_init(&threadPool->lock,NULL);
   pthread_cond_init(&threadPool->modified,NULL);
-  threadPool->size = size;
   List_init(&threadPool->idle);
   List_init(&threadPool->running);
+  threadPool->quitFlag = FALSE;
   if (sem_init(&startInfo.started,0,0) != 0)
   {
     HALT_INTERNAL_ERROR("cannot initialise start trigger");
   }
-  threadPool->quitFlag = FALSE;
+  startInfo.threadPool = threadPool;
+  startInfo.niceLevel  = niceLevel;
 
-  i = 0;
-  while (i < (int)size)
+  for (i = 0; i < size; i++)
   {
     threadPoolNode = LIST_NEW_NODE(ThreadPoolNode);
     if (threadPoolNode == NULL)
@@ -317,11 +299,9 @@ bool ThreadPool_init(ThreadPool *threadPool,
     threadPoolNode->state = THREADPOOL_THREAD_STATE_IDLE;
     pthread_cond_init(&threadPoolNode->trigger,NULL);
 
-    // init thread info
-    startInfo.threadPool     = threadPool;
+    // init start info
     startInfo.threadPoolNode = threadPoolNode;
     startInfo.name           = name;
-    startInfo.niceLevel      = niceLevel;
 
     // init thread attributes
     pthread_attr_init(&threadAttributes);
@@ -379,9 +359,8 @@ bool ThreadPool_init(ThreadPool *threadPool,
     }
 
     List_append(&threadPool->idle,threadPoolNode);
-
-    i++;
   }
+  assert(List_count(&threadPool->idle) == size);
   sem_destroy(&startInfo.started);
 
 //  #ifdef NDEBUG

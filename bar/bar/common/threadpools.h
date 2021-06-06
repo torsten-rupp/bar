@@ -62,20 +62,13 @@ typedef struct
 
 typedef struct
 {
-  void (*entryFunction)(void *argument);
-  void *argument;
-} ThreadPoolStartInfoMsg;
-
-typedef struct
-{
   pthread_mutex_t lock;
   pthread_cond_t  modified;
 
   ThreadPoolList  idle;
   ThreadPoolList  running;
-  uint            size;
 
-  bool quitFlag;
+  bool            quitFlag;
 } ThreadPool;
 
 typedef struct
