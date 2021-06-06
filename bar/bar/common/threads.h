@@ -27,7 +27,8 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
-#include "lists.h"
+#include "common/lists.h"
+#include "common/msgqueues.h"
 
 /****************** Conditional compilation switches *******************/
 
