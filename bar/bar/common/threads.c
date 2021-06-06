@@ -31,7 +31,6 @@
 
 #include "common/global.h"
 #include "common/lists.h"
-#include "common/msgqueues.h"
 
 #include "threads.h"
 
@@ -243,10 +242,10 @@ LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
 LOCAL void *debugThreadStackTraceWrapStartCode(void *userData)
 {
   StackTraceStartInfo *stackTraceStartInfo = (StackTraceStartInfo*)userData;
-  void                      *(*startCode)(void*);
-  void                      *argument;
-  ThreadId                  threadId;
-  void                      *result;
+  void                *(*startCode)(void*);
+  void                *argument;
+  ThreadId            threadId;
+  void                *result;
 
   assert(stackTraceStartInfo != NULL);
   assert(stackTraceStartInfo->startCode != NULL);
@@ -808,9 +807,9 @@ bool __Thread_init(const char *__fileName__,
                   )
 #endif /* NDEBUG */
 {
-  StartInfo startInfo;
-  pthread_attr_t  threadAttributes;
-  int             result;
+  StartInfo      startInfo;
+  pthread_attr_t threadAttributes;
+  int            result;
 
   assert(thread != NULL);
   assert(name != NULL);

@@ -28,7 +28,6 @@
 
 #include "common/global.h"
 #include "common/lists.h"
-#include "common/msgqueues.h"
 
 /****************** Conditional compilation switches *******************/
 
