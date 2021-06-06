@@ -526,6 +526,7 @@ COMMON_SOURCES              = common/arrays.c \
                               common/stringmaps.c \
                               common/strings.c \
                               common/threads.c \
+                              common/threadpools.c \
 
 COMMON_SOURCES_OTHER        = common/arrays.c \
                               common/filesystems_ext.c \
