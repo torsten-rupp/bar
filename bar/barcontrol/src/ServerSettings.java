@@ -999,7 +999,7 @@ public class ServerSettings
         combo = BARWidgets.newByteSize(subComposite,
                                        BARControl.tr("Size limit for temporary files."),
                                        maxTmpSize,
-                                       new String[]{"32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
+                                       new String[]{"","32M","64M","128M","140M","256M","512M","1G","2G","4G","8G","64G","128G","512G","1T","2T","4T","8T"}
                                       );
         Widgets.layout(combo,0,2,TableLayoutData.WE);
       }
@@ -1119,7 +1119,7 @@ public class ServerSettings
         combo = BARWidgets.newTime(subComposite,
                                    BARControl.tr("Index database keep time for not existing storages."),
                                    indexDatabaseKeepTime,
-                                   new String[]{"0",
+                                   new String[]{"",
                                                 BARControl.tr("1 day"),
                                                 BARControl.tr("3 days"),
                                                 BARControl.tr("1 week"),
