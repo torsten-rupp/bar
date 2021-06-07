@@ -550,8 +550,11 @@ public class BARWidgets
         String string = widget.getText();
         try
         {
-          long n = Units.parseByteSize(string);
-          string = Units.formatByteSize(n);
+          if (!string.isEmpty())
+          {
+            long n = Units.parseByteSize(string);
+            string = Units.formatByteSize(n);
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -580,8 +583,11 @@ public class BARWidgets
         String string = widget.getText();
         try
         {
-          long  n = Units.parseByteSize(string);
-          string = Units.formatByteSize(n);
+          if (!string.isEmpty())
+          {
+            long  n = Units.parseByteSize(string);
+            string = Units.formatByteSize(n);
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -619,8 +625,11 @@ public class BARWidgets
         String string = widget.getText();
         try
         {
-          long n = Units.parseByteSize(string);
-          string = Units.formatByteSize(n);
+          if (!string.isEmpty())
+          {
+            long n = Units.parseByteSize(string);
+            string = Units.formatByteSize(n);
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -658,7 +667,6 @@ public class BARWidgets
         {
           public String getString(WidgetVariable variable)
           {
-//            return Units.formatByteSize(variable.getLong());
             return variable.getString();
           }
         };
@@ -732,15 +740,38 @@ public class BARWidgets
         String string = widget.getText();
         try
         {
-          long n = Units.parseLocalizedTime(string);
-
-          if (listener != null)
+          if (!string.isEmpty())
           {
-            if (Units.parseTime(listener.getString(widgetVariable)) == n) color = null;
+            long n = Units.parseLocalizedTime(string);
+
+            if (listener != null)
+            {
+              string = listener.getString(widgetVariable);
+              if (!string.isEmpty())
+              {
+                if (Units.parseTime(string) == n) color = null;
+              }
+              else
+              {
+                color = null;
+              }
+            }
+            else
+            {
+              string = widgetVariable.getString();
+              if (!string.isEmpty())
+              {
+                if (Units.parseTime(string) == n) color = null;
+              }
+              else
+              {
+                color = null;
+              }
+            }
           }
           else
           {
-            if (Units.parseTime(widgetVariable.getString()) == n) color = null;
+            color = null;
           }
         }
         catch (NumberFormatException exception1)
@@ -762,8 +793,11 @@ public class BARWidgets
         String string = widget.getText();
         try
         {
-          n      = Units.parseLocalizedTime(string);
-          string = Units.formatTime(n);
+          if (!string.isEmpty())
+          {
+            n      = Units.parseLocalizedTime(string);
+            string = Units.formatTime(n);
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -803,8 +837,11 @@ public class BARWidgets
         String string = widget.getText();
         try
         {
-          n      = Units.parseLocalizedTime(string);
-          string = Units.formatTime(n);
+          if (!string.isEmpty())
+          {
+            n      = Units.parseLocalizedTime(string);
+            string = Units.formatTime(n);
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -853,8 +890,11 @@ public class BARWidgets
         String string = widget.getText();
         try
         {
-          n      = Units.parseLocalizedTime(string);
-          string = Units.formatTime(n);
+          if (!string.isEmpty())
+          {
+            n      = Units.parseLocalizedTime(string);
+            string = Units.formatTime(n);
+          }
         }
         catch (NumberFormatException exception)
         {
