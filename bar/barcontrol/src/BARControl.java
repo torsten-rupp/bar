@@ -1042,7 +1042,8 @@ class Units
    */
   public static String getTime(double n)
   {
-    if      (((long)n % (7L*24L*60L*60L)) == 0) return String.format("%d",(long)(n/(7L*24L*60L*60L)));
+    if      (((long)n                   ) == 0) return "";
+    else if (((long)n % (7L*24L*60L*60L)) == 0) return String.format("%d",(long)(n/(7L*24L*60L*60L)));
     else if (((long)n % (   24L*60L*60L)) == 0) return String.format("%d",(long)(n/(   24L*60L*60L)));
     else if (((long)n % (       60L*60L)) == 0) return String.format("%d",(long)(n/(       60L*60L)));
     else if (((long)n % (           60L)) == 0) return String.format("%d",(long)(n/(           60L)));
@@ -1055,7 +1056,8 @@ class Units
    */
   public static String getTimeUnit(double n)
   {
-    if      (((long)n % (7L*24L*60L*60L)) == 0) return (((long)n / (7L*24L*60L*60L)) != 1) ? "weeks" : "week";
+    if      (((long)n                   ) == 0) return "";
+    else if (((long)n % (7L*24L*60L*60L)) == 0) return (((long)n / (7L*24L*60L*60L)) != 1) ? "weeks" : "week";
     else if (((long)n % (   24L*60L*60L)) == 0) return (((long)n / (   24L*60L*60L)) != 1) ? "days"  : "day";
     else if (((long)n % (       60L*60L)) == 0) return "h";
     else if (((long)n % (           60L)) == 0) return "min";
@@ -1068,7 +1070,8 @@ class Units
    */
   public static String getLocalizedTimeUnit(double n)
   {
-    if      (((long)n > 0) && (((long)n % (7L*24L*60L*60L)) == 0)) return (((long)n / (7L*24L*60L*60L)) != 1) ? BARControl.tr("weeks") : BARControl.tr("week");
+    if      (((long)n                                     ) == 0 ) return "";
+    else if (((long)n > 0) && (((long)n % (7L*24L*60L*60L)) == 0)) return (((long)n / (7L*24L*60L*60L)) != 1) ? BARControl.tr("weeks") : BARControl.tr("week");
     else if (((long)n > 0) && (((long)n % (   24L*60L*60L)) == 0)) return (((long)n / (   24L*60L*60L)) != 1) ? BARControl.tr("days" ) : BARControl.tr("day" );
     else if (((long)n > 0) && (((long)n % (       60L*60L)) == 0)) return BARControl.tr("h");
     else if (((long)n > 0) && (((long)n % (           60L)) == 0)) return BARControl.tr("min");
