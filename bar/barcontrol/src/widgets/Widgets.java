@@ -5429,8 +5429,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
               ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
               assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
+              // save selection
+              int selectedIndex = combo.getSelectionIndex();
+
               if (comparator != null)
               {
+                // update entry
                 for (int i = 0; i < dataArray.size(); i++)
                 {
                   if (comparator.compare(data,dataArray.get(i)) == 0)
@@ -5449,6 +5453,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     {
                       combo.add(text,i);
                       dataArray.add(i,data);
+                      if ((selectedIndex >= 0) && (i <= selectedIndex)) selectedIndex++;
                       break;
                     }
                     i++;
@@ -5466,7 +5471,6 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 {
                   if (combo.getItem(i).equals(text))
                   {
-                    combo.setItem(i,text);
                     updatedFlag = true;
                     break;
                   }
@@ -5480,6 +5484,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     {
                       combo.add(text,i);
                       dataArray.add(i,data);
+                      if ((selectedIndex >= 0) && (i <= selectedIndex)) selectedIndex++;
                       break;
                     }
                     i++;
@@ -5490,6 +5495,16 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     dataArray.add(data);
                   }
                 }
+              }
+
+              // restore selection
+              if (selectedIndex >= 0)
+              {
+                combo.select(selectedIndex);
+              }
+              else
+              {
+                combo.setText("");
               }
             }
           });
