@@ -395,8 +395,8 @@ LOCAL ProgressInfo               importProgressInfo;
                 \
                 typeof(error) __closure__(void)block; __closure__; \
               })(); \
+      (void)endInterruptableOperation(indexHandle,&transactionFlag); \
     } \
-    (void)endInterruptableOperation(indexHandle,&transactionFlag); \
   } \
   while (0)
 
@@ -2464,6 +2464,8 @@ LOCAL Errors beginInterruptableOperation(IndexHandle *indexHandle, bool *transac
 
   assert(indexHandle != NULL);
   assert(transactionFlag != NULL);
+
+  (*transactionFlag) = FALSE;
 
   error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
   if (error != ERROR_NONE)
@@ -5905,9 +5907,6 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
 {
   Errors               error;
   DatabaseId           entityId;
-  #ifndef NDEBUG
-    ulong              deletedCounter;
-  #endif
   #ifdef INDEX_DEBUG_PURGE
     uint64             t0,dt[10];
   #endif
@@ -7221,7 +7220,6 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                name
                               );
       if (error == ERROR_NONE)
-
       {
         if (!Database_getNextRow(&databaseQueryHandle,
                                  "%lld %llu",
@@ -11902,10 +11900,11 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
-                                    "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s hostName=%S archiveType=%s createdDateTime=%llu locked=%y",
+                                    "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s hostName=%S userName=%S archiveType=%s createdDateTime=%llu locked=%y",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
                                     hostName,
+                                    userName,
                                     Archive_archiveTypeToString(archiveType),
                                     createdDateTime,
                                     locked
@@ -16110,7 +16109,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
           // add file entry
           if (error == ERROR_NONE)
           {
-
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount

@@ -316,14 +316,16 @@ LOCAL DatabaseList databaseList;
       assert(databaseHandle->databaseNode != NULL); \
       \
       __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
-      assert(__result == 0); \
-      ({ \
-        auto void __closure__(void); \
-        \
-        void __closure__(void)block; __closure__; \
-      })(); \
-      __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
-      assert(__result == 0); \
+      if (__result == 0) \
+      { \
+        ({ \
+          auto void __closure__(void); \
+          \
+          void __closure__(void)block; __closure__; \
+        })(); \
+        __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+        assert(__result == 0); \
+      } \
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
@@ -336,14 +338,20 @@ LOCAL DatabaseList databaseList;
       assert(databaseHandle->databaseNode != NULL); \
       \
       __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
-      assert(__result == 0); \
-      result = ({ \
-                 auto typeof(result) __closure__(void); \
-                 \
-                 typeof(result) __closure__(void)block; __closure__; \
-               })(); \
-      __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
-      assert(__result == 0); \
+      if (__result == 0) \
+      {
+        result = ({ \
+                   auto typeof(result) __closure__(void); \
+                   \
+                   typeof(result) __closure__(void)block; __closure__; \
+                 })(); \
+        __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+        assert(__result == 0); \
+      } \
+      else \
+      { \
+        result = ERROR_X(DATABASE,"lock fail"); \
+      } \
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
@@ -367,20 +375,22 @@ LOCAL DatabaseList databaseList;
       UNUSED_VARIABLE(databaseHandle); \
       \
       __result = pthread_mutex_lock(&databaseLock); \
-      assert(__result == 0); \
-      databaseLockBy.threadId = Thread_getCurrentId(); \
-      databaseLockBy.fileName = __FILE__; \
-      databaseLockBy.lineNb   = __LINE__; \
-      ({ \
-        auto void __closure__(void); \
-        \
-        void __closure__(void)block; __closure__; \
-      })(); \
-      databaseLockBy.threadId = THREAD_ID_NONE; \
-      databaseLockBy.fileName = NULL; \
-      databaseLockBy.lineNb   = 0; \
-      __result = pthread_mutex_unlock(&databaseLock); \
-      assert(__result == 0); \
+      if (__result == 0) \
+      { \
+        databaseLockBy.threadId = Thread_getCurrentId(); \
+        databaseLockBy.fileName = __FILE__; \
+        databaseLockBy.lineNb   = __LINE__; \
+        ({ \
+          auto void __closure__(void); \
+          \
+          void __closure__(void)block; __closure__; \
+        })(); \
+        databaseLockBy.threadId = THREAD_ID_NONE; \
+        databaseLockBy.fileName = NULL; \
+        databaseLockBy.lineNb   = 0; \
+        __result = pthread_mutex_unlock(&databaseLock); \
+        assert(__result == 0); \
+      } \
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
@@ -395,20 +405,22 @@ LOCAL DatabaseList databaseList;
       UNUSED_VARIABLE(databaseHandle); \
       \
       __result = pthread_mutex_lock(&databaseLock); \
-      assert(__result == 0); \
-      databaseLockBy.threadId = Thread_getCurrentId(); \
-      databaseLockBy.fileName = __FILE__; \
-      databaseLockBy.lineNb   = __LINE__; \
-      result = ({ \
-                 auto typeof(result) __closure__(void); \
-                 \
-                 typeof(result) __closure__(void)block; __closure__; \
-               })(); \
-      databaseLockBy.threadId = THREAD_ID_NONE; \
-      databaseLockBy.fileName = NULL; \
-      databaseLockBy.lineNb   = 0; \
-      __result = pthread_mutex_unlock(&databaseLock); \
-      assert(__result == 0); \
+      if (__result == 0) \
+      { \
+        databaseLockBy.threadId = Thread_getCurrentId(); \
+        databaseLockBy.fileName = __FILE__; \
+        databaseLockBy.lineNb   = __LINE__; \
+        result = ({ \
+                   auto typeof(result) __closure__(void); \
+                   \
+                   typeof(result) __closure__(void)block; __closure__; \
+                 })(); \
+        databaseLockBy.threadId = THREAD_ID_NONE; \
+        databaseLockBy.fileName = NULL; \
+        databaseLockBy.lineNb   = 0; \
+        __result = pthread_mutex_unlock(&databaseLock); \
+        assert(__result == 0); \
+      } \
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
@@ -1279,6 +1291,7 @@ LOCAL_INLINE void pendingReadsDecrement(DatabaseHandle *databaseHandle)
 #ifdef DATABASE_USE_ATOMIC_INCREMENT
 #else /* not DATABASE_USE_ATOMIC_INCREMENT */
 #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+  if (databaseHandle->databaseNode->pendingReadCount <= 0) HALT_INTERNAL_ERROR("pending read count");
   databaseHandle->databaseNode->pendingReadCount--;
   #ifndef NDEBUG
     debugClearDatabaseThreadInfo(databaseHandle->databaseNode->debug.pendingReads,
@@ -1343,6 +1356,7 @@ LOCAL_INLINE void pendingReadWritesDecrement(DatabaseHandle *databaseHandle)
 #ifdef DATABASE_USE_ATOMIC_INCREMENT
 #else /* not DATABASE_USE_ATOMIC_INCREMENT */
 #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+  if (databaseHandle->databaseNode->pendingReadWriteCount <= 0) HALT_INTERNAL_ERROR("pending read/write count");
   databaseHandle->databaseNode->pendingReadWriteCount--;
   #ifndef NDEBUG
     debugClearDatabaseThreadInfo(databaseHandle->databaseNode->debug.pendingReadWrites,
@@ -1429,10 +1443,12 @@ LOCAL_INLINE void __readsDecrement(const char *__fileName__, ulong __lineNb__, D
 #ifdef DATABASE_USE_ATOMIC_INCREMENT
 #else /* not DATABASE_USE_ATOMIC_INCREMENT */
 #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+  if (databaseHandle->databaseNode->readCount <= 0) HALT_INTERNAL_ERROR("read count");
   databaseHandle->databaseNode->readCount--;
   #ifdef DATABASE_DEBUG_LOCK
     debugRemoveThreadLWPId(databaseHandle->databaseNode->readLPWIds,SIZE_OF_ARRAY(databaseHandle->databaseNode->readLPWIds));
   #endif
+  if (databaseHandle->readLockCount <= 0) HALT_INTERNAL_ERROR("read lock count");
   databaseHandle->readLockCount--;
   #ifndef NDEBUG
     databaseHandle->debug.locked.threadId = THREAD_ID_NONE;
@@ -1544,10 +1560,12 @@ LOCAL_INLINE void __readWritesDecrement(const char *__fileName__, ulong __lineNb
 #ifdef DATABASE_USE_ATOMIC_INCREMENT
 #else /* not DATABASE_USE_ATOMIC_INCREMENT */
 #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+  if (databaseHandle->databaseNode->readWriteCount <= 0) HALT_INTERNAL_ERROR("read/write count");
   databaseHandle->databaseNode->readWriteCount--;
   #ifdef DATABASE_DEBUG_LOCK
     debugRemoveThreadLWPId(databaseHandle->databaseNode->readWriteLPWIds,SIZE_OF_ARRAY(databaseHandle->databaseNode->readWriteLPWIds));
   #endif
+  if (databaseHandle->readWriteLockCount <= 0) HALT_INTERNAL_ERROR("read/write lock count");
   databaseHandle->readWriteLockCount--;
   #ifndef NDEBUG
     databaseHandle->debug.locked.threadId = THREAD_ID_NONE;
@@ -6086,7 +6104,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   #else /* not DATABASE_SUPPORT_TRANSACTIONS */
     UNUSED_VARIABLE(databaseHandle);
   #endif /* DATABASE_SUPPORT_TRANSACTIONS */
-//fprintf(stderr,"%s, %d: Database_beginTransaction\n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
@@ -6123,6 +6140,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       #ifdef DATABASE_USE_ATOMIC_INCREMENT
       #else /* not DATABASE_USE_ATOMIC_INCREMENT */
       #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+      if (databaseHandle->databaseNode->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
       databaseHandle->databaseNode->transactionCount--;
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
@@ -6238,6 +6256,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       #ifdef DATABASE_USE_ATOMIC_INCREMENT
       #else /* not DATABASE_USE_ATOMIC_INCREMENT */
       #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+      if (databaseHandle->databaseNode->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
       databaseHandle->databaseNode->transactionCount--;
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
