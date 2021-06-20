@@ -1968,7 +1968,6 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 {
   AutoFreeList           autoFreeList;
   String                 printableStorageName;
-  Thread                 *convertThreads;
   uint                   convertThreadCount;
   Errors                 error;
   CryptSignatureStates   allCryptSignatureState;
@@ -2157,20 +2156,10 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
 
   // start convert threads
   MsgQueue_reset(&convertInfo->entryMsgQueue);
-  convertThreadCount   = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  convertThreads       = (Thread*)malloc(convertThreadCount*sizeof(Thread));
-  if (convertThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,convertThreads,{ free(convertThreads); });
+  convertThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   for (i = 0; i < convertThreadCount; i++)
   {
-    if (!Thread_init(&convertThreads[i],"BAR convert",globalOptions.niceLevel,convertThreadCode,convertInfo))
-    {
-      HALT_FATAL_ERROR("Cannot initialize convertthread #%d!",i);
-    }
-    AUTOFREE_ADD(&autoFreeList,&convertThreads[i],{ MsgQueue_setEndOfMsg(&convertInfo->entryMsgQueue); Thread_join(&convertThreads[i]); Thread_done(&convertThreads[i]); });
+    ThreadPool_run(&workerThreadPool,convertThreadCode,convertInfo);
   }
 
   // read archive entries
@@ -2228,17 +2217,7 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
 
   // wait for convert threads
   MsgQueue_setEndOfMsg(&convertInfo->entryMsgQueue);
-  for (i = 0; i < convertThreadCount; i++)
-  {
-    AUTOFREE_REMOVE(&autoFreeList,&convertThreads[i]);
-    if (!Thread_join(&convertThreads[i]))
-    {
-      HALT_INTERNAL_ERROR("Cannot stop convert thread #%d!",i);
-    }
-    Thread_done(&convertThreads[i]);
-  }
-  AUTOFREE_REMOVE(&autoFreeList,convertThreads);
-  free(convertThreads);
+  ThreadPool_joinAll(&workerThreadPool);
 
   // close destination archive
   AUTOFREE_REMOVE(&autoFreeList,&convertInfo->destinationArchiveHandle);

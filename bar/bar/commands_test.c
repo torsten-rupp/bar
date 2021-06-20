@@ -29,15 +29,16 @@
 #include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/msgqueues.h"
+#include "common/patterns.h"
+#include "common/patternlists.h"
+#include "common/files.h"
+#include "common/fragmentlists.h"
 
 #include "errors.h"
-#include "common/patterns.h"
 #include "entrylists.h"
-#include "common/patternlists.h"
 #include "deltasourcelists.h"
-#include "common/files.h"
 #include "archive.h"
-#include "common/fragmentlists.h"
+#include "bar.h"
 
 #include "commands_test.h"
 
@@ -137,7 +138,7 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 LOCAL void initTestInfo(TestInfo                *testInfo,
                         const EntryList         *includeEntryList,
                         const PatternList       *excludePatternList,
-                        const JobOptions        *jobOptions,
+                        JobOptions              *jobOptions,
                         bool                    *pauseTestFlag,
                         bool                    *requestedAbortFlag,
                         GetNamePasswordFunction getNamePasswordFunction,
@@ -1129,6 +1130,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   assert(testInfo != NULL);
   assert(testInfo->jobOptions != NULL);
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   // init variables
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
@@ -1305,7 +1307,6 @@ LOCAL Errors testArchiveContent(TestInfo         *testInfo,
   String                 printableStorageName;
   StorageInfo            storageInfo;
   Errors                 error;
-  Thread                 *testThreads;
   uint                   testThreadCount;
   uint                   i;
   ArchiveHandle          archiveHandle;
@@ -1438,18 +1439,9 @@ NULL, // masterSocketHandle
   // start test threads
   MsgQueue_reset(&testInfo->entryMsgQueue);
   testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  testThreads     = (Thread*)malloc(testThreadCount*sizeof(Thread));
-  if (testThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,testThreads,{ free(testThreads); });
   for (i = 0; i < testThreadCount; i++)
   {
-    if (!Thread_init(&testThreads[i],"BAR test",globalOptions.niceLevel,testThreadCode,testInfo))
-    {
-      HALT_FATAL_ERROR("Cannot initialize test thread #%d!",i);
-    }
+    ThreadPool_run(&workerThreadPool,testThreadCode,testInfo);
   }
 
   // read archive entries
@@ -1524,16 +1516,7 @@ NULL, // masterSocketHandle
 
   // wait for test threads
   MsgQueue_setEndOfMsg(&testInfo->entryMsgQueue);
-  for (i = 0; i < testThreadCount; i++)
-  {
-    if (!Thread_join(&testThreads[i]))
-    {
-      HALT_INTERNAL_ERROR("Cannot stop test thread #%d!",i);
-    }
-    Thread_done(&testThreads[i]);
-  }
-  AUTOFREE_REMOVE(&autoFreeList,testThreads);
-  free(testThreads);
+  ThreadPool_joinAll(&workerThreadPool);
 
   // output info
   if (!isPrintInfo(1)) printInfo(0,

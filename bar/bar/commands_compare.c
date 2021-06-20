@@ -1923,7 +1923,6 @@ LOCAL Errors compareArchiveContent(CompareInfo      *compareInfo,
 {
   AutoFreeList           autoFreeList;
   String                 printableStorageName;
-  Thread                 *compareThreads;
   uint                   compareThreadCount;
   StorageInfo            storageInfo;
   Errors                 error;
@@ -2051,19 +2050,9 @@ NULL, // masterSocketHandle
   // start compare threads
   MsgQueue_reset(&compareInfo->entryMsgQueue);
   compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  compareThreads     = (Thread*)malloc(compareThreadCount*sizeof(Thread));
-  if (compareThreads == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,compareThreads,{ free(compareThreads); });
   for (i = 0; i < compareThreadCount; i++)
   {
-    if (!Thread_init(&compareThreads[i],"BAR compare",globalOptions.niceLevel,compareThreadCode,compareInfo))
-    {
-      HALT_FATAL_ERROR("Cannot initialize comparethread #%d!",i);
-    }
+    ThreadPool_run(&workerThreadPool,compareThreadCode,compareInfo);
   }
 
   // output info
@@ -2145,16 +2134,7 @@ NULL, // masterSocketHandle
 
   // wait for compare threads
   MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
-  for (i = 0; i < compareThreadCount; i++)
-  {
-    if (!Thread_join(&compareThreads[i]))
-    {
-      HALT_INTERNAL_ERROR("Cannot stop compare thread #%d!",i);
-    }
-    Thread_done(&compareThreads[i]);
-  }
-  AUTOFREE_REMOVE(&autoFreeList,compareThreads);
-  free(compareThreads);
+  ThreadPool_joinAll(&workerThreadPool);
 
   // output info
   if (!isPrintInfo(1)) printInfo(0,
