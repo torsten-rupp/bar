@@ -42,6 +42,7 @@
 #include "common/stringlists.h"
 #include "common/arrays.h"
 #include "common/threads.h"
+#include "common/threadpools.h"
 #include "common/files.h"
 #include "common/patternlists.h"
 #include "common/network.h"
@@ -110,11 +111,14 @@ typedef struct
 } MountedList;
 
 /***************************** Variables *******************************/
-String                   tmpDirectory;
-Semaphore                consoleLock;
+String     tmpDirectory;
+Semaphore  consoleLock;
 #ifdef HAVE_NEWLOCALE
-  locale_t               POSIXLocale;
+  locale_t POSIXLocale;
 #endif /* HAVE_NEWLOCALE */
+
+ThreadPool clientThreadPool;
+ThreadPool workerThreadPool;
 
 /*---------------------------------------------------------------------*/
 
@@ -595,6 +599,15 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { Thread_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Thread_initAll,{ Thread_doneAll(); });
 
+  error = ThreadPool_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { ThreadPool_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Thread_initAll,{ ThreadPool_doneAll(); });
+
   error = Password_initAll();
   if (error != ERROR_NONE)
   {
@@ -770,6 +783,7 @@ LOCAL void doneAll(void)
   Crypt_doneAll();
   Compress_doneAll();
   Password_doneAll();
+  ThreadPool_doneAll();
   Thread_doneAll();
   Configuration_doneAll();
 
@@ -4189,6 +4203,13 @@ LOCAL Errors runDebug(void)
 }
 #endif /* NDEBUG */
 
+LOCAL void xxx(int a)
+{
+fprintf(stderr,"%s:%d: a=%d\n",__FILE__,__LINE__,a);
+Misc_mdelay(a*1000);
+fprintf(stderr,"%s:%d: a=%d\n",__FILE__,__LINE__,a);
+}
+
 /***********************************************************************\
 * Name   : bar
 * Purpose: BAR main program
@@ -4273,6 +4294,29 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     return ERROR_INVALID_ARGUMENT;
   }
+
+// TODO: remove
+#if 0
+{
+  ThreadPool threadPool;
+  int i;
+
+  if (!ThreadPool_init(&threadPool,"x",0,10)) exit(2);
+ThreadPool_run(&threadPool,xxx,(void*)1);
+ThreadPool_run(&threadPool,xxx,(void*)3);
+ThreadPool_run(&threadPool,xxx,(void*)2);
+ThreadPool_run(&threadPool,xxx,(void*)4);
+#if 1
+for (i = 10 ; i<40; i++)
+ThreadPool_run(&threadPool,xxx,(void*)2);
+#endif
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+//ThreadPool_joinAll(&threadPool);
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+ThreadPool_done(&threadPool);
+}
+exit(1);
+#endif
 
   // if daemon: print info
   printInfoFlag = !globalOptions.quietFlag && globalOptions.daemonFlag;
@@ -4362,7 +4406,9 @@ LOCAL Errors bar(int argc, const char *argv[])
 
     configFileName = String_newCString(globalOptions.saveConfigurationFileName);
     if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"Writing configuration file '%s'...",String_cString(configFileName)); }
-    error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES);
+// TODO:
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+    error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL);
     if (error != ERROR_NONE)
     {
        if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"FAIL!\n"); }
@@ -4401,6 +4447,13 @@ LOCAL Errors bar(int argc, const char *argv[])
     return error;
   }
 
+  // create worker thread pools
+  ThreadPool_init(&workerThreadPool,
+                  "BAR worker",
+                  globalOptions.niceLevel,
+                  (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
+                 );
+
   // run
   error = ERROR_NONE;
   if      (globalOptions.daemonFlag)
@@ -4430,6 +4483,9 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     error = runInteractive(argc,argv);
   }
+
+  // done thread pools
+  ThreadPool_done(&workerThreadPool);
 
   // delete temporary directory
   (void)File_delete(tmpDirectory,TRUE);
