@@ -49,7 +49,7 @@ typedef struct
   sem_t          lock;
   ThreadPool     *threadPool;
   ThreadPoolNode *threadPoolNode;
-  const char     *name;
+  const char     *namePrefix;
   int            niceLevel;
   sem_t          started;
 //  void       (*entryFunction)(void*);
@@ -112,14 +112,14 @@ LOCAL void *threadPoolStartCode(void *userData)
   {
     // try to set thread name
     #ifdef HAVE_PTHREAD_SETNAME_NP
-      if (startInfo->name != NULL)
+      if (startInfo->namePrefix != NULL)
       {
-        (void)pthread_setname_np(pthread_self(),startInfo->name);
+        (void)pthread_setname_np(pthread_self(),startInfo->namePrefix);
       }
     #endif /* HAVE_PTHREAD_SETNAME_NP */
 
     #ifndef NDEBUG
-//      debugThreadStackTraceSetThreadName(pthread_self(),startInfo->name);
+//      debugThreadStackTraceSetThreadName(pthread_self(),startInfo->namePrefix);
     #endif /* NDEBUG */
 
     #if   defined(PLATFORM_LINUX)
@@ -263,7 +263,7 @@ void ThreadPool_doneAll(void)
 }
 
 bool ThreadPool_init(ThreadPool *threadPool,
-                     const char *name,
+                     const char *namePrefix,
                      int        niceLevel,
                      uint       size
                     )
@@ -301,7 +301,7 @@ bool ThreadPool_init(ThreadPool *threadPool,
 
     // init start info
     startInfo.threadPoolNode = threadPoolNode;
-    startInfo.name           = name;
+    startInfo.namePrefix     = namePrefix;
 
     // init thread attributes
     pthread_attr_init(&threadAttributes);
