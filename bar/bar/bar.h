@@ -27,6 +27,7 @@
 #include "common/patternlists.h"
 #include "common/passwords.h"
 #include "common/misc.h"
+#include "common/threadpools.h"
 
 #include "entrylists.h"
 #include "compress.h"
@@ -84,6 +85,9 @@ extern Semaphore  consoleLock;            // lock console
 #ifdef HAVE_NEWLOCALE
   extern locale_t POSIXLocale;            // POSIX locale
 #endif /* HAVE_NEWLOCALE */
+
+extern ThreadPool clientThreadPool;
+extern ThreadPool workerThreadPool;
 
 /****************************** Macros *********************************/
 
