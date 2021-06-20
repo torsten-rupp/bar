@@ -1558,7 +1558,11 @@ Errors Continuous_initAll(void)
   #endif /* PLATFORM_... */
 
   // init command queue
-  if (!MsgQueue_init(&initDoneNotifyMsgQueue,0))
+  if (!MsgQueue_init(&initDoneNotifyMsgQueue,
+                     0,
+                     CALLBACK_((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL)
+                    )
+     )
   {
     HALT_FATAL_ERROR("Cannot initialize init notify message queue!");
   }
@@ -1578,7 +1582,7 @@ void Continuous_doneAll(void)
   if (initFlag)
   {
     // done notify event message queue
-    MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK_((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
+    MsgQueue_done(&initDoneNotifyMsgQueue);
 
     #if   defined(PLATFORM_LINUX)
       assert(inotifyHandle != -1);
