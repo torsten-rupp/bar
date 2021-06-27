@@ -1215,11 +1215,12 @@ bool Misc_findCommandInPath(String     command,
 * Input  : commandTemplate         - command template string
 *          macros                  - macros array
 *          macroCount              - number of macros in array
+*          commandLine             - command line variable or NULL
 *          stdoutExecuteIOFunction - stdout callback or NULL
 *          stdoutExecuteIOUserData - user data for stdoout callback
 *          stderrExecuteIOFunction - stderr callback or NULL
 *          stderrExecuteIOUserData - user data for stderr callback
-* Output : -
+* Output : commandLine - command line
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1227,6 +1228,7 @@ bool Misc_findCommandInPath(String     command,
 Errors Misc_executeCommand(const char        *commandTemplate,
                            const TextMacro   macros[],
                            uint              macroCount,
+                           String            commandLine,
                            ExecuteIOFunction stdoutExecuteIOFunction,
                            void              *stdoutExecuteIOUserData,
                            ExecuteIOFunction stderrExecuteIOFunction,

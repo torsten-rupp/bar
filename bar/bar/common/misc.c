@@ -129,6 +129,9 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
             state = COMPLETE;
           }
         }
+      #else
+        UNUSED_VARIABLE(applicationIdData);
+        UNUSED_VARIABLE(applicationIdDataLength);
       #endif
 
       #ifdef HAVE_SD_ID128_GET_MACHINE
@@ -2286,6 +2289,7 @@ bool Misc_findCommandInPath(String     command,
 Errors Misc_executeCommand(const char        *commandTemplate,
                            const TextMacro   macros[],
                            uint              macroCount,
+                           String            commandLine,
                            ExecuteIOFunction stdoutExecuteIOFunction,
                            void              *stdoutExecuteIOUserData,
                            ExecuteIOFunction stderrExecuteIOFunction,
@@ -2293,7 +2297,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                           )
 {
   Errors          error;
-  String          commandLine;
+  String          expandedCommandLine;
   StringTokenizer stringTokenizer;
   ConstString     token;
   String          command;
@@ -2301,30 +2305,31 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   StringList      argumentList;
   char const      **arguments;
   StringNode      *stringNode;
-  uint            n,z;
+  String          string;
+  uint            n,i;
 
   error = ERROR_NONE;
   if (!stringIsEmpty(commandTemplate))
   {
-    commandLine = String_new();
-    name        = String_new();
-    command     = File_newFileName();
+    expandedCommandLine = String_new();
+    name                = String_new();
+    command             = File_newFileName();
     StringList_init(&argumentList);
 
     // expand command line
-    Misc_expandMacros(commandLine,commandTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
+    Misc_expandMacros(expandedCommandLine,commandTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
 //fprintf(stderr,"%s, %d: execute command: %s\n",__FILE__,__LINE__,String_cString(commandLine));
 
     // parse command line
-    String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
+    String_initTokenizer(&stringTokenizer,expandedCommandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
     if (!String_getNextToken(&stringTokenizer,&token,NULL))
     {
-      error = ERRORX_(PARSE_COMMAND,0,"%s",String_cString(commandLine));
+      error = ERRORX_(PARSE_COMMAND,0,"%s",String_cString(expandedCommandLine));
       String_doneTokenizer(&stringTokenizer);
       StringList_done(&argumentList);
       String_delete(command);
       String_delete(name);
-      String_delete(commandLine);
+      String_delete(expandedCommandLine);
       return error;
     }
     File_setFileName(name,token);
@@ -2358,17 +2363,30 @@ stringNode = stringNode->next;
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    z = 0;
-    arguments[z] = String_cString(command); z++;
-    stringNode = argumentList.head;
-    while (stringNode != NULL)
+    i = 0;
+    arguments[i] = String_cString(command); i++;
+    STRINGLIST_ITERATE(&argumentList,stringNode,string)
     {
-      assert(z < n);
-      arguments[z] = String_cString(stringNode->string); z++;
-      stringNode = stringNode->next;
+      assert(i < n);
+      arguments[i] = String_cString(string); i++;
     }
-    assert(z < n);
-    arguments[z] = NULL; z++;
+    assert(i < n);
+    arguments[i] = NULL; i++;
+
+    // get command line
+    if (commandLine != NULL)
+    {
+      String_clear(commandLine);
+      String_append(commandLine,command);
+      if (!StringList_isEmpty(&argumentList))
+      {
+        STRINGLIST_ITERATE(&argumentList,stringNode,string)
+        {
+          String_appendChar(commandLine,' ');
+          String_append(commandLine,string);
+        }
+      }
+    }
 
     // execute command
     error = execute(String_cString(command),
@@ -2385,7 +2403,7 @@ stringNode = stringNode->next;
     StringList_done(&argumentList);
     String_delete(command);
     String_delete(name);
-    String_delete(commandLine);
+    String_delete(expandedCommandLine);
   }
 
   return error;

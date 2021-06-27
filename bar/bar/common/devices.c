@@ -477,6 +477,7 @@ Errors Device_mount(ConstString mountCommand,
   return Misc_executeCommand(command,
                              textMacros.data,
                              textMacros.count,
+                             NULL, // commandLine
                              CALLBACK_(NULL,NULL),
                              CALLBACK_(NULL,NULL)
                             );
@@ -501,6 +502,7 @@ Errors Device_umount(ConstString umountCommand,
     error = Misc_executeCommand(String_cString(umountCommand),
                                 textMacros.data,
                                 textMacros.count,
+                                NULL, // commandLine
                                 CALLBACK_(NULL,NULL),
                                 CALLBACK_(NULL,NULL)
                                );
@@ -510,6 +512,7 @@ Errors Device_umount(ConstString umountCommand,
     error = Misc_executeCommand("/bin/umount %directory",
                                 textMacros.data,
                                 textMacros.count,
+                                NULL, // commandLine
                                 CALLBACK_(NULL,NULL),
                                 CALLBACK_(NULL,NULL)
                                );
@@ -518,6 +521,7 @@ Errors Device_umount(ConstString umountCommand,
       error = Misc_executeCommand("sudo /bin/umount %directory",
                                   textMacros.data,
                                   textMacros.count,
+                                  NULL, // commandLine
                                   CALLBACK_(NULL,NULL),
                                   CALLBACK_(NULL,NULL)
                                  );
