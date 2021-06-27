@@ -92,10 +92,10 @@
 #define DVD_IMAGE_COMMAND                         "nice mkisofs -V Backup -volset %number -J -r -o %image %directory"
 #define DVD_ECC_COMMAND                           "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
 #define DVD_BLANK_COMMAND                         "nice dvd+rw-format -force %device"
-#define DVD_WRITE_COMMAND                         "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory"
+#define DVD_WRITE_COMMAND                         "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
 //#warning todo remove -dry-run
 //#define DVD_WRITE_COMMAND                         "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -J -r  %directory"
-#define DVD_WRITE_IMAGE_COMMAND                   "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
+#define DVD_WRITE_IMAGE_COMMAND                   "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
 //#warning todo remove -dry-run
 //#define DVD_WRITE_IMAGE_COMMAND                   "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -dry-run"
 
@@ -104,11 +104,11 @@
 #define BD_IMAGE_COMMAND                          "nice mkisofs -V Backup -volset %number -J -r -o %image %directory"
 #define BD_ECC_COMMAND                            "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
 #define BD_BLANK_COMMAND                          "nice dvd+rw-format -force %device"
-#define BD_WRITE_COMMAND                          "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory"
+#define BD_WRITE_COMMAND                          "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
 //#warning todo remove -dry-run
 //#define BD_WRITE_COMMAND                          "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -J -r %directory"
-#define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload"
-//#define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload  -dry-run"
+#define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
+//#define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty -dry-run"
 
 #define MIN_PASSWORD_QUALITY_LEVEL                0.6
 
