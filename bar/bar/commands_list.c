@@ -4229,22 +4229,31 @@ LOCAL void printDirectoryListHeader(ConstString storageName)
 /***********************************************************************\
 * Name   : printDirectoryListFooter
 * Purpose: print directory list footer
-* Input  : fileCount - number of files listed
+* Input  : fileCount     - number of files listed
+*          totalFileSize - total file sizes [bytes]
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printDirectoryListFooter(ulong fileCount)
+LOCAL void printDirectoryListFooter(ulong fileCount, uint64 totalFileSize)
 {
   String line;
+  char   sizeString[32];
 
   if (!globalOptions.noHeaderFooterFlag)
   {
     line = String_new();
 
+    getHumanSizeString(sizeString,sizeof(sizeString),totalFileSize);
+
     printSeparator('-');
-    printConsole(stdout,0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
+    printConsole(stdout,0,"%lu %s, %s (%"PRIu64" bytes)\n",
+                 fileCount,
+                 (fileCount == 1) ? "entry" : "entries",
+                 sizeString,
+                 totalFileSize
+                );
     printConsole(stdout,0,"\n");
 
     String_delete(line);
@@ -4308,12 +4317,13 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
   FileInfo           fileInfo;
   String             fileName;
   DirectoryEntryNode *directoryEntryNode;
+  uint64             totalFileSize;
   String             dateTimeString;
   String             line;
   char               userName[12],groupName[12];
   char               permissionString[10];
   TextMacros         (textMacros,7);
-  char               buffer[16];
+  char               sizeString[32];
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -4375,6 +4385,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
 
   // output directory content
   printDirectoryListHeader(printableStorageName);
+  totalFileSize = 0LL;
   LIST_ITERATE(&directoryEntryList,directoryEntryNode)
   {
     TEXT_MACROS_INIT(textMacros)
@@ -4389,13 +4400,14 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           TEXT_MACRO_X_CSTRING("%type","FILE",NULL);
           if (globalOptions.humanFormatFlag)
           {
-            getHumanSizeString(buffer,sizeof(buffer),directoryEntryNode->fileInfo.size);
+            getHumanSizeString(sizeString,sizeof(sizeString),directoryEntryNode->fileInfo.size);
           }
           else
           {
-            stringFormat(buffer,sizeof(buffer),"%"PRIu64,directoryEntryNode->fileInfo.size);
+            stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,directoryEntryNode->fileInfo.size);
           }
-          TEXT_MACRO_X_CSTRING("%size",buffer,NULL);
+          TEXT_MACRO_X_CSTRING("%size",sizeString,NULL);
+          totalFileSize += directoryEntryNode->fileInfo.size;
           break;
         case FILE_TYPE_DIRECTORY:
           TEXT_MACRO_X_CSTRING("%type","DIR",NULL);
@@ -4455,7 +4467,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
                                )
                 );
   }
-  printDirectoryListFooter(List_count(&directoryEntryList));
+  printDirectoryListFooter(List_count(&directoryEntryList),totalFileSize);
 
   // free resources
   String_delete(line);
