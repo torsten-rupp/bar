@@ -98,6 +98,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                         textMacros.data,
                         textMacros.count,
+                        NULL, // commandLine
                         CALLBACK_(executeIOOutput,NULL),
                         CALLBACK_(executeIOOutput,NULL)
                        );
@@ -129,6 +130,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
+                            NULL, // commandLine
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            );
@@ -148,6 +150,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     if (Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
+                            NULL, // commandLine
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            ) == ERROR_NONE
@@ -208,6 +211,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
+                            NULL, // commandLine
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            );
@@ -230,6 +234,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
+                            NULL, // commandLine
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            );
@@ -628,6 +633,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePreProcessCommand ),
                                   textMacros.data,
                                   textMacros.count,
+                                  NULL, // commandLine
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -639,6 +645,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
                                   textMacros.data,
                                   textMacros.count,
+                                  NULL, // commandLine
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -650,6 +657,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
                                   textMacros.data,
                                   textMacros.count,
+                                  NULL, // commandLine
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -676,6 +684,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.writeCommand),
                                   textMacros.data,
                                   textMacros.count,
+                                  NULL, // commandLine
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -748,6 +757,7 @@ LOCAL Errors StorageDevice_unloadVolume(const StorageInfo *storageInfo)
   error = Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                               textMacros.data,
                               textMacros.count,
+                              NULL, // commandLine
                               CALLBACK_(executeIOOutput,NULL),
                               CALLBACK_(executeIOOutput,NULL)
                              );

@@ -55,8 +55,8 @@
 #define MAX_BUFFER_SIZE       (64*1024)
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
-#define UNLOAD_VOLUME_DELAY_TIME (10LL*US_PER_SECOND) /* [us] */
-#define LOAD_VOLUME_DELAY_TIME   (10LL*US_PER_SECOND) /* [us] */
+#define UNLOAD_VOLUME_DELAY_TIME (30LL*MS_PER_SECOND) /* [ms] */
+#define LOAD_VOLUME_DELAY_TIME   (30LL*MS_PER_SECOND) /* [ms] */
 
 #define MAX_CD_SIZE  (900LL*1024LL*1024LL)     // 900M
 #define MAX_DVD_SIZE (2LL*4613734LL*1024LL)    // 9G (dual layer)
@@ -75,6 +75,7 @@
 typedef struct
 {
   StorageInfo *storageInfo;
+  String      commandLine;
   StringList  stderrList;
 } ExecuteIOInfo;
 
@@ -876,41 +877,113 @@ LOCAL Errors StorageOptical_done(StorageInfo *storageInfo)
 LOCAL Errors StorageOptical_loadVolume(const StorageInfo *storageInfo)
 {
   TextMacros (textMacros,2);
+  StringList stderrList;
+  String     commandLine;
+  Errors     error;
 
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+
+  // init variables
+  StringList_init(&stderrList);
+  commandLine = String_new();
 
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
   }
-  return Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.loadVolumeCommand),
-                             textMacros.data,
-                             textMacros.count,
-                             CALLBACK_(executeIOOutput,NULL),
-                             CALLBACK_(executeIOOutput,NULL)
-                            );
+  error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.loadVolumeCommand),
+                              textMacros.data,
+                              textMacros.count,
+                              commandLine,
+                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,NULL)
+                             );
+  if (error == ERROR_NONE)
+  {
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Loaded medium"
+              );
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+  }
+  else
+  {
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Load medium fail: %s",
+               Error_getText(error)
+              );
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+    logLines(storageInfo->logHandle,
+             LOG_TYPE_ERROR,
+             "  ",
+             &stderrList
+            );
+  }
+
+  // free resources
+  String_delete(commandLine);
+  StringList_done(&stderrList);
+
+  return error;
 }
 
 LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
 {
   TextMacros (textMacros,2);
+  StringList stderrList;
+  String     commandLine;
+  Errors     error;
 
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+
+  // init variables
+  StringList_init(&stderrList);
+  commandLine = String_new();
 
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
   }
-  return Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
-                             textMacros.data,
-                             textMacros.count,
-                             CALLBACK_(executeIOOutput,NULL),
-                             CALLBACK_(executeIOOutput,NULL)
-                            );
+  error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
+                              textMacros.data,
+                              textMacros.count,
+                              commandLine,
+                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,NULL)
+                             );
+  if (error == ERROR_NONE)
+  {
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Unloaded medium"
+              );
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+  }
+  else
+  {
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Unload medium fail: %s",
+               Error_getText(error)
+              );
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+    logLines(storageInfo->logHandle,
+             LOG_TYPE_ERROR,
+             "  ",
+             &stderrList
+            );
+  }
+
+  // free resources
+  String_delete(commandLine);
+  StringList_done(&stderrList);
+
+  return error;
 }
 
 /***********************************************************************\
@@ -945,7 +1018,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
   {
     // sleep a short time to give hardware time for finishing volume, then unload current volume
     printInfo(1,"Unload medium #%d...",storageInfo->volumeNumber);
-    Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+    Misc_mdelay(UNLOAD_VOLUME_DELAY_TIME);
     (void)StorageOptical_unloadVolume(storageInfo);
     printInfo(1,"OK\n");
 
@@ -972,7 +1045,8 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(1,"Unload medium...");
-        Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+//TODO: check if medium is ready
+        Misc_mdelay(UNLOAD_VOLUME_DELAY_TIME);
         (void)StorageOptical_unloadVolume(storageInfo);
         printInfo(1,"OK\n");
       }
@@ -991,6 +1065,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
     if (Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.requestVolumeCommand),
                             textMacros.data,
                             textMacros.count,
+                            NULL, // commandLine
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            ) == ERROR_NONE
@@ -1050,7 +1125,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
         // load medium, then sleep a short time to give hardware time for reading medium information
         printInfo(1,"Load medium #%d...",storageInfo->requestedVolumeNumber);
         (void)StorageOptical_loadVolume(storageInfo);
-        Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+        Misc_mdelay(LOAD_VOLUME_DELAY_TIME);
         printInfo(1,"OK\n");
 
         // store new medium number
@@ -1068,7 +1143,8 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
         printInfo(1,"Load medium #%d...",storageInfo->requestedVolumeNumber);
         (void)StorageOptical_loadVolume(storageInfo);
         printInfo(1,"OK\n");
-        Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+//TODO: check if medium is ready
+        Misc_mdelay(LOAD_VOLUME_DELAY_TIME);
 
         return ERROR_ABORTED;
         break;
@@ -1187,6 +1263,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     // init variables
     storageInfo->opticalDisk.write.step = 0;
     executeIOInfo.storageInfo           = storageInfo;
+    executeIOInfo.commandLine           = String_new();
     StringList_init(&executeIOInfo.stderrList);
 
     // update volume info
@@ -1198,6 +1275,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
     if (error != ERROR_NONE)
     {
+      String_delete(executeIOInfo.commandLine);
       StringList_done(&executeIOInfo.stderrList);
       return error;
     }
@@ -1224,10 +1302,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     {
       // create medium image
       printInfo(1,"Create medium image #%u with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
+      String_clear(executeIOInfo.commandLine);
       StringList_clear(&executeIOInfo.stderrList);
       error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imageCommand),
                                   textMacros.data,
                                   textMacros.count,
+                                  executeIOInfo.commandLine,
                                   CALLBACK_(executeIOmkisofsStdout,&executeIOInfo),
                                   CALLBACK_(executeIOmkisofsStderr,&executeIOInfo)
                                  );
@@ -1237,10 +1317,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
         logMessage(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
-                   "Create medium image #%u: %s",
+                   "Create medium image #%u fail: %s",
                    storageInfo->volumeNumber,
                    Error_getText(error)
                   );
+        logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
         logLines(storageInfo->logHandle,
                  LOG_TYPE_ERROR,
                  "  ",
@@ -1249,22 +1330,26 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
         File_delete(imageFileName,FALSE);
         String_delete(imageFileName);
+        String_delete(executeIOInfo.commandLine);
         StringList_done(&executeIOInfo.stderrList);
         return error;
       }
       File_getInfo(&fileInfo,imageFileName);
       printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
       logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Created medium image #%u",storageInfo->volumeNumber);
+      logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
       storageInfo->opticalDisk.write.step++;
 
       if (storageInfo->jobOptions->errorCorrectionCodesFlag)
       {
         // add error-correction codes to medium image
         printInfo(1,"Add ECC to image #%d...",storageInfo->opticalDisk.write.number);
+        String_clear(executeIOInfo.commandLine);
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccCommand),
                                     textMacros.data,
                                     textMacros.count,
+                                    executeIOInfo.commandLine,
                                     CALLBACK_(executeIOdvdisasterStdout,&executeIOInfo),
                                     CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo)
                                    );
@@ -1274,10 +1359,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
-                     "Add ECC to image #%u: %s",
+                     "Add ECC to image #%u fail: %s",
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
@@ -1286,12 +1372,14 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
+          String_delete(executeIOInfo.commandLine);
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
         File_getInfo(&fileInfo,imageFileName);
         printInfo(1,"OK (%llu bytes)\n",fileInfo.size);
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Added error correction codes to medium image #%u",storageInfo->volumeNumber);
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
         storageInfo->opticalDisk.write.step++;
       }
 
@@ -1318,6 +1406,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         {
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
+          String_delete(executeIOInfo.commandLine);
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
@@ -1328,10 +1417,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       {
         // blank mediuam
         printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
+        String_clear(executeIOInfo.commandLine);
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
                                     textMacros.data,
                                     textMacros.count,
+                                    executeIOInfo.commandLine,
                                     CALLBACK_(executeIOblankStdout,&executeIOInfo),
                                     CALLBACK_(executeIOblankStderr,&executeIOInfo)
                                    );
@@ -1341,10 +1432,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
-                     "Blank medium #%u: %s",
+                     "Blank medium #%u fail: %s",
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
@@ -1353,11 +1445,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
+          String_delete(executeIOInfo.commandLine);
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
         printInfo(1,"OK\n");
-        logMessage(storageInfo->logHandle,LOG_TYPE_ALWAYS,"Blanked medium image #%u",storageInfo->volumeNumber);
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked medium image #%u",storageInfo->volumeNumber);
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
         storageInfo->opticalDisk.write.step++;
       }
 
@@ -1369,10 +1463,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
         // write image to medium
         printInfo(1,"Write image to medium #%d...",storageInfo->opticalDisk.write.number);
+        String_clear(executeIOInfo.commandLine);
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeImageCommand),
                                     textMacros.data,
                                     textMacros.count,
+                                    executeIOInfo.commandLine,
                                     CALLBACK_(executeIOgrowisofsStdout,&executeIOInfo),
                                     CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo)
                                    );
@@ -1384,13 +1480,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         else
         {
           printInfo(1,"FAIL\n");
-
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
                      "Write image to medium #%u: %s",
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
@@ -1413,10 +1509,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       {
         File_delete(imageFileName,FALSE);
         String_delete(imageFileName);
+        String_delete(executeIOInfo.commandLine);
         StringList_done(&executeIOInfo.stderrList);
         return error;
       }
       logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written medium image #%u",storageInfo->volumeNumber);
+      logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
       storageInfo->opticalDisk.write.step++;
     }
     else
@@ -1430,6 +1528,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         {
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
+          String_delete(executeIOInfo.commandLine);
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
@@ -1440,10 +1539,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       {
         // blank mediuam
         printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
+        String_clear(executeIOInfo.commandLine);
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
                                     textMacros.data,
                                     textMacros.count,
+                                    executeIOInfo.commandLine,
                                     CALLBACK_(executeIOblankStdout,&executeIOInfo),
                                     CALLBACK_(executeIOblankStderr,&executeIOInfo)
                                    );
@@ -1453,10 +1554,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           logMessage(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
-                     "Blank medium #%u: %s",
+                     "Blank medium #%u fail: %s",
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
@@ -1465,11 +1567,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
+          String_delete(executeIOInfo.commandLine);
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
         printInfo(1,"OK\n");
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked medium image #%u",storageInfo->volumeNumber);
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
         storageInfo->opticalDisk.write.step++;
       }
 
@@ -1481,10 +1585,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
         // write to medium
         printInfo(1,"Write medium #%d with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
+        String_clear(executeIOInfo.commandLine);
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeCommand),
                                     textMacros.data,
                                     textMacros.count,
+                                    executeIOInfo.commandLine,
                                     CALLBACK_(executeIOgrowisofsStdout,&executeIOInfo),
                                     CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo)
                                    );
@@ -1511,10 +1617,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       {
         logMessage(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
-                   "Write image to medium #%u: %s",
+                   "Write image to medium #%u fail: %s",
                    storageInfo->volumeNumber,
                    Error_getText(error)
                   );
+        logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
         logLines(storageInfo->logHandle,
                  LOG_TYPE_ERROR,
                  "  ",
@@ -1523,10 +1630,12 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
         File_delete(imageFileName,FALSE);
         String_delete(imageFileName);
+        String_delete(executeIOInfo.commandLine);
         StringList_done(&executeIOInfo.stderrList);
         return error;
       }
       logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written medium image #%u",storageInfo->volumeNumber);
+      logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
       storageInfo->opticalDisk.write.step++;
     }
 
@@ -1552,6 +1661,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     String_delete(fileName);
     if (error != ERROR_NONE)
     {
+      String_delete(executeIOInfo.commandLine);
       StringList_done(&executeIOInfo.stderrList);
       return error;
     }
@@ -1561,6 +1671,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     storageInfo->opticalDisk.write.totalSize     = 0;
 
     // free resources
+    String_delete(executeIOInfo.commandLine);
     StringList_done(&executeIOInfo.stderrList);
   }
 
