@@ -4854,6 +4854,7 @@ class Dialogs
                                  (T)widgetPath.getData(),
                                  (widgetName != null) ? widgetName.getText() : null
                                 );
+          Widgets.setFocus(widgetFilter);
         }
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
@@ -5057,6 +5058,14 @@ class Dialogs
           @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
+            if (widgetName != null)
+            {
+              Widgets.setFocus(widgetName);
+            }
+            else
+            {
+              Widgets.setFocus(widgetDone);
+            }
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -5111,6 +5120,18 @@ class Dialogs
                                   || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
                                   || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
                                  );
+          }
+        });
+        widgetName.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            Widgets.setFocus(widgetDone);
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
           }
         });
       }
