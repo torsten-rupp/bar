@@ -3420,7 +3420,7 @@ public class ServerSettings
 
         widgetBeginMinute = Widgets.newOptionMenu(subComposite);
         widgetBeginMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
-        widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55","59"});
         widgetBeginMinute.setText(maintenanceData.getBeginMinute()); if (widgetBeginMinute.getText().equals("")) widgetBeginMinute.setText("*");
         Widgets.layout(widgetBeginMinute,0,1,TableLayoutData.W);
 
@@ -3435,7 +3435,7 @@ public class ServerSettings
 
         widgetEndMinute = Widgets.newOptionMenu(subComposite);
         widgetEndMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
-        widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55","59"});
         widgetEndMinute.setText(maintenanceData.getEndMinute()); if (widgetEndMinute.getText().equals("")) widgetEndMinute.setText("*");
         Widgets.layout(widgetEndMinute,0,4,TableLayoutData.W);
       }
