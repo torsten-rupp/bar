@@ -1409,7 +1409,7 @@ public class BARServer
   public final static String            DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
   public final static String            DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
-  public static char                    fileSeparator;
+  public static String                  pathSeparator;
 
   private final static int              SOCKET_READ_TIMEOUT    =  60*1000;                      // timeout reading socket [ms]
   private final static int              TIMEOUT                = 120*1000;                      // global timeout [ms]
@@ -2195,11 +2195,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       // get file separator character
       syncExecuteCommand(input,
                          output,
-                         "GET name=FILE_SEPARATOR",
+                         "GET name=PATH_SEPARATOR",
                          2,  // debugLevel
                          valueMap
                         );
-      fileSeparator = valueMap.getString("value","/").charAt(0);
+      pathSeparator = valueMap.getString("value","/");
     }
     catch (BARException exception)
     {
@@ -3841,7 +3841,7 @@ throw new Error("NYI");
       super(absolutePath);
       assert(   absolutePath.matches("^/.*")          // Unix
              || absolutePath.matches("^[A-Za-z]:.*")  // Windows
-            );
+            ) : "'" + absolutePath + "' is not absolute";
 
       this.absoluteFile = new File(absolutePath);
       this.fileType     = fileType;
@@ -3888,6 +3888,7 @@ throw new Error("NYI");
     /** get absolute file
      * @return absolute file
      */
+    @Override
     public RemoteFile getAbsoluteFile()
     {
       return new RemoteFile(absoluteFile.getPath());
@@ -3905,12 +3906,16 @@ throw new Error("NYI");
     /** get absolute file
      * @return absolute file
      */
+
+    @Override
     public RemoteFile getParentFile()
     {
-      String parentPath = absoluteFile.getParent();
-      if (parentPath != null)
+      String path = absoluteFile.getPath();
+
+      int i = path.lastIndexOf(BARServer.pathSeparator);
+      if (i >= 0)
       {
-        return new RemoteFile(parentPath);
+        return new RemoteFile(path.substring(0,i));
       }
       else
       {
@@ -3921,6 +3926,7 @@ throw new Error("NYI");
     /** get file size
      * @return size [bytes]
      */
+    @Override
     public long length()
     {
       return size;
@@ -3929,6 +3935,7 @@ throw new Error("NYI");
     /** get last modified
      * @return last modified date/time
      */
+    @Override
     public long lastModified()
     {
       return dateTime*1000;
@@ -3937,6 +3944,7 @@ throw new Error("NYI");
     /** check if file is file
      * @return true iff file
      */
+    @Override
     public boolean isFile()
     {
       return fileType == FileTypes.FILE;
@@ -3945,6 +3953,7 @@ throw new Error("NYI");
     /** check if file is directory
      * @return true iff directory
      */
+    @Override
     public boolean isDirectory()
     {
       return fileType == FileTypes.DIRECTORY;
@@ -3953,6 +3962,7 @@ throw new Error("NYI");
     /** check if file is hidden
      * @return always false
      */
+    @Override
     public boolean isHidden()
     {
       return getName().startsWith(".");
@@ -3961,6 +3971,7 @@ throw new Error("NYI");
     /** check if file exists
      * @return always true
      */
+    @Override
     public boolean exists()
     {
       return true;
@@ -3993,15 +4004,23 @@ throw new Error("NYI");
     }
 
     /** get new file instance
+     * @param path path (can be null)
      * @param name name
-     * @return file
+     * @return file instance
      */
     @Override
-    public RemoteFile newFileInstance(String name)
+    public RemoteFile newFileInstance(String path, String name)
     {
       FileTypes fileType = FileTypes.FILE;
       long      size     = 0;
       long      dateTime = 0;
+
+      // get name
+      if (path != null)
+      {
+        if (!path.endsWith(BARServer.pathSeparator)) path = path+BARServer.pathSeparator;
+        name = path+name;
+      }
 
       try
       {
@@ -4014,7 +4033,7 @@ throw new Error("NYI");
                                  valueMap
                                 );
 
-        fileType = valueMap.getEnum("fileType",FileTypes.class);
+        fileType = valueMap.getEnum  ("fileType",FileTypes.class);
         switch (fileType)
         {
           case FILE:
@@ -4036,6 +4055,26 @@ throw new Error("NYI");
       }
 
       return new RemoteFile(name,fileType,size,dateTime);
+    }
+
+    /** get parent file instance
+     * @param file file
+     * @return parent file instance or null
+     */
+    @Override
+    public RemoteFile getParentFile(RemoteFile file)
+    {
+      return file.getParentFile();
+    }
+
+    /** get absolute path
+     * @param path path
+     * @return absolute path
+     */
+    @Override
+    public String getAbsolutePath(RemoteFile file)
+    {
+      return file.getAbsolutePath();
     }
 
     /** get shortcut files

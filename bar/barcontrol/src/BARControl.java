@@ -1482,13 +1482,41 @@ public class BARControl
   public static ListDirectory<File> listDirectory = new ListDirectory<File>()
   {
     /** get new file instance
+     * @param path path (can be null)
      * @param name name
-     * @return file
+     * @return file instance
      */
     @Override
-    public File newFileInstance(String name)
+    public File newFileInstance(String path, String name)
     {
-      return new File(name);
+      if (path != null)
+      {
+        return new File(path,name);
+      }
+      else
+      {
+        return new File(name);
+      }
+    }
+
+    /** get parent file instance
+     * @param file file
+     * @return parent file instance or null
+     */
+    @Override
+    public File getParentFile(File file)
+    {
+      return file.getParentFile();
+    }
+
+    /** get absolute path
+     * @param path path
+     * @return absolute path
+     */
+    @Override
+    public String getAbsolutePath(File file)
+    {
+      return file.getAbsolutePath();
     }
 
     /** get shortcut files
@@ -4846,7 +4874,7 @@ if (false) {
           final int n[] = {0};
           try
           {
-            System.out.println(String.format("%-32s %-12s %-20s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
+            System.out.println(String.format("%-32s %-18s %-20s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-13s",
                                              "Name",
                                              "State",
                                              "Host name",
@@ -4857,7 +4885,7 @@ if (false) {
                                              "Crypt type",
                                              "Mode",
                                              "Last executed",
-                                             "Estimated"
+                                             "Estimated [s]"
                                             )
                               );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
@@ -4897,7 +4925,7 @@ if (false) {
                                            cryptPasswordMode = "-";
                                          }
 
-                                         System.out.println(String.format("%-32s %-12s %-20s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
+                                         System.out.println(String.format("%-32s %-18s %-20s %-12s %14d %-25s %-14s %-10s %-8s %-19s %13d",
                                                                           name,
                                                                           (serverState[0] == BARServer.States.RUNNING)
                                                                             ? JobData.formatStateText(state,slaveHostName,slaveState)

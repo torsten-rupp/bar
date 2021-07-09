@@ -566,38 +566,19 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   }
 
   /** get new file instance
+   * @param path path (can be null)
    * @param name name
    * @return file instance
    */
-  public abstract T newFileInstance(String name);
+  public abstract T newFileInstance(String path, String name);
 
   /** get new file instance
-   * @param path path
    * @param name name
    * @return file instance
    */
-  public T newFileInstance(String path, String name)
+  public T newFileInstance(String name)
   {
-    return newFileInstance(new File(path,name).getAbsolutePath());
-  }
-
-  /** get new file instance
-   * @param file file
-   * @param name name
-   * @return file instance
-   */
-  public T newFileInstance(T file, String name)
-  {
-    return newFileInstance(new File(file,name).getAbsolutePath());
-  }
-
-  /** get new file instance
-   * @param file file
-   * @return file instance
-   */
-  public T newFileInstance(T file)
-  {
-    return newFileInstance(file.getAbsolutePath());
+    return newFileInstance((String)null,name);
   }
 
   /** get root file instance
@@ -610,26 +591,22 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
 
   /** get parent file instance
    * @param file file
-   * @return parent file instance
+   * @return parent file instance or null
    */
-  public T getParentFile(T file)
-  {
-    if (file.getParentFile() != null)
-    {
-      return newFileInstance(file.getParentFile().getAbsolutePath());
-    }
-    else
-    {
-      return null;
-    }
-  }
+  public abstract T getParentFile(T file);
+
+  /** get absolute path
+   * @param path path
+   * @return absolute path
+   */
+  public abstract String getAbsolutePath(T file);
 
   /** compare files
    * @return -1/0/1 if file0 </=/> file1
    */
   public int compare(T file0, T file1)
   {
-    return file0.getAbsolutePath().compareTo(file1.getAbsolutePath());
+    return getAbsolutePath(file0).compareTo(getAbsolutePath(file1));
   }
 
   /** get shortcut files
@@ -651,7 +628,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public void addShortcut(T shortcut)
   {
-    shortcutMap.put(shortcut.getAbsolutePath(),shortcut);
+    shortcutMap.put(getAbsolutePath(shortcut),shortcut);
   }
 
   /** add shortcut file
@@ -667,7 +644,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public void removeShortcut(T shortcut)
   {
-    shortcutMap.remove(shortcut.getAbsolutePath());
+    shortcutMap.remove(getAbsolutePath(shortcut));
   }
 
   /** open list files in directory
@@ -1394,7 +1371,7 @@ class Dialogs
             if (!display.readAndDispatch()) display.sleep();
           }
         }
-        catch (Throwable throwable)
+        catch (Exception exception)
         {
           // close dialog
           if (!dialog.isDisposed())
@@ -4974,7 +4951,7 @@ class Dialogs
             if (file.isDirectory())
             {
               // set new path, clear name
-              T newPath = listDirectory.newFileInstance((T)widgetPath.getData(),file.getName());
+              T newPath = listDirectory.newFileInstance(((T)widgetPath.getData()).getPath(),file.getName());
               widgetPath.setData(newPath);
               widgetPath.setText(newPath.getAbsolutePath());
               if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.ENTRY)) widgetName.setText("");
@@ -5036,8 +5013,11 @@ class Dialogs
               fileGeometry = dialog.getSize();
               close(dialog,
                     (widgetName != null)
-                      ? listDirectory.newFileInstance(widgetPath.getText(),widgetName.getText()).getAbsolutePath()
-                      : listDirectory.newFileInstance(widgetPath.getText()).getAbsolutePath()
+                      ? listDirectory.getAbsolutePath(listDirectory.newFileInstance(widgetPath.getText(),
+                                                                                    widgetName.getText()
+                                                                                   )
+                                                     )
+                      : listDirectory.getAbsolutePath(listDirectory.newFileInstance(widgetPath.getText()))
                    );
             }
           }
@@ -5148,8 +5128,10 @@ class Dialogs
           T file = (T)widgetPath.getData();
           close(dialog,
                 (widgetName != null)
-                  ? listDirectory.newFileInstance(file,widgetName.getText()).getAbsolutePath()
-                  : file.getAbsolutePath()
+                  ? listDirectory.getAbsolutePath(listDirectory.newFileInstance(file.getPath(),
+                                                  widgetName.getText())
+                                                 )
+                  : listDirectory.getAbsolutePath(file)
                );
         }
       });
