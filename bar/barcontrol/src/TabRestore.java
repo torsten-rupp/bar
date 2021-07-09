@@ -7855,7 +7855,7 @@ Dprintf.dprintf("");
         // guess a date
         for (IndexData indexData : indexDataHashSet)
         {
-          String archiveNameParts[] = StringUtils.splitArray(indexData.getName(),BARServer.fileSeparator);
+          String archiveNameParts[] = StringUtils.splitArray(indexData.getName(),BARServer.pathSeparator);
           for (String archiveNamePart : archiveNameParts)
           {
             for (SimpleDateFormat dateFormat : DATE_FORMATS)
