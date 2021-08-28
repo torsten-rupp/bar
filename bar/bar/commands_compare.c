@@ -2136,6 +2136,12 @@ NULL, // masterSocketHandle
   MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
   ThreadPool_joinAll(&workerThreadPool);
 
+  // close archive
+  Archive_close(&archiveHandle);
+
+  // done storage
+  (void)Storage_done(&storageInfo);
+
   // output info
   if (!isPrintInfo(1)) printInfo(0,
                                  "%s",
@@ -2164,12 +2170,6 @@ NULL, // masterSocketHandle
                   );
     }
   }
-
-  // close archive
-  Archive_close(&archiveHandle);
-
-  // done storage
-  (void)Storage_done(&storageInfo);
 
   // free resources
   String_delete(printableStorageName);
@@ -2338,12 +2338,33 @@ NULL,  //               requestedAbortFlag,
     }
   }
 
+  // get error
+// TODO:
+#if 0
+  if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
+  {
+    error = compareInfo.failError;
+  }
+  else
+  {
+    error = ERROR_ABORTED;
+  }
+#else
+error = compareInfo.failError;
+#endif
+
   // done compare info
   doneCompareInfo(&compareInfo);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
+
+  // output info
+  if (error != ERROR_NONE)
+  {
+    printInfo(1,"Compare fail: %s\n",Error_getText(error));
+  }
 
   return failError;
 }
