@@ -1263,4 +1263,12 @@ ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
 endif
 
+.PHONY: setup
+setup:
+	#install packages/backup-archiver.iss backup-archiver.iss
+	$(WINE) "$(ISCC)" \
+  /O$(PROJECT_ROOT) \
+  /F$(DISTRIBUTION_NAME)-setup \
+  packages/backup-archiver.iss
+
 # end of file
