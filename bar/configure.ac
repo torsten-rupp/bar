@@ -687,6 +687,8 @@ dnl --- detect ISCC.exe
 dnl usage: AC_PROG_ISCC(<variable>)
 AC_DEFUN([AC_PROG_ISCC],
 [
+  AC_REQUIRE([AC_PROG_WINE])
+  AC_REQUIRE([WINE_C_DRIVE])
   AC_CACHE_CHECK(
     [ISCC],
     ac_cv_prog_iscc,
@@ -1428,10 +1430,10 @@ if test -n "$WINE" -a -n "$WINEPATH"; then
   AC_WINE_C_DRIVE(WINE_C_DRIVE)
   AC_PROG_ISCC(ISCC)
   if test -z "$ISCC"; then
-    AC_MSG_WARN([No 'ISCC.exe' tool found. Cannot create Win32 build.])
+    AC_MSG_WARN([No 'ISCC.exe' tool found. Cannot create Win32 setup program.])
   fi
 else
-  AC_MSG_WARN([No 'wine' tool found. Cannot create Win32 build.])
+  AC_MSG_WARN([No 'wine' tool found. Cannot create Win32 setup program.])
 fi
 
 # compiler/link flags/paths

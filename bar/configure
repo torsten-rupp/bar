@@ -5736,6 +5736,10 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_wine_c_drive" >&5
 $as_echo "$ac_cv_wine_c_drive" >&6; }
 
+  AC_PROG_WINE
+WINE_C_DRIVE
+
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking ISCC" >&5
 $as_echo_n "checking ISCC... " >&6; }
@@ -5759,12 +5763,12 @@ fi
 $as_echo "$ac_cv_prog_iscc" >&6; }
 
   if test -z "$ISCC"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No 'ISCC.exe' tool found. Cannot create Win32 build." >&5
-$as_echo "$as_me: WARNING: No 'ISCC.exe' tool found. Cannot create Win32 build." >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No 'ISCC.exe' tool found. Cannot create Win32 setup program." >&5
+$as_echo "$as_me: WARNING: No 'ISCC.exe' tool found. Cannot create Win32 setup program." >&2;}
   fi
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No 'wine' tool found. Cannot create Win32 build." >&5
-$as_echo "$as_me: WARNING: No 'wine' tool found. Cannot create Win32 build." >&2;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No 'wine' tool found. Cannot create Win32 setup program." >&5
+$as_echo "$as_me: WARNING: No 'wine' tool found. Cannot create Win32 setup program." >&2;}
 fi
 
 # compiler/link flags/paths
