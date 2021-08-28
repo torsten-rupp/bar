@@ -388,6 +388,12 @@
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
 
+/* sd_id128_get_machine() available */
+#undef HAVE_SD_ID128_GET_MACHINE
+
+/* sd_id128_get_machine_app_specific() available */
+#undef HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC
+
 /* select() available */
 #undef HAVE_SELECT
 
@@ -498,6 +504,9 @@
 
 /* sysconf() available */
 #undef HAVE_SYSCONF
+
+/* Define to 1 if you have the <systemd/sd-id128.h> header file. */
+#undef HAVE_SYSTEMD_SD_ID128_H
 
 /* Define to 1 if you have the <sys/inotify.h> header file. */
 #undef HAVE_SYS_INOTIFY_H
@@ -624,6 +633,9 @@
 
 /* uuid_generate() available */
 #undef HAVE_UUID_GENERATE
+
+/* uuid_parse() available */
+#undef HAVE_UUID_PARSE
 
 /* uuid_unparse_lower() available */
 #undef HAVE_UUID_UNPARSE_LOWER
