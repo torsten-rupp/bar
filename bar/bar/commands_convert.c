@@ -2391,11 +2391,32 @@ Errors Command_convert(const StringList        *storageNameList,
     failError = ERROR_FILE_NOT_FOUND_;
   }
 
+  // get error
+// TODO:
+#if 0
+  if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
+  {
+    error = convertInfo.failError;
+  }
+  else
+  {
+    error = ERROR_ABORTED;
+  }
+#else
+error = convertInfo.failError;
+#endif
+
   // done convert info
   doneConvertInfo(&convertInfo);
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
+
+  // output info
+  if (error != ERROR_NONE)
+  {
+    printInfo(1,"Convert fail: %s\n",Error_getText(error));
+  }
 
   return failError;
 }
