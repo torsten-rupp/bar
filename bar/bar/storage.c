@@ -1422,7 +1422,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
         }
         else
         {
-          File_setFileNameChar(storageSpecifier->archiveName,FILE_PATHNAME_SEPARATOR_CHAR);
+          File_setFileNameChar(storageSpecifier->archiveName,FILE_PATH_SEPARATOR_CHAR);
         }
         while (File_getNextSplitFileName(&archiveNameTokenizer,&token) && !hasPatternFlag)
         {
@@ -1466,7 +1466,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
         }
         else
         {
-          File_setFileNameChar(storageSpecifier->archivePatternString,FILE_PATHNAME_SEPARATOR_CHAR);
+          File_setFileNameChar(storageSpecifier->archivePatternString,FILE_PATH_SEPARATOR_CHAR);
         }
         while (File_getNextSplitFileName(&archiveNameTokenizer,&token))
         {
