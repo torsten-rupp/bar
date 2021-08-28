@@ -1448,8 +1448,8 @@ NULL, // masterSocketHandle
   allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   error                  = ERROR_NONE;
   lastSignatureOffset    = Archive_tell(&archiveHandle);
-  while (   (testInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
-         && ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
+  while (   ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
+         && (testInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
          && !Archive_eof(&archiveHandle,isPrintInfo(3) ? ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS : ARCHIVE_FLAG_NONE)
         )
   {
@@ -1518,6 +1518,12 @@ NULL, // masterSocketHandle
   MsgQueue_setEndOfMsg(&testInfo->entryMsgQueue);
   ThreadPool_joinAll(&workerThreadPool);
 
+  // close archive
+  Archive_close(&archiveHandle);
+
+  // done storage
+  (void)Storage_done(&storageInfo);
+
   // output info
   if (!isPrintInfo(1)) printInfo(0,
                                  "%s",
@@ -1546,12 +1552,6 @@ NULL, // masterSocketHandle
                   );
     }
   }
-
-  // close archive
-  Archive_close(&archiveHandle);
-
-  // done storage
-  (void)Storage_done(&storageInfo);
 
   // free resources
   String_delete(printableStorageName);
@@ -1719,6 +1719,21 @@ NULL,  //               requestedAbortFlag,
     }
   }
 
+  // get error
+// TODO:
+#if 0
+  if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
+  {
+    error = testInfo.failError;
+  }
+  else
+  {
+    error = ERROR_ABORTED;
+  }
+#else
+error = testInfo.failError;
+#endif
+
   // done test info
   doneTestInfo(&testInfo);
 
@@ -1726,7 +1741,13 @@ NULL,  //               requestedAbortFlag,
   Storage_doneSpecifier(&storageSpecifier);
   FragmentList_done(&fragmentList);
 
-  return failError;
+  // output info
+  if (error != ERROR_NONE)
+  {
+    printInfo(1,"Test fail: %s\n",Error_getText(error));
+  }
+
+  return error;
 }
 
 #ifdef __cplusplus
