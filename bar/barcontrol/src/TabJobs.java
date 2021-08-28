@@ -15645,7 +15645,7 @@ throw new Error("NYI");
         if ((scheduleData.day != ScheduleData.ANY) && (scheduleData.weekDays != ScheduleData.ANY))
         {
           if (!Dialogs.confirm(dialog,
-                               BARControl.tr("The job may not be triggered if the specified day is not in the set of spedified weekdays.\nReally keep this setting?")
+                               BARControl.tr("The job may not be triggered if the specified day is not in the set of specified weekdays.\nReally keep this setting?")
                               )
              )
           {

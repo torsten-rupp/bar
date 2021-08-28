@@ -3225,14 +3225,14 @@ public class TabStatus
       table.setBackground(COLOR_BACKGROUND);
       table.setLayout(new TableLayout(null,1.0));
       Widgets.layout(table,row,1,TableLayoutData.W);
-      Widgets.addTableColumn(table,0,BARControl.tr("Type"),        SWT.LEFT, 100,false);
-      Widgets.addTableColumn(table,1,BARControl.tr("Count"),       SWT.RIGHT, 60,false);
-      Widgets.addTableColumn(table,2,BARControl.tr("Average time"),SWT.LEFT, 120,false);
-      Widgets.addTableItem(table,null,BARControl.tr("normal"     ),executionCountNormal,      String.format("%02d:%02d:%02d",averageDurationNormal      /(60*60),averageDurationNormal      %(60*60)/60,averageDurationNormal      %60));
-      Widgets.addTableItem(table,null,BARControl.tr("full"       ),executionCountFull,        String.format("%02d:%02d:%02d",averageDurationFull        /(60*60),averageDurationFull        %(60*60)/60,averageDurationFull        %60));
-      Widgets.addTableItem(table,null,BARControl.tr("incremental"),executionCountIncremental, String.format("%02d:%02d:%02d",averageDurationIncremental /(60*60),averageDurationIncremental %(60*60)/60,averageDurationIncremental %60));
-      Widgets.addTableItem(table,null,BARControl.tr("differental"),executionCountDifferential,String.format("%02d:%02d:%02d",averageDurationDifferential/(60*60),averageDurationDifferential%(60*60)/60,averageDurationDifferential%60));
-      Widgets.addTableItem(table,null,BARControl.tr("continuous" ),executionCountContinuous,  String.format("%02d:%02d:%02d",averageDurationContinuous  /(60*60),averageDurationContinuous  %(60*60)/60,averageDurationContinuous  %60));
+      Widgets.addTableColumn(table,0,BARControl.tr("Type"),         SWT.LEFT, 100,false);
+      Widgets.addTableColumn(table,1,BARControl.tr("Count"),        SWT.RIGHT, 60,false);
+      Widgets.addTableColumn(table,2,BARControl.tr("Average time" ),SWT.LEFT, 120,false);
+      Widgets.addTableItem(table,null,BARControl.tr("normal"      ),executionCountNormal,      String.format("%02d:%02d:%02d",averageDurationNormal      /(60*60),averageDurationNormal      %(60*60)/60,averageDurationNormal      %60));
+      Widgets.addTableItem(table,null,BARControl.tr("full"        ),executionCountFull,        String.format("%02d:%02d:%02d",averageDurationFull        /(60*60),averageDurationFull        %(60*60)/60,averageDurationFull        %60));
+      Widgets.addTableItem(table,null,BARControl.tr("incremental" ),executionCountIncremental, String.format("%02d:%02d:%02d",averageDurationIncremental /(60*60),averageDurationIncremental %(60*60)/60,averageDurationIncremental %60));
+      Widgets.addTableItem(table,null,BARControl.tr("differential"),executionCountDifferential,String.format("%02d:%02d:%02d",averageDurationDifferential/(60*60),averageDurationDifferential%(60*60)/60,averageDurationDifferential%60));
+      Widgets.addTableItem(table,null,BARControl.tr("continuous"  ),executionCountContinuous,  String.format("%02d:%02d:%02d",averageDurationContinuous  /(60*60),averageDurationContinuous  %(60*60)/60,averageDurationContinuous  %60));
       row++;
 
       Point size = widgetJobTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);

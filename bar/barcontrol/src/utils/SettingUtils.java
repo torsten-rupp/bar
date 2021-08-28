@@ -677,15 +677,15 @@ public class SettingUtils
       return stringArray;
     }
 
-    /** get mapped indizes
-     * @return indizes
+    /** get mapped indices
+     * @return indices
      */
     public int[] getMap(String strings[])
     {
-      int indizes[] = new int[strings.length];
+      int indices[] = new int[strings.length];
       for (int i = 0; i < strings.length; i++)
       {
-        indizes[i] = i;
+        indices[i] = i;
       }
       if (stringArray != null)
       {
@@ -694,14 +694,14 @@ public class SettingUtils
           int j = StringUtils.indexOf(strings,stringArray[i]);
           if ((j >= i) && (j < stringArray.length))
           {
-            int n = indizes[i];
-            indizes[i] = indizes[j];
-            indizes[j] = n;
+            int n = indices[i];
+            indices[i] = indices[j];
+            indices[j] = n;
           }
         }
       }
 
-      return indizes;
+      return indices;
     }
 
     /** convert data to string

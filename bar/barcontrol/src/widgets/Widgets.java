@@ -4663,7 +4663,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   /** swap list items
    * @param list list
-   * @param i,j indizes of list items to swap
+   * @param i,j indices of list items to swap
    */
   private static void swapListItems(List list, int i, int j)
   {
@@ -6601,7 +6601,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   /** swap table items
    * @param table table
    * @param tableItems table items
-   * @param i,j indizes of table items to swap
+   * @param i,j indices of table items to swap
    */
   private static void swapTableItems(Table table, TableItem tableItems[], int i, int j)
   {

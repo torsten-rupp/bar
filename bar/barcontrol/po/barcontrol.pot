@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-08-28 14:23+0200\n"
+"POT-Creation-Date: 2021-08-28 15:12+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -45,7 +45,7 @@ msgstr ""
 
 #: src/BARControl.java:861 src/TabJobs.java:6127 src/TabJobs.java:15496
 #: src/TabJobs.java:16056 src/TabRestore.java:6153 src/TabRestore.java:7748
-#: src/TabStatus.java:1000
+#: src/TabStatus.java:1000 src/TabStatus.java:3234
 msgid "differential"
 msgstr ""
 
@@ -2016,12 +2016,12 @@ msgstr ""
 
 #: src/ServerSettings.java:1664 src/ServerSettings.java:1850
 #: src/ServerSettings.java:2037 src/ServerSettings.java:2224
-msgid "Request volumn command"
+msgid "Request medium command"
 msgstr ""
 
 #: src/ServerSettings.java:1667 src/ServerSettings.java:1853
 #: src/ServerSettings.java:2040 src/ServerSettings.java:2227
-msgid "Request volumn command."
+msgid "Request medium command."
 msgstr ""
 
 #: src/ServerSettings.java:1676 src/ServerSettings.java:1862
@@ -2373,11 +2373,11 @@ msgid "index operations"
 msgstr ""
 
 #: src/ServerSettings.java:2781
-msgid "Log continous operations."
+msgid "Log continuous operations."
 msgstr ""
 
 #: src/ServerSettings.java:2783
-msgid "continous operations"
+msgid "continuous operations"
 msgstr ""
 
 #: src/ServerSettings.java:2815 src/ServerSettings.java:2817
@@ -2479,7 +2479,7 @@ msgstr ""
 #: src/ServerSettings.java:3498
 msgid ""
 "The maintenance time may not be used if the specified day is not in the set "
-"of spedified weekdays.\n"
+"of specified weekdays.\n"
 "Really keep this setting?"
 msgstr ""
 
@@ -3215,8 +3215,8 @@ msgstr ""
 msgid "stop if exists"
 msgstr ""
 
-#: src/TabJobs.java:6791
-msgid "rename"
+#: src/TabJobs.java:6791 src/TabRestore.java:9794
+msgid "rename if exists"
 msgstr ""
 
 #: src/TabJobs.java:6792 src/TabJobs.java:7802 src/TabJobs.java:8472
@@ -4123,7 +4123,7 @@ msgstr ""
 #: src/TabJobs.java:15648
 msgid ""
 "The job may not be triggered if the specified day is not in the set of "
-"spedified weekdays.\n"
+"specified weekdays.\n"
 "Really keep this setting?"
 msgstr ""
 
@@ -4483,7 +4483,7 @@ msgid "Refresh index"
 msgstr ""
 
 #: src/TabRestore.java:6070
-msgid "Refresh all indizes with error"
+msgid "Refresh all indices with error"
 msgstr ""
 
 #: src/TabRestore.java:6084
@@ -4499,7 +4499,7 @@ msgid "Add to index"
 msgstr ""
 
 #: src/TabRestore.java:6215
-msgid "Remove all indizes with error"
+msgid "Remove all indices with error"
 msgstr ""
 
 #: src/TabRestore.java:6231 src/TabRestore.java:6818
@@ -4728,13 +4728,13 @@ msgid ""
 msgstr ""
 
 #: src/TabRestore.java:8470
-msgid "Refresh all indizes with error state?"
+msgid "Refresh all indices with error state?"
 msgstr ""
 
 #: src/TabRestore.java:8487
 #, java-format
 msgid ""
-"Cannot refresh database indizes with error state!\n"
+"Cannot refresh database indices with error state!\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -4742,7 +4742,7 @@ msgstr ""
 #: src/TabRestore.java:8497
 #, java-format
 msgid ""
-"Communication error while refreshing database indizes\n"
+"Communication error while refreshing database indices\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -4772,7 +4772,7 @@ msgid "Select local storage directory"
 msgstr ""
 
 #: src/TabRestore.java:8632
-msgid "Add indizes"
+msgid "Add indices"
 msgstr ""
 
 #: src/TabRestore.java:8643 src/TabRestore.java:8664
@@ -4808,7 +4808,7 @@ msgid ""
 msgstr ""
 
 #: src/TabRestore.java:8769
-msgid "Remove indizes"
+msgid "Remove indices"
 msgstr ""
 
 #: src/TabRestore.java:8830
@@ -4824,7 +4824,7 @@ msgstr ""
 #: src/TabRestore.java:8864 src/TabRestore.java:9019 src/TabRestore.java:9048
 #, java-format
 msgid ""
-"Communication error while removing database indizes\n"
+"Communication error while removing database indices\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -4832,7 +4832,7 @@ msgstr ""
 #: src/TabRestore.java:8876 src/TabRestore.java:9031 src/TabRestore.java:9307
 #, java-format
 msgid ""
-"Connection error while removing database indizes\n"
+"Connection error while removing database indices\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -4840,7 +4840,7 @@ msgstr ""
 #: src/TabRestore.java:8917
 #, java-format
 msgid ""
-"Cannot get database indizes with error state!\n"
+"Cannot get database indices with error state!\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -4853,7 +4853,7 @@ msgstr ""
 #: src/TabRestore.java:8985
 #, java-format
 msgid ""
-"Cannot remove database indizes with error state!\n"
+"Cannot remove database indices with error state!\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -4881,7 +4881,7 @@ msgid ""
 msgstr ""
 
 #: src/TabRestore.java:9195
-msgid "Delete storage indizes and archives"
+msgid "Delete storage indices and archives"
 msgstr ""
 
 #: src/TabRestore.java:9242
@@ -4973,10 +4973,6 @@ msgid ""
 "If set to 'rename' then the new entry is renamed if entry already exists.\n"
 "If set to 'overwrite' then existing entries are overwritten.\n"
 "Otherwise stop with an error if entry exists."
-msgstr ""
-
-#: src/TabRestore.java:9794
-msgid "rename if exists"
 msgstr ""
 
 #: src/TabRestore.java:9808
@@ -5405,8 +5401,4 @@ msgstr ""
 
 #: src/TabStatus.java:3230
 msgid "Average time"
-msgstr ""
-
-#: src/TabStatus.java:3234
-msgid "differental"
 msgstr ""

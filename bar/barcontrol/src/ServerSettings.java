@@ -1661,10 +1661,10 @@ public class ServerSettings
         Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
         row++;
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("Request volumn command")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Request volumn command."),
+                                             BARControl.tr("Request medium command."),
                                              cdRequestVolumeCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -1847,10 +1847,10 @@ public class ServerSettings
         Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
         row++;
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("Request volumn command")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Request volumn command."),
+                                             BARControl.tr("Request medium command."),
                                              dvdRequestVolumeCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2034,10 +2034,10 @@ public class ServerSettings
         Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
         row++;
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("Request volumn command")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Request volumn command."),
+                                             BARControl.tr("Request medium command."),
                                              bdRequestVolumeCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2221,10 +2221,10 @@ public class ServerSettings
         Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
         row++;
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("Request volumn command")+":");
+        label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Request volumn command."),
+                                             BARControl.tr("Request medium command."),
                                              deviceRequestVolumeCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2778,9 +2778,9 @@ public class ServerSettings
         row++;
 
         button = BARWidgets.newCheckbox(subComposite,
-                                        BARControl.tr("Log continous operations."),
+                                        BARControl.tr("Log continuous operations."),
                                         log,
-                                        BARControl.tr("continous operations"),
+                                        BARControl.tr("continuous operations"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -3495,7 +3495,7 @@ public class ServerSettings
         if ((maintenanceData.day != MaintenanceData.ANY) && (maintenanceData.weekDays != MaintenanceData.ANY))
         {
           if (!Dialogs.confirm(dialog,
-                               BARControl.tr("The maintenance time may not be used if the specified day is not in the set of spedified weekdays.\nReally keep this setting?")
+                               BARControl.tr("The maintenance time may not be used if the specified day is not in the set of specified weekdays.\nReally keep this setting?")
                               )
              )
           {

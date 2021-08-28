@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-08-28 14:23+0200\n"
-"PO-Revision-Date: 2020-03-30 10:23+0200\n"
+"POT-Creation-Date: 2021-08-28 15:12+0200\n"
+"PO-Revision-Date: 2021-08-28 15:13+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -46,7 +46,7 @@ msgstr "inkrementell"
 
 #: src/BARControl.java:861 src/TabJobs.java:6127 src/TabJobs.java:15496
 #: src/TabJobs.java:16056 src/TabRestore.java:6153 src/TabRestore.java:7748
-#: src/TabStatus.java:1000
+#: src/TabStatus.java:1000 src/TabStatus.java:3234
 msgid "differential"
 msgstr "differentiell"
 
@@ -277,9 +277,8 @@ msgid "Index update operation"
 msgstr "Index erneuern"
 
 #: src/BARControl.java:3055
-#, fuzzy
 msgid "Index maintenance operation"
-msgstr "Index erneuern"
+msgstr "Index-Wartungsoperation"
 
 #: src/BARControl.java:3071
 msgid "Toggle suspend/continue"
@@ -1252,9 +1251,8 @@ msgid "parsing weekdays fail"
 msgstr "Fehler beim Lesen der Wochentagsangabe"
 
 #: src/BARException.java:1169
-#, fuzzy
 msgid "parsing maintenance fail"
-msgstr "Fehler beim Verarbeiten des Datums"
+msgstr "Fehler beim Verarbeiten der Wartungszeit"
 
 #: src/BARException.java:1176
 msgid "parsing schedule fail"
@@ -1297,9 +1295,8 @@ msgid "persistence not found"
 msgstr "Persistenzeintrag nicht gefunden"
 
 #: src/BARException.java:1254
-#, fuzzy
 msgid "maintenance not found"
-msgstr "Persistenzeintrag nicht gefunden"
+msgstr "Wartungszeit nicht gefunden"
 
 #: src/BARException.java:1264
 msgid "server not found"
@@ -1386,9 +1383,8 @@ msgid "slave is not paired"
 msgstr "Nebeninstanz nicht gekoppelt"
 
 #: src/BARException.java:1391
-#, fuzzy
 msgid "instance is not a slave"
-msgstr "Nebeninstanz nicht gekoppelt"
+msgstr "Instanz ist keine Nebeninstanz"
 
 #: src/BARServer.java:924
 #, java-format
@@ -1401,9 +1397,9 @@ msgid "Timeout reading data from server ''{0}''"
 msgstr "Zeitüberschreitung beim Lesen von Rechner ''{0}''"
 
 #: src/BARServer.java:981
-#, fuzzy, java-format
+#, java-format
 msgid "Lost connection to server ''{0}''."
-msgstr "Verbindung zu Rechner ''{0}'' verloren"
+msgstr "Verbindung zu Rechner ''{0}'' verloren."
 
 #: src/BARServer.java:1233 src/TabRestore.java:9241 src/TabStatus.java:2835
 msgid "Confirmation"
@@ -1753,14 +1749,12 @@ msgid "Run requested index database updates."
 msgstr ""
 
 #: src/ServerSettings.java:1100
-#, fuzzy
 msgid "Index update"
-msgstr "Indexdatenbank"
+msgstr "Index erneuern"
 
 #: src/ServerSettings.java:1106
-#, fuzzy
 msgid "Auto add lost archives to index database."
-msgstr "Archive zu Index hinzufügen"
+msgstr "Verlorene Archive automatisch dem Index hinzufügen."
 
 #: src/ServerSettings.java:1108
 msgid "Auto index update"
@@ -1808,9 +1802,8 @@ msgid "Date"
 msgstr "Datum"
 
 #: src/ServerSettings.java:1145
-#, fuzzy
 msgid "Click to sort by date."
-msgstr "Klicken um nach Typ zu sortieren."
+msgstr "Klicken um nach Datum zu sortieren."
 
 #: src/ServerSettings.java:1147 src/ServerSettings.java:3348
 #: src/TabJobs.java:9659 src/TabJobs.java:15395
@@ -1818,27 +1811,24 @@ msgid "Week days"
 msgstr "Wochentage"
 
 #: src/ServerSettings.java:1148
-#, fuzzy
 msgid "Click to sort by week days."
-msgstr "Klicken um nach Typ zu sortieren."
+msgstr "Klicken um nach Wochentag zu sortieren."
 
 #: src/ServerSettings.java:1150
 msgid "Begin"
 msgstr ""
 
 #: src/ServerSettings.java:1151
-#, fuzzy
 msgid "Click to sort by begin time."
-msgstr "Klicken um nach Namen zu sortieren."
+msgstr "Klicken um nach Startzeit zu sortieren."
 
 #: src/ServerSettings.java:1153
 msgid "End"
 msgstr ""
 
 #: src/ServerSettings.java:1154
-#, fuzzy
 msgid "Click to sort by end time."
-msgstr "Klicken um nach Namen zu sortieren."
+msgstr "Klicken um nach Endezeit zu sortieren."
 
 #: src/ServerSettings.java:1162 src/ServerSettings.java:1172
 #: src/ServerSettings.java:1268 src/ServerSettings.java:1437
@@ -1860,13 +1850,13 @@ msgid "Add maintenance time"
 msgstr ""
 
 #: src/ServerSettings.java:1200 src/ServerSettings.java:1297
-#, fuzzy, java-format
+#, java-format
 msgid ""
 "Add maintenance time fail:\n"
 "\n"
 "{0}"
 msgstr ""
-"Hinzufügen des Speicherservers fehltgeschlagen:\n"
+"Hinzufügen der Wartungszeit fehlgeschlagen:\n"
 "\n"
 "{0}"
 
@@ -1879,9 +1869,8 @@ msgid "Edit"
 msgstr "Ändern"
 
 #: src/ServerSettings.java:1221
-#, fuzzy
 msgid "Edit maintenance time"
-msgstr "Geschätzte Restzeit"
+msgstr "Wartungszeit editieren"
 
 #: src/ServerSettings.java:1221 src/ServerSettings.java:1502
 #: src/ServerSettings.java:2876 src/TabJobs.java:12435 src/TabJobs.java:12822
@@ -1891,13 +1880,13 @@ msgid "Save"
 msgstr "Speichern"
 
 #: src/ServerSettings.java:1245
-#, fuzzy, java-format
+#, java-format
 msgid ""
 "Save maintenance time fail:\n"
 "\n"
 "{0}"
 msgstr ""
-"Speicher der Einstellungen fehlgeschlagen:\n"
+"Speicher der Wartungszeit fehlgeschlagen:\n"
 "\n"
 "{0}"
 
@@ -1911,9 +1900,8 @@ msgid "Clone"
 msgstr "Duplizieren"
 
 #: src/ServerSettings.java:1268
-#, fuzzy
 msgid "Clone maintenance time"
-msgstr "Persistierungseintrag duplizieren"
+msgstr "Warungszeit duplizieren"
 
 #: src/ServerSettings.java:1304 src/ServerSettings.java:1595
 #: src/TabJobs.java:3570 src/TabJobs.java:3638 src/TabJobs.java:3748
@@ -1929,13 +1917,13 @@ msgid "Delete maintenance time {0}, {1}..{2}?"
 msgstr ""
 
 #: src/ServerSettings.java:1337
-#, fuzzy, java-format
+#, java-format
 msgid ""
 "Delete maintenance time fail:\n"
 "\n"
 "{0}"
 msgstr ""
-"Löschen der Einstellungen für Speicherserver fehgeschlagen:\n"
+"Löschen der Wartungszeit fehlgeschlagen:\n"
 "\n"
 "{0}"
 
@@ -2084,12 +2072,12 @@ msgstr "CD Gerätename."
 
 #: src/ServerSettings.java:1664 src/ServerSettings.java:1850
 #: src/ServerSettings.java:2037 src/ServerSettings.java:2224
-msgid "Request volumn command"
+msgid "Request medium command"
 msgstr "Befehle neues Medium"
 
 #: src/ServerSettings.java:1667 src/ServerSettings.java:1853
 #: src/ServerSettings.java:2040 src/ServerSettings.java:2227
-msgid "Request volumn command."
+msgid "Request medium command."
 msgstr "Befehl für Medium."
 
 #: src/ServerSettings.java:1676 src/ServerSettings.java:1862
@@ -2458,11 +2446,11 @@ msgid "index operations"
 msgstr "Indexoperationen"
 
 #: src/ServerSettings.java:2781
-msgid "Log continous operations."
+msgid "Log continuous operations."
 msgstr "Kontinuierliche Operationen in Log schreiben."
 
 #: src/ServerSettings.java:2783
-msgid "continous operations"
+msgid "continuous operations"
 msgstr "Kontinuierliche Operationen"
 
 #: src/ServerSettings.java:2815 src/ServerSettings.java:2817
@@ -2498,13 +2486,13 @@ msgid "Log post command."
 msgstr "Nachbearbeitungsbefehl für Logdatei."
 
 #: src/ServerSettings.java:3107
-#, fuzzy, java-format
+#, java-format
 msgid ""
 "Get maintenance list fail:\n"
 "\n"
 "{0}"
 msgstr ""
-"Fehler beim Empfangen der Serverliste:\n"
+"Fehler beim Empfangen der Wartungszeitliste:\n"
 "\n"
 "{0}"
 
@@ -2568,13 +2556,12 @@ msgid "No weekdays specified!"
 msgstr "Keine Wochentage angegeben!"
 
 #: src/ServerSettings.java:3498
-#, fuzzy
 msgid ""
 "The maintenance time may not be used if the specified day is not in the set "
-"of spedified weekdays.\n"
+"of specified weekdays.\n"
 "Really keep this setting?"
 msgstr ""
-"Der Auftrag wird möglicherweise nicht ausgeführt, wenn der angegebene Tag "
+"Die Wartungszeit wird möglicherweise nicht aktiv, wenn der angegebene Tag "
 "nicht in der Menge der angegebenen Wochentage ist.\n"
 "Die Einstellungen wirklich so speichern?"
 
@@ -3387,14 +3374,13 @@ msgid "Archive file mode"
 msgstr "Archivierungsmodus"
 
 #: src/TabJobs.java:6789
-#, fuzzy
 msgid ""
 "If set to ''rename'' then the archive is renamed if it already exists.\n"
 "If set to ''append'' then data is appended to the existing archive files.\n"
 "If set to ''overwrite'' then existing archive files are overwritten.\n"
 "Otherwise stop with an error if an archive file exists."
 msgstr ""
-"Fall \"umbenennen\" aktiviert ist, wird ein neuer Name bei existierenden "
+"Falls \"umbenennen\" aktiviert ist, wird ein neuer Name bei existierenden "
 "Dateien/Verzeichnisse erzeugt. Falls \"überschreiben\" aktiviert ist werden "
 "existierende Dateien/Verzeichnisse überschrieben. Andernfalls wird der "
 "Auftrag mit einem Fehler abgebrochen."
@@ -3404,10 +3390,9 @@ msgstr ""
 msgid "stop if exists"
 msgstr "abbrechen, wenn vorhanden"
 
-#: src/TabJobs.java:6791
-#, fuzzy
-msgid "rename"
-msgstr "Umbenennen"
+#: src/TabJobs.java:6791 src/TabRestore.java:9794
+msgid "rename if exists"
+msgstr "umbenennen, wenn vorhanden"
 
 #: src/TabJobs.java:6792 src/TabJobs.java:7802 src/TabJobs.java:8472
 msgid "append"
@@ -4469,7 +4454,7 @@ msgstr "Keine Zeit angegeben. Auftrag wirklich jede Minute ausführen?"
 #: src/TabJobs.java:15648
 msgid ""
 "The job may not be triggered if the specified day is not in the set of "
-"spedified weekdays.\n"
+"specified weekdays.\n"
 "Really keep this setting?"
 msgstr ""
 "Der Auftrag wird möglicherweise nicht ausgeführt, wenn der angegebene Tag "
@@ -4787,9 +4772,8 @@ msgid "Job"
 msgstr "Auftrag"
 
 #: src/TabRestore.java:4698
-#, fuzzy
 msgid "Entity"
-msgstr "Datensatz Kennung"
+msgstr "Eintrag"
 
 #: src/TabRestore.java:4729 src/TabRestore.java:5020 src/TabRestore.java:5368
 #: src/TabRestore.java:5843
@@ -4873,7 +4857,7 @@ msgid "Refresh index"
 msgstr "Indizes neu erstellen"
 
 #: src/TabRestore.java:6070
-msgid "Refresh all indizes with error"
+msgid "Refresh all indices with error"
 msgstr "Alle Indexeinträge mit Fehlerstatus neu erstellen"
 
 #: src/TabRestore.java:6084
@@ -4889,7 +4873,7 @@ msgid "Add to index"
 msgstr "Index hinzufügen"
 
 #: src/TabRestore.java:6215
-msgid "Remove all indizes with error"
+msgid "Remove all indices with error"
 msgstr "Indexeinträge mit Fehlerstatus löschen"
 
 #: src/TabRestore.java:6231 src/TabRestore.java:6818
@@ -5151,13 +5135,13 @@ msgstr ""
 "{0}"
 
 #: src/TabRestore.java:8470
-msgid "Refresh all indizes with error state?"
+msgid "Refresh all indices with error state?"
 msgstr "Alle Indexeinträge mit Fehlerstatus neu erstellen?"
 
 #: src/TabRestore.java:8487
 #, java-format
 msgid ""
-"Cannot refresh database indizes with error state!\n"
+"Cannot refresh database indices with error state!\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -5168,7 +5152,7 @@ msgstr ""
 #: src/TabRestore.java:8497
 #, java-format
 msgid ""
-"Communication error while refreshing database indizes\n"
+"Communication error while refreshing database indices\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -5201,7 +5185,7 @@ msgid "Select local storage directory"
 msgstr "Auswahl lokale Speicherpfad"
 
 #: src/TabRestore.java:8632
-msgid "Add indizes"
+msgid "Add indices"
 msgstr "Index hinzufügen"
 
 #: src/TabRestore.java:8643 src/TabRestore.java:8664
@@ -5249,7 +5233,7 @@ msgstr ""
 "{3,choice,0#Einträgen|1#Eintrag|1<Einträgen} entfernen?"
 
 #: src/TabRestore.java:8769
-msgid "Remove indizes"
+msgid "Remove indices"
 msgstr "Index löschen"
 
 #: src/TabRestore.java:8830
@@ -5270,7 +5254,7 @@ msgstr ""
 #: src/TabRestore.java:8864 src/TabRestore.java:9019 src/TabRestore.java:9048
 #, java-format
 msgid ""
-"Communication error while removing database indizes\n"
+"Communication error while removing database indices\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -5281,7 +5265,7 @@ msgstr ""
 #: src/TabRestore.java:8876 src/TabRestore.java:9031 src/TabRestore.java:9307
 #, java-format
 msgid ""
-"Connection error while removing database indizes\n"
+"Connection error while removing database indices\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -5292,7 +5276,7 @@ msgstr ""
 #: src/TabRestore.java:8917
 #, java-format
 msgid ""
-"Cannot get database indizes with error state!\n"
+"Cannot get database indices with error state!\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -5301,14 +5285,14 @@ msgstr ""
 "(Fehler: {0})"
 
 #: src/TabRestore.java:8925
-#, fuzzy, java-format
+#, java-format
 msgid "Remove {0} {0,choice,0#storages|1#storage|1<storages} with error state?"
 msgstr "{0} {0,choice,0#Indizes|1#Index|1<Indizes} mit Fehlerstatus löschen?"
 
 #: src/TabRestore.java:8985
 #, java-format
 msgid ""
-"Cannot remove database indizes with error state!\n"
+"Cannot remove database indices with error state!\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -5337,18 +5321,17 @@ msgstr ""
 "(Fehler: {0})"
 
 #: src/TabRestore.java:9186
-#, fuzzy, java-format
+#, java-format
 msgid ""
 "Delete {0} {0,choice,0#storage files|1#storage file|1<storage files} with "
 "{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})?"
 msgstr ""
-"Auftrag mit {0} {0,choice,0#Einträgen|1#Eintrag|1<Einträgen}/{1} ({2} "
+"{0} {0,choice,0#Dateien|1#Datei|1<Dateien}/{1} ({2} "
 "{2,choice,0#Bytes|1#Byte|1<Bytes}) löschen?"
 
 #: src/TabRestore.java:9195
-#, fuzzy
-msgid "Delete storage indizes and archives"
-msgstr "Wähle Archivedateiname aus"
+msgid "Delete storage indices and archives"
+msgstr "Archiveindex und -dateien löschen"
 
 #: src/TabRestore.java:9242
 #, java-format
@@ -5459,10 +5442,6 @@ msgstr ""
 "Dateien/Verzeichnisse erzeugt. Falls \"überschreiben\" aktiviert ist werden "
 "existierende Dateien/Verzeichnisse überschrieben. Andernfalls wird der "
 "Auftrag mit einem Fehler abgebrochen."
-
-#: src/TabRestore.java:9794
-msgid "rename if exists"
-msgstr "umbenennen, wenn vorhanden"
 
 #: src/TabRestore.java:9808
 msgid "Start restore"
@@ -5920,9 +5899,12 @@ msgstr "Anzahl"
 msgid "Average time"
 msgstr "Durchschnittliche Ausführungszeit"
 
-#: src/TabStatus.java:3234
-msgid "differental"
-msgstr "differentiell"
+#~ msgid "differental"
+#~ msgstr "differentiell"
+
+#, fuzzy
+#~ msgid "rename"
+#~ msgstr "Umbenennen"
 
 #~ msgid "show again"
 #~ msgstr "wieder anzeigen"

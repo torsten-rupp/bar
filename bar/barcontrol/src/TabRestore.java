@@ -6067,7 +6067,7 @@ Dprintf.dprintf("");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indizes with error")+"\u2026",Settings.hasNormalRole());
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh all indices with error")+"\u2026",Settings.hasNormalRole());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -6212,7 +6212,7 @@ Dprintf.dprintf("");
           }
         });
 
-        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indizes with error")+"\u2026",Settings.hasNormalRole());
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Remove all indices with error")+"\u2026",Settings.hasNormalRole());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -8467,7 +8467,7 @@ Dprintf.dprintf("");
   {
     try
     {
-      if (Dialogs.confirm(shell,BARControl.tr("Refresh all indizes with error state?")))
+      if (Dialogs.confirm(shell,BARControl.tr("Refresh all indices with error state?")))
       {
         {
           BARControl.waitCursor();
@@ -8484,7 +8484,7 @@ Dprintf.dprintf("");
         }
         catch (Exception exception)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state!\n\n(error: {0})",exception.getMessage()));
+          Dialogs.error(shell,BARControl.tr("Cannot refresh database indices with error state!\n\n(error: {0})",exception.getMessage()));
         }
         finally
         {
@@ -8494,7 +8494,7 @@ Dprintf.dprintf("");
     }
     catch (CommunicationError error)
     {
-      Dialogs.error(shell,BARControl.tr("Communication error while refreshing database indizes\n\n(error: {0})",error.toString()));
+      Dialogs.error(shell,BARControl.tr("Communication error while refreshing database indices\n\n(error: {0})",error.toString()));
     }
   }
 
@@ -8629,7 +8629,7 @@ Dprintf.dprintf("");
     if ((storagePath != null) && !storagePath.isEmpty())
     {
       final BusyDialog busyDialog = new BusyDialog(shell,
-                                                   BARControl.tr("Add indizes"),
+                                                   BARControl.tr("Add indices"),
                                                    500,200,
                                                    (String)null,
                                                    BusyDialog.PROGRESS_BAR0|BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
@@ -8766,7 +8766,7 @@ Dprintf.dprintf("");
         )
       {
         final BusyDialog busyDialog = new BusyDialog(shell,
-                                                     BARControl.tr("Remove indizes"),
+                                                     BARControl.tr("Remove indices"),
                                                      500,
                                                      100,
                                                      (String)null,
@@ -8861,7 +8861,7 @@ Dprintf.dprintf("");
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",error.getMessage()));
+                  Dialogs.error(shell,BARControl.tr("Communication error while removing database indices\n\n(error: {0})",error.getMessage()));
                  }
               });
             }
@@ -8873,7 +8873,7 @@ Dprintf.dprintf("");
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",error.getMessage()));
+                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indices\n\n(error: {0})",error.getMessage()));
                  }
               });
             }
@@ -8898,7 +8898,7 @@ Dprintf.dprintf("");
   {
     try
     {
-      // get number of indizes with error state
+      // get number of indices with error state
       long errorTotalStorageCount;
       try
       {
@@ -8914,7 +8914,7 @@ Dprintf.dprintf("");
           @Override
           public void run()
           {
-            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state!\n\n(error: {0})",exception.getMessage()));
+            Dialogs.error(shell,BARControl.tr("Cannot get database indices with error state!\n\n(error: {0})",exception.getMessage()));
           }
         });
         return;
@@ -8942,7 +8942,7 @@ Dprintf.dprintf("");
                 final String[] errorMessage = new String[1];
                 ValueMap       valueMap     = new ValueMap();
 
-                // remove indizes with error state
+                // remove indices with error state
                 Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR",
                                                        0  // debug level
                                                       );
@@ -8982,7 +8982,7 @@ Dprintf.dprintf("");
                     public void run()
                     {
                       busyDialog.close();
-                      Dialogs.error(shell,BARControl.tr("Cannot remove database indizes with error state!\n\n(error: {0})",errorMessage[0]));
+                      Dialogs.error(shell,BARControl.tr("Cannot remove database indices with error state!\n\n(error: {0})",errorMessage[0]));
                     }
                   });
 
@@ -9016,7 +9016,7 @@ Dprintf.dprintf("");
                   public void run()
                   {
                     busyDialog.close();
-                    Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",error.getMessage()));
+                    Dialogs.error(shell,BARControl.tr("Communication error while removing database indices\n\n(error: {0})",error.getMessage()));
                    }
                 });
               }
@@ -9028,7 +9028,7 @@ Dprintf.dprintf("");
                   public void run()
                   {
                     busyDialog.close();
-                    Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",error.getMessage()));
+                    Dialogs.error(shell,BARControl.tr("Connection error while removing database indices\n\n(error: {0})",error.getMessage()));
                    }
                 });
               }
@@ -9045,7 +9045,7 @@ Dprintf.dprintf("");
     }
     catch (CommunicationError error)
     {
-      Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",error.toString()));
+      Dialogs.error(shell,BARControl.tr("Communication error while removing database indices\n\n(error: {0})",error.toString()));
     }
   }
 
@@ -9192,7 +9192,7 @@ Dprintf.dprintf("");
          )
       {
         final BusyDialog busyDialog = new BusyDialog(shell,
-                                                     BARControl.tr("Delete storage indizes and archives"),
+                                                     BARControl.tr("Delete storage indices and archives"),
                                                      500,
                                                      150,
                                                      (String)null,
@@ -9304,7 +9304,7 @@ Dprintf.dprintf("");
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",error.getMessage()));
+                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indices\n\n(error: {0})",error.getMessage()));
                  }
               });
             }
