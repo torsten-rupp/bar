@@ -382,7 +382,7 @@ public class Settings
       }
       while (servers.size() > MAX_SERVER_HISTORY)
       {
-        servers.remove(0);
+        servers.remove(servers.iterator().next());
       }
 
       return servers;
@@ -581,7 +581,7 @@ public class Settings
    */
   public static boolean isModified()
   {
-    return SettingUtils.isExternalModified(new File(configFileName));
+    return SettingUtils.isModified();
   }
 
   /** get server
