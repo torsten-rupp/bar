@@ -278,6 +278,7 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SE
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = CMD_VALUE_SELECT_ARRAY
 (
   {"stop",      ARCHIVE_FILE_MODE_STOP,      "stop if archive file exists"      },
+  {"rename",    ARCHIVE_FILE_MODE_RENAME,    "rename if archive file exists"    },
   {"append",    ARCHIVE_FILE_MODE_APPEND,    "append to existing archive files" },
   {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE, "overwrite existing archive files" },
 );
@@ -372,6 +373,7 @@ const ConfigValueSet CONFIG_VALUE_LOG_TYPES[] = CONFIG_VALUE_SET_ARRAY
 const ConfigValueSelect CONFIG_VALUE_ARCHIVE_FILE_MODES[] = CONFIG_VALUE_SELECT_ARRAY
 (
   {"stop",      ARCHIVE_FILE_MODE_STOP      },
+  {"rename",    ARCHIVE_FILE_MODE_RENAME    },
   {"append",    ARCHIVE_FILE_MODE_APPEND    },
   {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE },
 );

@@ -5003,6 +5003,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   StorageMsg       storageMsg;
   Errors           error;
   String           printableStorageName;
+  String           directoryName;
   FileInfo         fileInfo;
   Server           server;
   FileHandle       fileHandle;
@@ -5010,10 +5011,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   uint64           storageSize;
   bool             appendFlag;
   StorageHandle    storageHandle;
-//  ulong            bufferLength;
   String           pattern;
 
-  String           directoryName;
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
   IndexId          existingEntityId;
@@ -5104,6 +5103,61 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     if (!createInfo->storageFlags.dryRun)
     {
+      // get file info
+      error = File_getInfo(&fileInfo,storageMsg.fileName);
+      if (error != ERROR_NONE)
+      {
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+        printError("Cannot get information for file '%s' (error: %s)",
+                   String_cString(storageMsg.fileName),
+                   Error_getText(error)
+                  );
+
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        break;
+      }
+      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
+
+      // check if exist, auto-rename if requested
+      if (   (createInfo->storageInfo.jobOptions != NULL)
+          && (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_RENAME)
+          && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName)
+         )
+      {
+        // rename new entry
+        String prefixFileName  = String_new();
+        String postfixFileName = String_new();
+        long index = String_findLastChar(storageMsg.archiveName,STRING_END,'.');
+        if (index >= 0)
+        {
+          String_sub(prefixFileName,storageMsg.archiveName,STRING_BEGIN,index);
+          String_sub(postfixFileName,storageMsg.archiveName,index,STRING_END);
+        }
+        else
+        {
+          String_set(prefixFileName,storageMsg.archiveName);
+        }
+        String_set(storageMsg.archiveName,prefixFileName);
+        Misc_formatDateTime(storageMsg.archiveName,fileInfo.timeModified,"-%H:%M:%S");
+        String_append(storageMsg.archiveName,postfixFileName);
+        if (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName))
+        {
+          uint n = 0;
+          do
+          {
+            String_set(storageMsg.archiveName,prefixFileName);
+            Misc_formatDateTime(storageMsg.archiveName,fileInfo.timeModified,"-%H:%M:%S");
+            String_appendFormat(storageMsg.archiveName,"-%u",n);
+            String_append(storageMsg.archiveName,postfixFileName);
+            n++;
+          }
+          while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
+        }
+        String_delete(postfixFileName);
+        String_delete(prefixFileName);
+      }
+
       // get printable storage name
       Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
@@ -5115,22 +5169,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         printError("Cannot pre-process file '%s' (error: %s)!",
                    String_cString(printableStorageName),
-                   Error_getText(error)
-                  );
-
-        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        break;
-      }
-      DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
-
-      // get file info
-      error = File_getInfo(&fileInfo,storageMsg.fileName);
-      if (error != ERROR_NONE)
-      {
-        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-
-        printError("Cannot get information for file '%s' (error: %s)",
-                   String_cString(storageMsg.fileName),
                    Error_getText(error)
                   );
 

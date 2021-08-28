@@ -2205,7 +2205,7 @@ public class TabJobs
   private WidgetVariable  storageLoginPassword      = new WidgetVariable<String> ("","");
   private WidgetVariable  storageDeviceName         = new WidgetVariable<String> ("","");
   private WidgetVariable  storageFileName           = new WidgetVariable<String> ("","");
-  private WidgetVariable  archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","overwrite","append"},"stop");
+  private WidgetVariable  archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","rename","overwrite","append"},"stop");
   private WidgetVariable  sshPublicKeyFileName      = new WidgetVariable<String> ("ssh-public-key","");
   private WidgetVariable  sshPrivateKeyFileName     = new WidgetVariable<String> ("ssh-private-key","");
   private WidgetVariable  maxBandWidthFlag          = new WidgetVariable<Boolean>(false);
@@ -3276,7 +3276,6 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-Dprintf.dprintf("_");
               openAllIncludedDirectories();
             }
           });
@@ -6787,10 +6786,11 @@ Dprintf.dprintf("_");
               Widgets.layout(label,0,0,TableLayoutData.W);
 
               combo = Widgets.newOptionMenu(subComposite);
-              combo.setToolTipText(BARControl.tr("If set to 'append' then append data to existing archive files.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if archive file exists."));
-              Widgets.setComboItems(combo,new Object[]{BARControl.tr("stop if exists"),"stop",
-                                                       BARControl.tr("append"        ),"append",
-                                                       BARControl.tr("overwrite"     ),"overwrite",
+              combo.setToolTipText(BARControl.tr("If set to ''rename'' then the archive is renamed if it already exists.\nIf set to ''append'' then data is appended to the existing archive files.\nIf set to ''overwrite'' then existing archive files are overwritten.\nOtherwise stop with an error if an archive file exists."));
+              Widgets.setComboItems(combo,new Object[]{BARControl.tr("stop if exists"  ),"stop",
+                                                       BARControl.tr("rename if exists"),"rename",
+                                                       BARControl.tr("append"          ),"append",
+                                                       BARControl.tr("overwrite"       ),"overwrite",
                                                       }
                                    );
               Widgets.layout(combo,0,1,TableLayoutData.W);
