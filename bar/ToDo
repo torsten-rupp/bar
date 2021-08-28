@@ -172,6 +172,12 @@ rest time
 - option --no-auto-pairing
 - slave: send log file mail on master
 - BARControl: list index without header/footer lines
+- Tab Jobs, Job Dropdown: sort entries
+- job option: do not schedule missed job executions
+- schedule log: detail reason for start, e. g. missed, manual, auto
+- bar-sqlite3: verbose by default, option --quiet
+- check: schedule change work with new time?
+- continuous jobs: option to discard backup changed files in case of an error
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok

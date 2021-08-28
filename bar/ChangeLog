@@ -1,10 +1,12 @@
-2020-12-31 0.22
+2020-xx-xx 0.22
   * added option --save-configuration: format and
     save configuration file
   * fixed reading cryption keys via config file
   * fixed CD/DVD/BD blank command: use
     "dvd+rw-format -force" to create medium in
     restricted overwrite mode
+  * parallel restore
+  * use thread-pool
   * upgrade bzip2 1.0.8
   * upgrade MMXL 3.2
   * upgrade zStandard 1.4.8
