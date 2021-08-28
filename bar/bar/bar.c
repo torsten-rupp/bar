@@ -1662,6 +1662,7 @@ void logPostProcess(LogHandle        *logHandle,
         error = Misc_executeCommand(globalOptions.logPostCommand,
                                     textMacros.data,
                                     textMacros.count,
+                                    NULL,  // commandLine
                                     CALLBACK_(NULL,NULL),
                                     CALLBACK_(executeIOlogPostProcess,&stderrList)
                                    );
