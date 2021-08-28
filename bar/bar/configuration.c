@@ -1602,7 +1602,6 @@ LOCAL void initGlobalOptions(void)
   globalOptions.barExecutable                                   = String_new();
   globalOptions.niceLevel                                       = 0;
   globalOptions.maxThreads                                      = 0;
-//  globalOptions.tmpDirectory                                    = String_newCString(DEFAULT_TMP_DIRECTORY);
   globalOptions.tmpDirectory                                    = File_getSystemDirectory(String_new(),FILE_SYSTEM_PATH_TMP,NULL);
   globalOptions.maxTmpSize                                      = 0LL;
   globalOptions.jobsDirectory                                   = File_getSystemDirectoryCString(String_new(),FILE_SYSTEM_PATH_CONFIGURATION,DEFAULT_JOBS_SUB_DIRECTORY);
@@ -2628,13 +2627,13 @@ LOCAL bool configValueConfigFileParse(void *userData, void *variable, const char
 }
 
 /***********************************************************************\
-* Name   : configValueFormatMaintenanceDate
-* Purpose: format maintenance config statement
+* Name   : configValueConfigFileFormat
+* Purpose: format config statement
 * Input  : formatUserData  - format user data
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -2757,7 +2756,7 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -2878,7 +2877,7 @@ LOCAL bool configValueMaintenanceWeekDaySetParse(void *userData, void *variable,
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -3006,7 +3005,7 @@ LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -3514,7 +3513,7 @@ LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const ch
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -3635,7 +3634,7 @@ LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, co
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -3763,7 +3762,7 @@ LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const ch
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -3881,7 +3880,7 @@ LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, co
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -3990,7 +3989,7 @@ LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, co
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -4099,7 +4098,7 @@ LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, con
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -4380,8 +4379,9 @@ ulong getBandWidth(BandWidthList *bandWidthList)
                      &currentDay,
                      &currentHour,
                      &currentMinute,
-                     NULL,
-                     &currentWeekDay
+                     NULL,  // second
+                     &currentWeekDay,
+                     NULL  // isDayLightSaving
                     );
 
   // find best matching band width node
@@ -4551,7 +4551,7 @@ LOCAL bool configValuePasswordParse(void *userData, void *variable, const char *
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -4694,7 +4694,7 @@ LOCAL bool configValueCryptAlgorithmsParse(void *userData, void *variable, const
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -4808,7 +4808,7 @@ LOCAL bool configValueBandWidthParse(void *userData, void *variable, const char 
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
@@ -4988,7 +4988,7 @@ LOCAL bool configValueOwnerParse(void *userData, void *variable, const char *nam
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
@@ -5125,7 +5125,7 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
@@ -5267,7 +5267,7 @@ LOCAL bool configValueImageEntryPatternParse(void *userData, void *variable, con
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
@@ -5473,7 +5473,7 @@ LOCAL bool configValuePatternParse(void *userData, void *variable, const char *n
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
@@ -5627,7 +5627,7 @@ LOCAL bool configValueMountParse(void *userData, void *variable, const char *nam
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
@@ -5746,7 +5746,7 @@ LOCAL bool configValueDeltaSourceParse(void *userData, void *variable, const cha
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Notes  : -
 \***********************************************************************/
@@ -5956,7 +5956,7 @@ LOCAL bool configValueCompressAlgorithmsParse(void *userData, void *variable, co
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -6125,7 +6125,7 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -6298,7 +6298,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -6599,7 +6599,7 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
 *          operation       - format operation
 *          data            - operation data
 *          userData        - user data
-* Output : line - formated line
+* Output : formatUserData - format user data
 * Return : TRUE if config statement formated, FALSE if end of data
 * Return : -
 * Notes  : -
@@ -8232,8 +8232,10 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ,"<text>"),
 
+  CONFIG_VALUE_SPACE(),
+
   CONFIG_VALUE_SEPARATOR("schedules"),
-  CONFIG_VALUE_SECTION_ARRAY("schedule",NULL,-1,NULL,NULL,
+  CONFIG_STRUCT_VALUE_SECTION_ARRAY("schedule",JobNode,job.options.scheduleList,ConfigValue_listSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ,"<uuid>"),
     CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ,"<uuid>"),
     CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueScheduleDateParse,configValueScheduleDateFormat,NULL),
@@ -8252,7 +8254,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   ),
 
   CONFIG_VALUE_SEPARATOR("persistence"),
-  CONFIG_VALUE_SECTION_ARRAY("persistence",NULL,-1,NULL,NULL,
+  CONFIG_STRUCT_VALUE_SECTION_ARRAY("persistence",JobNode,job.options.persistenceList,ConfigValue_listSectionDataIterator,NULL,
     CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValuePersistenceMinKeepParse,configValuePersistenceMinKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValuePersistenceMaxKeepParse,configValuePersistenceMaxKeepFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValuePersistenceMaxAgeParse,configValuePersistenceMaxAgeFormat,NULL),
@@ -9291,7 +9293,7 @@ Errors Configuration_update(void)
     return ERROR_NO_WRITABLE_CONFIG;
   }
 
-  error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES);
+  error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL);
   if (error != ERROR_NONE)
   {
     logMessage(NULL,  // logHandle
