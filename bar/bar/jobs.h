@@ -720,6 +720,7 @@ INLINE bool __Job_listLock(const char         *__fileName__,
 {
   bool locked;
 
+//fprintf(stderr,"%s:%d: joblist wait\n",__fileName__,__lineNb__);
   #ifndef NDEBUG
     locked = __Semaphore_lock(__fileName__,__lineNb__,&jobList.lock,semaphoreLockType,timeout);
   #else /* not NDEBUG */
@@ -729,6 +730,7 @@ INLINE bool __Job_listLock(const char         *__fileName__,
   #ifndef NDEBUG
     if (locked)
     {
+//fprintf(stderr,"%s:%d: joblist locked\n",__fileName__,__lineNb__);
       jobList.lockTimestamp = Misc_getTimestamp();
       #ifdef HAVE_BACKTRACE
         jobList.lockStackTraceSize = backtrace((void*)jobList.lockStackTrace,SIZE_OF_ARRAY(jobList.lockStackTrace));
@@ -786,6 +788,7 @@ INLINE void __Job_listUnlock(const char *__fileName__,
     }
   #endif /* NDEBUG */
 
+//fprintf(stderr,"%s:%d: joblist unlocked\n",__fileName__,__lineNb__);
   #ifndef NDEBUG
     __Semaphore_unlock(__fileName__,__lineNb__,&jobList.lock);
   #else /* not NDEBUG */
@@ -1344,7 +1347,7 @@ Errors Job_rereadAll(ConstString jobsDirectory);
 Errors Job_write(JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_writeModifiedAll
+* Name   : Job_writeAllModified
 * Purpose: write (update) modified job files
 * Input  : -
 * Output : -
@@ -1352,7 +1355,7 @@ Errors Job_write(JobNode *jobNode);
 * Notes  : update jobList
 \***********************************************************************/
 
-void Job_writeModifiedAll(void);
+void Job_writeAllModified(void);
 
 /***********************************************************************\
 * Name   : Job_setModified

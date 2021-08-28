@@ -1885,7 +1885,8 @@ bool Job_read(JobNode *jobNode)
                                 printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
                               }),NULL,
                               scheduleNode,
-  NULL // commentLineList
+// TODO:
+NULL // commentLineList
                              );
           }
           else
@@ -1910,7 +1911,6 @@ bool Job_read(JobNode *jobNode)
       if (String_isEmpty(scheduleNode->uuid))
       {
         Misc_getUUID(scheduleNode->uuid);
-        jobNode->modifiedFlag = TRUE;
       }
 
       // get schedule info (if possible)
@@ -1998,7 +1998,7 @@ bool Job_read(JobNode *jobNode)
                                   printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
                                 }),NULL,
                                 persistenceNode,
-  NULL // commentLineList
+NULL // commentLineList
                                );
             }
             else
@@ -2092,7 +2092,7 @@ bool Job_read(JobNode *jobNode)
                             printWarning("%s in %S, line %ld: '%s'",warningMessage,jobNode->fileName,lineNb,String_cString(line));
                           }),NULL,
                           jobNode,
-  NULL // commentLineList
+NULL // commentLineList
                          );
       }
       else
@@ -2119,6 +2119,8 @@ bool Job_read(JobNode *jobNode)
   // close file
   (void)File_close(&fileHandle);
   jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
+
+  // check if failed
   if (failFlag)
   {
     return FALSE;
@@ -2128,7 +2130,6 @@ bool Job_read(JobNode *jobNode)
   if (String_isEmpty(jobNode->job.uuid))
   {
     Misc_getUUID(jobNode->job.uuid);
-    jobNode->modifiedFlag = TRUE;
   }
 
   // read schedule info (ignore errors)
@@ -2179,35 +2180,45 @@ Errors Job_rereadAll(ConstString jobsDirectory)
     {
       SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        // find/create job
         jobNode = Job_find(baseName);
         if (jobNode == NULL)
         {
-          // create new job
+          // create and read new job
           jobNode = Job_new(JOB_TYPE_CREATE,
                             baseName,
                             NULL, // jobUUID
                             fileName
                            );
           assert(jobNode != NULL);
-          List_append(&jobList,jobNode);
 
-          // notify about changes
-          Job_listChanged();
-        }
-
-        if (   !Job_isActive(jobNode->jobState)
-            && (File_getFileTimeModified(fileName) > jobNode->fileModified)
-           )
-        {
-          // read job
           (void)Job_read(jobNode);
+          List_append(&jobList,jobNode);
 
           // notify about changes
           Job_includeExcludeChanged(jobNode);
           Job_mountChanged(jobNode);
           Job_scheduleChanged(jobNode);
           Job_persistenceChanged(jobNode);
+
+          // notify about changes
+          Job_listChanged();
+        }
+        else
+        {
+          // re-read existing job if not active and file is modified
+          if (   !Job_isActive(jobNode->jobState)
+              && (File_getFileTimeModified(fileName) > jobNode->fileModified)
+             )
+          {
+            // read job
+            (void)Job_read(jobNode);
+
+            // notify about changes
+            Job_includeExcludeChanged(jobNode);
+            Job_mountChanged(jobNode);
+            Job_scheduleChanged(jobNode);
+            Job_persistenceChanged(jobNode);
+          }
         }
       }
     }
@@ -2273,6 +2284,8 @@ Errors Job_rereadAll(ConstString jobsDirectory)
 
 Errors Job_write(JobNode *jobNode)
 {
+// TODO:remove
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 #if 0
   StringList            jobLinesList;
   String                line;
@@ -2430,7 +2443,8 @@ Errors Job_write(JobNode *jobNode)
         break;
     }
 
-    error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES);
+    // write config
+    error = ConfigValue_writeConfigFile(jobNode->fileName,JOB_CONFIG_VALUES,jobNode);
     if (error != ERROR_NONE)
     {
       logMessage(NULL,  // logHandle
@@ -2465,7 +2479,7 @@ Errors Job_write(JobNode *jobNode)
   return ERROR_NONE;
 }
 
-void Job_writeModifiedAll(void)
+void Job_writeAllModified(void)
 {
   JobNode *jobNode;
   Errors  error;
