@@ -318,6 +318,8 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
 
   createInfo->logHandle                            = logHandle;
 
+  Dictionary_init(&createInfo->namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
   createInfo->storeIncrementalFileInfoFlag         = FALSE;
 
   createInfo->collectorSumThreadExitedFlag         = FALSE;
@@ -410,6 +412,8 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
   doneStatusInfo(&createInfo->statusInfo);
   FragmentList_done(&createInfo->statusInfoFragmentList);
   StringList_done(&createInfo->storageFileList);
+
+  Dictionary_done(&createInfo->namesDictionary);
 }
 
 /***********************************************************************\
@@ -1963,7 +1967,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         }
         else
         {
-          File_setFileNameChar(basePath,FILE_PATHNAME_SEPARATOR_CHAR);
+          File_setFileNameChar(basePath,FILE_PATH_SEPARATOR_CHAR);
         }
       }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
@@ -2993,7 +2997,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         }
         else
         {
-          File_setFileNameChar(basePath,FILE_PATHNAME_SEPARATOR_CHAR);
+          File_getSystemDirectory(basePath,FILE_SYSTEM_PATH_ROOT,NULL);
         }
       }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
@@ -8105,10 +8109,6 @@ Errors Command_create(ServerIO                     *masterIO,
       || !String_isEmpty(jobOptions->incrementalListFileName)
      )
   {
-    // init names dictionary
-    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-    AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary); });
-
     // get increment list file name
     incrementalListFileName = String_new();
     if (!String_isEmpty(jobOptions->incrementalListFileName))
@@ -8545,7 +8545,6 @@ Errors Command_create(ServerIO                     *masterIO,
   if (useIncrementalFileInfoFlag)
   {
     String_delete(incrementalListFileName);
-    Dictionary_done(&createInfo.namesDictionary);
   }
   doneCreateInfo(&createInfo);
   Index_close(indexHandle);
