@@ -1,235 +1,684 @@
-# ----------------------------------------------------------------------------
 #
-# $Source: /home/torsten/cvs/bar/Makefile.in,v $
 # $Revision$
+# $Date$
 # $Author$
 # Contents: Makefile for bar
 # Systems: all
 #
 # ----------------------------------------------------------------------------
 
-#----------------------------- external variables ----------------------------
-#
-# DESTDIR=<path>    install destination directory
-# DIST=1            install for creating distribution packages
-
 #---------------------------------- settings ---------------------------------
 
-ENABLE_DEBUG    = @ENABLE_DEBUG@
-ENABLE_GUI      = @ENABLE_GUI@
+PLATFORM                = @PLATFORM@
 
-PLATFORM        = @PLATFORM@
+VALGRIND_ERROR_EXITCODE = 123
+TESTCODE_EXITCODE       = 124
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR             = $(abspath @srcdir@)
-
-ETC_DIR                = /etc
+BASE_DIR           = $(CURDIR)
+SOURCE_DIR         = $(abspath @srcdir@)
+CONFIG_DIR         = @CONFIG_DIR@
+TLS_DIR            = @TLS_DIR@
 
 ifeq ($(DESTDIR),)
-INSTALL_DIR            = $(if $(prefix),$(prefix),@INSTALL_DIR@)
-INSTALL_BIN_DIR        = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
-INSTALL_LIB_DIR        = $(if $(libdir),$(libdir),/usr/lib)
-INSTALL_LOCALE_DIR     = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
-INSTALL_ETC_DIR        = $(if $(sysconfdir),$(sysconfdir),$(ETC_DIR))
-#INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
-INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/init.d
-INSTALL_LOGROTATED_DIR = $(INSTALL_ETC_DIR)/logrotate.d
-INSTALL_CONFIG_DIR     = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
-INSTALL_MAN_DIR        = $(if $(mandir),$(mandir),@MAN_DIR@)
+INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
+INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
+INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
+INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
+INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
+INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
 else
-INSTALL_DIR            = @INSTALL_DIR@
-INSTALL_BIN_DIR        = @INSTALL_BIN_DIR@
-INSTALL_LIB_DIR        = /usr/lib
-INSTALL_LOCALE_DIR     = @LOCALE_DIR@
-INSTALL_ETC_DIR        = $(ETC_DIR)
-#INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
-INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/init.d
-INSTALL_LOGROTATED_DIR = $(INSTALL_ETC_DIR)/logrotate.d
-INSTALL_CONFIG_DIR     = @CONFIG_DIR@
-INSTALL_MAN_DIR        = @MAN_DIR@
+INSTALL_DIR        = @INSTALL_DIR@
+INSTALL_BIN_DIR    = @INSTALL_BIN_DIR@
+INSTALL_LOCALE_DIR = @LOCALE_DIR@
+INSTALL_ETC_DIR    = /etc
+INSTALL_CONFIG_DIR = @CONFIG_DIR@
+INSTALL_MAN_DIR    = @MAN_DIR@
 endif
-INSTALL_TLS_DIR        = @TLS_DIR@
+INSTALL_TLS_DIR    = @TLS_DIR@
+
+TEST_DATA_DIR      ?= test
+
+WINE_C_DRIVE       = @WINE_C_DRIVE@
 
 #--------------------------------- tool chain --------------------------------
 
-CERTTOOL         = @CERTTOOL@
-OPENSSL          = @OPENSSL@
-KEYTOOL          = @KEYTOOL@
+# shell in Makefile must be bash
+SHELL                      = bash
 
-DOCKER_RUN_FLAGS = run -i -t
+CTAGS_FLAGS                =
 
-TXT2MAN          = @TXT2MAN@
-UNOCONV          = @UNOCONV@
+CC                         = @CC@
+CC_FLAGS                   = @CC_FLAGS@ -g
+CC_WARN_FLAGS              = @CC_WARN_FLAGS@
+CXX                        = @CXX@
+CXX_FLAGS                  = @CXX_FLAGS@ -g
+CXX_WARN_FLAGS             = @CXX_WARN_FLAGS@
+CC_FLAGS_RELEASE           = @CC_FLAGS_RELEASE@
+CC_FLAGS_DEBUG             = @CC_FLAGS_DEBUG@ -finstrument-functions
+CC_FLAGS_VALGRIND          = @CC_FLAGS_DEBUG@
+#-fno-sanitize-recover=all -fstack-protector-all -fsanitize=undefined
+CC_FLAGS_OPTIMIZE          = @CC_FLAGS_OPTIMIZE@
+CC_FLAGS_OPTIMIZE_RELEASE  = @CC_FLAGS_OPTIMIZE_RELEASE@
+CC_FLAGS_OPTIMIZE_DEBUG    = @CC_FLAGS_OPTIMIZE_DEBUG@
+CC_FLAGS_OPTIMIZE_VALGRIND = @CC_FLAGS_OPTIMIZE_DEBUG@
+CC_FLAGS_GCOV              = @CC_FLAGS_GCOV@ -DGCOV -fprofile-arcs -ftest-coverage
+CC_FLAGS_GPROF             = @CC_FLAGS_GPROF@ -DGPROF -pg
+CC_FLAGS_VALGRIND          = @CC_FLAGS_VALGRIND@ -fno-builtin
+CC_DEFINES                 = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
+CC_DEFINES_RELEASE         = @CC_DEFINES_RELEASE@
+CC_DEFINES_DEBUG           = @CC_DEFINES_DEBUG@
+# -D_LONG_LONG
+CC_INCLUDES                = . @CC_INCLUDES@ extern $(SOURCE_DIR)
+ifdef WERROR
+  CC_FLAGS   += -Werror
+  CC_DEFINES += WERROR
+endif
 
-SVNVERSION       = svnversion
+LD                         = $(if @CXX@,@CXX@,@CC@)
+LD_FLAGS                   = @LD_FLAGS@
+LD_FLAGS_RELEASE           = @LD_FLAGS_RELEASE@
+LD_FLAGS_DEBUG             = @LD_FLAGS_DEBUG@ -Wl,-wrap,pthread_create
+ifneq (@HEAPVIEW_DIR@,)
+LD_FLAGS_DEBUG             += -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
+else
+LD_FLAGS_DEBUG             +=
+endif
+LD_FLAGS_GCOV              = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -fprofile-arcs
+LD_FLAGS_GPROF             = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -pg
+LD_FLAGS_VALGRIND          = @LD_FLAGS_VALGRIND@
+LD_LIBRARY_PATHS           = @LIBRARY_PATHS@
+ifneq (@HEAPVIEW_DIR@,)
+  LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
+endif
+LD_LIBRARIES               = @LIBRARIES@
+LD_STATIC_LIBRARIES        = @STATIC_LIBRARIES@
+ifneq (@HEAPVIEW_DIR@,)
+  LD_STATIC_LIBRARIES += HeapView
+endif
+LD_STATIC_PREFIX           = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
+
+WINDOWS_DLLS               = /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libgcc_s_sjlj-1.dll \
+                             /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libstdc++-6.dll \
+                             /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
+
+ifneq ($(SANITIZER),)
+  CC_FLAGS_DEBUG += -fno-sanitize-recover=all -fstack-protector-all
+  ifeq ($(SANITIZER),address)
+    CC_FLAGS_DEBUG += -fsanitize=address
+    LD_FLAGS       += -static-libasan
+    LD_LIBRARIES   += asan
+  else ifeq ($(SANITIZER),leak)
+    CC_FLAGS_DEBUG += -fsanitize=leak
+    LD_FLAGS       += -static-liblsan
+    LD_LIBRARIES   += lsan
+  else ifeq ($(SANITIZER),thread)
+    CC_FLAGS_DEBUG += -fsanitize=thread
+    LD_FLAGS       += -static-libtsan
+    LD_LIBRARIES   += tsan
+  else ifeq ($(SANITIZER),undefined)
+    CC_FLAGS_DEBUG += -fsanitize=undefined
+    LD_FLAGS       += -static-libubsan
+    LD_LIBRARIES   += ubsan
+  else ifeq ($(SANITIZER),help)
+    $(error available sanitizers: address, leak, thread, undefined)
+  else
+    $(warning available sanitizers: address, leak, thread, undefined)
+    $(error ERROR: unknown sanitizer function '$(SANITIZER)')
+  endif
+endif
+
+STRIP                      = @STRIP@
+OBJDUMP                    = @OBJDUMP@
+OBJCOPY                    = @OBJCOPY@
+
+XGETTEXT                   = @XGETTEXT@
+XGETTEXT_FLAGS             = -L C -k -ktr
+MSGMERGE                   = @MSGMERGE@
+MSGFMT                     = @MSGFMT@
+
+SVNVERSION                 = @SVNVERSION@
+
+DUMP_SYMS                  = @DUMP_SYMS@
 
 #---------------------------------- commands----------------------------------
 
-CAT          = cat
-CD           = cd
-CHMOD        = chmod
-CONVERT      = convert
-CP           = cp
-DIFF         = diff
-DOCKER       = @DOCKER@
-ECHO         = echo
-ECHO_NO_LF   = echo -n
-EPM          = @EPM@
-GREP         = grep
-INSTALL      = @INSTALL@
-LN           = ln
-MD5SUM       = @MD5SUM@
-MKDIR        = mkdir
-MV           = mv
-NROFF        = nroff
-PERL         = @PERL@
-PRINTF       = printf
-RMDIR        = rmdir
-RMF          = rm -f
-RMRF         = rm -rf
-SED          = sed
-TAR          = tar
-WINE         = @WINE@
-WINE_C_DRIVE = @WINE_C_DRIVE@
-ZIP          = zip
+ATTR            = @ATTR@
+BC              = bc
+BZIP2           = bzip2
+CAT             = cat
+CD              = cd
+CHATTR          = chattr
+CHMOD           = chmod
+CP              = cp
+CTAGS           = ctags
+CUT             = cut
+DD              = dd
+DDD             = ddd
+DIFF            = diff
+ECHO            = echo
+ECHO_NO_LF      = echo -n
+FIND            = find
+GDB             = gdb
+GREP            = grep
+GETFATTR        = @GETFATTR@
+INSTALL         = @INSTALL@
+KILL            = kill
+KILLALL         = killall
+LN              = ln
+LS              = ls
+MKDIR           = mkdir
+MKFIFO          = mkfifo
+MKTEMP          = mktemp
+NETCAT          = netcat
+PERL            = @PERL@
+READLINK        = readlink
+RMDIR           = rmdir
+RMF             = rm -f
+RMRF            = rm -rf
+SCP             = scp
+SED             = sed
+SETFATTR        = @SETFATTR@
+SLEEP           = sleep
+SSH             = ssh
+SSHPASS         = sshpass
+SORT            = sort
+STAT            = stat
+SUDO            = sudo
+TAIL            = tail
+TAR             = tar
+TIME            = @TIME@
+TIMEOUT         = timeout
+TOUCH           = touch
+ULIMIT          = ulimit
+WINE            = @WINE@
+XARGS           = xargs
+
+LCOV            = @LCOV@
+GENHTML         = @GENHTML@
+
+VALGRIND        = valgrind
+VALGRIND_FLAGS  = --gen-suppressions=no --track-origins=yes  --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
+CALLGRIND_FLAGS = -v
 
 #------------------------ specific variables/settings ------------------------
 
-SHELL = bash
-
-VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+# major, minor version number
+VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
 VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
+ifneq ($(SVNVERSION),)
+  VERSION_REPOSITORY := $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
+else
+  VERSION_REPOSITORY := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+endif
 
-CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
-COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
+# supported min. compress algorithms
+ifeq ($(MIN_COMPRESS_NAMES),)
+  MIN_COMPRESS_NAMES = none
+  MIN_COMPRESS_NAMES += zip9
+  ifeq (@HAVE_BZ2@,1)
+    MIN_COMPRESS_NAMES += bzip9
+  endif
+  ifeq (@HAVE_LZMA@,1)
+    MIN_COMPRESS_NAMES += lzma9
+  endif
+  ifeq (@HAVE_LZO@,1)
+    MIN_COMPRESS_NAMES += lzo5
+  endif
+  ifeq (@HAVE_LZ4@,1)
+    MIN_COMPRESS_NAMES += lz4-9
+  endif
+  ifeq (@HAVE_ZSTD@,1)
+    MIN_COMPRESS_NAMES += zstd19
+  endif
+endif
 
-CRYPT    = none
-COMPRESS = none
+# supported min. crypt algorithms
+MIN_CRYPT_NAMES  = none
+ifeq (@HAVE_GCRYPT@,1)
+  MIN_CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES256 TWOFISH256 SERPENT256 CAMELLIA256
+endif
 
-PACKAGE_NAME           = backup-archiver
-PACKAGE_NAME_GUI       = backup-archiver-gui
-DISTRIBUTION_NAME      = $(PACKAGE_NAME)-$(VERSION)
-DISTRIBUTION_NAME_ORIG = $(PACKAGE_NAME)_$(VERSION).orig
-DISTRIBUTION_NAME_GUI  = $(PACKAGE_NAME_GUI)-$(VERSION)
+# SQLite flags
+SQLITE_FLAGS         = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
+SQLITE_FLAGS_RELEASE =
+SQLITE_FLAGS_DEBUG   = -DSQLITE_DEBUG
+#-DSQLITE_LOCK_TRACE
 
-#-------------------------------- functions ----------------------------------
+# xdelta3 flags
+XDELTA3_FLAGS =
 
-# print info line
-# $(call functionPrintInfo,text)
-functionPrintInfo = \
-  $(if $(QUIET), \
-    $(ECHO_NO_LF) "$1...",\
-    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
-   )
+# additional options
+OPTIONS ?= $(O)
 
-# print result
-# $(call functionPrintResult,text)
-functionPrintResult = \
-  $(if $(QUIET), \
-    $(ECHO) "$1",\
-    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
-   )
+# test settings
+TEST_CONFIG                      = intermediate/bar.cfg
+TEST_KEY_CRYPT_PUBLIC            = intermediate/key-crypt.public
+TEST_KEY_CRYPT_PRIVATE           = intermediate/key-crypt.private
+TEST_KEY_SIGNATURE_PUBLIC        = intermediate/signature-key.public
+TEST_KEY_SIGNATURE_PRIVATE       = intermediate/signature-key.private
+
+TEST_SERVER_PORT                 = 39909
+TEST_SERVER_TLS_PORT             = 39910
+TEST_SERVER_DIRECTORY            = test
+TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
+TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/barserver.pid
+TEST_SERVER_JOBS                 = $(TEST_SERVER_DIRECTORY)/jobs
+TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
+TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
+
+# hosts, ports, passwords, keys for tests
+TEST_HOST                        ?= localhost
+TEST_PASSWORD                    =
+
+TEST_HOST_FTP                    ?= $(TEST_HOST)
+TEST_PASSWORD_FTP                ?= $(TEST_PASSWORD)
+
+TEST_HOST_SSH                    ?= $(TEST_HOST)
+TEST_PORT_SSH                    ?= 22
+TEST_PASSWORD_SSH                ?= $(TEST_PASSWORD)
+TEST_PUBLIC_KEY_SSH              =  $(HOME)/.ssh/id_rsa.pub
+TEST_PRIVATE_KEY_SSH             =  $(HOME)/.ssh/id_rsa
+
+TEST_HOST_SCP                    ?= $(TEST_HOST)
+TEST_PORT_SCP                    ?= 22
+TEST_PASSWORD_SCP                ?= $(TEST_PASSWORD_SSH)
+TEST_PUBLIC_KEY_SCP              =  $(TEST_PUBLIC_KEY_SSH)
+TEST_PRIVATE_KEY_SCP             =  $(TEST_PRIVATE_KEY_SSH)
+
+TEST_HOST_SFTP                   ?= $(TEST_HOST)
+TEST_PORT_SFTP                   ?= 22
+TEST_PASSWORD_SFTP               ?= $(TEST_PASSWORD_SSH)
+TEST_PUBLIC_KEY_SFTP             =  $(TEST_PUBLIC_KEY_SSH)
+TEST_PRIVATE_KEY_SFTP            =  $(TEST_PRIVATE_KEY_SSH)
+
+TEST_HOST_WEBDAV                 ?= localhost/webdav
+TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
+
+TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
+
+TEST_SLAVE_HOST                  =
+TEST_SLAVE_PORT                  = 39911
+TEST_SLAVE_TLS_PORT              = 39912
+TEST_SLAVE_USERNAME              ?= test
+TEST_SLAVE_PASSWORD              ?= test
+TEST_SLAVE_DIRECTORY             = slave
+TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
+TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/barserver.pid
+TEST_SLAVE_JOBS                  = $(TEST_SLAVE_DIRECTORY)/jobs
+TEST_SLAVE_DATABASE              = $(TEST_SLAVE_DIRECTORY)/index.db
+TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
+
+# languages
+LANGUAGES = de jp
 
 #---------------------------------- rules ------------------------------------
 
-# convert images
-doc/images/%.png: doc/images/%.xcf
-	$(CONVERT) $^ -layers flatten $@
+# source search paths
+vpath %.c   $(SOURCE_DIR)
+vpath %.cpp $(SOURCE_DIR)
+ifeq (@HAVE_BREAKPAD@,1)
+vpath %.cc  ../packages/breakpad/src/processor
+endif
 
-doc/images/%-small.png: doc/images/%.xcf
-	$(CONVERT) $^ -delete 1--1 -resize 200x200 $@
+# disable implicit rule for *.y -> *.c
+%.c: %.y
 
-doc/images/%-large.png: doc/images/%.xcf
-	$(CONVERT) $^ -delete 1--1 $@
+# compile C source
+release/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+
+debug/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+
+gcov/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
+
+gprof/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gprof/$*.o
+
+valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+
+common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/common/$*.c -o common/$*.o
+
+%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+
+release/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+
+debug/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+
+gcov/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
+
+gprof/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gprof/$*.o
+
+valgrind/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+
+%.o: %.c
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+
+# compile C++ source
+release/%.o: $(SOURCE_DIR)/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o release/$*.o
+
+debug/%.o: $(SOURCE_DIR)/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
+
+gcov/%.o: $(SOURCE_DIR)/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gcov/$*.o
+
+gprof/%.o: $(SOURCE_DIR)/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gprof/$*.o
+
+valgrind/%.o: $(SOURCE_DIR)/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o valgrind/$*.o
+
+common/%.o: common/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c common/$*.cpp -o common/$*.o
+
+%.o: %.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cpp -o $*.o
+
+%.o: %.cc
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cc -o $*.o
+
+%.o:
+	$(error Unkown object file '$*.o': do not know how to create it)
 
 #--------------------------------- objects -----------------------------------
 
-TARGETS              = bar/bar@EXEEXT@ \
-                       bar/bar-debug@EXEEXT@ \
-                       bar/bar-keygen@SHELLEXT@ \
-                       $(if $(findstring $(ENABLE_GUI),yes),\
-                         barcontrol/barcontrol@SHELLEXT@ \
-                         barcontrol/barcontrol.cmd \
-                       ) \
+BAR_SOURCES                 = bar.c \
+                              configuration.c \
+                              commands_create.c \
+                              commands_list.c \
+                              commands_test.c \
+                              commands_compare.c \
+                              commands_restore.c \
+                              commands_convert.c \
+                              archive.c \
+                              chunks.c \
+                              entrylists.c \
+                              compress.c \
+                              deltasources.c \
+                              deltasourcelists.c \
+                              crypt.c \
+                              storage.c \
+                              index.c \
+                              jobs.c \
+                              continuous.c \
+                              server.c \
+                              server_io.c \
+                              connector.c \
 
-DOC                  = $(if $(TXT2MAN),doc/bar.7) \
-                       $(if $(UNOCONV),doc/backup-archiver.pdf) \
+BAR_SOURCES_OTHER           = forward.h \
+                              \
+                              compress_zip.c \
+                              compress_bz2.c \
+                              compress_lzma.c \
+                              compress_lzo.c \
+                              compress_lz4.c \
+                              compress_zstd.c \
+                              compress_xd3.c \
+                              \
+                              storage_file.c \
+                              storage_ftp.c \
+                              storage_scp.c \
+                              storage_sftp.c \
+                              storage_webdav.c \
+                              storage_optical.c \
+                              storage_device.c \
+                              storage_master.c \
+                              \
+                              index_version1.c \
+                              index_version2.c \
+                              index_version3.c \
+                              index_version4.c \
+                              index_version5.c \
+                              index_version6.c \
+                              index_version7.c \
+                              \
+                              archive_format.pl \
+                              archive_format.def \
+                              index_definition.pl \
+                              index_definition.def \
+                              valgrind.supp \
+                              bar.cfg \
+                              bar-keygen.in \
+                              \
+                              common/filesystems_ext.c \
+                              common/filesystems_fat.c \
+                              common/filesystems_reiserfs.c \
 
-DOC_IMAGES           = doc/images/archivename-editor.png \
-                       doc/images/entries.png \
-                       doc/images/images.png \
-                       doc/images/filters+mounts.png \
-                       doc/images/restore-dialog.png \
-                       doc/images/restore.png \
-                       doc/images/schedule.png \
-                       doc/images/persistence.png \
-                       doc/images/scripts.png \
-                       doc/images/server-commands.png \
-                       doc/images/server-general.png \
-                       doc/images/server-servers.png \
-                       doc/images/server-verbosity+log.png \
-                       doc/images/status.png \
-                       doc/images/storage.png \
+BAR_SOURCES_FILTER          = $(if @HAVE_BFD@,,common/stacktraces.c) \
 
-DOC_IMAGES_SMALL     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
-DOC_IMAGES_LARGE     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
+BAR_HEADERS                 = $(patsubst %.c,  %.h,$(filter %.c,  $(BAR_SOURCES))) \
+                              $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
+                              bar_global.h \
 
-OTHER_SOURCES        = errors.pl \
-                       errors.def \
+BAR_OBJECTS                 = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+                              errors.o \
+                              archive_format.o \
+                              $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
 
-KEY_FILES            = bar-key.pem \
-                       bar-ca.pem \
-                       bar-server-key.pem \
-                       bar-server-cert.pem \
+BAR_OBJECTS_RELEASE         = $(addprefix release/,$(BAR_OBJECTS))
 
-SCRIPTS              = scripts/barserver-SuSE \
-                       scripts/barserver-Fedora \
-                       scripts/barserver-RedHat \
-                       scripts/barserver-Mandrake \
-                       scripts/barserver-debian \
-                       scripts/barserver-CentOS \
-                       scripts/barserver.service \
-                       scripts/logrotate.conf \
+BAR_OBJECTS_DEBUG           = $(addprefix debug/,$(BAR_OBJECTS))
+
+BAR_OBJECTS_GCOV            = $(addprefix gcov/,$(BAR_OBJECTS))
+
+BAR_OBJECTS_GPROF           = $(addprefix gprof/,$(BAR_OBJECTS))
+
+BAR_OBJECTS_VALGRIND        = $(addprefix valgrind/,$(BAR_OBJECTS))
+
+BAR_PO                      = po/german.po \
+                              po/japanese.po
+
+BAR_MO                      = $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo)
+
+COMMON_SOURCES              = common/arrays.c \
+                              common/autofree.c \
+                              common/bitmaps.c \
+                              common/cmdoptions.c \
+                              common/configvalues.c \
+                              common/database.c \
+                              common/devices.c \
+                              common/dictionaries.c \
+                              common/files.c \
+                              common/filesystems.c \
+                              common/fragmentlists.c \
+                              common/global.c \
+                              common/lists.c \
+                              common/minidump.cpp \
+                              common/misc.c \
+                              common/msgqueues.c \
+                              common/network.c \
+                              common/patternlists.c \
+                              common/patterns.c \
+                              common/passwords.c \
+                              common/ringbuffers.c \
+                              common/semaphores.c \
+                              common/stacktraces.c \
+                              common/stringlists.c \
+                              common/stringmaps.c \
+                              common/strings.c \
+                              common/threads.c \
+                              common/threadpools.c \
+
+COMMON_SOURCES_OTHER        = common/arrays.c \
+                              common/filesystems_ext.c \
+                              common/filesystems_fat.c \
+                              common/filesystems_reiserfs.c \
+
+COMMON_SOURCES_FILTER       = $(if @HAVE_BREAKPAD@,,common/minidump.cpp) \
+
+COMMON_HEADERS              = $(patsubst %.c,  %.h,$(filter %.c,  $(COMMON_SOURCES))) \
+                              $(patsubst %.cpp,%.h,$(filter %.cpp,$(COMMON_SOURCES))) \
+
+
+SQLITE3_SOURCES             = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
+
+SQLITE3_HEADERS             = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sqlite3.h,sqlite3.h)
+
+SQLITE3_OBJECTS             = $(foreach z,$(filter %.c,  $(notdir $(SQLITE3_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(notdir $(SQLITE3_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+
+SQLITE3_OBJECTS_RELEASE     = $(addprefix release/,$(SQLITE3_OBJECTS))
+
+EXTERN_SOURCES              = $(SQLITE3_SOURCES) \
+
+EXTERN_HEADERS              = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
+
+EXTERN_OBJECTS              = $(foreach z,$(filter %.c,  $(notdir $(EXTERN_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(notdir $(EXTERN_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+                              $(if @HAVE_XDELTA3@,xdelta3.o) \
+
+EXTERN_OBJECTS_RELEASE      = $(addprefix release/,$(EXTERN_OBJECTS))
+
+EXTERN_OBJECTS_DEBUG        = $(addprefix debug/,$(EXTERN_OBJECTS))
+
+EXTERN_OBJECTS_GCOV         = $(addprefix gcov/,$(EXTERN_OBJECTS))
+
+EXTERN_OBJECTS_GPROF        = $(addprefix gprof/,$(EXTERN_OBJECTS))
+
+EXTERN_OBJECTS_VALGRIND     = $(addprefix valgrind/,$(EXTERN_OBJECTS))
+
+DESTROYER_SOURCES           = destroyer.c \
+
+DESTROYER_HEADERS           = $(patsubst %.c,%.h,$(DESTROYER_SOURCES)) \
+
+DESTROYER_OBJECTS           = $(foreach z,$(filter %.c,  $(DESTROYER_SOURCES)),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(DESTROYER_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
+                              errors.o \
+                              $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+
+
+BAR_MINIDUMP_SOURCES        = bar-minidump.cpp \
+
+BAR_MINIDUMP_SOURCES_COMMON = common/minidump.cpp \
+
+BAR_MINIDUMP_HEADERS        = \
+
+BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
+                                $(addprefix release/,$(foreach z,$(filter %.c,  $(BAR_MINIDUMP_SOURCES)),$(patsubst %.c,  %.o,$z))) \
+                                $(addprefix release/,$(foreach z,$(filter %.cpp,$(BAR_MINIDUMP_SOURCES)),$(patsubst %.cpp,%.o,$z))) \
+                                $(addprefix release/,$(foreach z,$(filter %.cc, $(BAR_MINIDUMP_SOURCES)),$(patsubst %.cc, %.o,$z))) \
+                                $(addprefix release/,$(foreach z,$(filter %.c,  $(BAR_MINIDUMP_SOURCES_COMMON)),$(patsubst %.c,  %.o,$z))) \
+                                $(addprefix release/,$(foreach z,$(filter %.cpp,$(BAR_MINIDUMP_SOURCES_COMMON)),$(patsubst %.cpp,%.o,$z))) \
+                                $(addprefix release/,$(foreach z,$(filter %.cc, $(BAR_MINIDUMP_SOURCES_COMMON)),$(patsubst %.cc, %.o,$z))) \
+                                release/stackwalk_common.o \
+                              )
+
+BAR_SQLITE3_SOURCES         = bar-sqlite3.c \
+
+BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
+                              common/cmdoptions.c \
+                              common/lists.c \
+                              common/strings.c \
+                              common/stringlists.c \
+                              common/dictionaries.c \
+                              common/files.c \
+                              common/devices.c \
+                              common/database.c \
+                              common/threads.c \
+                              common/misc.c \
+                              common/arrays.c \
+                              common/semaphores.c \
+                              common/stacktraces.c \
+
+BAR_SQLITE3_HEADERS         = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
+
+BAR_SQLITE3_OBJECTS         = $(addprefix release/,$(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.c,%.o,$z))) \
+                              release/errors.o \
+                              $(addprefix release/,$(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(BAR_SQLITE3_SOURCES_COMMON))),$(patsubst %.c,  %.o,$z))) \
+                              $(addprefix release/,$(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(BAR_SQLITE3_SOURCES_COMMON))),$(patsubst %.cpp,%.o,$z))) \
+
+SHOWCHUNKS_SOURCES          = showchunks.c \
+
+SHOWCHUNKS_OBJECTS          = $(addprefix release/,$(foreach z,$(SHOWCHUNKS_SOURCES),$(patsubst %.c,%.o,$z))) \
+                              release/errors.o \
+
+INTERMEDIATE_SOURCES        = errors.c \
+                              archive_format.c \
+
+INTERMEDIATE_HEADERS        = errors.h \
+                              archive_format.h \
+                              archive_format_const.h \
+                              index_definition.h \
+
+TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
+                              bar-debug@EXEEXT@ bar-debug.sym \
+                              $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
+                              bar-keygen@SHELLEXT@ \
+                              bar-sqlite3@EXEEXT@ \
+                              $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
+                              $(BAR_MO) \
+
+TARGETS                     = $(TARGETS_INSTALL) \
+                              bar-gcov@EXEEXT@ \
+                              bar-gprof@EXEEXT@ \
+                              bar-valgrind@EXEEXT@ \
+                              destroyer@EXEEXT@ \
 
 #------------------------------ dependencies ---------------------------------
 
-.PHONY: all clean distclean
+# default target
+.PHONY: all clean distclean depend
+all: $(TARGETS)
 
-all: \
-  $(TARGETS) \
-  $(DOC) \
-  $(DOC_IMAGES) \
-  $(DOC_IMAGES_SMALL) \
-  $(DOC_IMAGES_LARGE) \
-
+# clean
 clean: \
-  clean_keys \
-  clean_doc \
-  clean_rpm \
-  clean_deb
-	-$(MAKE) -C bar clean
-ifeq ($(ENABLE_GUI),yes)
-	-$(MAKE) -C barcontrol clean
-endif
-	$(RMRF) $(DISTRIBUTION_NAME)
-	$(RMF) $(DISTRIBUTION_NAME).tar.bz2 $(DISTRIBUTION_NAME).orig.tar.gz
-	$(RMRF) tmp
+  testcode_clean \
+  gcov_clean \
+  test_clean
+	$(RMF) bar.tags
+	$(RMF) $(BAR_OBJECTS_RELEASE)
+	$(RMF) $(BAR_OBJECTS_DEBUG)
+	$(RMF) $(BAR_OBJECTS_GCOV)
+	$(RMF) $(BAR_OBJECTS_GPROF)
+	$(RMF) $(BAR_OBJECTS_VALGRIND)
+	$(RMF) $(BAR_SQLITE3_OBJECTS)
+	$(RMF) $(EXTERN_OBJECTS_RELEASE)
+	$(RMF) $(EXTERN_OBJECTS_DEBUG)
+	$(RMF) $(EXTERN_OBJECTS_GCOV)
+	$(RMF) $(EXTERN_OBJECTS_VALGRIND)
+	$(RMF) $(DESTROYER_OBJECTS)
+	$(RMF) $(BAR_MINIDUMP_OBJECTS)
+	$(RMF) $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
+	$(RMF) /tmp/bar.cfg /tmp/bar-slave.cfg /tmp/bar.log /tmp/bar-slave.log /tmp/pairing
+	$(RMF) bar-gcov.info gmon.out
+	$(RMF) $(TARGETS)
 
-distclean: clean
-	-$(MAKE) -C bar distclean
-ifeq ($(ENABLE_GUI),yes)
-	-$(MAKE) -C barcontrol distclean
-endif
-	./download-third-party-packages.sh --clean
-	$(RMRF) extern
-	$(RMF) Makefile
-	$(RMF) src/Config.java
-	$(RMF) epm.list
-	$(RMF) config.status
-	$(RMF) config.log
+distclean: \
+  clean \
+  test_distclean
+	$(RMF) Makefile Makefile.depend
+	$(RMF) config.h
+	$(RMRF) release debug valgrind
 
 # help
 .PHONY: help
@@ -241,1034 +690,1795 @@ help:
 	@$(ECHO) "  distclean"
 	@$(ECHO) ""
 	@$(ECHO) "  bar"
-	@$(ECHO) "  bar-keygen"
-	@$(ECHO) "  barcontrol"
+	@$(ECHO) "  bar-debug [SANITIZER=<sanitizer>]"
+	@$(ECHO) "  bar-valgrind"
+	@$(ECHO) "  bar-gcov"
 	@$(ECHO) ""
-	@$(ECHO) "  keys"
+	@$(ECHO) "  po"
 	@$(ECHO) ""
-	@$(ECHO) "  doc"
-	@$(ECHO) "  clean_doc"
-	@$(ECHO) "  man"
-	@$(ECHO) "  showman"
-	@$(ECHO) "  pdf"
+	@$(ECHO) "  run                                       run server"
+	@$(ECHO) "  run_slave                                 run server slave"
+	@$(ECHO) "  run_en"
+	@$(ECHO) "  run_de"
+	@$(ECHO) "  run_jp"
+	@$(ECHO) "  run_ssl                                   run server with SSL"
 	@$(ECHO) ""
-	@$(ECHO) "  install"
+	@$(ECHO) "  rundev                                    run server"
+	@$(ECHO) "  rundevd, rundevd1                         run development server (debug version)"
+	@$(ECHO) "  rundevd2                                  run development server 2 (debug version)"
+	@$(ECHO) "  rundevgdb                                 run development server with GDB"
+	@$(ECHO) "  rundevddd                                 run development server with DDD"
+	@$(ECHO) "  rundevgcov                                run development server with gcov"
+	@$(ECHO) "  rundevgprof                               run development server with gprof"
+	@$(ECHO) "  rundevvalgrind                            run development server with valgrind"
+	@$(ECHO) "  rundevcallgrind                           run development server with callgrind"
+	@$(ECHO) "  rundev_slave                              run development server slave"
+	@$(ECHO) "  rundevd_slave                             run development server slave (debug version)"
+	@$(ECHO) "  rundevgdb_slave                           run development server slave with GDB"
+	@$(ECHO) "  rundev_wine                               run server with wine"
+	@$(ECHO) "  rundevd_wine                              run development server with wine"
+	@$(ECHO) "  rundevd_slave_wine                        run development server slave with wine"
+	@$(ECHO) "  rundev_en"
+	@$(ECHO) "  rundev_de"
+	@$(ECHO) "  rundev_jp"
+	@$(ECHO) "  rundev_ssl"
+	@$(ECHO) "  rundev_test"
 	@$(ECHO) ""
-	@$(ECHO) "  test"
-	@$(ECHO) "  test1[-debug|-valgrind], test_basic"
-	@$(ECHO) "  test2[-debug|-valgrind], test_compress"
-	@$(ECHO) "  test3[-debug|-valgrind], test_crypt"
-	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt"
-	@$(ECHO) "  test5[-debug|-valgrind], test_signatures"
-	@$(ECHO) "  test6[-debug|-valgrind], test_split"
-	@$(ECHO) "  test7[-debug|-valgrind], test_image"
-	@$(ECHO) "  test8[-debug|-valgrind], test_storage"
-	@$(ECHO) "  test9[-debug|-valgrind], test_largefile"
-	@$(ECHO) "  test10[-debug|-valgrind], test_dvd"
-	@$(ECHO) "  test_parameters"
-	@$(ECHO) "  test_combined"
-	@$(ECHO) "  test_misc"
+	@$(MAKE) -C test -j1 --no-print-directory -s help_output
 	@$(ECHO) ""
-	@$(ECHO) "  memcheck"
-	@$(ECHO) "  memcheck_extended"
+	@$(ECHO) "  show_debug_test_code"
+	@$(ECHO) "  run_debug_test_code"
+	@$(ECHO) ""
+	@$(ECHO) "  gcov [CHECK=1|2|3|4|5|6|7|8]"
+	@$(ECHO) "  gcov_clean"
+	@$(ECHO) "  gcov_zero                                 reset gcov data"
+	@$(ECHO) "  gcov<1|2|3|4|5|6|7|8>"
+	@$(ECHO) "  gcov_html                                 re-generate gcov HTML report"
+	@$(ECHO) ""
+	@$(ECHO) "  memcheck [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
+	@$(ECHO) "  memcheck_extended [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
+	@$(ECHO) "  memcheck<1|2|2a|2b|2c|2d|2e|3|4|5|6|7>"
+	@$(ECHO) ""
+	@$(ECHO) "  testcode_init                             init test code name"
+	@$(ECHO) "  testcode_all                              run all test code"
+	@$(ECHO) "  testcode_list                             list test code names"
+	@$(ECHO) "  testcode [TESTCODE=<name>]                run test code or test code <name>"
+	@$(ECHO) ""
+	@$(ECHO) "  performance"
+	@$(ECHO) "  performance1, performance_none"
+	@$(ECHO) "  performance2, performance_zip_compress"
+	@$(ECHO) "  performance3, performance_bzip2_compress"
+	@$(ECHO) "  performance4, performance_lzma_compress"
+	@$(ECHO) "  performance5, performance_lzo_compress"
+	@$(ECHO) "  performance6, performance_lz4_compress"
+	@$(ECHO) "  performance7, performance_zstd_compress"
+	@$(ECHO) "  performance8, performance_delta_compress"
+	@$(ECHO) ""
+	@$(ECHO) "  crashdump MINIDUMP=<file name>"
 	@$(ECHO) ""
 	@$(ECHO) "  dist"
-	@$(ECHO) "  clean_dist"
-	@$(ECHO) "  debian_dist"
-	@$(ECHO) "  clean_debian_dist"
-	@$(ECHO) ""
-	@$(ECHO) "  rpm[d]"
-	@$(ECHO) "  rpm32[d]"
-	@$(ECHO) "  rpm64[d]"
-	@$(ECHO) "  clean_rpm"
-	@$(ECHO) ""
-	@$(ECHO) "  deb[d]"
-	@$(ECHO) "  deb32[d]"
-	@$(ECHO) "  deb64[d]"
-	@$(ECHO) "  clean_deb"
-	@$(ECHO) ""
-	@$(ECHO) "  win32"
-	@$(ECHO) "  clean_win32"
-	@$(ECHO) ""
-	@$(ECHO) "  update_docker"
-	@$(ECHO) "  purge_docker"
-	@$(ECHO) ""
-	@$(ECHO) "  rpm_docker"
-	@$(ECHO) "  deb_docker"
-	@$(ECHO) "  win32_docker"
-	@$(ECHO) ""
-	@$(ECHO) "  install_test"
-	@$(ECHO) ""
-	@$(ECHO) "  install_test_rpm"
-	@$(ECHO) "  install_test_rpm_centos6"
-	@$(ECHO) "  install_test_rpm_centos6-x86_64"
-	@$(ECHO) "  install_test_rpm_centos7"
-	@$(ECHO) "  install_test_rpm_centos7-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora28-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora29-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora30-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora31-x86_64"
-	@$(ECHO) "  install_test_rpm_opensuse-tumbleweed-x86_64"
-	@$(ECHO) "  install_test_rpm_opensuse-leap-x86_64"
-	@$(ECHO) ""
-	@$(ECHO) "  install_test_deb"
-	@$(ECHO) "  install_test_deb_debian8"
-	@$(ECHO) "  install_test_deb_debian8-x86_64"
-	@$(ECHO) "  install_test_deb_debian9"
-	@$(ECHO) "  install_test_deb_debian9-x86_64"
-	@$(ECHO) "  install_test_deb_debian10"
-	@$(ECHO) "  install_test_deb_debian10-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu16.04-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu18.04-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu19.04-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu19.10-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu20.04-x86_64"
-	@$(ECHO) ""
-	@$(ECHO) "  gui"
-	@$(ECHO) "  clean_gui"
 
 # create dependencies
 .PHONY: depend
-depend:
-	$(MAKE) -j1 -C bar depend
-	$(MAKE) -j1 -C barcontrol depend
+depend: Makefile.depend
+
+Makefile.depend: $(SOURCE_DIR)/Makefile $(SOURCE_DIR)/Makefile.in
+	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
+	$(ECHO) >Makefile.depend
+	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|release/\1|g' | \
+            $(CAT) >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|debug/\1|g' | \
+            $(CAT) >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|gcov/\1|g' | \
+            $(CAT) >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|gprof/\1|g' | \
+            $(CAT) >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
+            $(SED) 's|\(.*\.o:\)|valgrind/\1|g' | \
+            $(CAT) >> Makefile.depend; \
+        done;
+	for z in $(COMMON_SOURCES); do \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|release/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|debug/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|gcov/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|gprof/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' >> Makefile.depend; \
+        done;
+
+# create tags file
+bar.tags: \
+  $(BAR_SOURCES) \
+  $(BAR_SOURCES_OTHER) \
+  $(COMMON_SOURCES) \
+  $(COMMON_SOURCES_OTHER) \
+  $(EXTERN_SOURCES) \
+  $(DESTROYER_SOURCES) \
+  $(BAR_MINIDUMP_SOURCES) \
+  $(BAR_MINIDUMP_SOURCES_COMMON)
+	$(CTAGS) $(CTAGS_FLAGS) -f $@ $^
 
 # ----------------------------------------------------------------------------
-# create bar
-.PHONY: bar bar-debug
 
-bar bar/bar@EXEEXT@:
-	$(MAKE) -C bar bar@EXEEXT@
-
-bar-debug bar/bar-debug@EXEEXT@:
-	$(MAKE) -C bar bar-debug@EXEEXT@
-
-# create bar-keygen
-.PHONY: bar-keygen
-
-bar-keygen bar/bar-keygen@SHELLEXT@:
-	$(MAKE) -C bar bar-keygen@SHELLEXT@
-
-# create barcontrol
-.PHONY: barcontrol
-
-barcontrol barcontrol/barcontrol:
-ifeq ($(ENABLE_GUI),yes)
-	$(MAKE) -C barcontrol barcontrol@SHELLEXT@
-else
-	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+# create BAR
+bar@EXEEXT@: \
+  $(BAR_OBJECTS_RELEASE) \
+  $(EXTERN_OBJECTS_RELEASE)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq (@HAVE_BREAKPAD@,1)
+	$(MAKE) release/bar.sym.bz2.o
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ release/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+endif
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
 endif
 
-barcontrol/barcontrol.cmd:
-ifeq ($(ENABLE_GUI),yes)
-	$(MAKE) -C barcontrol barcontrol.cmd
-else
-	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+bar.sym: bar@EXEEXT@
+	$(OBJCOPY) --only-keep-debug bar@EXEEXT@ $@
+
+bar-debug@EXEEXT@: \
+  $(BAR_OBJECTS_DEBUG) \
+  $(EXTERN_OBJECTS_DEBUG)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq (@HAVE_BREAKPAD@,1)
+	$(MAKE) debug/bar.sym.bz2.o
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ debug/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+endif
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
 endif
 
-barcontrol/barcontrol%.jar:
-ifeq ($(ENABLE_GUI),yes)
-	$(MAKE) -C barcontrol barcontrol$*.jar
-else
-	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+bar-debug.sym: bar-debug@EXEEXT@
+	$(OBJCOPY) --only-keep-debug bar-debug@EXEEXT@ $@
+
+bar-gcov@EXEEXT@: \
+  $(BAR_OBJECTS_GCOV) \
+  $(EXTERN_OBJECTS_GCOV)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_GCOV) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
 endif
 
-# ----------------------------------------------------------------------------
-# create SSL keys and certificates
+bar-gprof@EXEEXT@: \
+  $(BAR_OBJECTS_GPROF) \
+  $(EXTERN_OBJECTS_GPROF)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_GPROF) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
-.PHONY: keys clean_keys
+# Note: a special valgrind version is needed because of a bug in valgrind
+#       reporting false positives when gcc builtin-functions are used.
+#       See: https://bugs.launchpad.net/ubuntu/+source/valgrind/+bug/852760
+bar-valgrind@EXEEXT@: \
+  $(BAR_OBJECTS_VALGRIND) \
+  $(EXTERN_OBJECTS_VALGRIND)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_VALGRIND) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
-keys: \
-  $(KEY_FILES)
+# i18n
+.PHONY: i18n po
+i18n po: \
+  $(SOURCE_DIR)/po/german.po \
+  $(SOURCE_DIR)/po/japanese.po
 
-clean_keys:
-	$(RMF) $(KEY_FILES)
+$(SOURCE_DIR)/po/bar.pot: $(SOURCE_DIR)/*.c
+	$(INSTALL) -d $(@D)
+	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ $(SOURCE_DIR)/*.c
 
-$(KEY_FILES):
-	$(MAKE) -C bar bar-keygen@SHELLEXT@
-	($(CD) bar; \
-         ./bar-keygen@SHELLEXT@ \
-           --tls-directory=.. \
-           --private-directory=.. \
-           --certs-directory=.. \
-           $(if $(CERTTOOL),--certtool) \
-           $(if $(OPENSSL),--openssl) \
-           --force \
+$(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/bar.pot
+	$(INSTALL) -d $(@D)
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
+	$(TOUCH) $@
+
+$(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/bar.pot
+	$(INSTALL) -d $(@D)
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
+	$(TOUCH) $@
+
+po/de/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/german.po
+	$(INSTALL) -d $(@D)
+	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/german.po
+
+po/jp/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/japanese.po
+	$(INSTALL) -d $(@D)
+	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/japanese.po
+
+# create breakpad symbol files
+ifeq (@HAVE_BREAKPAD@,1)
+release/bar.sym.bz2.o:
+	$(DUMP_SYMS) ./bar@EXEEXT@ | $(BZIP2) -c >release/bar.sym.bz2
+	(format=$(shell $(OBJDUMP) -a release/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
+         name=$(subst .,_,$(subst /,_,release/bar.sym.bz2)); \
+         $(OBJCOPY) \
+           -I binary \
+           -O $$format \
+           -B i386 \
+           --redefine-sym _binary_$${name}_start=_minidump_symbols_start \
+           --redefine-sym _binary_$${name}_end=_minidump_symbols_end \
+           --redefine-sym _binary_$${name}_size=_minidump_symbols_size \
+           release/bar.sym.bz2 $@; \
         )
+	$(RMF) release/bar.sym.bz2
+else
+	@$(ECHO) "Warning: breakpad not configured - cannot build symbol object file."
+endif
+
+ifeq (@HAVE_BREAKPAD@,1)
+debug/bar.sym.bz2.o:
+	$(DUMP_SYMS) ./bar-debug@EXEEXT@ | $(BZIP2) -c >debug/bar.sym.bz2
+	(format=$(shell $(OBJDUMP) -a debug/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
+         name=$(subst .,_,$(subst /,_,debug/bar.sym.bz2)); \
+         $(OBJCOPY) \
+           -I binary \
+           -O $$format \
+           -B i386 \
+           --redefine-sym _binary_$${name}_start=_minidump_symbols_start \
+           --redefine-sym _binary_$${name}_end=_minidump_symbols_end \
+           --redefine-sym _binary_$${name}_size=_minidump_symbols_size \
+           debug/bar.sym.bz2 $@; \
+        )
+	$(RMF) debug/bar.sym.bz2
+else
+	@$(ECHO) "Warning: breakpad not configured - cannot build symbol object file."
+endif
+
+# compile SQLite, xdelta C source without warning flags
+release/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+debug/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gcov/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gprof/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+valgrind/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+
+ifeq (@HAVE_XDELTA3@,1)
+release/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+debug/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gcov/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gprof/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+valgrind/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+endif
+
+# create bar-keygen script
+bar-keygen@SHELLEXT@: $(SOURCE_DIR)/bar-keygen.in
+	$(CAT) $(SOURCE_DIR)/bar-keygen.in | \
+        ( \
+          while IFS="" read -r line; do \
+            if   test "$$line" = "@CERTTOOL/CA.TEMPL@"; then \
+              $(CAT) $(SOURCE_DIR)/../ssl/certtool/ca.tmpl; \
+            elif test "$$line" = "@CERTTOOL/SERVER.TEMPL@"; then \
+              $(CAT) $(SOURCE_DIR)/../ssl/certtool/server.tmpl; \
+            elif test "$$line" = "@OPENSSL/CA.TEMPL@"; then \
+              $(CAT) $(SOURCE_DIR)/../ssl/openssl/ca.tmpl; \
+            elif test "$$line" = "@OPENSSL/SERVER.TEMPL@"; then \
+              $(CAT) $(SOURCE_DIR)/../ssl/openssl/server.tmpl; \
+            else \
+              line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(DESTDIR)$(TLS_DIR)|g'`; \
+              line=`$(ECHO) "$$line"|$(SED) 's|\@CONFIG_DIR\@|$(DESTDIR)$(CONFIG_DIR)|g'`; \
+              $(ECHO) "$$line"; \
+            fi; \
+          done; \
+        ) >$@
+	$(CHMOD) 775 $@
+
+# error definition
+errors.h: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -h $@
+errors.c: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
+	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -c $@
+release/errors.o: errors.c errors.h
+debug/errors.o: errors.c errors.h
+gcov/errors.o: errors.c errors.h
+gprof/errors.o: errors.c errors.h
+valgrind/errors.o: errors.c errors.h
+
+# archive format definition
+archive_format.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
+	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -h $@
+archive_format_const.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
+	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -n $@
+archive_format.c: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
+	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -c $@ -i archive.h -i archive_format.h
+release/archive_format.o: archive_format.c archive_format.h
+debug/archive_format.o: archive_format.c archive_format.h
+gcov/archive_format.o: archive_format.c archive_format.h
+gprof/archive_format.o: archive_format.c archive_format.h
+valgrind/archive_format.o: archive_format.c archive_format.h
+
+# index database definition
+index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_definition.def
+	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.def >$@
+
+# create destroyer (for testing only!)
+destroyer@EXEEXT@: \
+  $(DESTROYER_OBJECTS) \
+  $(EXTERN_OBJECTS_RELEASE)
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+
+# create bar-minidump
+release/bar-minidump.o: bar-minidump.cc
+
+release/stackwalk_common.o: ../packages/breakpad/src/processor/stackwalk_common.cc
+
+bar-minidump@EXEEXT@: \
+  $(BAR_MINIDUMP_OBJECTS)
+ifeq (@HAVE_BREAKPAD@,1)
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          -lbreakpad -ldisasm
+else
+	@$(ECHO) "ERROR: breakpad not available - cannot build bar-minidump"
+endif
+
+# create show chunks program
+showchunks@EXEEXT@: \
+  $(SHOWCHUNKS_OBJECTS)
+	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+
+# create bar-sqlite3
+bar-sqlite3@EXEEXT@: \
+  $(BAR_SQLITE3_OBJECTS) \
+  $(SQLITE3_OBJECTS_RELEASE)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
 
 # ----------------------------------------------------------------------------
-# create documentation
 
-.PHONY: doc clean_doc showman pdf
-doc:
-	@$(MAKE) -C doc
+/tmp/bar.cfg: bar.cfg
+	$(INSTALL) -m 600 bar.cfg /tmp/bar.cfg
 
-clean_doc:
-	@$(MAKE) -C doc clean
+/tmp/bar-slave.cfg: bar.cfg
+	$(INSTALL) -m 600 bar.cfg /tmp/bar-slave.cfg
 
-# create man-page
-.PHONY: man clean_man showman
-man doc/bar.7:
-	@$(MAKE) -C doc man
+../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
+	$(MAKE) -C .. keys
 
-clean_man:
-	@$(MAKE) -C doc clean_man
+# run server
+.PHONY: run runserver rund runserverd run_ssl runserver_ssl
+.PHONY: run_slave runserver_slave rund_slave runserverd_slave
+run runserver: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          $(OPTIONS)
 
-showman:
-	@$(MAKE) -C doc showman
+rund runserverd: bar-debug@EXEEXT@
+	$(INSTALL) -d jobs
+	nice ./bar-debug@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          $(OPTIONS)
 
-# create manual
-pdf doc/backup-archiver.pdf:
-	@$(MAKE) -C doc backup-archiver.pdf
+run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          $(OPTIONS)
+
+.PHONY: run_slave runserver_slave rund_slave runserverd_slave
+run_slave runserver_slave: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	touch /tmp/pairing
+	nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=slave \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --pairing-master-file=/tmp/pairing \
+          --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rund_slave runserverd_slave: bar-debug@EXEEXT@
+	$(INSTALL) -d jobs
+	touch /tmp/pairing
+	nice ./bar-debug@EXEEXT@ --daemon -D \
+          --server-mode=slave \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
+          --pairing-master-file=/tmp/pairing \
+          --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+.PHONY: rundevd_wine rundevd_slave_wine
+rundevd_wine:
+	nice $(WINE) ./bar-debug.exe --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=C:/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --pairing-master-file=C:/tmp/pairing \
+          --log-file=C:/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rundevd_slave_wine:
+	nice $(WINE) ./bar-debug.exe --daemon -D \
+          --server-mode=slave \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=C:/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --pairing-master-file=C:/tmp/pairing \
+          --log-file=C:/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+.PHONY: run_en runserver_en run_de runserver_de run_ssl runserver_ssl
+run_en runserver_en: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          $(OPTIONS)
+
+run_de runserver_de: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          $(OPTIONS)
+
+run_jp runserver_jp: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          $(OPTIONS)
+
+.PHONY: rundev rundevd rundevd1 rundevd2 rundevgdb rundevddd rundevvalgrind rundevcallgrind rundevgcov rundevgprof rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
+.PHONY: rundev_slave rundevd_slave rundevgdb_slave rundevddd_slave
+rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command="$(SUDO) /bin/umount %directory" \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command="$(SUDO) /bin/umount %directory" \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
+          --jobs-directory=jobs2 \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=0 \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command="$(SUDO) /bin/umount %directory" \
+          --verbose=0 \
+          --log-file=/tmp/bar2.log --log=all --debug-server \
+          $(OPTIONS)
+
+rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command="$(SUDO) /bin/umount %directory" \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundevgcov: bar-gcov@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	./bar-gcov@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all --debug-server \
+          $(OPTIONS)
+
+rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	./bar-gprof@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all --debug-server \
+          $(OPTIONS)
+
+rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all --debug-server \
+          $(OPTIONS)
+
+rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	$(VALGRIND) --tool=callgrind $(CALLGRIND_FLAGS) ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all --debug-server \
+          $(OPTIONS)
+
+rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	touch /tmp/pairing
+	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
+          --server-mode=slave \
+          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_SLAVE_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --pairing-master-file=/tmp/pairing \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	touch /tmp/pairing
+	nice ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar-slave.cfg \
+          --server-mode=slave \
+          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --pairing-master-file=/tmp/pairing \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	touch /tmp/pairing
+	$(GDB) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=slave \
+          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --pairing-master-file=/tmp/pairing \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	touch /tmp/pairing
+	$(DDD) --args ./bar-debug@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=slave \
+          --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
+          --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_SLAVE_PORT) --server-tls-port=$(TEST_SERVER_TLS_SLAVE_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --pairing-master-file=/tmp/pairing \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar-slave.log --log=all --debug-server \
+          $(OPTIONS)
+
+rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=39909$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundev_de: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=de_DE nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundev_jp: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=ja_JP nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --log-file=/tmp/bar.log --log=all \
+          $(OPTIONS)
+
+rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --index-database=intermediate/index.db \
+          --jobs-directory=intermediate/jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=$(TEST_SERVER_PORT) --server-tls-port=$(TEST_SERVER_TLS_PORT) \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          $(OPTIONS)
+
+# ----------------------------------------------------------------------------
+
+# tests
+.PHONY: test test_min test_clean test_distclean
+test: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(RMF) bar-test.log
+	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+test_min: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(RMF) bar-test.log
+	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 CRYPT_NAMES=$(MIN_CRYPT_NAMES) COMPRESS_NAMES=$(MIN_COMPRESS_NAMES) IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+test%: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 $@
+test%-debug: \
+  bar-debug@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 $@
+
+test%-gcov: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 $@
+
+test%-gprof: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 $@
+
+test%-valgrind: \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 $@
+
+test_clean:
+	@$(MAKE) -C test clean
+
+test_distclean:
+	@$(MAKE) -C test distclean
+
+# ----------------------------------------------------------------------------
+
+# helper function to check valid exitcode
+# call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
+functionTestCheckExitcode = \
+  $3 2>/dev/null; if test $$? -lt $1 -o $$? -gt $2; then false; fi
+
+# bar executables
+BAR_GCOV     = ./bar-gcov@EXEEXT@
+BAR_VALGRIND = ./bar-valgrind@EXEEXT@
+
+# test environment variables
+TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
+
+run_debug_test_code:
+	$(call functionTestCheckExitcode,125,125,initAll1=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll2=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll3=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll4=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll5=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll6=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll7=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll8=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll9=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll10=1 $(TEST_BAR))
+	$(call functionTestCheckExitcode,125,125,initAll11=1 $(TEST_BAR))
+
+# helper function to check if parameter exists
+# call functionVerifyParameter,<name>[,message]
+functionVerifyParameter = \
+  if test -z "$($1)"; then \
+    if test -n "$2"; then \
+      $(ECHO) >&2 "ERROR: $2"; \
+    else \
+      $(ECHO) >&2 "ERROR: parameter '$1' not set"; \
+    fi; \
+    exit 1; \
+  fi
+
+# code coverage analysis
+.PHONY: gcov coverage
+.PHONY: gcov_clean
+.PHONY: gcov_zero
+.PHONY: gcov_html
+gcov coverage: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+ifneq ($(LCOV),)
+	@$(MAKE) gcov_basic \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_compress \
+          COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_delta_compress \
+          COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_crypt \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_asymmetric_crypt \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_signatures \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_split \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_convert \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_image \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          IMAGE_COMPRESS_NAMES=none \
+          EXT_BLOCK_SIZES=default \
+          QUIET=1
+	@$(MAKE) gcov_storage_file \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+ifneq ($(TEST_PASSWORD_FTP),)
+	@$(MAKE) gcov_storage_ftp \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+endif
+ifneq ($(TEST_PASSWORD_SSH),)
+	@$(MAKE) gcov_storage_scp \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_storage_sftp \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+endif
+ifneq ($(TEST_PASSWORD_WEBDAV),)
+	@$(MAKE) gcov_storage_webdav \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+endif
+	@$(MAKE) gcov_optical \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          OPTIONS="--cd-blank-command=true --cd-write-command=true --cd-write-image-command=true --dvd-blank-command=true --dvd-write-command=true --dvd-write-image-command=true --bd-blank-command=true --bd-write-command=true --bd-write-image-command=true" \
+          TEST_OPTICAL_SLEEP_TIME=0 \
+          TEST_OPTICAL_EMULATION=1 \
+          QUIET=1
+	@$(MAKE) gcov_device \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          OPTIONS="--cd-blank-command=true --cd-write-command=true --cd-write-image-command=true --dvd-blank-command=true --dvd-write-command=true --dvd-write-image-command=true --bd-blank-command=true --bd-write-command=true --bd-write-image-command=true" \
+          TEST_DEVICE_SLEEP_TIME=0 \
+          TEST_DEVICE_EMULATION=1 \
+          QUIET=1
+	@$(MAKE) gcov_index \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_server \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_combined \
+          COMBINED_COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+          COMBINED_CRYPT_NAMES="none $(if @HAVE_GCRYPT@,AES256)" \
+          QUIET=1
+	@$(MAKE) gcov_arguments \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_misc \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_html
+ifeq ($(TEST_PASSWORD_FTP),)
+	@$(ECHO) Warning: no FTP password - skipped ftp test
+endif
+ifeq ($(TEST_PASSWORD_SSH),)
+	@$(ECHO) Warning: no SSH password - skipped scp/sftp test
+endif
+else
+	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
+endif
+
+gcov%: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
+
+#	$(MAKE) gcov_html
+
+gcov_clean:
+	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
+	$(RMRF) coverage
+
+gcov_zero:
+	$(LCOV) --base-directory . --directory . --zerocounters
+
+gcov_html:
+ifneq ($(GENHTML),)
+	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
+	$(INSTALL) -d coverage
+	$(GENHTML) -o coverage bar-gcov.info --legend
+	# work-around for bug in genhtml?
+	$(LN) -sfT coverage/gcov.css gcov.css
+else
+	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
+endif
+
+# ----------------------------------------------------------------------------
+
+# valgrind checks
+.PHONY: memcheck
+memcheck: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(MAKE) \
+          VALGRIND_OPTIONS="--leak-check=summary" \
+          $(if $(CHECK),\
+            memcheck$(CHECK),\
+            memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8 \
+           )
+
+.PHONY: memcheck_extended
+memcheck_extended: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(MAKE) \
+          VALGRIND_OPTIONS="--leak-check=full" \
+            $(if $(CHECK),\
+              memcheck$(CHECK),\
+              memcheck1 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8 \
+             )
+
+.PHONY: memcheck1 memcheck2 memcheck2a memcheck2b memcheck2c memcheck2d memcheck2e memcheck3 memcheck4 memcheck5 memcheck6 memcheck7 memcheck8
+memcheck1: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) --help >/dev/null
+memcheck2: \
+  memcheck2a \
+  memcheck2b \
+  memcheck2c \
+  memcheck2d \
+  memcheck2e
+memcheck2a: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+memcheck2b: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=bzip9 --overwrite-archive-files >/dev/null
+memcheck2c: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --overwrite-archive-files >/dev/null
+memcheck2d: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --compress-algorithm=none --crypt-algorithm=AES256 --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-type=asymmetric --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --overwrite-archive-files >/dev/null
+memcheck2e: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -c intermediate/test-###.bar $(TEST_FILES) $(BAR_OPTIONS) --archive-part-size=100000 --overwrite-archive-files >/dev/null
+memcheck2f: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --dry-run >/dev/null
+memcheck3:  \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -l intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
+memcheck4: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -t intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
+memcheck5: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -d intermediate/test*.bar $(BAR_OPTIONS) >/dev/null
+memcheck6: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) -x intermediate/test*.bar $(BAR_OPTIONS) --destination intermediate/restore >/dev/null
+memcheck7: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
+	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) >/dev/null
+	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) dvd:///dev/dvd: $(BAR_OPTIONS) >/dev/null
+memcheck8: \
+  $(BAR_VALGRIND) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
+          --log-file=valgrind.log \
+          --leak-check=full \
+          --leak-resolution=high \
+          --track-fds=yes \
+          --suppressions=valgrind.supp \
+          $(VALGRIND_OPTIONS) \
+          $(BAR_VALGRIND) \
+            --daemon \
+            --no-detach \
+            --no-default-config \
+            --jobs-directory=jobs \
+            --server-ca-file=bar-ca.pem \
+            --server-cert-file=bar-server-cert.pem \
+            --server-key-file=bar-server-key.pem \
+            --server-port=$(TEST_SERVER_PORT) \
+            --server-tls-port=$(TEST_SERVER_SSL_PORT) \
+            --debug-server &
+	$(SLEEP) 30
+	$(ECHO) '1 VERSION' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 JOB_LIST' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEVICE_LIST' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 FILE_LIST storageDirectory=/tmp'| $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 PASSWORDS_CLEAR' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 INDEX_STORAGE_LIST maxCount=10 indexState=* indexMode=* pattern=x'| $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_STATISTICS' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_PRINT_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 DEBUG_DUMP_MEMORY_INFO' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) 'UNKNOWN' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 UNKNOWN' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+	$(ECHO) '1 QUIT' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
+
+#valgrind --tool=callgrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
+#valgrind --tool=cachegrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
+
+# ----------------------------------------------------------------------------
+
+DEVICE_ZERO    = /dev/zero
+DEVICE_RANDOM  = /dev/urandom
+
+# different performance files
+PERFORMANCE_FILES = \
+  $(TEST_DATA_DIR)/data/zero100M.dat \
+  $(TEST_DATA_DIR)/data/random100M.dat \
+  $(TEST_DATA_DIR)/data/delta1/test100M.dat \
+  $(TEST_DATA_DIR)/data/delta2/test100M.dat \
+
+# temporary performance files
+PERFORMANCE_FILES_CLEAN = \
+  intermediate/*.bar \
+  intermediate/new \
+  intermediate/restore \
+  intermediate/*.image
+
+# test bar exeuctable
+PERFORMANCE_BAR = ./bar@EXEEXT@
+
+$(TEST_DATA_DIR)/data/zero100M.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=100 2>/dev/null
+$(TEST_DATA_DIR)/data/random100M.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=100 2>/dev/null
+$(TEST_DATA_DIR)/data/delta1/test100M.dat:
+	$(INSTALL) -d $(@D)
+	( \
+         $(DD) if=$(DEVICE_RANDOM) bs=1M count=100 2>/dev/null; \
+        ) >$@
+$(TEST_DATA_DIR)/data/delta2/test100M.dat: $(TEST_DATA_DIR)/data/delta1/test100M.dat
+	$(INSTALL) -d $(@D)
+	( \
+          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test100M.dat skip=0 bs=1M count=50 2>/dev/null; \
+          $(DD) if=$(DEVICE_RANDOM) bs=1M count=1 2>/dev/null; \
+          $(DD) if=$(TEST_DATA_DIR)/data/delta1/test100M.dat skip=256 bs=1M count=49 2>/dev/null; \
+        ) >$@
+
+# performance tests
+.PHONY: performance
+performance:
+	@$(MAKE) \
+          $(if $(CHECK),\
+            performance$(CHECK),\
+            performance_none performance_zip_compress performance_bzip2_compress performance_lzma_compress performance_lzo_compress performance_lz4_compress performance_zstd_compress performance_delta_compress \
+           )
+
+.PHONY: performance1 performance_none
+performance1 performance_none: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "none (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance2 performance_zip_compress
+performance2 performance_zip_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "zip (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=zip9 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance3 performance_bzip2_compress
+performance3 performance_bzip2_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "bzip2 (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=bzip9 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance4 performance_lzma_compress
+performance4 performance_lzma_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "lzma (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzma9 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance5 performance_lzo_compress
+performance5 performance_lzo_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "lyo (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzo5 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance6 performance_lz4_compress
+performance6 performance_lz4_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "lz4 (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lz4-16 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance7 performance_zstd_compress
+performance7 performance_zstd_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "zstd (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=zstd19 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance8 performance_delta_compress
+performance8 performance_delta_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+ifeq (@HAVE_XDELTA3@,1)
+	@$(ECHO) "delta (100M random):"
+	@($(CD) $(TEST_DATA_DIR)/data/delta1; ../../../$(PERFORMANCE_BAR) -c ../../test-A.bar test100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null)
+	@$(ECHO_NO_LF) "  Create : "
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -c ../../test-B.bar test100M.dat --overwrite-archive-files --compress-algorithm=xdelta9+lzma9 --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@$(ECHO_NO_LF) "  Test   : "
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -t ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@$(ECHO_NO_LF) "  Diff   : "
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -d ../../test-B.bar --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
+	@$(ECHO_NO_LF) "  Extract: "
+	@($(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -x ../../test-B.bar --delta-source=../../test-A.bar --destination=../../restore --overwrite-files 1>/dev/null 2>/dev/null")
+endif
+
+# ----------------------------------------------------------------------------
+
+# testcode runs:
+#   1A+2+3+4: full+list+diff+extract
+#   1B+2+3+4: differentiell+list+diff+extract
+#   1C+2+3+4: incremental+list+diff+extract
+
+TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
+                     --compress-algorithm=lzma9 \
+                     --crypt-algorithm=AES256 \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-type=asymmetric \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --archive-part-size=100K \
+                     --overwrite-archive-files \
+                     --full \
+                     --log-post-command='true' \
+                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
+TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
+                     --compress-algorithm=lzma9 \
+                     --crypt-algorithm=AES256 \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-type=asymmetric \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --archive-part-size=100K \
+                     --overwrite-archive-files \
+                     --differential \
+                     --incremental-list-file=intermediate/test.bid \
+                     --log-post-command='true' \
+                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
+TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
+                     --compress-algorithm=lzma9 \
+                     --crypt-algorithm=AES256 \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-type=asymmetric \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --archive-part-size=100K \
+                     --overwrite-archive-files \
+                     --incremental \
+                     --incremental-list-file=intermediate/test.bid \
+                     --log-post-command='true' \
+                     -c intermediate/test-\#\#\#.bar $(TEST_DATA_DIR)/data
+TESTCODE_COMMAND2=$(TEST_BAR_DEBUG) \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     -l intermediate/test-*.bar
+TESTCODE_COMMAND3=$(TEST_BAR_DEBUG) \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     -d intermediate/test-*.bar
+TESTCODE_COMMAND4=$(TEST_BAR_DEBUG) \
+                     --crypt-password=$(TEST_PASSWORD_CRYPT) \
+                     --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) \
+                     --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) \
+                     --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) \
+                     --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) \
+                     --destination=intermediate/restore \
+                     -x intermediate/test-*.bar
+
+TESTCODE_COMMANDS = \
+  TESTCODE_COMMAND1A \
+  TESTCODE_COMMAND1B \
+  TESTCODE_COMMAND1C \
+  TESTCODE_COMMAND2 \
+  TESTCODE_COMMAND3 \
+  TESTCODE_COMMAND4 \
+
+# call functionTestcode(command)
+functionTestcode = \
+ if test $$rc -ne $(TESTCODE_EXITCODE); then \
+   TESTCODE_LIST=testcode.list TESTCODE_NAME=testcode.name TESTCODE_DONE=testcode.done \
+     $($1) >/dev/null; \
+   rc=$$?; \
+   if test $$rc -ne $(TESTCODE_EXITCODE); then \
+     $(ECHO) "Test code fail $1 (exitcode: $$rc):"; \
+     $(ECHO) "TESTCODE=$(if $(testcode),$(testcode),`$(CAT) testcode.name 2>/dev/null`) $($1)"; \
+   fi; \
+ fi
+
+# helper function to execute test code
+# call functionTestcodeA
+# call functionTestcodeB
+# call functionTestcodeC
+functionTestcodeA = \
+  ( \
+   rc=0; \
+   \
+   $(call functionTestcode,TESTCODE_COMMAND1A); \
+   $(call functionTestcode,TESTCODE_COMMAND2); \
+   $(call functionTestcode,TESTCODE_COMMAND3); \
+   $(call functionTestcode,TESTCODE_COMMAND4); \
+   \
+   exit $$rc; \
+  )
+
+functionTestcodeB = \
+  ( \
+   rc=0; \
+   \
+   $(call functionTestcode,TESTCODE_COMMAND1B); \
+   $(call functionTestcode,TESTCODE_COMMAND2); \
+   $(call functionTestcode,TESTCODE_COMMAND3); \
+   $(call functionTestcode,TESTCODE_COMMAND4); \
+   \
+   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
+     $(ECHO) "ERROR: No more testcode executed!"; \
+     $(ECHO) ""; \
+     $(ECHO) "Available and not executed testcode:"; \
+     $(MAKE) --quiet testcode_diff; \
+   fi; \
+   \
+   exit $$rc; \
+  )
+
+functionTestcodeC = \
+  ( \
+   rc=0; \
+   \
+   $(call functionTestcode,TESTCODE_COMMAND1C); \
+   $(call functionTestcode,TESTCODE_COMMAND2); \
+   $(call functionTestcode,TESTCODE_COMMAND3); \
+   $(call functionTestcode,TESTCODE_COMMAND4); \
+   \
+   if test -z "$(TESTCODE)" -a -z "`$(CAT) testcode.name 2>/dev/null`"; then \
+     $(ECHO) "ERROR: No more testcode executed!"; \
+     $(ECHO) ""; \
+     $(ECHO) "Available and not executed testcode:"; \
+     $(MAKE) --quiet testcode_diff; \
+   fi; \
+   \
+   exit $$rc; \
+  )
+
+.PHONY: testcode_clean testcode_init testcode_all testcode testcodex testcode_list testcode_diff
+
+testcode_clean:
+	$(RMF) testcode.list testcode.skip testcode.name testcode.done
+
+testcode_init: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	$(ECHO_NO_LF) >testcode.list
+	$(ECHO_NO_LF) >testcode.done
+	for z in $(TESTCODE_SKIP); do $(ECHO) $$s; done >testcode.skip
+	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) >/dev/null;)
+
+testcode_all: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	rc=$(TESTCODE_EXITCODE); \
+        while test $$rc -eq $(TESTCODE_EXITCODE); do \
+          rc=0; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeA) 1>/dev/null 2>/dev/null; \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeB); \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeC); \
+            rc=$$?; \
+          fi; \
+        done
+
+testcode: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+          rc=0; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeA); \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeB); \
+            rc=$$?; \
+          fi; \
+          if test $$rc -ne $(TESTCODE_EXITCODE); then \
+            $(call functionTestcodeC); \
+            rc=$$?; \
+          fi; \
+
+testcodex: \
+  $(TEST_BAR_DEBUG) \
+  $(TEST_CONFIG) \
+  $(TEST_KEYS) \
+  $(TEST_FILES)
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND1)
+	$(TESTCODE_COMMAND1) >/dev/null
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND2) >/dev/null; \
+	$(TESTCODE_COMMAND1) >/dev/null
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND3) >/dev/null; \
+	$(TESTCODE_COMMAND1) >/dev/null
+	TESTCODE=$(shell $(CAT) testcode.name) \
+          $(TESTCODE_COMMAND4) >/dev/null; \
+
+testcode_list:
+	$(ECHO_NO_LF) >testcode.list
+	$(foreach z,$(TESTCODE_COMMANDS),TESTCODE_LIST=testcode.list $($z) >/dev/null;)
+
+testcode_diff:
+	$(CAT) testcode.list | $(CUT) -d " " -f 1 | $(SORT) >testcode.list.sorted
+	$(CAT) testcode.done | $(CUT) -d " " -f 1 | $(SORT) >testcode.done.sorted
+	$(DIFF) testcode.list.sorted testcode.done.sorted | $(GREP) '<' | $(SED) 's/<\s*/  /g'
+	$(RMF) testcode.list.sorted testcode.done.sorted
 
 # ----------------------------------------------------------------------------
 # install/uninstall
-# Note: prefix DESTDIR is used for temporary installations
+# Note: prefix is used for temporary installations
 
-.PHONY: install install_bar install_barcontrol install_scripts install_man install_keys uninstall install_dist
+.PHONY: install uninstall
 
 install: \
-  install_bar \
-  install_barcontrol \
-  install_scripts \
-  install_man \
-  $(if $(DIST),,install_keys)
-
-install_bar:
-	$(MAKE) -C bar install \
-          prefix=$(prefix) \
-          bindir=$(bindir) \
-          libdir=$(libdir) \
-          datadir=$(datadir) \
-          sysconfdir=$(sysconfdir) \
-          mandir=$(mandir) \
-          DESTDIR=$(DESTDIR)
-
-install_barcontrol:
-	$(MAKE) -C barcontrol install \
-          prefix=$(prefix) \
-          bindir=$(bindir) \
-          libdir=$(libdir) \
-          datadir=$(datadir) \
-          sysconfdir=$(sysconfdir) \
-          mandir=$(mandir) \
-          DESTDIR=$(DESTDIR)
-
-# install script files
-install_scripts: \
-  $(SCRIPTS)
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
-	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
-	$(INSTALL) -d "$(DESTDIR)/var/lib/bar/install"; \
-	$(INSTALL) -t "$(DESTDIR)/var/lib/bar/install" \
-          scripts/barserver-SuSE \
-          scripts/barserver-Fedora \
-          scripts/barserver-RedHat \
-          scripts/barserver-CentOS \
-          scripts/barserver-Mandrake \
-          scripts/barserver-debian \
-          scripts/barserver.service
-
-# install man-page
-install_man: \
-  doc/bar.7
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
-	$(INSTALL) -m 644 doc/bar.7 "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
-
-# install keys
-# Note: prefix is used for temporary installations
-install_keys: \
-  $(KEY_FILES)
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_TLS_DIR)"
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_TLS_DIR)/certs"
-	$(INSTALL) -m 644 bar-ca.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/certs"
-	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/certs"
-	$(INSTALL) -d -m 700 "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
-	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
-	$(INSTALL) -m 600 bar-key.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
+  $(TARGETS_INSTALL)
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) -m 644 bar.sym bar-debug.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-sqlite3@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
+	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
+          $(INSTALL) -m 600 $(SOURCE_DIR)/bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
+        else \
+          echo "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; \
+        fi
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)/jobs"
+	for language in $(LANGUAGES); do \
+          $(INSTALL) -d "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES"; \
+          $(INSTALL) po/$$language/LC_MESSAGES/bar.mo "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
+        done
 
 # uninstall all
 uninstall:
-	@read -n 1 -p "Really uninstall? [y/N] " s; \
-        if test "$s" = "y" -o "$s" = "Y"; then \
-          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"; \
-          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
-                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
-                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
-          ) \
-          $(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-server-cert.pem"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"; \
-          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/\"; \
-          ) \
-          $(RMF) "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
-          $(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"; \
-        fi
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-sqlite3@EXEEXT@"
+	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+        )
+	$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"
+	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"
+	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-server-cert.pem"
+	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"
+	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.jks" \
+        )
+	$(RMF) "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"
+	$(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"
+	$(RMDIR) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/jobs"
+	for language in $(LANGUAGES); do \
+          $(RMF) "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
+        done
 
 # ----------------------------------------------------------------------------
-# tests
 
-# run server
-.PHONY: barserver barserver_ssl
-barserver:
-	@$(MAKE) -C bar barserver
-
-barserver_ssl:
-	@$(MAKE) -C bar barserver_ssl
-
-# do tests
-.PHONY: test test% test%-debug test%-gcov test%-gprof test%-valgrind
-test:
-	@$(MAKE) -C bar $@
-test%:
-	@$(MAKE) -C bar $@
-test%-debug:
-	@$(MAKE) -C bar $@
-test%-gcov:
-	@$(MAKE) -C bar $@
-test%-gprof:
-	@$(MAKE) -C bar $@
-test%-valgrind:
-	@$(MAKE) -C bar $@
-
-# memory checks
-.PHONY: memcheck memcheck1 memcheck_extended
-memcheck:
-	@$(MAKE) -C bar memcheck
-
-memcheck_extended:
-	@$(MAKE) -C bar memcheck_extended
-
-# ----------------------------------------------------------------------------
-# distribution
-
-.PHONY: dist clean_dist
-
+# copy distribution files
+.PHONY: dist
 dist:
-	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
-	$(MAKE) $(DISTRIBUTION_NAME).tar.bz2
-
-clean_dist:
-	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
-
-# create distribution
-$(DISTRIBUTION_NAME).tar.bz2: \
-  $(TARGETS) \
-  \
-  configure \
-  configure.ac \
-  Makefile.in \
-  epm.list.in \
-  version \
-  ToDo \
-  ChangeLog \
-  \
-  download-third-party-packages.sh \
-  $(OTHER_SOURCES) \
-  \
-  bin/config.guess \
-  bin/config.sub \
-  bin/install-sh \
-  bin/config.guess \
-  bin/config.sub bin/install-sh \
-  \
-  bar/Makefile.in \
-  bar/test/Makefile.in \
-  barcontrol/Makefile.in \
-  \
-  ssl/certtool/*.tmpl \
-  ssl/openssl/*.tmpl \
-  \
-  $(SCRIPTS) \
-  \
-  misc/*.patch \
-  \
-  doc/Makefile.in \
-  doc/README \
-  doc/COPYING \
-  doc/backup-archiver.odt \
-  doc/backup-archiver.pdf \
-  doc/*.txt \
-  $(DOC) \
-  $(DOC_IMAGES) \
-  $(DOC_IMAGES_SMALL) \
-  $(DOC_IMAGES_LARGE) \
-  \
-  packages/*
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
-	$(INSTALL) -m 775 \
-                   -t tmp/$(DISTRIBUTION_NAME) \
-                   configure \
-                   download-third-party-packages.sh \
-                   $(OTHER_SOURCES)
+ifneq ($(DIRECTORY),)
+	$(INSTALL) -d $(DIRECTORY)/bar
 	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME) \
-                   configure.ac \
+                   -t $(DIRECTORY)/bar \
                    Makefile.in \
-                   epm.list.in \
-                   ToDo \
-                   ChangeLog
-	( \
-          $(GREP) MAJOR version; \
-          $(GREP) MINOR version; \
-          $(GREP) PATCH version; \
-          $(ECHO) "RELEASE=$(shell $(SVNVERSION) .)"; \
-        ) > tmp/$(DISTRIBUTION_NAME)/version
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
+                   config.h.in \
+                   $(sort $(BAR_SOURCES) \
+                          $(BAR_HEADERS) \
+                          $(BAR_SOURCES_OTHER) \
+                          $(EXTERN_SOURCES) \
+                          $(EXTERN_HEADERS) \
+                          $(DESTROYER_SOURCES) \
+                          $(DESTROYER_HEADERS) \
+                          $(DESTROYER_SOURCES) \
+                          $(BAR_MINIDUMP_SOURCES) \
+                          $(BAR_MINIDUMP_HEADERS) \
+                          $(BAR_SQLITE3_SOURCES) \
+                          $(BAR_SQLITE3_HEADERS) \
+                   )
+	$(INSTALL) -d $(DIRECTORY)/bar/common
+	$(INSTALL) -m 644 \
+                   -t $(DIRECTORY)/bar/common \
+                   $(sort $(COMMON_SOURCES) \
+	                  $(COMMON_HEADERS) \
+                          $(COMMON_SOURCES_OTHER) \
+	           )
+	$(INSTALL) -d $(DIRECTORY)/bar/po
 	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/bin \
-                   bin/config.guess \
-                   bin/config.sub \
-                   bin/install-sh
-	$(MAKE) -C bar dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
-	$(MAKE) -C barcontrol dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
-	$(MAKE) -C doc dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/bin \
-                   bin/config.guess \
-                   bin/config.sub bin/install-sh
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/certtool
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/ssl/certtool \
-                   ssl/certtool/*.tmpl
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/openssl
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/ssl/openssl \
-                   ssl/openssl/*.tmpl
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/scripts
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/scripts \
-                   $(SCRIPTS)
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/misc
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/misc \
-                   misc/*.patch
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/doc \
-                   doc/README \
-                   doc/COPYING \
-                   doc/backup-archiver.odt \
-                   doc/backup-archiver.pdf \
-                   doc/*.txt \
-                   doc/bar.7
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc/images
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/doc/images \
-                   doc/images/*.png
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/packages \
-                   packages/*.dockerfile \
-                   packages/*.spec \
-                   packages/*.iss \
-                   packages/*.sh
-	$(INSTALL) -m 775 \
-                   -t tmp/$(DISTRIBUTION_NAME)/packages \
-                   packages/changelog.pl
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/packages/debian \
-                   packages/debian/compat \
-                   packages/debian/conffiles \
-                   packages/debian/control \
-                   packages/debian/copyright \
-                   packages/debian/postinst \
-                   packages/debian/postrm \
-                   packages/debian/preinst \
-                   packages/debian/prerm \
-                   packages/debian/rules
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian/source
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/packages/debian/source \
-                   packages/debian/source/format
-	#
-	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
-	$(RMRF) tmp/$(DISTRIBUTION_NAME)
-	#
-ifneq ($(MD5SUM),)
-	$(MD5SUM) $@
+                   -t $(DIRECTORY)/bar/po \
+                   $(sort po/Makefile.in \
+                          po/*.pot \
+                          po/*.po \
+                   )
+	$(MAKE) -C test dist DIRECTORY=../$(DIRECTORY)
+else
+	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
 endif
-
-# --- Debian distribution
-.PHONY: debian_dist clean_debian_dist $(DISTRIBUTION_NAME).orig.tar.gz
-
-debian_dist: \
-  $(DISTRIBUTION_NAME).orig.tar.gz
-
-clean_debian_dist:
-	$(RMF) $(DISTRIBUTION_NAME).orig.tar.gz
-
-# create Debian distribution
-$(DISTRIBUTION_NAME).orig.tar.gz: \
-  $(DISTRIBUTION_NAME).tar.bz2 \
-  download-third-party-packages.sh
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
-	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/extern
-        # copy existing packages to avoid download (which may fail because of an instable Internet)
-	$(INSTALL) \
-          extern/binutils-*.tar.bz2 \
-          extern/bzip2-*.tar.gz \
-          extern/c-ares-*.tar.gz \
-          extern/curl-*.tar.bz2 \
-          extern/gmp-*.tar.xz \
-          extern/gnutls-*.tar.xz \
-          extern/icu*.tgz \
-          extern/libiconv-*.tar.gz \
-          extern/libcdio-*.tar.gz \
-          extern/libgcrypt-*.tar.bz2 \
-          extern/libgpg-error-*.tar.bz2 \
-          extern/libssh2-*.tar.gz \
-          extern/lz4-*.tar.gz \
-          extern/lzo-*.tar.gz \
-          extern/mtx-*.tar.gz \
-          extern/mxml-*.tar.gz \
-          extern/nettle-*.tar.gz \
-          extern/openssl-*.tar.gz \
-          extern/pcre-*.tar.bz2 \
-          extern/sqlite-src-*.zip \
-          extern/pthreads-w32-*.tar.gz \
-          extern/xdelta*.tar.gz \
-          extern/xz-*.tar.gz \
-          extern/zlib-*.tar.gz \
-          extern/zstd-*.zip \
-          tmp/$(DISTRIBUTION_NAME).orig/extern
-	$(INSTALL) \
-          third-party/breakpad-r1430.tar.bz2 \
-          tmp/$(DISTRIBUTION_NAME).orig/extern/breakpad.tar.bz2
-	if test -n "`ls extern/ftplib-*.tar.gz 2>/dev/null`"; then \
-	  $(INSTALL) \
-            extern/ftplib-*.tar.gz \
-            tmp/$(DISTRIBUTION_NAME).orig/extern; \
-        fi
-	if test -n "`ls extern/launch4j-*.tgz 2>/dev/null`"; then \
-	  $(INSTALL) \
-            extern/launch4j-*.tgz \
-            tmp/$(DISTRIBUTION_NAME).orig/extern; \
-        fi
-	if test -n "`ls extern/epm-*-source.tar.bz2 2>/dev/null`"; then \
-          $(INSTALL) \
-            extern/epm-*-source.tar.bz2 \
-            tmp/$(DISTRIBUTION_NAME).orig/extern; \
-        fi
-	# download not existing packages
-	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig -n
-	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
-	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
 
 # ----------------------------------------------------------------------------
-# packages
 
-.PHONY: packages
-packages: \
-  rpm \
-  deb \
-  gui
-
-.PHONY: update_docker
-update_docker:
-	# base images
-	$(DOCKER) pull i386/centos:6
-	$(DOCKER) pull centos:6
-	$(DOCKER) pull i386/debian:8
-	$(DOCKER) pull debian:8
-	#
-	# test images
-	$(DOCKER) pull i386/centos:7
-	$(DOCKER) pull centos:7
-	#
-	$(DOCKER) pull fedora:28
-	$(DOCKER) pull fedora:29
-	$(DOCKER) pull fedora:30
-	$(DOCKER) pull fedora:31
-	#
-	$(DOCKER) pull opensuse/tumbleweed
-	$(DOCKER) pull opensuse/leap
-	#
-	$(DOCKER) pull i386/debian:8
-	$(DOCKER) pull debian:8
-	$(DOCKER) pull i386/debian:9
-	$(DOCKER) pull debian:9
-	$(DOCKER) pull i386/debian:10
-	$(DOCKER) pull debian:10
-	#
-	$(DOCKER) pull ubuntu:16.04
-	$(DOCKER) pull ubuntu:18.04
-	$(DOCKER) pull ubuntu:19.04
-	$(DOCKER) pull ubuntu:19.10
-	$(DOCKER) pull ubuntu:20.04
-	#
-	# base images
-	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile             -t bar-centos:6            .)
-	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile      -t bar-centos-x86_64:6     .)
-	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile             -t bar-debian:8            .)
-	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile      -t bar-debian-x86_64:8     .)
-	(cd packages; $(DOCKER) build -f bar-ubuntu18.04-mingw32.dockerfile -t bar-mingw32             .)
-	#
-	# test images
-	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
-	#(cd packages; $(DOCKER) build -f bar-centos7.dockerfile            -t bar-centos:7            .)
-	#(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile     -t bar-centos-x86_64:7     .)
-	##(cd packages; $(DOCKER) build -f bar-fedora28-x86_64.dockerfile    -t bar-fedora-x86_64:28    .)
-	#(cd packages; $(DOCKER) build -f bar-fedora29-x86_64.dockerfile    -t bar-fedora-x86_64:29    .)
-	#
-	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
-
-.PHONY: purge_docker
-purge_docker:
-	$(DOCKER) rm $$($(DOCKER) ps -a -q)
-
-.PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
-rpm_docker:
-	echo TODO
-rpm_docker-x86_64:
-	echo TODO
-
-deb_docker:
-	echo TODO
-deb_docker-x86_64:
-	echo TODO
-
-win32_docker:
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            -e CFLAGS="-m32" \
-            -v $(PWD):/media/home \
-            -v $(WINE_C_DRIVE):/media/wine \
-            --name=bar-win32 \
-            bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
-              -s \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(WINE) \
-              $(DISTRIBUTION_NAME)-setup; \
+.PHONY: crashdump
+crashdump:
+ifneq ($(MINIDUMP),)
+	../packages/breakpad/src/tools/linux/md2core/minidump-2-core -v $(MINIDUMP) 1>bar.core 2>bar.core.out
+	(a=`grep -w GUID bar.core.ouot |grep bar|sed 's/-.*//g'`; \
+         b=`objdump -h ./bar|grep \.text|awk '{print $$4}'`; \
+         gdb --eval-command="add-symbol-file ./bar@EXEEXT@ `perl -e 'die unless $$ARGV[0] && $$ARGV[1]; printf("%#x\n", hex($$ARGV[0]) + hex($$ARGV[1]))' $$a $$b;`" --core ./bar.core; \
         )
-win32_docker-x86_64:
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            -v $(PWD):/media/home \
-            -v $(WINE_C_DRIVE):/media/wine \
-            --name=bar-win32-x86_64 \
-            bar-mingw32 setarch x86_64 -- /media/home/packages/build_win32.sh \
-              -s \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(WINE) \
-              $(DISTRIBUTION_NAME)-setup; \
-        )
-
-
-# RPM
-.PHONY: rpm rpmd clean_rpm
-rpm: \
-  rpm32 \
-  rpm64
-rpmd: \
-  rpm32d \
-  rpm64d
-
-.PHONY: rpm32 rpm32d rpm64 rpm64d
-rpm32: \
-  $(DISTRIBUTION_NAME).rpm
-rpm32d:
-	$(MAKE) $(DISTRIBUTION_NAME).rpm DEBUG=1
-rpm64: \
-  $(DISTRIBUTION_NAME)-x86_64.rpm
-rpm64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm DEBUG=1
-
-clean_rpm:
-	$(RMF) $(DISTRIBUTION_NAME).rpm
-	$(RMF) $(DISTRIBUTION_NAME).rpm.log
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm.log
-
-$(DISTRIBUTION_NAME).rpm: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	# Note: scl_source to enable gcc 7
-	@$(call functionPrintInfo,Build RPM on CentOS 6 32bit)
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            -e CFLAGS="-m32" \
-            -v $(PWD):/media/home \
-            bar-centos:6 setarch i686 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME).rpm \
-              $(if $(DEBUG),--debug) \
-              ;" \
-        ) | tee $@.log
-	@$(call functionPrintResult,OK)
-
-$(DISTRIBUTION_NAME)-x86_64.rpm: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	# Note: scl_source to enable gcc 7
-	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
-	@( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            -v $(PWD):/media/home \
-            bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME)-x86_64.rpm \
-              $(if $(DEBUG),--debug) \
-              ;" \
-        ) | tee $@.log
-	@$(call functionPrintResult,OK)
-
-# DEB
-.PHONY: deb debd clean_deb
-deb: \
-  deb32 \
-  deb64
-debd: \
-  deb32d \
-  deb64d
-
-.PHONY: deb32 deb32d deb-gui32 deb-gui32d deb64 deb64d deb-gui64 deb-gui64d
-deb32: \
-  $(DISTRIBUTION_NAME).deb
-deb32d:
-	$(MAKE) $(DISTRIBUTION_NAME).deb DEBUG=1
-deb-gui32: \
-  $(DISTRIBUTION_NAME_GUI).deb
-deb-gui32d:
-	$(MAKE) $(DISTRIBUTION_NAME_GUI).deb DEBUG=1
-deb64: \
-  $(DISTRIBUTION_NAME)-x86_64.deb
-deb64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb DEBUG=1
-deb-gui64: \
-  $(DISTRIBUTION_NAME_GUI)-x86_64.deb
-deb-gui64d:
-	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb DEBUG=1
-
-clean_deb:
-	$(RMF) $(DISTRIBUTION_NAME).deb
-	$(RMF) $(DISTRIBUTION_NAME_GUI).deb
-	$(RMF) $(DISTRIBUTION_NAME).deb.log
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb
-	$(RMF) $(DISTRIBUTION_NAME_GUI)-x86_64.deb
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb.log
-
-$(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 32bit)
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            -v $(PWD):/media/home \
-            bar-debian:8 setarch i686 -- /media/home/packages/build_deb.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME).deb \
-              $(DISTRIBUTION_NAME_GUI).deb \
-              $(if $(DEBUG),--debug) \
-              ; \
-        ) | tee $@.log
-	@$(call functionPrintResult,OK)
-
-$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 64bit)
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            -v $(PWD):/media/home \
-            bar-debian-x86_64:8 setarch x86_64 -- /media/home/packages/build_deb.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME)-x86_64.deb \
-              $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
-              $(if $(DEBUG),--debug) \
-              ; \
-        ) | tee $@.log
-	@$(call functionPrintResult,OK)
-
-# Windows setup
-.PHONY: win32 clean_win32
-win32: \
-  $(DISTRIBUTION_NAME)-setup.exe
-
-clean_win32:
-	$(RMF) $(DISTRIBUTION_NAME).rpm
-	$(RMF) $(DISTRIBUTION_NAME).rpm.log
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm.log
-
-$(DISTRIBUTION_NAME)-setup.exe: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build Win32 on mingw32)
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            -e CFLAGS="-m32" \
-            -v $(PWD):/media/home \
-            -v $(WINE_C_DRIVE):/media/wine \
-            bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(WINE) \
-              $(DISTRIBUTION_NAME)-setup; \
-        ) | tee $@.log
-	@$(call functionPrintResult,OK)
-
-# install test
-.PHONY: install_test
-install_test:
-	@$(MAKE) QUIET=1 \
-          install_test_rpm \
-          install_test_deb
-
-.PHONY: install_test_rpm
-install_test_rpm: \
-  install_test_rpm_centos6 \
-  install_test_rpm_centos6-x86_64 \
-  install_test_rpm_centos7 \
-  install_test_rpm_centos7-x86_64 \
-  install_test_rpm_fedora28-x86_64 \
-  install_test_rpm_fedora29-x86_64 \
-  install_test_rpm_opensuse-tumbleweed-x86_64 \
-  install_test_rpm_opensuse-leap-x86_64 \
-
-# call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
-functionInstallTestRPM = \
-  $(DOCKER) $(DOCKER_RUN_FLAGS) \
-      --rm \
-      -v $(PWD):/media/home \
-      $1 \
-      /media/home/packages/install_test_rpm.sh \
-        $3
-
-# call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
-functionInstallTestDEB = \
-  $(DOCKER) $(DOCKER_RUN_FLAGS) \
-      --rm \
-      -v $(PWD):/media/home \
-      $1 \
-      /media/home/packages/install_test_deb.sh \
-        $3
-
-# Note: i386 images is broken; use own image
-.PHONY: install_test_rpm_centos6
-install_test_rpm_centos6:
-	@$(call functionPrintInfo,Test install Centos 6)
-	@$(call functionInstallTestRPM,bar-centos:6,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_centos6-x86_64
-install_test_rpm_centos6-x86_64:
-	@$(call functionPrintInfo,Test install Centos 6 64bit)
-	@$(call functionInstallTestRPM,centos:6,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-
-.PHONY: install_test_rpm_centos7
-install_test_rpm_centos7:
-	@$(call functionPrintInfo,Test install Centos 7)
-	@$(call functionInstallTestRPM,bar-centos:7,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_centos7-x86_64
-install_test_rpm_centos7-x86_64:
-	@$(call functionPrintInfo,Test install Centos 7 64bit)
-	@$(call functionInstallTestRPM,centos:7,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-
-.PHONY: install_test_rpm_fedora28-x86_64
-install_test_rpm_fedora28-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 28 64bit)
-	@$(call functionInstallTestRPM,fedora:28,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_fedora29-x86_64
-install_test_rpm_fedora29-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 29 64bit)
-	@$(call functionInstallTestRPM,fedora:29,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_fedora30-x86_64
-install_test_rpm_fedora30-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 30 64bit)
-	@$(call functionInstallTestRPM,fedora:30,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_fedora31-x86_64
-install_test_rpm_fedora31-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 31 64bit)
-	@$(call functionInstallTestRPM,fedora:31,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-
-.PHONY: install_test_rpm_opensuse-tumbleweed-x86_64
-install_test_rpm_opensuse-tumbleweed-x86_64:
-	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
-	@$(call functionInstallTestRPM,opensuse/tumbleweed,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_opensuse-leap-x86_64
-install_test_rpm_opensuse-leap-x86_64:
-	@$(call functionPrintInfo,Test install OpenSuSE Leap 64bit)
-	@$(call functionInstallTestRPM,opensuse/leap,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-
-.PHONY: install_test_deb
-install_test_deb: \
-  install_test_deb_debian8 \
-  install_test_deb_debian8-x86_64 \
-  install_test_deb_debian9 \
-  install_test_deb_debian9-x86_64 \
-  install_test_deb_ubuntu16.04-x86_64 \
-  install_test_deb_ubuntu18.04-x86_64 \
-  install_test_deb_ubuntu19.04-x86_64 \
-  install_test_deb_ubuntu19.10-x86_64 \
-  install_test_deb_ubuntu20.04-x86_64 \
-
-.PHONY: install_test_deb_debian8
-install_test_deb_debian8:
-	@$(call functionPrintInfo,Test install Debian 8)
-	@$(call functionInstallTestDEB,bar-debian:8,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian8-x86_64
-install_test_deb_debian8-x86_64:
-	@$(call functionPrintInfo,Test install Debian 8 64bit)
-	@$(call functionInstallTestDEB,bar-debian-x86_64:8,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian9
-install_test_deb_debian9:
-	@$(call functionPrintInfo,Test install Debian 9)
-	@$(call functionInstallTestDEB,i386/debian:9,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian9-x86_64
-install_test_deb_debian9-x86_64:
-	@$(call functionPrintInfo,Test install Debian 9 64bit)
-	@$(call functionInstallTestDEB,debian:9,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian10
-install_test_deb_debian10:
-	@$(call functionPrintInfo,Test install Debian 10)
-	@$(call functionInstallTestDEB,i386/debian:10,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian10-x86_64
-install_test_deb_debian10-x86_64:
-	@$(call functionPrintInfo,Test install Debian 10 64bit)
-	@$(call functionInstallTestDEB,debian:10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-
-.PHONY: install_test_deb_ubuntu16.04-x86_64
-install_test_deb_ubuntu16.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 16.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:16.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu18.04-x86_64
-install_test_deb_ubuntu18.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 18.10 64bit)
-	@$(call functionInstallTestDEB,ubuntu:18.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu19.04-x86_64
-install_test_deb_ubuntu19.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 19.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:19.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu19.10-x86_64
-install_test_deb_ubuntu19.10-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 19.10 64bit)
-	@$(call functionInstallTestDEB,ubuntu:19.10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu20.04-x86_64
-install_test_deb_ubuntu20.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 20.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:20.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-
-# GUI
-.PHONY: gui clean_gui
-
-gui: \
-  $(DISTRIBUTION_NAME_GUI).zip
-
-clean_gui:
-	$(RMF) $(DISTRIBUTION_NAME_GUI).zip
-
-$(DISTRIBUTION_NAME_GUI).zip: \
-  barcontrol/barcontrol@SHELLEXT@ \
-  barcontrol/barcontrol.cmd \
-  barcontrol/barcontrol-linux.jar \
-  barcontrol/barcontrol-linux_64.jar \
-  barcontrol/barcontrol.cmd \
-  barcontrol/barcontrol-windows.jar \
-  barcontrol/barcontrol-windows_64.jar \
-  barcontrol/barcontrol-solaris.jar \
-  barcontrol/barcontrol-macosx.jar \
-  barcontrol/barcontrol-macosx_64.jar
-	$(INSTALL) -d tmp/gui/linux
-	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol@SHELLEXT@ \
-                   tmp/gui/linux
-	$(INSTALL) -m 664 \
-                   barcontrol/barcontrol-linux.jar \
-                   barcontrol/barcontrol-linux_64.jar \
-                   tmp/gui/linux
-	#
-	$(INSTALL) -d tmp/gui/windows
-	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol.cmd \
-                   tmp/gui/windows
-	$(INSTALL) -m 664 \
-                   barcontrol/barcontrol-windows.jar \
-                   barcontrol/barcontrol-windows_64.jar \
-                   tmp/gui/windows
-	#
-	$(INSTALL) -d tmp/gui/solaris
-	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol \
-                   tmp/gui/solaris
-	$(INSTALL) -m 664 \
-                   barcontrol/barcontrol-solaris.jar \
-                   tmp/gui/solaris
-	#
-	$(INSTALL) -d tmp/gui/macosx
-	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol \
-                   tmp/gui/macosx
-	$(INSTALL) -m 664 \
-                   barcontrol/barcontrol-macosx.jar \
-                   barcontrol/barcontrol-macosx_64.jar \
-                   tmp/gui/macosx
-
-	($(CD) tmp/gui; $(ZIP) -r ../../$@ linux windows solaris macosx)
-	$(RMRF) tmp/gui
-	#
-ifneq ($(MD5SUM),)
-	$(MD5SUM) $@
+else
+	echo "Please specify minidump file with MINIDUMP=<file name>"
 endif
 
-.PHONY: setup
-setup:
-	#install packages/backup-archiver.iss backup-archiver.iss
-	$(WINE) "$(ISCC)" \
-  /O$(PROJECT_ROOT) \
-  /F$(DISTRIBUTION_NAME)-setup \
-  packages/backup-archiver.iss
+# ----------------------------------------------------------------------------
+
+ifeq ($(NO_DEPEND),)
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),distclean)
+-include Makefile.depend
+endif
+endif
+endif
 
 # end of file

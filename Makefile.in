@@ -1,0 +1,1274 @@
+# ----------------------------------------------------------------------------
+#
+# $Source: /home/torsten/cvs/bar/Makefile.in,v $
+# $Revision$
+# $Author$
+# Contents: Makefile for bar
+# Systems: all
+#
+# ----------------------------------------------------------------------------
+
+#----------------------------- external variables ----------------------------
+#
+# DESTDIR=<path>    install destination directory
+# DIST=1            install for creating distribution packages
+
+#---------------------------------- settings ---------------------------------
+
+ENABLE_DEBUG    = @ENABLE_DEBUG@
+ENABLE_GUI      = @ENABLE_GUI@
+
+PLATFORM        = @PLATFORM@
+
+#------------------------------------ paths ----------------------------------
+
+SOURCE_DIR             = $(abspath @srcdir@)
+
+ETC_DIR                = /etc
+
+ifeq ($(DESTDIR),)
+INSTALL_DIR            = $(if $(prefix),$(prefix),@INSTALL_DIR@)
+INSTALL_BIN_DIR        = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
+INSTALL_LIB_DIR        = $(if $(libdir),$(libdir),/usr/lib)
+INSTALL_LOCALE_DIR     = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
+INSTALL_ETC_DIR        = $(if $(sysconfdir),$(sysconfdir),$(ETC_DIR))
+#INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
+INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/init.d
+INSTALL_LOGROTATED_DIR = $(INSTALL_ETC_DIR)/logrotate.d
+INSTALL_CONFIG_DIR     = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
+INSTALL_MAN_DIR        = $(if $(mandir),$(mandir),@MAN_DIR@)
+else
+INSTALL_DIR            = @INSTALL_DIR@
+INSTALL_BIN_DIR        = @INSTALL_BIN_DIR@
+INSTALL_LIB_DIR        = /usr/lib
+INSTALL_LOCALE_DIR     = @LOCALE_DIR@
+INSTALL_ETC_DIR        = $(ETC_DIR)
+#INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/$(if $(wildcard $(ETC_DIR)/rc.d),rc.d/init.d,init.d)
+INSTALL_INITD_DIR      = $(INSTALL_ETC_DIR)/init.d
+INSTALL_LOGROTATED_DIR = $(INSTALL_ETC_DIR)/logrotate.d
+INSTALL_CONFIG_DIR     = @CONFIG_DIR@
+INSTALL_MAN_DIR        = @MAN_DIR@
+endif
+INSTALL_TLS_DIR        = @TLS_DIR@
+
+#--------------------------------- tool chain --------------------------------
+
+CERTTOOL         = @CERTTOOL@
+OPENSSL          = @OPENSSL@
+KEYTOOL          = @KEYTOOL@
+
+DOCKER_RUN_FLAGS = run -i -t
+
+TXT2MAN          = @TXT2MAN@
+UNOCONV          = @UNOCONV@
+
+SVNVERSION       = svnversion
+
+#---------------------------------- commands----------------------------------
+
+CAT          = cat
+CD           = cd
+CHMOD        = chmod
+CONVERT      = convert
+CP           = cp
+DIFF         = diff
+DOCKER       = @DOCKER@
+ECHO         = echo
+ECHO_NO_LF   = echo -n
+EPM          = @EPM@
+GREP         = grep
+INSTALL      = @INSTALL@
+LN           = ln
+MD5SUM       = @MD5SUM@
+MKDIR        = mkdir
+MV           = mv
+NROFF        = nroff
+PERL         = @PERL@
+PRINTF       = printf
+RMDIR        = rmdir
+RMF          = rm -f
+RMRF         = rm -rf
+SED          = sed
+TAR          = tar
+WINE         = @WINE@
+WINE_C_DRIVE = @WINE_C_DRIVE@
+ZIP          = zip
+
+#------------------------ specific variables/settings ------------------------
+
+SHELL = bash
+
+VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
+
+CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
+COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
+
+CRYPT    = none
+COMPRESS = none
+
+PACKAGE_NAME           = backup-archiver
+PACKAGE_NAME_GUI       = backup-archiver-gui
+DISTRIBUTION_NAME      = $(PACKAGE_NAME)-$(VERSION)
+DISTRIBUTION_NAME_ORIG = $(PACKAGE_NAME)_$(VERSION).orig
+DISTRIBUTION_NAME_GUI  = $(PACKAGE_NAME_GUI)-$(VERSION)
+
+#-------------------------------- functions ----------------------------------
+
+# print info line
+# $(call functionPrintInfo,text)
+functionPrintInfo = \
+  $(if $(QUIET), \
+    $(ECHO_NO_LF) "$1...",\
+    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
+   )
+
+# print result
+# $(call functionPrintResult,text)
+functionPrintResult = \
+  $(if $(QUIET), \
+    $(ECHO) "$1",\
+    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
+   )
+
+#---------------------------------- rules ------------------------------------
+
+# convert images
+doc/images/%.png: doc/images/%.xcf
+	$(CONVERT) $^ -layers flatten $@
+
+doc/images/%-small.png: doc/images/%.xcf
+	$(CONVERT) $^ -delete 1--1 -resize 200x200 $@
+
+doc/images/%-large.png: doc/images/%.xcf
+	$(CONVERT) $^ -delete 1--1 $@
+
+#--------------------------------- objects -----------------------------------
+
+TARGETS              = bar/bar@EXEEXT@ \
+                       bar/bar-debug@EXEEXT@ \
+                       bar/bar-keygen@SHELLEXT@ \
+                       $(if $(findstring $(ENABLE_GUI),yes),\
+                         barcontrol/barcontrol@SHELLEXT@ \
+                         barcontrol/barcontrol.cmd \
+                       ) \
+
+DOC                  = $(if $(TXT2MAN),doc/bar.7) \
+                       $(if $(UNOCONV),doc/backup-archiver.pdf) \
+
+DOC_IMAGES           = doc/images/archivename-editor.png \
+                       doc/images/entries.png \
+                       doc/images/images.png \
+                       doc/images/filters+mounts.png \
+                       doc/images/restore-dialog.png \
+                       doc/images/restore.png \
+                       doc/images/schedule.png \
+                       doc/images/persistence.png \
+                       doc/images/scripts.png \
+                       doc/images/server-commands.png \
+                       doc/images/server-general.png \
+                       doc/images/server-servers.png \
+                       doc/images/server-verbosity+log.png \
+                       doc/images/status.png \
+                       doc/images/storage.png \
+
+DOC_IMAGES_SMALL     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
+DOC_IMAGES_LARGE     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
+
+OTHER_SOURCES        = errors.pl \
+                       errors.def \
+
+KEY_FILES            = bar-key.pem \
+                       bar-ca.pem \
+                       bar-server-key.pem \
+                       bar-server-cert.pem \
+
+SCRIPTS              = scripts/barserver-SuSE \
+                       scripts/barserver-Fedora \
+                       scripts/barserver-RedHat \
+                       scripts/barserver-Mandrake \
+                       scripts/barserver-debian \
+                       scripts/barserver-CentOS \
+                       scripts/barserver.service \
+                       scripts/logrotate.conf \
+
+#------------------------------ dependencies ---------------------------------
+
+.PHONY: all clean distclean
+
+all: \
+  $(TARGETS) \
+  $(DOC) \
+  $(DOC_IMAGES) \
+  $(DOC_IMAGES_SMALL) \
+  $(DOC_IMAGES_LARGE) \
+
+clean: \
+  clean_keys \
+  clean_doc \
+  clean_rpm \
+  clean_deb
+	-$(MAKE) -C bar clean
+ifeq ($(ENABLE_GUI),yes)
+	-$(MAKE) -C barcontrol clean
+endif
+	$(RMRF) $(DISTRIBUTION_NAME)
+	$(RMF) $(DISTRIBUTION_NAME).tar.bz2 $(DISTRIBUTION_NAME).orig.tar.gz
+	$(RMRF) tmp
+
+distclean: clean
+	-$(MAKE) -C bar distclean
+ifeq ($(ENABLE_GUI),yes)
+	-$(MAKE) -C barcontrol distclean
+endif
+	./download-third-party-packages.sh --clean
+	$(RMRF) extern
+	$(RMF) Makefile
+	$(RMF) src/Config.java
+	$(RMF) epm.list
+	$(RMF) config.status
+	$(RMF) config.log
+
+# help
+.PHONY: help
+help:
+	@$(ECHO) "Help targets:"
+	@$(ECHO) ""
+	@$(ECHO) "  all "
+	@$(ECHO) "  clean "
+	@$(ECHO) "  distclean"
+	@$(ECHO) ""
+	@$(ECHO) "  bar"
+	@$(ECHO) "  bar-keygen"
+	@$(ECHO) "  barcontrol"
+	@$(ECHO) ""
+	@$(ECHO) "  keys"
+	@$(ECHO) ""
+	@$(ECHO) "  doc"
+	@$(ECHO) "  clean_doc"
+	@$(ECHO) "  man"
+	@$(ECHO) "  showman"
+	@$(ECHO) "  pdf"
+	@$(ECHO) ""
+	@$(ECHO) "  install"
+	@$(ECHO) ""
+	@$(ECHO) "  test"
+	@$(ECHO) "  test1[-debug|-valgrind], test_basic"
+	@$(ECHO) "  test2[-debug|-valgrind], test_compress"
+	@$(ECHO) "  test3[-debug|-valgrind], test_crypt"
+	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt"
+	@$(ECHO) "  test5[-debug|-valgrind], test_signatures"
+	@$(ECHO) "  test6[-debug|-valgrind], test_split"
+	@$(ECHO) "  test7[-debug|-valgrind], test_image"
+	@$(ECHO) "  test8[-debug|-valgrind], test_storage"
+	@$(ECHO) "  test9[-debug|-valgrind], test_largefile"
+	@$(ECHO) "  test10[-debug|-valgrind], test_dvd"
+	@$(ECHO) "  test_parameters"
+	@$(ECHO) "  test_combined"
+	@$(ECHO) "  test_misc"
+	@$(ECHO) ""
+	@$(ECHO) "  memcheck"
+	@$(ECHO) "  memcheck_extended"
+	@$(ECHO) ""
+	@$(ECHO) "  dist"
+	@$(ECHO) "  clean_dist"
+	@$(ECHO) "  debian_dist"
+	@$(ECHO) "  clean_debian_dist"
+	@$(ECHO) ""
+	@$(ECHO) "  rpm[d]"
+	@$(ECHO) "  rpm32[d]"
+	@$(ECHO) "  rpm64[d]"
+	@$(ECHO) "  clean_rpm"
+	@$(ECHO) ""
+	@$(ECHO) "  deb[d]"
+	@$(ECHO) "  deb32[d]"
+	@$(ECHO) "  deb64[d]"
+	@$(ECHO) "  clean_deb"
+	@$(ECHO) ""
+	@$(ECHO) "  win32"
+	@$(ECHO) "  clean_win32"
+	@$(ECHO) ""
+	@$(ECHO) "  update_docker"
+	@$(ECHO) "  purge_docker"
+	@$(ECHO) ""
+	@$(ECHO) "  rpm_docker"
+	@$(ECHO) "  deb_docker"
+	@$(ECHO) "  win32_docker"
+	@$(ECHO) ""
+	@$(ECHO) "  install_test"
+	@$(ECHO) ""
+	@$(ECHO) "  install_test_rpm"
+	@$(ECHO) "  install_test_rpm_centos6"
+	@$(ECHO) "  install_test_rpm_centos6-x86_64"
+	@$(ECHO) "  install_test_rpm_centos7"
+	@$(ECHO) "  install_test_rpm_centos7-x86_64"
+	@$(ECHO) "  install_test_rpm_fedora28-x86_64"
+	@$(ECHO) "  install_test_rpm_fedora29-x86_64"
+	@$(ECHO) "  install_test_rpm_fedora30-x86_64"
+	@$(ECHO) "  install_test_rpm_fedora31-x86_64"
+	@$(ECHO) "  install_test_rpm_opensuse-tumbleweed-x86_64"
+	@$(ECHO) "  install_test_rpm_opensuse-leap-x86_64"
+	@$(ECHO) ""
+	@$(ECHO) "  install_test_deb"
+	@$(ECHO) "  install_test_deb_debian8"
+	@$(ECHO) "  install_test_deb_debian8-x86_64"
+	@$(ECHO) "  install_test_deb_debian9"
+	@$(ECHO) "  install_test_deb_debian9-x86_64"
+	@$(ECHO) "  install_test_deb_debian10"
+	@$(ECHO) "  install_test_deb_debian10-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu16.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu18.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu19.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu19.10-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu20.04-x86_64"
+	@$(ECHO) ""
+	@$(ECHO) "  gui"
+	@$(ECHO) "  clean_gui"
+
+# create dependencies
+.PHONY: depend
+depend:
+	$(MAKE) -j1 -C bar depend
+	$(MAKE) -j1 -C barcontrol depend
+
+# ----------------------------------------------------------------------------
+# create bar
+.PHONY: bar bar-debug
+
+bar bar/bar@EXEEXT@:
+	$(MAKE) -C bar bar@EXEEXT@
+
+bar-debug bar/bar-debug@EXEEXT@:
+	$(MAKE) -C bar bar-debug@EXEEXT@
+
+# create bar-keygen
+.PHONY: bar-keygen
+
+bar-keygen bar/bar-keygen@SHELLEXT@:
+	$(MAKE) -C bar bar-keygen@SHELLEXT@
+
+# create barcontrol
+.PHONY: barcontrol
+
+barcontrol barcontrol/barcontrol:
+ifeq ($(ENABLE_GUI),yes)
+	$(MAKE) -C barcontrol barcontrol@SHELLEXT@
+else
+	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
+
+barcontrol/barcontrol.cmd:
+ifeq ($(ENABLE_GUI),yes)
+	$(MAKE) -C barcontrol barcontrol.cmd
+else
+	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
+
+barcontrol/barcontrol%.jar:
+ifeq ($(ENABLE_GUI),yes)
+	$(MAKE) -C barcontrol barcontrol$*.jar
+else
+	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
+
+# ----------------------------------------------------------------------------
+# create SSL keys and certificates
+
+.PHONY: keys clean_keys
+
+keys: \
+  $(KEY_FILES)
+
+clean_keys:
+	$(RMF) $(KEY_FILES)
+
+$(KEY_FILES):
+	$(MAKE) -C bar bar-keygen@SHELLEXT@
+	($(CD) bar; \
+         ./bar-keygen@SHELLEXT@ \
+           --tls-directory=.. \
+           --private-directory=.. \
+           --certs-directory=.. \
+           $(if $(CERTTOOL),--certtool) \
+           $(if $(OPENSSL),--openssl) \
+           --force \
+        )
+
+# ----------------------------------------------------------------------------
+# create documentation
+
+.PHONY: doc clean_doc showman pdf
+doc:
+	@$(MAKE) -C doc
+
+clean_doc:
+	@$(MAKE) -C doc clean
+
+# create man-page
+.PHONY: man clean_man showman
+man doc/bar.7:
+	@$(MAKE) -C doc man
+
+clean_man:
+	@$(MAKE) -C doc clean_man
+
+showman:
+	@$(MAKE) -C doc showman
+
+# create manual
+pdf doc/backup-archiver.pdf:
+	@$(MAKE) -C doc backup-archiver.pdf
+
+# ----------------------------------------------------------------------------
+# install/uninstall
+# Note: prefix DESTDIR is used for temporary installations
+
+.PHONY: install install_bar install_barcontrol install_scripts install_man install_keys uninstall install_dist
+
+install: \
+  install_bar \
+  install_barcontrol \
+  install_scripts \
+  install_man \
+  $(if $(DIST),,install_keys)
+
+install_bar:
+	$(MAKE) -C bar install \
+          prefix=$(prefix) \
+          bindir=$(bindir) \
+          libdir=$(libdir) \
+          datadir=$(datadir) \
+          sysconfdir=$(sysconfdir) \
+          mandir=$(mandir) \
+          DESTDIR=$(DESTDIR)
+
+install_barcontrol:
+	$(MAKE) -C barcontrol install \
+          prefix=$(prefix) \
+          bindir=$(bindir) \
+          libdir=$(libdir) \
+          datadir=$(datadir) \
+          sysconfdir=$(sysconfdir) \
+          mandir=$(mandir) \
+          DESTDIR=$(DESTDIR)
+
+# install script files
+install_scripts: \
+  $(SCRIPTS)
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
+	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
+	$(INSTALL) -d "$(DESTDIR)/var/lib/bar/install"; \
+	$(INSTALL) -t "$(DESTDIR)/var/lib/bar/install" \
+          scripts/barserver-SuSE \
+          scripts/barserver-Fedora \
+          scripts/barserver-RedHat \
+          scripts/barserver-CentOS \
+          scripts/barserver-Mandrake \
+          scripts/barserver-debian \
+          scripts/barserver.service
+
+# install man-page
+install_man: \
+  doc/bar.7
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
+	$(INSTALL) -m 644 doc/bar.7 "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
+
+# install keys
+# Note: prefix is used for temporary installations
+install_keys: \
+  $(KEY_FILES)
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_TLS_DIR)"
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_TLS_DIR)/certs"
+	$(INSTALL) -m 644 bar-ca.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/certs"
+	$(INSTALL) -m 644 bar-server-cert.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/certs"
+	$(INSTALL) -d -m 700 "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
+	$(INSTALL) -m 600 bar-server-key.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
+	$(INSTALL) -m 600 bar-key.pem "$(DESTDIR)$(INSTALL_TLS_DIR)/private"
+
+# uninstall all
+uninstall:
+	@read -n 1 -p "Really uninstall? [y/N] " s; \
+        if test "$s" = "y" -o "$s" = "Y"; then \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"; \
+          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
+                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
+                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+          ) \
+          $(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-server-cert.pem"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"; \
+          $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/\"; \
+          ) \
+          $(RMF) "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
+          $(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"; \
+        fi
+
+# ----------------------------------------------------------------------------
+# tests
+
+# run server
+.PHONY: barserver barserver_ssl
+barserver:
+	@$(MAKE) -C bar barserver
+
+barserver_ssl:
+	@$(MAKE) -C bar barserver_ssl
+
+# do tests
+.PHONY: test test% test%-debug test%-gcov test%-gprof test%-valgrind
+test:
+	@$(MAKE) -C bar $@
+test%:
+	@$(MAKE) -C bar $@
+test%-debug:
+	@$(MAKE) -C bar $@
+test%-gcov:
+	@$(MAKE) -C bar $@
+test%-gprof:
+	@$(MAKE) -C bar $@
+test%-valgrind:
+	@$(MAKE) -C bar $@
+
+# memory checks
+.PHONY: memcheck memcheck1 memcheck_extended
+memcheck:
+	@$(MAKE) -C bar memcheck
+
+memcheck_extended:
+	@$(MAKE) -C bar memcheck_extended
+
+# ----------------------------------------------------------------------------
+# distribution
+
+.PHONY: dist clean_dist
+
+dist:
+	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
+	$(MAKE) $(DISTRIBUTION_NAME).tar.bz2
+
+clean_dist:
+	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
+
+# create distribution
+$(DISTRIBUTION_NAME).tar.bz2: \
+  $(TARGETS) \
+  \
+  configure \
+  configure.ac \
+  Makefile.in \
+  epm.list.in \
+  version \
+  ToDo \
+  ChangeLog \
+  \
+  download-third-party-packages.sh \
+  $(OTHER_SOURCES) \
+  \
+  bin/config.guess \
+  bin/config.sub \
+  bin/install-sh \
+  bin/config.guess \
+  bin/config.sub bin/install-sh \
+  \
+  bar/Makefile.in \
+  bar/test/Makefile.in \
+  barcontrol/Makefile.in \
+  \
+  ssl/certtool/*.tmpl \
+  ssl/openssl/*.tmpl \
+  \
+  $(SCRIPTS) \
+  \
+  misc/*.patch \
+  \
+  doc/Makefile.in \
+  doc/README \
+  doc/COPYING \
+  doc/backup-archiver.odt \
+  doc/backup-archiver.pdf \
+  doc/*.txt \
+  $(DOC) \
+  $(DOC_IMAGES) \
+  $(DOC_IMAGES_SMALL) \
+  $(DOC_IMAGES_LARGE) \
+  \
+  packages/*
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
+	$(INSTALL) -m 775 \
+                   -t tmp/$(DISTRIBUTION_NAME) \
+                   configure \
+                   download-third-party-packages.sh \
+                   $(OTHER_SOURCES)
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME) \
+                   configure.ac \
+                   Makefile.in \
+                   epm.list.in \
+                   ToDo \
+                   ChangeLog
+	( \
+          $(GREP) MAJOR version; \
+          $(GREP) MINOR version; \
+          $(GREP) PATCH version; \
+          $(ECHO) "RELEASE=$(shell $(SVNVERSION) .)"; \
+        ) > tmp/$(DISTRIBUTION_NAME)/version
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/bin \
+                   bin/config.guess \
+                   bin/config.sub \
+                   bin/install-sh
+	$(MAKE) -C bar dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
+	$(MAKE) -C barcontrol dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
+	$(MAKE) -C doc dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
+	#
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/bin \
+                   bin/config.guess \
+                   bin/config.sub bin/install-sh
+	#
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/certtool
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/ssl/certtool \
+                   ssl/certtool/*.tmpl
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/openssl
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/ssl/openssl \
+                   ssl/openssl/*.tmpl
+	#
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/scripts
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/scripts \
+                   $(SCRIPTS)
+	#
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/misc
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/misc \
+                   misc/*.patch
+	#
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/doc \
+                   doc/README \
+                   doc/COPYING \
+                   doc/backup-archiver.odt \
+                   doc/backup-archiver.pdf \
+                   doc/*.txt \
+                   doc/bar.7
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc/images
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/doc/images \
+                   doc/images/*.png
+	#
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/packages \
+                   packages/*.dockerfile \
+                   packages/*.spec \
+                   packages/*.iss \
+                   packages/*.sh
+	$(INSTALL) -m 775 \
+                   -t tmp/$(DISTRIBUTION_NAME)/packages \
+                   packages/changelog.pl
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/packages/debian \
+                   packages/debian/compat \
+                   packages/debian/conffiles \
+                   packages/debian/control \
+                   packages/debian/copyright \
+                   packages/debian/postinst \
+                   packages/debian/postrm \
+                   packages/debian/preinst \
+                   packages/debian/prerm \
+                   packages/debian/rules
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian/source
+	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/packages/debian/source \
+                   packages/debian/source/format
+	#
+	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
+	$(RMRF) tmp/$(DISTRIBUTION_NAME)
+	#
+ifneq ($(MD5SUM),)
+	$(MD5SUM) $@
+endif
+
+# --- Debian distribution
+.PHONY: debian_dist clean_debian_dist $(DISTRIBUTION_NAME).orig.tar.gz
+
+debian_dist: \
+  $(DISTRIBUTION_NAME).orig.tar.gz
+
+clean_debian_dist:
+	$(RMF) $(DISTRIBUTION_NAME).orig.tar.gz
+
+# create Debian distribution
+$(DISTRIBUTION_NAME).orig.tar.gz: \
+  $(DISTRIBUTION_NAME).tar.bz2 \
+  download-third-party-packages.sh
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
+	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/extern
+        # copy existing packages to avoid download (which may fail because of an instable Internet)
+	$(INSTALL) \
+          extern/binutils-*.tar.bz2 \
+          extern/bzip2-*.tar.gz \
+          extern/c-ares-*.tar.gz \
+          extern/curl-*.tar.bz2 \
+          extern/gmp-*.tar.xz \
+          extern/gnutls-*.tar.xz \
+          extern/icu*.tgz \
+          extern/libiconv-*.tar.gz \
+          extern/libcdio-*.tar.gz \
+          extern/libgcrypt-*.tar.bz2 \
+          extern/libgpg-error-*.tar.bz2 \
+          extern/libssh2-*.tar.gz \
+          extern/lz4-*.tar.gz \
+          extern/lzo-*.tar.gz \
+          extern/mtx-*.tar.gz \
+          extern/mxml-*.tar.gz \
+          extern/nettle-*.tar.gz \
+          extern/openssl-*.tar.gz \
+          extern/pcre-*.tar.bz2 \
+          extern/sqlite-src-*.zip \
+          extern/pthreads-w32-*.tar.gz \
+          extern/xdelta*.tar.gz \
+          extern/xz-*.tar.gz \
+          extern/zlib-*.tar.gz \
+          extern/zstd-*.zip \
+          tmp/$(DISTRIBUTION_NAME).orig/extern
+	$(INSTALL) \
+          third-party/breakpad-r1430.tar.bz2 \
+          tmp/$(DISTRIBUTION_NAME).orig/extern/breakpad.tar.bz2
+	if test -n "`ls extern/ftplib-*.tar.gz 2>/dev/null`"; then \
+	  $(INSTALL) \
+            extern/ftplib-*.tar.gz \
+            tmp/$(DISTRIBUTION_NAME).orig/extern; \
+        fi
+	if test -n "`ls extern/launch4j-*.tgz 2>/dev/null`"; then \
+	  $(INSTALL) \
+            extern/launch4j-*.tgz \
+            tmp/$(DISTRIBUTION_NAME).orig/extern; \
+        fi
+	if test -n "`ls extern/epm-*-source.tar.bz2 2>/dev/null`"; then \
+          $(INSTALL) \
+            extern/epm-*-source.tar.bz2 \
+            tmp/$(DISTRIBUTION_NAME).orig/extern; \
+        fi
+	# download not existing packages
+	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig -n
+	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
+	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
+
+# ----------------------------------------------------------------------------
+# packages
+
+.PHONY: packages
+packages: \
+  rpm \
+  deb \
+  gui
+
+.PHONY: update_docker
+update_docker:
+	# base images
+	$(DOCKER) pull i386/centos:6
+	$(DOCKER) pull centos:6
+	$(DOCKER) pull i386/debian:8
+	$(DOCKER) pull debian:8
+	#
+	# test images
+	$(DOCKER) pull i386/centos:7
+	$(DOCKER) pull centos:7
+	#
+	$(DOCKER) pull fedora:28
+	$(DOCKER) pull fedora:29
+	$(DOCKER) pull fedora:30
+	$(DOCKER) pull fedora:31
+	#
+	$(DOCKER) pull opensuse/tumbleweed
+	$(DOCKER) pull opensuse/leap
+	#
+	$(DOCKER) pull i386/debian:8
+	$(DOCKER) pull debian:8
+	$(DOCKER) pull i386/debian:9
+	$(DOCKER) pull debian:9
+	$(DOCKER) pull i386/debian:10
+	$(DOCKER) pull debian:10
+	#
+	$(DOCKER) pull ubuntu:16.04
+	$(DOCKER) pull ubuntu:18.04
+	$(DOCKER) pull ubuntu:19.04
+	$(DOCKER) pull ubuntu:19.10
+	$(DOCKER) pull ubuntu:20.04
+	#
+	# base images
+	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile             -t bar-centos:6            .)
+	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile      -t bar-centos-x86_64:6     .)
+	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile             -t bar-debian:8            .)
+	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile      -t bar-debian-x86_64:8     .)
+	(cd packages; $(DOCKER) build -f bar-ubuntu18.04-mingw32.dockerfile -t bar-mingw32             .)
+	#
+	# test images
+	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
+	#(cd packages; $(DOCKER) build -f bar-centos7.dockerfile            -t bar-centos:7            .)
+	#(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile     -t bar-centos-x86_64:7     .)
+	##(cd packages; $(DOCKER) build -f bar-fedora28-x86_64.dockerfile    -t bar-fedora-x86_64:28    .)
+	#(cd packages; $(DOCKER) build -f bar-fedora29-x86_64.dockerfile    -t bar-fedora-x86_64:29    .)
+	#
+	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
+
+.PHONY: purge_docker
+purge_docker:
+	$(DOCKER) rm $$($(DOCKER) ps -a -q)
+
+.PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
+rpm_docker:
+	echo TODO
+rpm_docker-x86_64:
+	echo TODO
+
+deb_docker:
+	echo TODO
+deb_docker-x86_64:
+	echo TODO
+
+win32_docker:
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -e CFLAGS="-m32" \
+            -v $(PWD):/media/home \
+            -v $(WINE_C_DRIVE):/media/wine \
+            --name=bar-win32 \
+            bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
+              -s \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(WINE) \
+              $(DISTRIBUTION_NAME)-setup; \
+        )
+win32_docker-x86_64:
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -v $(PWD):/media/home \
+            -v $(WINE_C_DRIVE):/media/wine \
+            --name=bar-win32-x86_64 \
+            bar-mingw32 setarch x86_64 -- /media/home/packages/build_win32.sh \
+              -s \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(WINE) \
+              $(DISTRIBUTION_NAME)-setup; \
+        )
+
+
+# RPM
+.PHONY: rpm rpmd clean_rpm
+rpm: \
+  rpm32 \
+  rpm64
+rpmd: \
+  rpm32d \
+  rpm64d
+
+.PHONY: rpm32 rpm32d rpm64 rpm64d
+rpm32: \
+  $(DISTRIBUTION_NAME).rpm
+rpm32d:
+	$(MAKE) $(DISTRIBUTION_NAME).rpm DEBUG=1
+rpm64: \
+  $(DISTRIBUTION_NAME)-x86_64.rpm
+rpm64d:
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm DEBUG=1
+
+clean_rpm:
+	$(RMF) $(DISTRIBUTION_NAME).rpm
+	$(RMF) $(DISTRIBUTION_NAME).rpm.log
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm.log
+
+$(DISTRIBUTION_NAME).rpm: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	# Note: scl_source to enable gcc 7
+	@$(call functionPrintInfo,Build RPM on CentOS 6 32bit)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            -e CFLAGS="-m32" \
+            -v $(PWD):/media/home \
+            bar-centos:6 setarch i686 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(DISTRIBUTION_NAME).rpm \
+              $(if $(DEBUG),--debug) \
+              ;" \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
+$(DISTRIBUTION_NAME)-x86_64.rpm: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	# Note: scl_source to enable gcc 7
+	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
+	@( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            -v $(PWD):/media/home \
+            bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(DISTRIBUTION_NAME)-x86_64.rpm \
+              $(if $(DEBUG),--debug) \
+              ;" \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
+# DEB
+.PHONY: deb debd clean_deb
+deb: \
+  deb32 \
+  deb64
+debd: \
+  deb32d \
+  deb64d
+
+.PHONY: deb32 deb32d deb-gui32 deb-gui32d deb64 deb64d deb-gui64 deb-gui64d
+deb32: \
+  $(DISTRIBUTION_NAME).deb
+deb32d:
+	$(MAKE) $(DISTRIBUTION_NAME).deb DEBUG=1
+deb-gui32: \
+  $(DISTRIBUTION_NAME_GUI).deb
+deb-gui32d:
+	$(MAKE) $(DISTRIBUTION_NAME_GUI).deb DEBUG=1
+deb64: \
+  $(DISTRIBUTION_NAME)-x86_64.deb
+deb64d:
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb DEBUG=1
+deb-gui64: \
+  $(DISTRIBUTION_NAME_GUI)-x86_64.deb
+deb-gui64d:
+	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb DEBUG=1
+
+clean_deb:
+	$(RMF) $(DISTRIBUTION_NAME).deb
+	$(RMF) $(DISTRIBUTION_NAME_GUI).deb
+	$(RMF) $(DISTRIBUTION_NAME).deb.log
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb
+	$(RMF) $(DISTRIBUTION_NAME_GUI)-x86_64.deb
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb.log
+
+$(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 32bit)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            -v $(PWD):/media/home \
+            bar-debian:8 setarch i686 -- /media/home/packages/build_deb.sh \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(DISTRIBUTION_NAME).deb \
+              $(DISTRIBUTION_NAME_GUI).deb \
+              $(if $(DEBUG),--debug) \
+              ; \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
+$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 64bit)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            -v $(PWD):/media/home \
+            bar-debian-x86_64:8 setarch x86_64 -- /media/home/packages/build_deb.sh \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(DISTRIBUTION_NAME)-x86_64.deb \
+              $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
+              $(if $(DEBUG),--debug) \
+              ; \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
+# Windows setup
+.PHONY: win32 clean_win32
+win32: \
+  $(DISTRIBUTION_NAME)-setup.exe
+
+clean_win32:
+	$(RMF) $(DISTRIBUTION_NAME).rpm
+	$(RMF) $(DISTRIBUTION_NAME).rpm.log
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm.log
+
+$(DISTRIBUTION_NAME)-setup.exe: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build Win32 on mingw32)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            -e CFLAGS="-m32" \
+            -v $(PWD):/media/home \
+            -v $(WINE_C_DRIVE):/media/wine \
+            bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
+              $(PACKAGE_NAME) \
+              $(DISTRIBUTION_NAME).tar.bz2 \
+              $(VERSION) \
+              $(shell id -u):$(shell id -g) \
+              $(WINE) \
+              $(DISTRIBUTION_NAME)-setup; \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
+# install test
+.PHONY: install_test
+install_test:
+	@$(MAKE) QUIET=1 \
+          install_test_rpm \
+          install_test_deb
+
+.PHONY: install_test_rpm
+install_test_rpm: \
+  install_test_rpm_centos6 \
+  install_test_rpm_centos6-x86_64 \
+  install_test_rpm_centos7 \
+  install_test_rpm_centos7-x86_64 \
+  install_test_rpm_fedora28-x86_64 \
+  install_test_rpm_fedora29-x86_64 \
+  install_test_rpm_opensuse-tumbleweed-x86_64 \
+  install_test_rpm_opensuse-leap-x86_64 \
+
+# call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
+functionInstallTestRPM = \
+  $(DOCKER) $(DOCKER_RUN_FLAGS) \
+      --rm \
+      -v $(PWD):/media/home \
+      $1 \
+      /media/home/packages/install_test_rpm.sh \
+        $3
+
+# call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
+functionInstallTestDEB = \
+  $(DOCKER) $(DOCKER_RUN_FLAGS) \
+      --rm \
+      -v $(PWD):/media/home \
+      $1 \
+      /media/home/packages/install_test_deb.sh \
+        $3
+
+# Note: i386 images is broken; use own image
+.PHONY: install_test_rpm_centos6
+install_test_rpm_centos6:
+	@$(call functionPrintInfo,Test install Centos 6)
+	@$(call functionInstallTestRPM,bar-centos:6,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_centos6-x86_64
+install_test_rpm_centos6-x86_64:
+	@$(call functionPrintInfo,Test install Centos 6 64bit)
+	@$(call functionInstallTestRPM,centos:6,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_rpm_centos7
+install_test_rpm_centos7:
+	@$(call functionPrintInfo,Test install Centos 7)
+	@$(call functionInstallTestRPM,bar-centos:7,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_centos7-x86_64
+install_test_rpm_centos7-x86_64:
+	@$(call functionPrintInfo,Test install Centos 7 64bit)
+	@$(call functionInstallTestRPM,centos:7,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_rpm_fedora28-x86_64
+install_test_rpm_fedora28-x86_64:
+	@$(call functionPrintInfo,Test install Fedora 28 64bit)
+	@$(call functionInstallTestRPM,fedora:28,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_fedora29-x86_64
+install_test_rpm_fedora29-x86_64:
+	@$(call functionPrintInfo,Test install Fedora 29 64bit)
+	@$(call functionInstallTestRPM,fedora:29,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_fedora30-x86_64
+install_test_rpm_fedora30-x86_64:
+	@$(call functionPrintInfo,Test install Fedora 30 64bit)
+	@$(call functionInstallTestRPM,fedora:30,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_fedora31-x86_64
+install_test_rpm_fedora31-x86_64:
+	@$(call functionPrintInfo,Test install Fedora 31 64bit)
+	@$(call functionInstallTestRPM,fedora:31,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_rpm_opensuse-tumbleweed-x86_64
+install_test_rpm_opensuse-tumbleweed-x86_64:
+	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
+	@$(call functionInstallTestRPM,opensuse/tumbleweed,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_opensuse-leap-x86_64
+install_test_rpm_opensuse-leap-x86_64:
+	@$(call functionPrintInfo,Test install OpenSuSE Leap 64bit)
+	@$(call functionInstallTestRPM,opensuse/leap,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_deb
+install_test_deb: \
+  install_test_deb_debian8 \
+  install_test_deb_debian8-x86_64 \
+  install_test_deb_debian9 \
+  install_test_deb_debian9-x86_64 \
+  install_test_deb_ubuntu16.04-x86_64 \
+  install_test_deb_ubuntu18.04-x86_64 \
+  install_test_deb_ubuntu19.04-x86_64 \
+  install_test_deb_ubuntu19.10-x86_64 \
+  install_test_deb_ubuntu20.04-x86_64 \
+
+.PHONY: install_test_deb_debian8
+install_test_deb_debian8:
+	@$(call functionPrintInfo,Test install Debian 8)
+	@$(call functionInstallTestDEB,bar-debian:8,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian8-x86_64
+install_test_deb_debian8-x86_64:
+	@$(call functionPrintInfo,Test install Debian 8 64bit)
+	@$(call functionInstallTestDEB,bar-debian-x86_64:8,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian9
+install_test_deb_debian9:
+	@$(call functionPrintInfo,Test install Debian 9)
+	@$(call functionInstallTestDEB,i386/debian:9,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian9-x86_64
+install_test_deb_debian9-x86_64:
+	@$(call functionPrintInfo,Test install Debian 9 64bit)
+	@$(call functionInstallTestDEB,debian:9,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian10
+install_test_deb_debian10:
+	@$(call functionPrintInfo,Test install Debian 10)
+	@$(call functionInstallTestDEB,i386/debian:10,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_debian10-x86_64
+install_test_deb_debian10-x86_64:
+	@$(call functionPrintInfo,Test install Debian 10 64bit)
+	@$(call functionInstallTestDEB,debian:10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_deb_ubuntu16.04-x86_64
+install_test_deb_ubuntu16.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 16.04 64bit)
+	@$(call functionInstallTestDEB,ubuntu:16.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu18.04-x86_64
+install_test_deb_ubuntu18.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 18.10 64bit)
+	@$(call functionInstallTestDEB,ubuntu:18.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu19.04-x86_64
+install_test_deb_ubuntu19.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 19.04 64bit)
+	@$(call functionInstallTestDEB,ubuntu:19.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu19.10-x86_64
+install_test_deb_ubuntu19.10-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 19.10 64bit)
+	@$(call functionInstallTestDEB,ubuntu:19.10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu20.04-x86_64
+install_test_deb_ubuntu20.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 20.04 64bit)
+	@$(call functionInstallTestDEB,ubuntu:20.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+# GUI
+.PHONY: gui clean_gui
+
+gui: \
+  $(DISTRIBUTION_NAME_GUI).zip
+
+clean_gui:
+	$(RMF) $(DISTRIBUTION_NAME_GUI).zip
+
+$(DISTRIBUTION_NAME_GUI).zip: \
+  barcontrol/barcontrol@SHELLEXT@ \
+  barcontrol/barcontrol.cmd \
+  barcontrol/barcontrol-linux.jar \
+  barcontrol/barcontrol-linux_64.jar \
+  barcontrol/barcontrol.cmd \
+  barcontrol/barcontrol-windows.jar \
+  barcontrol/barcontrol-windows_64.jar \
+  barcontrol/barcontrol-solaris.jar \
+  barcontrol/barcontrol-macosx.jar \
+  barcontrol/barcontrol-macosx_64.jar
+	$(INSTALL) -d tmp/gui/linux
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol@SHELLEXT@ \
+                   tmp/gui/linux
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-linux.jar \
+                   barcontrol/barcontrol-linux_64.jar \
+                   tmp/gui/linux
+	#
+	$(INSTALL) -d tmp/gui/windows
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol.cmd \
+                   tmp/gui/windows
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-windows.jar \
+                   barcontrol/barcontrol-windows_64.jar \
+                   tmp/gui/windows
+	#
+	$(INSTALL) -d tmp/gui/solaris
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol \
+                   tmp/gui/solaris
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-solaris.jar \
+                   tmp/gui/solaris
+	#
+	$(INSTALL) -d tmp/gui/macosx
+	$(INSTALL) -m 775 \
+                   barcontrol/barcontrol \
+                   tmp/gui/macosx
+	$(INSTALL) -m 664 \
+                   barcontrol/barcontrol-macosx.jar \
+                   barcontrol/barcontrol-macosx_64.jar \
+                   tmp/gui/macosx
+
+	($(CD) tmp/gui; $(ZIP) -r ../../$@ linux windows solaris macosx)
+	$(RMRF) tmp/gui
+	#
+ifneq ($(MD5SUM),)
+	$(MD5SUM) $@
+endif
+
+.PHONY: setup
+setup:
+	#install packages/backup-archiver.iss backup-archiver.iss
+	$(WINE) "$(ISCC)" \
+  /O$(PROJECT_ROOT) \
+  /F$(DISTRIBUTION_NAME)-setup \
+  packages/backup-archiver.iss
+
+# end of file
