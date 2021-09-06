@@ -1,7 +1,7 @@
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision$
-dnl $Author$
+dnl $Revision: 11560 $
+dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
 dnl --------------------------------------------------------------------
@@ -648,7 +648,7 @@ AC_DEFUN([AC_PROG_SUDO_COMMAND],
         ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
         # test sudo
-        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        SUDO_ASKPASS=false $SUDO -n -l 2>/dev/null | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
         if   test $? -eq 0; then
           ac_result=yes
         else
@@ -1428,7 +1428,7 @@ AC_PATH_PROGS(WINEPATH, winepath)
 AC_PROVIDE(AC_PROG_WINEPATH)
 if test -n "$WINE" -a -n "$WINEPATH"; then
   AC_WINE_C_DRIVE(WINE_C_DRIVE)
-  AC_PROG_ISCC(ISCC)
+  AC_PATH_PROGS(ISCC,iscc.exe)
   if test -z "$ISCC"; then
     AC_MSG_WARN([No 'ISCC.exe' tool found. Cannot create Win32 setup program.])
   fi
@@ -3964,6 +3964,7 @@ AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $LIBRARIES)
 
 # headers
+#TODO: compile+link systemd for sd-id128.h?
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \

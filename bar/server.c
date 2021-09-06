@@ -20278,10 +20278,6 @@ Errors Server_socket(void)
                     );
         }
       #else /* not HAVE_GNU_TLS */
-        UNUSED_VARIABLE(ca);
-        UNUSED_VARIABLE(cert);
-        UNUSED_VARIABLE(key);
-
         printWarning("TLS/SSL is not supported!");
       #endif /* HAVE_GNU_TLS */
     }

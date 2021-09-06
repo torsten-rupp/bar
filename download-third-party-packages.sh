@@ -120,12 +120,12 @@ while test $# != 0; do
       shift
       ;;
     -d | --destination)
-      destination=$2
+      destination="$2"
       shift
       shift
       ;;
     -l | --local-directory)
-      localDirectory=$2
+      localDirectory="$2"
       shift
       shift
       ;;
@@ -472,7 +472,7 @@ if test $cleanFlag -eq 0; then
     # zlib
     $ECHO_NO_NEW_LINE "Get zlib..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=`ls zlib-*.tar.gz 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/zlib-*.tar.gz; then
@@ -494,7 +494,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find extern -type d -name "zlib-*"` zlib)
+      (cd "$destination"; $LN -sfT `find extern -type d -name "zlib-*"` zlib)
     fi
     $ECHO "ok"
   fi
@@ -503,7 +503,7 @@ if test $cleanFlag -eq 0; then
     # bzip2
     $ECHO_NO_NEW_LINE "Get bzip2..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=bzip2-$BZIP2_VERSION.tar.gz
      url="https://sourceware.org/pub/bzip2/$fileName"
      if test ! -f $fileName; then
@@ -524,7 +524,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/bzip2-$BZIP2_VERSION bzip2)
+      (cd "$destination"; $LN -sfT extern/bzip2-$BZIP2_VERSION bzip2)
     fi
     $ECHO "ok"
   fi
@@ -533,7 +533,7 @@ if test $cleanFlag -eq 0; then
     # lzma
     $ECHO_NO_NEW_LINE "Get lzma..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=`ls xz-*.tar.gz 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/xz-*.tar.gz; then
@@ -555,7 +555,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find extern -type d -name "xz-*"` xz)
+      (cd "$destination"; $LN -sfT `find extern -type d -name "xz-*"` xz)
     fi
     $ECHO "ok"
   fi
@@ -564,7 +564,7 @@ if test $cleanFlag -eq 0; then
     # lzo
     $ECHO_NO_NEW_LINE "Get lzo..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=lzo-$LZO_VERSION.tar.gz
      url="http://www.oberhumer.com/opensource/lzo/download/$fileName"
      if test ! -f $fileName; then
@@ -585,7 +585,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/lzo-$LZO_VERSION lzo)
+      (cd "$destination"; $LN -sfT extern/lzo-$LZO_VERSION lzo)
     fi
     $ECHO "ok"
   fi
@@ -594,7 +594,7 @@ if test $cleanFlag -eq 0; then
     # lz4
     $ECHO_NO_NEW_LINE "Get lz4..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=`ls lz4-*.tar.gz 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/lz4-*.tar.gz; then
@@ -620,7 +620,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find extern -type d -name "lz4-*"` lz4)
+      (cd "$destination"; $LN -sfT `find extern -type d -name "lz4-*"` lz4)
     fi
     $ECHO "ok"
   fi
@@ -629,7 +629,7 @@ if test $cleanFlag -eq 0; then
     # zstd
     $ECHO_NO_NEW_LINE "Get zstd..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=`ls zstd-*.zip 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/zstd-*.zip; then
@@ -655,7 +655,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find extern -type d -name "zstd-*"` zstd)
+      (cd "$destination"; $LN -sfT `find extern -type d -name "zstd-*"` zstd)
     fi
     $ECHO "ok"
   fi
@@ -664,7 +664,7 @@ if test $cleanFlag -eq 0; then
     # xdelta3
     $ECHO_NO_NEW_LINE "Get xdelta3..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=xdelta3-$XDELTA3_VERSION.tar.gz
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/xdelta3-$XDELTA3_VERSION.tar.gz; then
@@ -687,7 +687,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find extern -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
+      (cd "$destination"; $LN -sfT `find extern -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
     fi
     $ECHO "ok"
   fi
@@ -696,7 +696,7 @@ if test $cleanFlag -eq 0; then
     # gpg-error, gcrypt
     $ECHO_NO_NEW_LINE "Get gpg-error, gcrypt..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
@@ -735,8 +735,8 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
-      (cd $destination; $LN -sfT extern/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
+      (cd "$destination"; $LN -sfT extern/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
+      (cd "$destination"; $LN -sfT extern/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
     fi
     $ECHO "ok"
   fi
@@ -745,7 +745,7 @@ if test $cleanFlag -eq 0; then
     # c-ares
     $ECHO_NO_NEW_LINE "Get c-ares..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=c-ares-$C_ARES_VERSION.tar.gz
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/c-ares-$C_ARES_VERSION.tar.gz; then
@@ -768,14 +768,14 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/c-ares-$C_ARES_VERSION c-ares)
+      (cd "$destination"; $LN -sfT extern/c-ares-$C_ARES_VERSION c-ares)
     fi
     $ECHO "ok"
 
     # curl
     $ECHO_NO_NEW_LINE "Get curl..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=curl-$CURL_VERSION.tar.bz2
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/curl-$CURL_VERSION.tar.bz2; then
@@ -798,7 +798,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/curl-$CURL_VERSION curl)
+      (cd "$destination"; $LN -sfT extern/curl-$CURL_VERSION curl)
     fi
     $ECHO "ok"
   fi
@@ -807,7 +807,7 @@ if test $cleanFlag -eq 0; then
     # mxml
     $ECHO_NO_NEW_LINE "Get mxml..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=mxml-$MXML_VERSION.zip
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/mxml-$MXML_VERSION.zip; then
@@ -830,7 +830,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/mxml-$MXML_VERSION mxml)
+      (cd "$destination"; $LN -sfT extern/mxml-$MXML_VERSION mxml)
     fi
     $ECHO "ok"
   fi
@@ -839,7 +839,7 @@ if test $cleanFlag -eq 0; then
     # openssl 1.0.1g
     $ECHO_NO_NEW_LINE "Get openssl..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=openssl-$OPENSSL_VERSION.tar.gz
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/openssl-$OPENSSL_VERSION.tar.gz; then
@@ -862,7 +862,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/openssl-$OPENSSL_VERSION openssl)
+      (cd "$destination"; $LN -sfT extern/openssl-$OPENSSL_VERSION openssl)
     fi
     $ECHO "ok"
   fi
@@ -871,7 +871,7 @@ if test $cleanFlag -eq 0; then
     # libssh2
     $ECHO_NO_NEW_LINE "Get libssh2..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=libssh2-$LIBSSH2_VERSION.tar.gz
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz; then
@@ -894,7 +894,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/libssh2-$LIBSSH2_VERSION libssh2)
+      (cd "$destination"; $LN -sfT extern/libssh2-$LIBSSH2_VERSION libssh2)
     fi
     $ECHO "ok"
   fi
@@ -903,7 +903,7 @@ if test $cleanFlag -eq 0; then
     # nettle
     $ECHO_NO_NEW_LINE "Get nettle..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=nettle-$NETTLE_VERSION.tar.gz
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/nettle-$NETTLE_VERSION.tar.gz; then
@@ -926,14 +926,14 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/nettle-$NETTLE_VERSION nettle)
+      (cd "$destination"; $LN -sfT extern/nettle-$NETTLE_VERSION nettle)
     fi
     $ECHO "ok"
 
     # gmp
     $ECHO_NO_NEW_LINE "Get gmp..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=gmp-$GMP_VERSION.tar.xz
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/gmp-$GMP_VERSION.tar.xz; then
@@ -956,14 +956,14 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find extern -type d -name "gmp-*"` gmp)
+      (cd "$destination"; $LN -sfT `find extern -type d -name "gmp-*"` gmp)
     fi
     $ECHO "ok"
 
     # libidn2
     $ECHO_NO_NEW_LINE "Get libidn2..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=libidn2-$LIBIDN2_VERSION.tar.gz
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz; then
@@ -984,14 +984,14 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT `find extern -type d -name "libidn2-*"` libidn2)
+      (cd "$destination"; $LN -sfT `find extern -type d -name "libidn2-*"` libidn2)
     fi
     $ECHO "ok"
 
     # gnutls
     $ECHO_NO_NEW_LINE "Get gnutls..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=gnutls-$GNU_TLS_VERSION.tar.xz
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/gnutls-$GNU_TLS_VERSION.tar.xz; then
@@ -1012,7 +1012,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/gnutls-$GNU_TLS_VERSION gnutls)
+      (cd "$destination"; $LN -sfT extern/gnutls-$GNU_TLS_VERSION gnutls)
     fi
     $ECHO "ok"
   fi
@@ -1021,7 +1021,7 @@ if test $cleanFlag -eq 0; then
     # libiconv
     $ECHO_NO_NEW_LINE "Get libiconv..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=libiconv-$LIBICONV_VERSION.tar.gz
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/libiconv-$LIBICONV_VERSION.tar.gz; then
@@ -1042,14 +1042,14 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/libiconv-$LIBICONV_VERSION libiconv)
+      (cd "$destination"; $LN -sfT extern/libiconv-$LIBICONV_VERSION libiconv)
     fi
     $ECHO "ok"
 
     # libcdio
     $ECHO_NO_NEW_LINE "Get libcdio..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=libcdio-$LIBCDIO_VERSION.tar.bz2
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2; then
@@ -1070,7 +1070,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/libcdio-$LIBCDIO_VERSION libcdio)
+      (cd "$destination"; $LN -sfT extern/libcdio-$LIBCDIO_VERSION libcdio)
     fi
     $ECHO "ok"
   fi
@@ -1079,7 +1079,7 @@ if test $cleanFlag -eq 0; then
     # mtx
     $ECHO_NO_NEW_LINE "Get mtx..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=mtx-$MTX_VERSION.tar.gz
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/mtx-$MTX_VERSION.tar.gz; then
@@ -1102,7 +1102,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/mtx-$MTX_VERSION mtx)
+      (cd "$destination"; $LN -sfT extern/mtx-$MTX_VERSION mtx)
     fi
     $ECHO "ok"
   fi
@@ -1111,7 +1111,7 @@ if test $cleanFlag -eq 0; then
     # pcre
     $ECHO_NO_NEW_LINE "Get pcre..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=pcre-$PCRE_VERSION.zip
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/pcre-$PCRE_VERSION.zip; then
@@ -1132,7 +1132,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/pcre-$PCRE_VERSION pcre)
+      (cd "$destination"; $LN -sfT extern/pcre-$PCRE_VERSION pcre)
     fi
     $ECHO "ok"
   fi
@@ -1141,7 +1141,7 @@ if test $cleanFlag -eq 0; then
     # sqlite
     $ECHO_NO_NEW_LINE "Get sqlite..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=sqlite-src-$SQLITE_VERSION.zip
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/sqlite-src-$SQLITE_VERSION.zip; then
@@ -1162,7 +1162,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/sqlite-src-$SQLITE_VERSION sqlite)
+      (cd "$destination"; $LN -sfT extern/sqlite-src-$SQLITE_VERSION sqlite)
     fi
     $ECHO "ok"
   fi
@@ -1171,7 +1171,7 @@ if test $cleanFlag -eq 0; then
     # icu
     $ECHO_NO_NEW_LINE "Get icu..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz; then
@@ -1192,7 +1192,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/icu icu)
+      (cd "$destination"; $LN -sfT extern/icu icu)
     fi
     $ECHO "ok"
   fi
@@ -1201,7 +1201,7 @@ if test $cleanFlag -eq 0; then
     # binutils
     $ECHO_NO_NEW_LINE "Get binutils..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=binutils-$BINUTILS_VERSION.tar.bz2
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/binutils-$BINUTILS_VERSION.tar.bz2; then
@@ -1222,7 +1222,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/binutils-$BINUTILS_VERSION binutils)
+      (cd "$destination"; $LN -sfT extern/binutils-$BINUTILS_VERSION binutils)
     fi
     $ECHO "ok"
   fi
@@ -1231,7 +1231,7 @@ if test $cleanFlag -eq 0; then
     # pthreads-w32 2.9.1
     $ECHO_NO_NEW_LINE "Get pthreads..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=pthreads-w32-2-9-1-release.tar.gz
      url="ftp://sourceware.org/pub/pthreads-win32/$fileName"
      if test ! -f $fileName; then
@@ -1252,7 +1252,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/pthreads-w32-2-9-1-release pthreads-w32)
+      (cd "$destination"; $LN -sfT extern/pthreads-w32-2-9-1-release pthreads-w32)
     fi
     $ECHO "ok"
   fi
@@ -1261,7 +1261,7 @@ if test $cleanFlag -eq 0; then
     # breakpad
     $ECHO_NO_NEW_LINE "Get breakpad..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=breakpad
      if test ! -d $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/breakpad; then
@@ -1277,7 +1277,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/breakpad breakpad)
+      (cd "$destination"; $LN -sfT extern/breakpad breakpad)
     fi
     $ECHO "ok"
   fi
@@ -1286,7 +1286,7 @@ if test $cleanFlag -eq 0; then
     # epm
     $ECHO_NO_NEW_LINE "Get epm..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=epm-$EPM_VERSION-source.tar.bz2
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/epm-$EPM_VERSION-source.tar.bz2; then
@@ -1307,7 +1307,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/epm-$EPM_VERSION epm)
+      (cd "$destination"; $LN -sfT extern/epm-$EPM_VERSION epm)
     fi
     $ECHO "ok"
   fi
@@ -1316,7 +1316,7 @@ if test $cleanFlag -eq 0; then
     # launchj4
     $ECHO_NO_NEW_LINE "Get launchj4..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=launch4j-3.1.0-beta2-linux.tgz
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/launch4j-3.1.0-beta2-linux.tgz; then
@@ -1337,7 +1337,7 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/launch4j launch4j)
+      (cd "$destination"; $LN -sfT extern/launch4j launch4j)
     fi
     $ECHO "ok"
   fi
@@ -1346,7 +1346,7 @@ if test $cleanFlag -eq 0; then
     # Windows JRE from OpenJDK 6
     $ECHO_NO_NEW_LINE "Get OpenJDK..."
     (
-     cd $destination/extern
+     cd "$destination/extern"
      fileName=openjdk-1.6.0-unofficial-b30-windows-i586-image.zip
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
@@ -1383,8 +1383,8 @@ if test $cleanFlag -eq 0; then
       exit $?
     fi
     if test $noDecompressFlag -eq 0; then
-      (cd $destination; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
-      (cd $destination; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
+      (cd "$destination"; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
+      (cd "$destination"; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
     fi
     $ECHO "ok"
   fi
@@ -1394,7 +1394,7 @@ else
   if test $allFlag -eq 1 -o $zlibFlag -eq 1; then
     # zlib
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/zlib-*.tar.gz
       $RMRF extern/zlib-*
     )
@@ -1404,7 +1404,7 @@ else
   if test $allFlag -eq 1 -o $bzip2Flag -eq 1; then
     # bzip2
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/bzip2-*.tar.gz
       $RMRF extern/bzip2-*
     )
@@ -1414,7 +1414,7 @@ else
   if test $allFlag -eq 1 -o $lzmaFlag -eq 1; then
     # lzma
     (
-      cd $destination
+      cd "$destination"
       $RMF `find extern -type f -name "xz-*.tar.gz" 2>/dev/null`
       $RMRF `find extern -type d -name "xz-*" 2>/dev/null`
     )
@@ -1424,7 +1424,7 @@ else
   if test $allFlag -eq 1 -o $lzoFlag -eq 1; then
     # lzo
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/lzo-*.tar.gz
       $RMRF extern/lzo-*
     )
@@ -1434,7 +1434,7 @@ else
   if test $allFlag -eq 1 -o $lz4Flag -eq 1; then
     # lz4
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/lz4*.tar.gz
       $RMRF extern/lz4*
     )
@@ -1444,7 +1444,7 @@ else
   if test $allFlag -eq 1 -o $zstdFlag -eq 1; then
     # zstd
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/zstd*.zip
       $RMRF extern/zstd*
     )
@@ -1454,7 +1454,7 @@ else
   if test $allFlag -eq 1 -o $xdelta3Flag -eq 1; then
     # xdelta3
     (
-      cd $destination
+      cd "$destination"
       $RMF `find extern -type f -name "xdelta3-*.tar.gz" 2>/dev/null`
       $RMRF `find extern -type d -name "xdelta3-*" 2>/dev/null`
     )
@@ -1464,7 +1464,7 @@ else
   if test $allFlag -eq 1 -o $gcryptFlag -eq 1; then
     # gcrypt
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/libgpg-error-*.tar.bz2 extern/libgcrypt-*.tar.bz2
       $RMRF extern/libgpg-error-* extern/libgcrypt-*
     )
@@ -1474,7 +1474,7 @@ else
   if test $allFlag -eq 1 -o $curlFlag -eq 1; then
     # curl
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/curl-*-.tar.bz2
       $RMRF extern/curl-*
     )
@@ -1482,7 +1482,7 @@ else
 
     # c-areas
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/c-ares-*-.tar.gz
       $RMRF extern/c-ares-*
     )
@@ -1492,7 +1492,7 @@ else
   if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
     # mxml
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/mxml-*-.tar.bz2
       $RMRF extern/mxml-*
     )
@@ -1502,7 +1502,7 @@ else
   if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
     # openssl
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/openssl*.tar.gz
       $RMRF extern/openssl*
     )
@@ -1512,7 +1512,7 @@ else
   if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
     # libssh2
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/libssh2*.tar.gz
       $RMRF extern/libssh2*
     )
@@ -1522,7 +1522,7 @@ else
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
     # gnutls
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/gnutls-*.tar.bz2
       $RMRF extern/gnutls-*
     )
@@ -1530,7 +1530,7 @@ else
 
     # libidn2
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/libidn2-*.tar.gz
       $RMRF extern/libidn2-*
     )
@@ -1538,7 +1538,7 @@ else
 
     # gmp
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/gmp-*.tar.bz2
       $RMRF extern/gmp-*
     )
@@ -1546,7 +1546,7 @@ else
 
     # nettle
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/nettle-*.tar.bz2
       $RMRF extern/nettle-*
     )
@@ -1556,7 +1556,7 @@ else
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
     # libiconv
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/libiconv-*.tar.gz
       $RMRF extern/libiconv-*
     )
@@ -1564,7 +1564,7 @@ else
 
     # libcdio
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/libcdio-*.tar.gz
       $RMRF extern/libcdio-*
     )
@@ -1574,7 +1574,7 @@ else
   if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
     # mtx
     (
-      cd $destination
+      cd "$destination"
       $RMRF extern/mtx-*
     )
     $RMF mtx
@@ -1583,7 +1583,7 @@ else
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     # pcre
     (
-      cd $destination
+      cd "$destination"
       $RMRF extern/pcre-*
     )
     $RMF pcre
@@ -1592,7 +1592,7 @@ else
   if test $allFlag -eq 1 -o $sqliteFlag -eq 1; then
     # sqlite
     (
-      cd $destination
+      cd "$destination"
       $RMRF extern/sqlite-*
     )
     $RMF sqlite
@@ -1601,7 +1601,7 @@ else
   if test $allFlag -eq 1 -o $icuFlag -eq 1; then
     # icu
     (
-      cd $destination
+      cd "$destination"
       $RMRF extern/icu4c-*
       $RMRF extern/icu
     )
@@ -1611,7 +1611,7 @@ else
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then
     # binutils
     (
-      cd $destination
+      cd "$destination"
       $RMRF extern/binutils-*
       $RMRF extern/binutils
     )
@@ -1621,7 +1621,7 @@ else
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
     # pthreadW32
     (
-      cd $destination
+      cd "$destination"
       $RMRF extern/pthreads-w32-*
     )
     $RMF pthreads-w32
@@ -1630,7 +1630,7 @@ else
   if test $allFlag -eq 1 -o $breakpadFlag -eq 1; then
     # breakpad
     (
-      cd $destination
+      cd "$destination"
       $RMRF extern/breakpad
     )
     $RMF breakpad
@@ -1639,7 +1639,7 @@ else
   if test $allFlag -eq 1 -o $epmFlag -eq 1; then
     # epm
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/epm-*.tar.bz2
       $RMRF extern/epm-*
     )
@@ -1649,7 +1649,7 @@ else
   if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
     # launch4j
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/launch4j-*.tgz
       $RMRF extern/launch4j
     )
@@ -1659,7 +1659,7 @@ else
   if test $jreWindowsFlag -eq 1; then
     # Windows JRE
     (
-      cd $destination
+      cd "$destination"
       $RMF extern/openjdk-*.zip
       $RMRF extern/openjdk-*
     )
