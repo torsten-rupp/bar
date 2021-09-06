@@ -2494,7 +2494,6 @@ LOCAL bool matchString(const char *string,
   #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(string != NULL);
-  assert(string->data != NULL);
   assert(pattern != NULL);
 
   if (index < stringLength(string))
@@ -2578,7 +2577,6 @@ LOCAL bool vmatchString(const char *string,
   #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(string != NULL);
-  assert(string->data != NULL);
   assert(pattern != NULL);
 
   if (index < stringLength(string))
