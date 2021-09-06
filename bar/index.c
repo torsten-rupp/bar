@@ -701,7 +701,8 @@ LOCAL void indexThreadInterrupt(void)
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
-                              INDEX_DEFINITION
+// TODO:
+                              INDEX_DEFINITION_SQLITE
                              );
     });
     if (error != ERROR_NONE)
