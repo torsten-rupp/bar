@@ -160,16 +160,25 @@ showman: doc/bar.7
 	$(NROFF) -man doc/bar.7
 
 # create manual
-.PHONY: pdf
-pdf backup-archiver.pdf: \
+backup-archiver.pdf: \
   $(SOURCE_DIR)/backup-archiver.odt \
   $(DOC_IMAGES)
 ifneq ($(UNOCONV),)
 	$(INSTALL) -d $(@D)
-	($(UNOCONV) -f pdf --stdout $(SOURCE_DIR)/backup-archiver.odt > $@; if test $$? -ne 0; then $(RMF) $@; fi)
+	($(UNOCONV) -f pdf --stdout $(SOURCE_DIR)/backup-archiver.odt > $@.new; \
+         if test $$? -eq 0; then \
+           $(MV) $@.new $@; \        
+         else \
+           $(ECHO) "ERROR: fail to  create PDF manual."; \
+           $(RMF) $@.new; \
+         fi; \
+        )
 else
 	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
 endif
+
+.PHONY: pdf
+pdf: backup-archiver.pdf
 
 # ----------------------------------------------------------------------------
 

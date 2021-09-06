@@ -593,7 +593,8 @@ BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
                                 release/stackwalk_common.o \
                               )
 
-BAR_SQLITE3_SOURCES         = bar-sqlite3.c \
+#TODO
+BAR_SQLITE3_SOURCES         = bar-index.c \
 
 BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
                               common/cmdoptions.c \
@@ -610,7 +611,7 @@ BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
                               common/semaphores.c \
                               common/stacktraces.c \
 
-BAR_SQLITE3_HEADERS         = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
+BAR_SQLITE3_HEADERS         = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_SQLITE3_SOURCES))) \
 
 BAR_SQLITE3_OBJECTS         = $(addprefix release/,$(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.c,%.o,$z))) \
                               release/errors.o \
@@ -634,7 +635,7 @@ TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
                               bar-debug@EXEEXT@ bar-debug.sym \
                               $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                               bar-keygen@SHELLEXT@ \
-                              bar-sqlite3@EXEEXT@ \
+                              bar-index@EXEEXT@ \
                               $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
                               $(BAR_MO) \
 
@@ -1095,8 +1096,8 @@ showchunks@EXEEXT@: \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 
-# create bar-sqlite3
-bar-sqlite3@EXEEXT@: \
+# create bar-index
+bar-index@EXEEXT@: \
   $(BAR_SQLITE3_OBJECTS) \
   $(SQLITE3_OBJECTS_RELEASE)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
@@ -2376,7 +2377,7 @@ install: \
 	$(INSTALL) bar-debug@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) -m 644 bar.sym bar-debug.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
-	$(INSTALL) bar-sqlite3@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) bar-index@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
@@ -2396,7 +2397,7 @@ endif
 uninstall:
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar@EXEEXT@"
 	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"
-	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-sqlite3@EXEEXT@"
+	$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-index@EXEEXT@"
 	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \

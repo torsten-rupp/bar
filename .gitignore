@@ -30,7 +30,6 @@ config.log
 config.status
 curl
 doc/Makefile
-doc/backup-archiver.pdf
 doc/images/archivename-editor-large.png
 doc/images/archivename-editor-small.png
 doc/images/archivename-editor.png
