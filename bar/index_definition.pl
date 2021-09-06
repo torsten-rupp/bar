@@ -403,7 +403,7 @@ sub processFile($$)
   {
     # all definitions
     print "\n";
-    print "const char* INDEX_DEFINITION_TABLE_NAMES_".$suffix."[] = \n";
+    print "static const char* INDEX_DEFINITION_TABLE_NAMES_".$suffix."[] = \n";
     print "{\n";
     foreach (@allDatabaseTableNames)
     {
@@ -412,7 +412,7 @@ sub processFile($$)
     print "  NULL\n";
     print "};\n";
     print "\n";
-    print "const char* INDEX_DEFINITION_TRIGGER_NAMES_".$suffix."[] = \n";
+    print "static const char* INDEX_DEFINITION_TRIGGER_NAMES_".$suffix."[] = \n";
     print "{\n";
     foreach (@allDatabaseTriggerNames)
     {
