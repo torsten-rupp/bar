@@ -28,6 +28,7 @@
 #include "errors.h"
 
 #include "sqlite3.h"
+#include "mysql/mysql.h"
 
 /****************** Conditional compilation switches *******************/
 #define _DATABASE_LOCK_PER_INSTANCE   // if defined use lock per database instance, otherwise a global lock for all database is used
@@ -41,6 +42,14 @@
 #define _DATABASE_DEBUG_LOG SQLITE_TRACE_STMT
 
 /***************************** Constants *******************************/
+
+// database type
+typedef enum
+{
+  DATABASE_TYPE_SQLITE3,
+  DATABASE_TYPE_MYSQL
+} DatabaseTypes;
+
 
 // database open mask
 #define DATABASE_OPEN_MASK_MODE  0x0000000F
@@ -70,19 +79,19 @@ typedef enum
 // database data types
 typedef enum
 {
-  DATABASE_TYPE_NONE,
+  DATABASE_DATATYPE_NONE,
 
-  DATABASE_TYPE_PRIMARY_KEY,
-  DATABASE_TYPE_FOREIGN_KEY,
+  DATABASE_DATATYPE_PRIMARY_KEY,
+  DATABASE_DATATYPE_FOREIGN_KEY,
 
-  DATABASE_TYPE_INT64,
-  DATABASE_TYPE_DOUBLE,
-  DATABASE_TYPE_DATETIME,
-  DATABASE_TYPE_TEXT,
-  DATABASE_TYPE_BLOB,
+  DATABASE_DATATYPE_INT64,
+  DATABASE_DATATYPE_DOUBLE,
+  DATABASE_DATATYPE_DATETIME,
+  DATABASE_DATATYPE_TEXT,
+  DATABASE_DATATYPE_BLOB,
 
-  DATABASE_TYPE_UNKNOWN
-} DatabaseTypes;
+  DATABASE_DATATYPE_UNKNOWN
+} DatabaseDataTypes;
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -221,10 +230,22 @@ typedef struct DatabaseNode
   #ifdef DATABASE_LOCK_PER_INSTANCE
     pthread_mutex_t           lock;
   #endif /* DATABASE_LOCK_PER_INSTANCE */
-  String                      fileName;                   // database file name
+  DatabaseTypes               type;
+  union
+  {
+    struct
+    {
+      String                  fileName;
+    } sqlite;
+    struct
+    {
+      String                  serverName;
+      String                  userName;
+    } mysql;
+  };
   uint                        openCount;
 
-  DatabaseLockTypes           type;
+  DatabaseLockTypes           lockType;
   uint                        pendingReadCount;
   uint                        readCount;
   pthread_cond_t              readTrigger;
@@ -263,7 +284,7 @@ typedef struct DatabaseNode
       struct
       {
         DatabaseThreadInfo threadInfo;
-        DatabaseLockTypes  type;
+        DatabaseLockTypes  lockType;
         uint               pendingReadCount;
         uint               readCount;
         uint               pendingReadWriteCount;
@@ -308,9 +329,13 @@ typedef struct DatabaseHandle
   #endif /* not NDEBUG */
 
   DatabaseNode                *databaseNode;
+  union
+  {
+    sqlite3                   *sqlite;
+    MYSQL                     *mysql;
+  } handle;
   uint                        readLockCount;
   uint                        readWriteLockCount;
-  sqlite3                     *handle;                    // SQlite3 handle
   uint                        transcationCount;
   long                        timeout;                    // timeout [ms]
   void                        *busyHandlerUserData;
@@ -384,7 +409,7 @@ typedef struct DatabaseColumnNode
   LIST_NODE_HEADER(struct DatabaseColumnNode);
 
   char          *name;
-  DatabaseTypes type;
+  DatabaseDataTypes type;
   union
   {
     // Note: data values are kept as strings to avoid conversion problems e.g. date/time -> integer
@@ -543,7 +568,10 @@ void Database_doneAll(void);
 * Name   : Database_open
 * Purpose: open database
 * Input  : databaseHandle   - database handle variable
-*          fileName         - file name or NULL for "in memory"
+*          uri              - database URI:
+*                               file name, NULL for "in memory",
+*                               sqlite3:<filename>
+*                               mysql:<server>:<user>
 *          databaseOpenMode - open mode; see DatabaseOpenModes
 *          timeout          - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle
@@ -553,7 +581,7 @@ void Database_doneAll(void);
 
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle    *databaseHandle,
-                       const char        *fileName,
+                       const char        *uri,
                        DatabaseOpenModes databaseOpenMode,
                        long              timeout
                       );
@@ -561,7 +589,7 @@ void Database_doneAll(void);
   Errors __Database_open(const char        *__fileName__,
                          ulong             __lineNb__,
                          DatabaseHandle    *databaseHandle,
-                         const char        *fileName,
+                         const char        *uri,
                          DatabaseOpenModes databaseOpenMode,
                          long              timeout
                         );
@@ -584,6 +612,26 @@ void Database_doneAll(void);
                         DatabaseHandle *databaseHandle
                        );
 #endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Database_getType
+* Purpose: get database type
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : database type; see DATABASE_TYPE_...
+* Notes  : -
+\***********************************************************************/
+
+INLINE DatabaseTypes Database_getType(DatabaseHandle *databaseHandle);
+#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENTATION__)
+INLINE DatabaseTypes Database_getType(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->databaseNode != NULL);
+
+  return databaseHandle->databaseNode->type;
+}
+#endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Database_addBusyHandler
@@ -994,7 +1042,7 @@ bool Database_setTableColumnListBlob(const DatabaseColumnList *columnList, const
 Errors Database_addColumn(DatabaseHandle *databaseHandle,
                           const char     *tableName,
                           const char     *columnName,
-                          DatabaseTypes  columnType
+                          DatabaseDataTypes  columnType
                          );
 
 /***********************************************************************\

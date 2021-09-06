@@ -41,6 +41,8 @@
 #include "common/semaphores.h"
 
 #include "sqlite3.h"
+#include "mysql/mysql.h"
+#include "mysql/errmsg.h"
 
 #include "errors.h"
 
@@ -144,6 +146,8 @@ LOCAL DatabaseList databaseList;
   } databaseLockBy;
 #endif /* DATABASE_LOCK_PER_INSTANCE */
 
+LOCAL MYSQL mysql;
+
 #ifndef NDEBUG
   LOCAL uint                databaseDebugCounter = 0;
 
@@ -195,7 +199,7 @@ LOCAL DatabaseList databaseList;
         String s = String_new(); \
         String_format(s,"EXPLAIN QUERY PLAN %s",String_cString(sqlString)); \
         fprintf(stderr,"DEBUG database %s, %d: query plan\n",__FILE__,__LINE__); \
-        sqlite3_exec(databaseHandle->handle, \
+        sqlite3_exec(databaseHandle->handle.sqlite, \
                      String_cString(s), \
                      debugPrintQueryPlanCallback, \
                      NULL, /* userData */ \
@@ -723,7 +727,7 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
   #ifdef DATABASE_LOCK_PER_INSTANCE
      pthread_mutex_destroy(&databaseNode->lock);
   #endif /* DATABASE_LOCK_PER_INSTANCE */
-  String_delete(databaseNode->fileName);
+  String_delete(databaseNode->sqlite.fileName);
 }
 
 #ifndef NDEBUG
@@ -1890,15 +1894,16 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
 * Name   : triggerUnlockRead
 * Purpose: trigger database read/write unlock all
 * Input  : databaseNode - database node
+*          lockType     - lock type; see DATABASE_LOCK_TYPE_*
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE void triggerUnlockRead(DatabaseHandle *databaseHandle, DatabaseLockTypes type)
+LOCAL_INLINE void triggerUnlockRead(DatabaseHandle *databaseHandle, DatabaseLockTypes lockType)
 #else /* not NDEBUG */
-LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, DatabaseLockTypes type)
+LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, DatabaseLockTypes lockType)
 #endif /* NDEBUG */
 {
   assert(databaseHandle != NULL);
@@ -1906,7 +1911,7 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
   assert(databaseHandle->databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
 
-  UNUSED_VARIABLE(type);
+  UNUSED_VARIABLE(lockType);
 
   #ifndef NDEBUG
 //fprintf(stderr,"%s, %d: trigger r %d\n",__FILE__,__LINE__,databaseNode->readTrigger);
@@ -1914,7 +1919,7 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.fileName     = __fileName__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.lineNb       = __lineNb__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter();
-    databaseHandle->databaseNode->debug.lastTrigger.type                    = type;
+    databaseHandle->databaseNode->debug.lastTrigger.type                    = lockType;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadCount        = databaseHandle->databaseNode->pendingReadCount;
     databaseHandle->databaseNode->debug.lastTrigger.readCount               = databaseHandle->databaseNode->readCount;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadWriteCount   = databaseHandle->databaseNode->pendingReadWriteCount;
@@ -1941,15 +1946,16 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
 * Name   : triggerUnlockReadWrite
 * Purpose: trigger database read/write unlock
 * Input  : databaseNode - database node
+*          lockType     - lock type; see DATABASE_LOCK_TYPE_*
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE void triggerUnlockReadWrite(DatabaseHandle *databaseHandle, DatabaseLockTypes type)
+LOCAL_INLINE void triggerUnlockReadWrite(DatabaseHandle *databaseHandle, DatabaseLockTypes lockType)
 #else /* not NDEBUG */
-LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, DatabaseLockTypes type)
+LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, DatabaseLockTypes lockType)
 #endif /* NDEBUG */
 {
   assert(databaseHandle != NULL);
@@ -1958,7 +1964,7 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
   assert(DATABASE_HANDLE_IS_LOCKED(databaseHandle));
 
-  UNUSED_VARIABLE(type);
+  UNUSED_VARIABLE(lockType);
 
   #ifndef NDEBUG
 //fprintf(stderr,"%s, %d: trigger rw %d\n",__FILE__,__LINE__,databaseNode->readWriteTrigger);
@@ -1966,7 +1972,7 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.fileName     = __fileName__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.lineNb       = __lineNb__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter();
-    databaseHandle->databaseNode->debug.lastTrigger.type                    = type;
+    databaseHandle->databaseNode->debug.lastTrigger.lockType                = lockType;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadCount        = databaseHandle->databaseNode->pendingReadCount;
     databaseHandle->databaseNode->debug.lastTrigger.readCount               = databaseHandle->databaseNode->readCount;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadWriteCount   = databaseHandle->databaseNode->pendingReadWriteCount;
@@ -2600,7 +2606,7 @@ LOCAL void executeCheckpoint(DatabaseHandle *databaseHandle)
                 DATABASE_LOCK_TYPE_READ_WRITE,
                 databaseHandle->timeout,
     {
-      (void)sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,CHECKPOINT_MODE,NULL,NULL);
+      (void)sqlite3_wal_checkpoint_v2(databaseHandle->handle.sqlite,NULL,CHECKPOINT_MODE,NULL,NULL);
     });
     databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
   }
@@ -2785,9 +2791,9 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 }
 
 /***********************************************************************\
-* Name   : sqliteExecute
-* Purpose: excute SQLite3 statement
-* Input  : handle              - SQLite3 handle
+* Name   : databaseExecute
+* Purpose: execute database statement
+* Input  : databaseHandle      - database handle
 *          sqlString           - SQL string
 *          databaseRowFunction - row call-back function (can be NULL)
 *          databaseRowUserData - user data for row call-back
@@ -2798,22 +2804,21 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
-                           const char          *sqlString,
-                           DatabaseRowFunction databaseRowFunction,
-                           void                *databaseRowUserData,
-                           ulong               *changedRowCount,
-                           long                timeout
-                          )
+LOCAL Errors databaseExecute(DatabaseHandle      *databaseHandle,
+                             const char          *sqlString,
+                             DatabaseRowFunction databaseRowFunction,
+                             void                *databaseRowUserData,
+                             ulong               *changedRowCount,
+                             long                timeout
+                            )
 {
   #define SLEEP_TIME 500L  // [ms]
 
   uint                          maxRetryCount;
   uint                          retryCount;
-  const char                    *sqlCommand,*nextSqlCommand;
+  StringTokenizer               stringTokenizer;
+  String                        sqlCommand;
   Errors                        error;
-  int                           sqliteResult;
-  sqlite3_stmt                  *statementHandle;
   uint                          count;
   const char                    **names,**values;
   uint                          i;
@@ -2823,118 +2828,256 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
   assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
   maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-  sqlCommand    = stringTrimBegin(sqlString);
+  String_initTokenizerCString(&stringTokenizer,
+                              stringTrimBegin(sqlString),
+                              ";",
+                              STRING_QUOTES,
+                              TRUE
+                             );
   error         = ERROR_NONE;
   retryCount    = 0;
   while (   (error == ERROR_NONE)
-         && !stringIsEmpty(sqlCommand)
+         && String_getNextToken(&stringTokenizer,&sqlCommand,NULL)
          && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
         )
   {
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlCommand));
 // TODO: reactivate when each thread has his own index handle
 #if 0
     assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
 #endif
 
     #ifndef NDEBUG
-      String_setCString(databaseHandle->debug.current.sqlCommand,sqlString);
+      String_set(databaseHandle->debug.current.sqlCommand,sqlCommand);
     #endif /* not NDEBUG */
 
-//fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,sqlCommand);
-    // prepare SQL statement
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
-                                      sqlCommand,
-                                      -1,
-                                      &statementHandle,
-                                      &nextSqlCommand
-                                     );
-//fprintf(stderr,"%s, %d: nextSqlCommand='%s'\n",__FILE__,__LINE__,nextSqlCommand);
-    if      (sqliteResult == SQLITE_MISUSE)
+    switch (databaseHandle->databaseNode->type)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
-    }
-    else if (sqliteResult == SQLITE_INTERRUPT)
-    {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-    }
-    else if (sqliteResult != SQLITE_OK)
-    {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-    }
-    assert(statementHandle != NULL);
-
-    // allocate call-back data
-    names  = NULL;
-    values = NULL;
-    count  = 0;
-    if (databaseRowFunction != NULL)
-    {
-      count = sqlite3_column_count(statementHandle);
-      names = (const char**)malloc(count*sizeof(const char*));
-      if (names == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      values = (const char**)malloc(count*sizeof(const char*));
-      if (values == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-    }
-
-    // step and process rows
-    do
-    {
-      // step
-      do
-      {
-        sqliteResult = sqlite3_step(statementHandle);
-        if      (sqliteResult == SQLITE_LOCKED)
+      case DATABASE_TYPE_SQLITE3:
         {
-          waitUnlockNotify(databaseHandle->handle);
-          sqlite3_reset(statementHandle);
-        }
-        else if (sqliteResult == SQLITE_MISUSE)
-        {
-          HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
-        }
-      }
-      while (sqliteResult == SQLITE_LOCKED);
-
-      // process row
-      if      (sqliteResult == SQLITE_ROW)
-      {
-        if (databaseRowFunction != NULL)
-        {
-          for (i = 0; i < count; i++)
+          int          sqliteResult;
+          sqlite3_stmt *statementHandle;
+  //fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,String_cString(sqlCommand));
+          // prepare SQL statement
+          sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
+                                            String_cString(sqlCommand),
+                                            -1,
+                                            &statementHandle,
+                                            NULL  // nextSqlCommand
+                                           );
+          if      (sqliteResult == SQLITE_MISUSE)
           {
-            names[i]  = sqlite3_column_name(statementHandle,i);
-            values[i] = (const char*)sqlite3_column_text(statementHandle,i);
+            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
           }
-          error = databaseRowFunction(names,values,count,databaseRowUserData);
+          else if (sqliteResult == SQLITE_INTERRUPT)
+          {
+            return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlCommand));
+          }
+          else if (sqliteResult != SQLITE_OK)
+          {
+            return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlCommand));
+          }
+          assert(statementHandle != NULL);
+
+          // allocate call-back data
+          names  = NULL;
+          values = NULL;
+          count  = 0;
+          if (databaseRowFunction != NULL)
+          {
+            count = sqlite3_column_count(statementHandle);
+            names = (const char**)malloc(count*sizeof(const char*));
+            if (names == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+            values = (const char**)malloc(count*sizeof(const char*));
+            if (values == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+          }
+
+          // step and process rows
+          do
+          {
+            // step
+            do
+            {
+              sqliteResult = sqlite3_step(statementHandle);
+              if      (sqliteResult == SQLITE_LOCKED)
+              {
+                waitUnlockNotify(databaseHandle->handle.sqlite);
+                sqlite3_reset(statementHandle);
+              }
+              else if (sqliteResult == SQLITE_MISUSE)
+              {
+                HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
+              }
+            }
+            while (sqliteResult == SQLITE_LOCKED);
+
+            // process row
+            if      (sqliteResult == SQLITE_ROW)
+            {
+              if (databaseRowFunction != NULL)
+              {
+                for (i = 0; i < count; i++)
+                {
+                  names[i]  = sqlite3_column_name(statementHandle,i);
+                  values[i] = (const char*)sqlite3_column_text(statementHandle,i);
+                }
+                error = databaseRowFunction(names,values,count,databaseRowUserData);
+              }
+            }
+          }
+          while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
+
+          // free call-back data
+          if (databaseRowFunction != NULL)
+          {
+            free(values);
+            free(names);
+          }
+
+          // get number of changes
+          if (changedRowCount != NULL)
+          {
+            (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->handle.sqlite);
+          }
+
+          // done SQL statement
+          sqlite3_finalize(statementHandle);
         }
-      }
-    }
-    while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
+        break;
+      case DATABASE_TYPE_MYSQL:
+        {
+fprintf(stderr,"%s:%d: sqlCommand=%s\n",__FILE__,__LINE__,String_cString(sqlCommand));
+          int mysqlResult;
 
-    // free call-back data
-    if (databaseRowFunction != NULL)
-    {
-      free(values);
-      free(names);
-    }
+          // prepare SQL statement
+          MYSQL_STMT *statementHandle = mysql_stmt_init(databaseHandle->handle.mysql);
+          assert(statementHandle != NULL);
+          mysqlResult = mysql_stmt_prepare(statementHandle,
+                                           String_cString(sqlCommand),
+                                           String_length(sqlCommand)
+                                          );
+          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+          {
+            HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",mysqlResult,mysql_stmt_error(statementHandle));
+          }
+          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+          {
+            mysql_stmt_close(statementHandle);
+            return ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlCommand));
+          }
+          else if (mysqlResult != 0)
+          {
+            mysql_stmt_close(statementHandle);
+            return ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlCommand));
+          }
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
-    // get number of changes
-    if (changedRowCount != NULL)
-    {
-      (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->handle);
-    }
+          // allocate call-back data
+          names  = NULL;
+          values = NULL;
+          count  = 0;
+          if (databaseRowFunction != NULL)
+          {
+            //// TODO: msgql_stmt?parameter_count
+            count = mysql_stmt_field_count(statementHandle);
+            names = (const char**)malloc(count*sizeof(const char*));
+            if (names == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+            values = (const char**)malloc(count*sizeof(const char*));
+            if (values == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+          }
 
-    // done SQL statement
-    sqlite3_finalize(statementHandle);
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+          // step and process rows
+          mysqlResult = mysql_stmt_execute(statementHandle);
+          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+          {
+            HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",mysqlResult,mysql_stmt_error(statementHandle));
+          }
+          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+          {
+            mysql_stmt_close(statementHandle);
+            return ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlCommand));
+          }
+          else if (mysqlResult != 0)
+          {
+            mysql_stmt_close(statementHandle);
+            return ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlCommand));
+          }
+
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+          if (mysql_stmt_num_rows(statementHandle) > 0)
+          {
+            do
+            {
+              // process row
+              mysqlResult = mysql_stmt_fetch(statementHandle);
+              if      (mysqlResult == 0)
+              {
+                if (databaseRowFunction != NULL)
+                {
+                  for (i = 0; i < count; i++)
+                  {
+  // TODO:                  names[i]  = sqlite3_column_name(statementHandle,i);
+  names[i] = "xxx";
+                    values[i] = (const char*)sqlite3_column_text(statementHandle,i);
+                  }
+  fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+                  error = databaseRowFunction(names,values,count,databaseRowUserData);
+                }
+              }
+              else if (mysqlResult == 1)
+              {
+                error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlCommand));
+              }
+              else if (mysqlResult == MYSQL_DATA_TRUNCATED)
+              {
+                error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlCommand));
+              }
+  fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+            }
+            while ((error == ERROR_NONE) && (mysqlResult == 0));
+          }
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+
+          // free call-back data
+          if (databaseRowFunction != NULL)
+          {
+            free(values);
+            free(names);
+          }
+
+          // get number of changes
+          if (changedRowCount != NULL)
+          {
+            (*changedRowCount) += (ulong)mysql_stmt_affected_rows(statementHandle);
+          }
+
+          // done SQL statement
+          mysql_stmt_close(statementHandle);
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+      #endif
+    }
 
     #ifndef NDEBUG
       // clear SQL command, backtrace
@@ -2942,7 +3085,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
     #endif /* not NDEBUG */
 
     // check result
-    if      (sqliteResult == SQLITE_BUSY)
+    if      (Error_getCode(error) == ERROR_DATABASE_BUSY)
     {
 //fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
 //Database_debugPrintLockInfo(databaseHandle);
@@ -2960,22 +3103,19 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
       retryCount++;
       continue;
     }
-    else if (sqliteResult != SQLITE_DONE)
-    {
-      // report error
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
-    }
-    else if (sqliteResult == SQLITE_INTERRUPT)
+    else if (Error_getCode(error) == ERROR_DATABASE_INTERRUPTED)
     {
       // report interrupt
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlCommand));
     }
-    else
+    else if (error != ERROR_NONE)
     {
-      // next SQL command part
-      sqlCommand = stringTrimBegin(nextSqlCommand);
+      // report error
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlCommand));
     }
   }
+  String_doneTokenizer(&stringTokenizer);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   if      (error != ERROR_NONE)
   {
@@ -3012,29 +3152,29 @@ LOCAL void freeColumnNode(DatabaseColumnNode *columnNode, void *userData)
 
   switch (columnNode->type)
   {
-    case DATABASE_TYPE_PRIMARY_KEY:
+    case DATABASE_DATATYPE_PRIMARY_KEY:
       break;
-    case DATABASE_TYPE_FOREIGN_KEY:
+    case DATABASE_DATATYPE_FOREIGN_KEY:
       break;
-    case DATABASE_TYPE_INT64:
+    case DATABASE_DATATYPE_INT64:
       String_delete(columnNode->value.i);
       break;
-    case DATABASE_TYPE_DOUBLE:
+    case DATABASE_DATATYPE_DOUBLE:
       String_delete(columnNode->value.d);
       break;
-    case DATABASE_TYPE_DATETIME:
+    case DATABASE_DATATYPE_DATETIME:
       String_delete(columnNode->value.i);
       break;
-    case DATABASE_TYPE_TEXT:
+    case DATABASE_DATATYPE_TEXT:
       String_delete(columnNode->value.text);
       break;
-    case DATABASE_TYPE_BLOB:
+    case DATABASE_DATATYPE_BLOB:
       if (columnNode->value.blob.data != NULL)
       {
         free(columnNode->value.blob.data);
       }
       break;
-    case DATABASE_TYPE_UNKNOWN:
+    case DATABASE_DATATYPE_UNKNOWN:
       break;
     default:
       #ifndef NDEBUG
@@ -3170,34 +3310,34 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
       {
         if (primaryKey)
         {
-          columnNode->type     = DATABASE_TYPE_PRIMARY_KEY;
+          columnNode->type     = DATABASE_DATATYPE_PRIMARY_KEY;
           columnNode->value.id = 0LL;
         }
         else
         {
-          columnNode->type    = DATABASE_TYPE_INT64;
+          columnNode->type    = DATABASE_DATATYPE_INT64;
           columnNode->value.i = String_new();
         }
       }
       else if (stringEqualsIgnoreCase(type,"REAL"))
       {
-        columnNode->type    = DATABASE_TYPE_DOUBLE;
+        columnNode->type    = DATABASE_DATATYPE_DOUBLE;
         columnNode->value.d = String_new();
       }
       else if (stringEqualsIgnoreCase(type,"TEXT"))
       {
-        columnNode->type       = DATABASE_TYPE_TEXT;
+        columnNode->type       = DATABASE_DATATYPE_TEXT;
         columnNode->value.text = String_new();
       }
       else if (stringEqualsIgnoreCase(type,"BLOB"))
       {
-        columnNode->type              = DATABASE_TYPE_BLOB;
+        columnNode->type              = DATABASE_DATATYPE_BLOB;
         columnNode->value.blob.data   = NULL;
         columnNode->value.blob.length = 0;
       }
       else
       {
-        columnNode->type = DATABASE_TYPE_UNKNOWN;
+        columnNode->type = DATABASE_DATATYPE_UNKNOWN;
       }
       columnNode->usedFlag = FALSE;
 
@@ -3258,32 +3398,32 @@ LOCAL DatabaseColumnNode *findTableColumnNode(const DatabaseColumnList *columnLi
 * Notes  : -
 \***********************************************************************/
 
-LOCAL const char *getDatabaseTypeString(DatabaseTypes type)
+LOCAL const char *getDatabaseTypeString(DatabaseDataTypes type)
 {
   const char *string;
 
   string = NULL;
   switch (type)
   {
-    case DATABASE_TYPE_PRIMARY_KEY:
+    case DATABASE_DATATYPE_PRIMARY_KEY:
       string = "INTEGER PRIMARY KEY";
       break;
-    case DATABASE_TYPE_INT64:
+    case DATABASE_DATATYPE_INT64:
       string = "INTEGER";
       break;
-    case DATABASE_TYPE_DOUBLE:
+    case DATABASE_DATATYPE_DOUBLE:
       string = "REAL";
       break;
-    case DATABASE_TYPE_DATETIME:
+    case DATABASE_DATATYPE_DATETIME:
       string = "INTEGER";
       break;
-    case DATABASE_TYPE_TEXT:
+    case DATABASE_DATATYPE_TEXT:
       string = "TEXT";
       break;
-    case DATABASE_TYPE_BLOB:
+    case DATABASE_DATATYPE_BLOB:
       string = "BLOB";
       break;
-    case DATABASE_TYPE_UNKNOWN:
+    case DATABASE_DATATYPE_UNKNOWN:
       string = "unknown";
       break;
     default:
@@ -3323,7 +3463,7 @@ Errors Database_initAll(void)
   List_init(&databaseList);
   Semaphore_init(&databaseList.lock,SEMAPHORE_TYPE_BINARY);
 
-  // enable multi-threaded support
+  // enable sqlite3 multi-threaded support
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
   {
@@ -3333,6 +3473,9 @@ Errors Database_initAll(void)
     pthread_mutexattr_destroy(&databaseLockAttribute);
     return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
   }
+
+  // init MySQL
+  mysql_init(&mysql);
 
   return ERROR_NONE;
 }
@@ -3352,7 +3495,7 @@ void Database_doneAll(void)
 
 #ifdef NDEBUG
   Errors Database_open(DatabaseHandle    *databaseHandle,
-                       const char        *fileName,
+                       const char        *uri,
                        DatabaseOpenModes databaseOpenMode,
                        long              timeout
                       )
@@ -3360,7 +3503,7 @@ void Database_doneAll(void)
   Errors __Database_open(const char        *__fileName__,
                          ulong             __lineNb__,
                          DatabaseHandle    *databaseHandle,
-                         const char        *fileName,
+                         const char        *uri,
                          DatabaseOpenModes databaseOpenMode,
                          long              timeout
                         )
@@ -3376,12 +3519,14 @@ void Database_doneAll(void)
     uint          i;
   #endif /* NDEBUG */
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   assert(databaseHandle != NULL);
 
   // init variables
   databaseHandle->readLockCount           = 0;
   databaseHandle->readWriteLockCount      = 0;
-  databaseHandle->handle                  = NULL;
+  databaseHandle->handle.sqlite           = NULL;
+  databaseHandle->handle.mysql            = NULL;
   databaseHandle->timeout                 = timeout;
   databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
   if (sem_init(&databaseHandle->wakeUp,0,0) != 0)
@@ -3389,96 +3534,166 @@ void Database_doneAll(void)
     return ERRORX_(DATABASE,0,"init locking");
   }
 
-  // create directory if needed
-  if (!stringIsEmpty(fileName))
+  // get database type and open/connect data
+  DatabaseTypes type;
+  String        fileName   = String_new();
+  String        serverName = String_new();
+  String        userName   = String_new();
+  String        password   = String_new();
+  if      (String_matchCString(uri,
+                               STRING_BEGIN,
+                               "^sqlite3:(.*)",
+                               NULL,
+                               STRING_NO_ASSIGN,
+                               fileName,
+                               NULL
+                              )
+          )
   {
-    directoryName = File_getDirectoryNameCString(String_new(),fileName);
-    if (   !String_isEmpty(directoryName)
-        && !File_isDirectory(directoryName)
-       )
-    {
-      error = File_makeDirectory(directoryName,
-                                 FILE_DEFAULT_USER_ID,
-                                 FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSION
-                                );
-      if (error != ERROR_NONE)
-      {
-        File_deleteFileName(directoryName);
-        sem_destroy(&databaseHandle->wakeUp);
-        return error;
-      }
-    }
-    String_delete(directoryName);
+    type = DATABASE_TYPE_SQLITE3;
   }
-
-  // get filename
-  databaseFileName = String_new();
-  if (!stringIsEmpty(fileName))
+  else if (String_matchCString(uri,
+                               STRING_BEGIN,
+                               "^mysql:([^:]+):([^:]+):(.*)",
+                               NULL,
+                               STRING_NO_ASSIGN,
+                               serverName,
+                               userName,
+                               password,
+                               NULL
+                              )
+          )
   {
-    // open file
-    String_format(databaseFileName,"file:%s",fileName);
+    type = DATABASE_TYPE_MYSQL;
   }
   else
   {
-    // open memory
-    String_format(databaseFileName,"file::memory:");
+    type = DATABASE_TYPE_SQLITE3;
   }
 
-  // get mode
-  sqliteMode = SQLITE_OPEN_URI;
-  switch (databaseOpenMode & DATABASE_OPEN_MASK_MODE)
+  switch (type)
   {
-    case DATABASE_OPENMODE_READ:
-      sqliteMode |= SQLITE_OPEN_READONLY;
-      String_appendCString(databaseFileName,"?immutable=1");
-      break;
-    case DATABASE_OPENMODE_READWRITE:
-      sqliteMode |= SQLITE_OPEN_READWRITE;
-      break;
-    case DATABASE_OPENMODE_CREATE:
-      sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
-      break;
-  }
-  if ((databaseOpenMode & DATABASE_OPEN_MASK_FLAGS) != 0)
-  {
-    if ((databaseOpenMode & DATABASE_OPENMODE_MEMORY) == DATABASE_OPENMODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(databaseFileName,"mode=memory");
-    if ((databaseOpenMode & DATABASE_OPENMODE_SHARED) == DATABASE_OPENMODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(databaseFileName,"cache=shared");
-  }
-//sqliteMode |= SQLITE_OPEN_NOMUTEX;
+    case DATABASE_TYPE_SQLITE3:
+      // create directory if needed
+      if (!String_isEmpty(fileName))
+      {
+        directoryName = File_getDirectoryName(String_new(),fileName);
+        if (   !String_isEmpty(directoryName)
+            && !File_isDirectory(directoryName)
+           )
+        {
+          error = File_makeDirectory(directoryName,
+                                     FILE_DEFAULT_USER_ID,
+                                     FILE_DEFAULT_GROUP_ID,
+                                     FILE_DEFAULT_PERMISSION
+                                    );
+          if (error != ERROR_NONE)
+          {
+            File_deleteFileName(directoryName);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+        }
+        String_delete(directoryName);
+      }
 
-  // open database
-  sqliteResult = sqlite3_open_v2(String_cString(databaseFileName),&databaseHandle->handle,sqliteMode,NULL);
-  if (sqliteResult != SQLITE_OK)
-  {
-    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
-    String_delete(databaseFileName);
-    sem_destroy(&databaseHandle->wakeUp);
-    return error;
-  }
+      // get sqlite name
+      if (!String_isEmpty(fileName))
+      {
+        // open file
+        String_format(fileName,"file:%s",fileName);
+      }
+      else
+      {
+        // open memory
+        String_format(fileName,"file::memory:");
+      }
 
-  // attach aux database
-  if ((databaseOpenMode & DATABASE_OPENMODE_AUX) == DATABASE_OPENMODE_AUX)
-  {
-    sqliteResult = sqlite3_exec(databaseHandle->handle,
-                                "ATTACH DATABASE ':memory:' AS " DATABASE_AUX,
-                                CALLBACK_(NULL,NULL),
-                                NULL
-                               );
-    if (sqliteResult != SQLITE_OK)
-    {
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s",sqlite3_errmsg(databaseHandle->handle));
-      sqlite3_close(databaseHandle->handle);
-      String_delete(databaseFileName);
-      sem_destroy(&databaseHandle->wakeUp);
-      return error;
-    }
+      // get mode
+      sqliteMode = SQLITE_OPEN_URI;
+      switch (databaseOpenMode & DATABASE_OPEN_MASK_MODE)
+      {
+        case DATABASE_OPENMODE_READ:
+          sqliteMode |= SQLITE_OPEN_READONLY;
+          String_appendCString(databaseFileName,"?immutable=1");
+          break;
+        case DATABASE_OPENMODE_READWRITE:
+          sqliteMode |= SQLITE_OPEN_READWRITE;
+          break;
+        case DATABASE_OPENMODE_CREATE:
+          sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
+          break;
+      }
+      if ((databaseOpenMode & DATABASE_OPEN_MASK_FLAGS) != 0)
+      {
+        if ((databaseOpenMode & DATABASE_OPENMODE_MEMORY) == DATABASE_OPENMODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(databaseFileName,"mode=memory");
+        if ((databaseOpenMode & DATABASE_OPENMODE_SHARED) == DATABASE_OPENMODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(databaseFileName,"cache=shared");
+      }
+    //sqliteMode |= SQLITE_OPEN_NOMUTEX;
+
+      // open database
+      sqliteResult = sqlite3_open_v2(String_cString(fileName),&databaseHandle->handle.sqlite,sqliteMode,NULL);
+      if (sqliteResult != SQLITE_OK)
+      {
+        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s",sqlite3_errmsg(databaseHandle->handle.sqlite));
+        String_delete(databaseFileName);
+        sem_destroy(&databaseHandle->wakeUp);
+        return error;
+      }
+
+      // attach aux database
+      if ((databaseOpenMode & DATABASE_OPENMODE_AUX) == DATABASE_OPENMODE_AUX)
+      {
+        sqliteResult = sqlite3_exec(databaseHandle->handle.sqlite,
+                                    "ATTACH DATABASE ':memory:' AS " DATABASE_AUX,
+                                    CALLBACK_(NULL,NULL),
+                                    NULL
+                                   );
+        if (sqliteResult != SQLITE_OK)
+        {
+          error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s",sqlite3_errmsg(databaseHandle->handle.sqlite));
+          sqlite3_close(databaseHandle->handle.sqlite);
+          String_delete(password);
+          String_delete(userName);
+          String_delete(serverName);
+          String_delete(fileName);
+          sem_destroy(&databaseHandle->wakeUp);
+          return error;
+        }
+      }
+      break;
+    case DATABASE_TYPE_MYSQL:
+      // open database
+      databaseHandle->handle.mysql = mysql_real_connect(&mysql,
+                                                        String_cString(serverName),
+                                                        String_cString(userName),
+                                                        String_cString(password),
+                                                        "bar",
+                                                        0,
+                                                        0,
+                                                        0
+                                                       );
+      if (databaseHandle->handle.mysql == NULL)
+      {
+        error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s",mysql_error(&mysql));
+        String_delete(password);
+        String_delete(userName);
+        String_delete(serverName);
+        String_delete(fileName);
+        sem_destroy(&databaseHandle->wakeUp);
+        return error;
+      }
+      break;
   }
 
   // get database node
   SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    databaseNode = LIST_FIND(&databaseList,databaseNode,String_equals(databaseNode->fileName,databaseFileName));
+    databaseNode = LIST_FIND(&databaseList,
+                             databaseNode,
+                                (databaseNode->type == type)
+                             && String_equals(databaseNode->sqlite.fileName,databaseFileName)
+                            );
     if (databaseNode != NULL)
     {
       databaseNode->openCount++;
@@ -3490,12 +3705,16 @@ void Database_doneAll(void)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-      databaseNode->fileName                = String_duplicate(databaseFileName);
+      databaseNode->type                    = type;
+      databaseNode->sqlite.fileName         = String_duplicate(fileName);
+      databaseNode->mysql.serverName        = String_duplicate(serverName);
+      databaseNode->mysql.userName          = String_duplicate(userName);
       databaseNode->openCount               = 1;
       #ifdef DATABASE_LOCK_PER_INSTANCE
         if (pthread_mutexattr_init(&databaseNode->lockAttribute) != 0)
         {
-          sqlite3_close(databaseHandle->handle);
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+          sqlite3_close(databaseHandle->handle.sqlite);
           String_delete(databaseFileName);
           sem_destroy(&databaseHandle->wakeUp);
           return ERRORX_(DATABASE,0,"init locking");
@@ -3503,14 +3722,15 @@ void Database_doneAll(void)
         pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
         if (pthread_mutex_init(&databaseNode->lock,&databaseNode->lockAttribute) != 0)
         {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           pthread_mutexattr_destroy(&databaseNode->lockAttribute);
-          sqlite3_close(databaseHandle->handle);
+          sqlite3_close(databaseHandle->handle.sqlite);
           String_delete(databaseFileName);
           sem_destroy(&databaseHandle->wakeUp);
           return ERRORX_(DATABASE,0,"init locking");
         }
       #endif /* DATABASE_LOCK_PER_INSTANCE */
-      databaseNode->type                    = DATABASE_LOCK_TYPE_NONE;
+      databaseNode->lockType                = DATABASE_LOCK_TYPE_NONE;
 
       databaseNode->pendingReadCount        = 0;
       databaseNode->readCount               = 0;
@@ -3560,71 +3780,99 @@ void Database_doneAll(void)
     databaseHandle->databaseNode = databaseNode;
   }
 
-  #if !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG)
-    fprintf(stderr,"WARNING: datatbase logging is enabled!\n");
-    sqlite3_trace_v2(databaseHandle->handle,DATABASE_DEBUG_LOG,logTraceCommandHandler,NULL);
-  #endif /* DATABASE_DEBUG_LOG */
-
+  // set handlers
+  switch (type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      #if !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG)
+        fprintf(stderr,"WARNING: datatbase logging is enabled!\n");
+        switch (databaseNode->type)
+        {
+          case DATABASE_TYPE_SQLITE3:
+            sqlite3_trace_v2(databaseHandle->handle.sqlite,DATABASE_DEBUG_LOG,logTraceCommandHandler,NULL);
+            break;
+          case DATABASE_TYPE_MYSQL:
+            break;
+        }
+      #endif /* DATABASE_DEBUG_LOG */
 #if 0
-  // set busy handler
-  sqliteResult = sqlite3_busy_handler(databaseHandle->handle,busyHandler,databaseHandle);
-  assert(sqliteResult == SQLITE_OK);
+      // set busy handler
+      sqliteResult = sqlite3_busy_handler(databaseHandle->handle.sqlite,busyHandler,databaseHandle);
+      assert(sqliteResult == SQLITE_OK);
 #endif /* 0 */
-  // set progress handler
-  sqlite3_progress_handler(databaseHandle->handle,50000,progressHandler,databaseHandle);
+      // set progress handler
+      sqlite3_progress_handler(databaseHandle->handle.sqlite,50000,progressHandler,databaseHandle);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
 
   // register special functions
-  sqliteResult = sqlite3_create_function(databaseHandle->handle,
-                                         "unixtimestamp",
-                                         1,
-                                         SQLITE_ANY,
-                                         NULL,
-                                         unixTimestamp,
-                                         NULL,
-                                         NULL
-                                        );
-  assert(sqliteResult == SQLITE_OK);
-  sqliteResult = sqlite3_create_function(databaseHandle->handle,
-                                         "regexp",
-                                         3,
-                                         SQLITE_ANY,
-                                         NULL,
-                                         regexpMatch,
-                                         NULL,
-                                         NULL
-                                        );
-  assert(sqliteResult == SQLITE_OK);
-  sqliteResult = sqlite3_create_function(databaseHandle->handle,
-                                         "dirname",
-                                         1,
-                                         SQLITE_ANY,
-                                         NULL,
-                                         dirname,
-                                         NULL,
-                                         NULL
-                                        );
-  assert(sqliteResult == SQLITE_OK);
+  switch (type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      sqliteResult = sqlite3_create_function(databaseHandle->handle.sqlite,
+                                             "unixtimestamp",
+                                             1,
+                                             SQLITE_ANY,
+                                             NULL,
+                                             unixTimestamp,
+                                             NULL,
+                                             NULL
+                                            );
+      assert(sqliteResult == SQLITE_OK);
+      sqliteResult = sqlite3_create_function(databaseHandle->handle.sqlite,
+                                             "regexp",
+                                             3,
+                                             SQLITE_ANY,
+                                             NULL,
+                                             regexpMatch,
+                                             NULL,
+                                             NULL
+                                            );
+      assert(sqliteResult == SQLITE_OK);
+      sqliteResult = sqlite3_create_function(databaseHandle->handle.sqlite,
+                                             "dirname",
+                                             1,
+                                             SQLITE_ANY,
+                                             NULL,
+                                             dirname,
+                                             NULL,
+                                             NULL
+                                            );
+      assert(sqliteResult == SQLITE_OK);
 //TODO: debug function for logging?
 #if 0
-  sqliteResult = sqlite3_create_function(databaseHandle->handle,
-                                         "debugPrint",
-                                         1,
-                                         SQLITE_ANY,
-                                         NULL,
-                                         debugPrint,
-                                         NULL,
-                                         NULL
-                                        );
-  assert(sqliteResult == SQLITE_OK);
+      sqliteResult = sqlite3_create_function(databaseHandle->handle.sqlite,
+                                             "debugPrint",
+                                             1,
+                                             SQLITE_ANY,
+                                             NULL,
+                                             debugPrint,
+                                             NULL,
+                                             NULL
+                                            );
+      assert(sqliteResult == SQLITE_OK);
 #endif
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
 
-  // enable recursive triggers
-  sqliteResult = sqlite3_exec(databaseHandle->handle,
-                              "PRAGMA recursive_triggers=ON",
-                              CALLBACK_(NULL,NULL),
-                              NULL
-                             );
-  assert(sqliteResult == SQLITE_OK);
+  switch (type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      // enable recursive triggers
+      sqliteResult = sqlite3_exec(databaseHandle->handle.sqlite,
+                                  "PRAGMA recursive_triggers=ON",
+                                  CALLBACK_(NULL,NULL),
+                                  NULL
+                                 );
+      assert(sqliteResult == SQLITE_OK);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
 
   #ifdef DATABASE_DEBUG
     fprintf(stderr,"Database debug: open '%s'\n",fileName);
@@ -3664,6 +3912,7 @@ void Database_doneAll(void)
     pthread_mutex_unlock(&debugDatabaseLock);
   #endif /* not NDEBUG */
 
+fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,databaseHandle->databaseNode->type);
   // free resources
   String_delete(databaseFileName);
 
@@ -3687,7 +3936,7 @@ void Database_doneAll(void)
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->readWriteLockCount == 0);
   assert(databaseHandle->readLockCount == 0);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle,DatabaseHandle);
@@ -3736,14 +3985,29 @@ void Database_doneAll(void)
     pthread_mutex_unlock(&debugDatabaseLock);
   #endif /* not NDEBUG */
 
-  // clear progress handler
-  sqlite3_progress_handler(databaseHandle->handle,0,NULL,NULL);
+  switch (databaseHandle->databaseNode->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      // clear progress handler
+      sqlite3_progress_handler(databaseHandle->handle.sqlite,0,NULL,NULL);
 
-  // clear busy timeout handler
-  sqlite3_busy_handler(databaseHandle->handle,NULL,NULL);
+      // clear busy timeout handler
+      sqlite3_busy_handler(databaseHandle->handle.sqlite,NULL,NULL);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
 
   // close database
-  sqlite3_close(databaseHandle->handle);
+  switch (databaseHandle->databaseNode->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      sqlite3_close(databaseHandle->handle.sqlite);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      mysql_close(databaseHandle->handle.mysql);
+      break;
+  }
 
   // free resources
 //TODO: remove?
@@ -3760,7 +4024,7 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(busyHandlerFunction != NULL);
 
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -3797,7 +4061,7 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(busyHandlerFunction != NULL);
 
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -3828,7 +4092,7 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(progressHandlerFunction != NULL);
 
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -3865,7 +4129,7 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(progressHandlerFunction != NULL);
 
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -3892,7 +4156,7 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   #ifdef DATABASE_SUPPORT_INTERRUPT
-    sqlite3_interrupt(databaseHandle->handle);
+    sqlite3_interrupt(databaseHandle->handle.sqlite);
   #endif /* DATABASE_SUPPORT_INTERRUPT */
 }
 
@@ -4515,13 +4779,27 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
 
-  error = Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "PRAGMA foreign_keys=%s;",
-                           enabled ? "ON" : "OFF"
-                          );
+  switch (databaseHandle->databaseNode->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "PRAGMA foreign_keys=%s;",
+                               enabled ? "ON" : "OFF"
+                              );
+      break;
+    case DATABASE_TYPE_MYSQL:
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "SET FOREIGN_KEY_CHECKS=%d;",
+                               enabled ? 1 : 0
+                              );
+      break;
+  }
 
   return error;
 }
@@ -4530,15 +4808,28 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
                                 const char     *directoryName
                                )
 {
+  Errors error;
+
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
 
-  return Database_execute(databaseHandle,
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          "PRAGMA temp_store_directory='%s';",
-                          directoryName
-                         );
+  switch (databaseHandle->databaseNode->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "PRAGMA temp_store_directory='%s';",
+                               directoryName
+                              );
+      break;
+    case DATABASE_TYPE_MYSQL:
+      error = ERROR_NONE;  // not supported; ignored
+      break;
+  }
+
+  return error;
 }
 
 Errors Database_createTemporaryTable(DatabaseHandle            *databaseHandle,
@@ -4595,7 +4886,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   assert(databaseHandleReference->handle != NULL);
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
   // get table lists
   error = getTableList(&tableListReference,databaseHandleReference);
@@ -4822,7 +5113,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
 
     // create select statement
-    sqliteResult = sqlite3_prepare_v2(fromDatabaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(fromDatabaseHandle->handle.sqlite,
                                       String_cString(sqlSelectString),
                                       -1,
                                       &fromStatementHandle,
@@ -4834,11 +5125,11 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(fromDatabaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(fromDatabaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      error = ERRORX_(INTERRUPTED,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
+      error = ERRORX_(INTERRUPTED,sqlite3_errcode(fromDatabaseHandle->handle.sqlite),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle.sqlite));
       if (transactionFlag)
       {
         (void)Database_rollbackTransaction(toDatabaseHandle);
@@ -4847,7 +5138,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
     else
     {
-      error = ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle));
+      error = ERRORX_(DATABASE,sqlite3_errcode(fromDatabaseHandle->handle.sqlite),"%s: %s",String_cString(sqlSelectString),sqlite3_errmsg(fromDatabaseHandle->handle.sqlite));
       if (transactionFlag)
       {
         (void)Database_rollbackTransaction(toDatabaseHandle);
@@ -4857,14 +5148,14 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     #ifndef NDEBUG
       if (fromStatementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(fromDatabaseHandle->handle),sqlite3_errmsg(fromDatabaseHandle->handle),String_cString(sqlSelectString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(fromDatabaseHandle->handle.sqlite),sqlite3_errmsg(fromDatabaseHandle->handle.sqlite),String_cString(sqlSelectString));
         abort();
       }
     #endif /* not NDEBUG */
 
     // copy rows
     n = 0;
-    while ((sqliteResult = sqliteStep(fromDatabaseHandle->handle,fromStatementHandle,fromDatabaseHandle->timeout)) == SQLITE_ROW)
+    while ((sqliteResult = sqliteStep(fromDatabaseHandle->handle.sqlite,fromStatementHandle,fromDatabaseHandle->timeout)) == SQLITE_ROW)
     {
       #ifdef DATABASE_DEBUG_COPY_TABLE
         rowCount++;
@@ -4882,7 +5173,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       {
         switch (columnNode->type)
         {
-          case DATABASE_TYPE_PRIMARY_KEY:
+          case DATABASE_DATATYPE_PRIMARY_KEY:
             columnNode->value.id = sqlite3_column_int64(fromStatementHandle,i);
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
@@ -4891,7 +5182,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               toColumnNode->usedFlag = TRUE;
             }
             break;
-          case DATABASE_TYPE_INT64:
+          case DATABASE_DATATYPE_INT64:
             String_setCString(columnNode->value.i,(const char*)sqlite3_column_text(fromStatementHandle,i));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
@@ -4900,7 +5191,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               toColumnNode->usedFlag = TRUE;
             }
             break;
-          case DATABASE_TYPE_DOUBLE:
+          case DATABASE_DATATYPE_DOUBLE:
             String_setCString(columnNode->value.d,(const char*)sqlite3_column_text(fromStatementHandle,i));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
@@ -4909,7 +5200,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               toColumnNode->usedFlag = TRUE;
             }
             break;
-          case DATABASE_TYPE_DATETIME:
+          case DATABASE_DATATYPE_DATETIME:
             String_setCString(columnNode->value.i,(const char*)sqlite3_column_text(fromStatementHandle,i));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
@@ -4918,7 +5209,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               toColumnNode->usedFlag = TRUE;
             }
             break;
-          case DATABASE_TYPE_TEXT:
+          case DATABASE_DATATYPE_TEXT:
             String_setCString(columnNode->value.text,(const char*)sqlite3_column_text(fromStatementHandle,i));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
@@ -4927,7 +5218,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               toColumnNode->usedFlag = TRUE;
             }
             break;
-          case DATABASE_TYPE_BLOB:
+          case DATABASE_DATATYPE_BLOB:
             HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
             break;
           default:
@@ -4964,7 +5255,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       i = 0;
       LIST_ITERATE(&toColumnList,columnNode)
       {
-        if (columnNode->usedFlag && (columnNode->type != DATABASE_TYPE_PRIMARY_KEY))
+        if (columnNode->usedFlag && (columnNode->type != DATABASE_DATATYPE_PRIMARY_KEY))
         {
           if (i > 0) String_appendChar(sqlInsertString,',');
           String_appendCString(sqlInsertString,columnNode->name);
@@ -4975,7 +5266,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       i = 0;
       LIST_ITERATE(&toColumnList,columnNode)
       {
-        if (columnNode->usedFlag && (columnNode->type != DATABASE_TYPE_PRIMARY_KEY))
+        if (columnNode->usedFlag && (columnNode->type != DATABASE_DATATYPE_PRIMARY_KEY))
         {
           if (i > 0) String_appendChar(sqlInsertString,',');
           String_appendChar(sqlInsertString,'?');
@@ -4986,7 +5277,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 //      DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
 
       // create insert statement
-      sqliteResult = sqlite3_prepare_v2(toDatabaseHandle->handle,
+      sqliteResult = sqlite3_prepare_v2(toDatabaseHandle->handle.sqlite,
                                         String_cString(sqlInsertString),
                                         -1,
                                         &toStatementHandle,
@@ -4998,11 +5289,11 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       }
       else if (sqliteResult == SQLITE_MISUSE)
       {
-        HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(toDatabaseHandle->handle));
+        HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(toDatabaseHandle->handle.sqlite));
       }
       else if (sqliteResult == SQLITE_INTERRUPT)
       {
-        error = ERRORX_(INTERRUPTED,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
+        error = ERRORX_(INTERRUPTED,sqlite3_errcode(toDatabaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle.sqlite),String_cString(sqlInsertString));
         sqlite3_finalize(fromStatementHandle);
         if (transactionFlag)
         {
@@ -5012,7 +5303,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       }
       else
       {
-        error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
+        error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle.sqlite),String_cString(sqlInsertString));
         sqlite3_finalize(fromStatementHandle);
         if (transactionFlag)
         {
@@ -5036,26 +5327,26 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         {
           switch (columnNode->type)
           {
-            case DATABASE_TYPE_PRIMARY_KEY:
+            case DATABASE_DATATYPE_PRIMARY_KEY:
               // can not be set
               break;
-            case DATABASE_TYPE_INT64:
+            case DATABASE_DATATYPE_INT64:
               sqlite3_bind_text(toStatementHandle,i,String_cString(columnNode->value.i),-1,NULL);
               i++;
               break;
-            case DATABASE_TYPE_DOUBLE:
+            case DATABASE_DATATYPE_DOUBLE:
               sqlite3_bind_text(toStatementHandle,i,String_cString(columnNode->value.d),-1,NULL);
               i++;
               break;
-            case DATABASE_TYPE_DATETIME:
+            case DATABASE_DATATYPE_DATETIME:
               sqlite3_bind_text(toStatementHandle,i,String_cString(columnNode->value.i),-1,NULL);
               i++;
               break;
-            case DATABASE_TYPE_TEXT:
+            case DATABASE_DATATYPE_TEXT:
               sqlite3_bind_text(toStatementHandle,i,String_cString(columnNode->value.text),-1,NULL);
               i++;
               break;
-            case DATABASE_TYPE_BLOB:
+            case DATABASE_DATATYPE_BLOB:
               i++;
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
@@ -5069,9 +5360,9 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       }
 
       // insert row
-      if (sqliteStep(toDatabaseHandle->handle,toStatementHandle,toDatabaseHandle->timeout) != SQLITE_DONE)
+      if (sqliteStep(toDatabaseHandle->handle.sqlite,toStatementHandle,toDatabaseHandle->timeout) != SQLITE_DONE)
       {
-        error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
+        error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle.sqlite),String_cString(sqlInsertString));
         sqlite3_finalize(toStatementHandle);
         sqlite3_finalize(fromStatementHandle);
         if (transactionFlag)
@@ -5080,20 +5371,20 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         }
         return error;
       }
-      lastRowId = (DatabaseId)sqlite3_last_insert_rowid(toDatabaseHandle->handle);
+      lastRowId = (DatabaseId)sqlite3_last_insert_rowid(toDatabaseHandle->handle.sqlite);
       LIST_ITERATE(&toColumnList,columnNode)
       {
         switch (columnNode->type)
         {
-          case DATABASE_TYPE_PRIMARY_KEY:
+          case DATABASE_DATATYPE_PRIMARY_KEY:
             columnNode->value.id = lastRowId;
             break;
-          case DATABASE_TYPE_INT64:
-          case DATABASE_TYPE_DOUBLE:
-          case DATABASE_TYPE_DATETIME:
-          case DATABASE_TYPE_TEXT:
-          case DATABASE_TYPE_BLOB:
-          case DATABASE_TYPE_UNKNOWN:
+          case DATABASE_DATATYPE_INT64:
+          case DATABASE_DATATYPE_DOUBLE:
+          case DATABASE_DATATYPE_DATETIME:
+          case DATABASE_DATATYPE_TEXT:
+          case DATABASE_DATATYPE_BLOB:
+          case DATABASE_DATATYPE_UNKNOWN:
             break;
           default:
             #ifndef NDEBUG
@@ -5280,8 +5571,8 @@ DatabaseId Database_getTableColumnListId(const DatabaseColumnList *columnList, c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert((columnNode->type == DATABASE_TYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_TYPE_INT64));
-    if (columnNode->type == DATABASE_TYPE_PRIMARY_KEY)
+    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_INT64));
+    if (columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY)
     {
       return columnNode->value.id;
     }
@@ -5303,8 +5594,8 @@ int Database_getTableColumnListInt(const DatabaseColumnList *columnList, const c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert((columnNode->type == DATABASE_TYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_TYPE_INT64));
-    if (columnNode->type == DATABASE_TYPE_PRIMARY_KEY)
+    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_INT64));
+    if (columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY)
     {
       return columnNode->value.id;
     }
@@ -5329,8 +5620,8 @@ uint Database_getTableColumnListUInt(const DatabaseColumnList *columnList, const
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert((columnNode->type == DATABASE_TYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_TYPE_INT64));
-    if (columnNode->type == DATABASE_TYPE_PRIMARY_KEY)
+    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_INT64));
+    if (columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY)
     {
       return columnNode->value.id;
     }
@@ -5355,8 +5646,8 @@ int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, con
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert((columnNode->type == DATABASE_TYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_TYPE_INT64));
-    if (columnNode->type == DATABASE_TYPE_PRIMARY_KEY)
+    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_INT64));
+    if (columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY)
     {
       return columnNode->value.id;
     }
@@ -5381,8 +5672,8 @@ uint64 Database_getTableColumnListUInt64(const DatabaseColumnList *columnList, c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert((columnNode->type == DATABASE_TYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_TYPE_INT64));
-    if (columnNode->type == DATABASE_TYPE_PRIMARY_KEY)
+    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_INT64));
+    if (columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY)
     {
       return columnNode->value.id;
     }
@@ -5407,7 +5698,7 @@ double Database_getTableColumnListDouble(const DatabaseColumnList *columnList, c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_DOUBLE);
+    assert(columnNode->type == DATABASE_DATATYPE_DOUBLE);
     return String_toDouble(columnNode->value.d,STRING_BEGIN,NULL,NULL,0);
   }
   else
@@ -5426,7 +5717,7 @@ uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList,
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_DATETIME);
+    assert(columnNode->type == DATABASE_DATATYPE_DATETIME);
     return String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
   }
   else
@@ -5445,7 +5736,7 @@ String Database_getTableColumnList(const DatabaseColumnList *columnList, const c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_TEXT);
+    assert(columnNode->type == DATABASE_DATATYPE_TEXT);
     return String_set(value,columnNode->value.text);
   }
   else
@@ -5466,7 +5757,7 @@ const char *Database_getTableColumnListCString(const DatabaseColumnList *columnL
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_TEXT);
+    assert(columnNode->type == DATABASE_DATATYPE_TEXT);
     return String_cString(columnNode->value.text);
   }
   else
@@ -5488,7 +5779,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_BLOB);
+    assert(columnNode->type == DATABASE_DATATYPE_BLOB);
 //    return columnNode->value.blob.data;
   }
   else
@@ -5507,7 +5798,7 @@ bool Database_setTableColumnListId(const DatabaseColumnList *columnList, const c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_INT64);
+    assert(columnNode->type == DATABASE_DATATYPE_INT64);
     String_format(columnNode->value.i,"%ld",value);
     columnNode->usedFlag = TRUE;
     return TRUE;
@@ -5528,7 +5819,7 @@ bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, cons
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_INT64);
+    assert(columnNode->type == DATABASE_DATATYPE_INT64);
     String_format(columnNode->value.i,"%"PRIi64,value);
     columnNode->usedFlag = TRUE;
     return TRUE;
@@ -5549,7 +5840,7 @@ bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, con
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_DOUBLE);
+    assert(columnNode->type == DATABASE_DATATYPE_DOUBLE);
     String_format(columnNode->value.d,"%f",value);
     columnNode->usedFlag = TRUE;
     return TRUE;
@@ -5570,7 +5861,7 @@ bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, c
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_DATETIME);
+    assert(columnNode->type == DATABASE_DATATYPE_DATETIME);
     String_format(columnNode->value.i,"%"PRIi64,value);
     columnNode->usedFlag = TRUE;
     return TRUE;
@@ -5599,7 +5890,7 @@ bool Database_setTableColumnListCString(const DatabaseColumnList *columnList, co
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_TEXT);
+    assert(columnNode->type == DATABASE_DATATYPE_TEXT);
     String_setCString(columnNode->value.text,value);
     columnNode->usedFlag = TRUE;
     return TRUE;
@@ -5620,7 +5911,7 @@ bool Database_setTableColumnListBlob(const DatabaseColumnList *columnList, const
   columnNode = findTableColumnNode(columnList,columnName);
   if (columnNode != NULL)
   {
-    assert(columnNode->type == DATABASE_TYPE_BLOB);
+    assert(columnNode->type == DATABASE_DATATYPE_BLOB);
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 UNUSED_VARIABLE(data);
 UNUSED_VARIABLE(length);
@@ -5640,7 +5931,7 @@ UNUSED_VARIABLE(length);
 Errors Database_addColumn(DatabaseHandle *databaseHandle,
                           const char     *tableName,
                           const char     *columnName,
-                          DatabaseTypes  columnType
+                          DatabaseDataTypes  columnType
                          )
 {
   const char *columnTypeString;
@@ -5655,25 +5946,25 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
   columnTypeString = NULL;
   switch (columnType)
   {
-    case DATABASE_TYPE_PRIMARY_KEY:
+    case DATABASE_DATATYPE_PRIMARY_KEY:
       columnTypeString = "INTEGER PRIMARY KEY";
       break;
-    case DATABASE_TYPE_FOREIGN_KEY:
+    case DATABASE_DATATYPE_FOREIGN_KEY:
       columnTypeString = "INTEGER DEFAULT 0";
       break;
-    case DATABASE_TYPE_INT64:
+    case DATABASE_DATATYPE_INT64:
       columnTypeString = "INTEGER DEFAULT 0";
       break;
-    case DATABASE_TYPE_DOUBLE:
+    case DATABASE_DATATYPE_DOUBLE:
       columnTypeString = "REAL DEFAULT 0.0";
       break;
-    case DATABASE_TYPE_DATETIME:
+    case DATABASE_DATATYPE_DATETIME:
       columnTypeString = "INTEGER DEFAULT 0";
       break;
-    case DATABASE_TYPE_TEXT:
+    case DATABASE_DATATYPE_TEXT:
       columnTypeString = "TEXT DEFAULT ''";
       break;
-    case DATABASE_TYPE_BLOB:
+    case DATABASE_DATATYPE_BLOB:
       columnTypeString = "BLOB";
       break;
     default:
@@ -5715,7 +6006,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 // TODO: remove
   assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -5754,12 +6045,12 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
                  WAIT_FOREVER,
     {
-      return sqliteExecute(databaseHandle,
-                           String_cString(sqlString),
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout
-                          );
+      return databaseExecute(databaseHandle,
+                             String_cString(sqlString),
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout
+                            );
     });
     if (error != ERROR_NONE)
     {
@@ -5768,7 +6059,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // copy old table -> new table
     formatSQLString(String_clear(sqlString),"SELECT * FROM %s;",tableName);
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -5780,26 +6071,26 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),sqlString);
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
 
     // copy table rows
-    while (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    while (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       // create SQL command string
       String_setCString(sqlString,"INSERT INTO __new__ (");
@@ -5827,14 +6118,14 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
           switch (columnNode->type)
           {
-            case DATABASE_TYPE_PRIMARY_KEY:
-            case DATABASE_TYPE_INT64:
-            case DATABASE_TYPE_DOUBLE:
-            case DATABASE_TYPE_DATETIME:
-            case DATABASE_TYPE_TEXT:
+            case DATABASE_DATATYPE_PRIMARY_KEY:
+            case DATABASE_DATATYPE_INT64:
+            case DATABASE_DATATYPE_DOUBLE:
+            case DATABASE_DATATYPE_DATETIME:
+            case DATABASE_DATATYPE_TEXT:
               formatSQLString(sqlString,"%'s",sqlite3_column_text(statementHandle,column));
               break;
-            case DATABASE_TYPE_BLOB:
+            case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
             default:
@@ -5858,12 +6149,12 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                    DATABASE_LOCK_TYPE_READ_WRITE,
                    WAIT_FOREVER,
       {
-        return sqliteExecute(databaseHandle,
-                             String_cString(sqlString),
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             databaseHandle->timeout
-                            );
+        return databaseExecute(databaseHandle,
+                               String_cString(sqlString),
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout
+                              );
       });
       if (error != ERROR_NONE)
       {
@@ -5955,7 +6246,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
   UNUSED_VARIABLE(timeout);
   #ifndef NDEBUG
@@ -6049,12 +6340,12 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // begin transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-    error = sqliteExecute(databaseHandle,
-                          String_cString(sqlString),
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          databaseHandle->timeout
-                         );
+    error = databaseExecute(databaseHandle,
+                            String_cString(sqlString),
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout
+                           );
     if (error != ERROR_NONE)
     {
       Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
@@ -6125,7 +6416,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
   #ifndef NDEBUG
     UNUSED_VARIABLE(__fileName__);
@@ -6170,12 +6461,12 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // end transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-    error = sqliteExecute(databaseHandle,
-                          String_cString(sqlString),
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          databaseHandle->timeout
-                         );
+    error = databaseExecute(databaseHandle,
+                            String_cString(sqlString),
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout
+                           );
     if (error != ERROR_NONE)
     {
       // Note: unlock even on error to avoid lost lock
@@ -6242,7 +6533,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
   #ifndef NDEBUG
     UNUSED_VARIABLE(__fileName__);
@@ -6288,12 +6579,12 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // rollback transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-    error = sqliteExecute(databaseHandle,
-                          String_cString(sqlString),
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          databaseHandle->timeout
-                         );
+    error = databaseExecute(databaseHandle,
+                            String_cString(sqlString),
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout
+                           );
     if (error != ERROR_NONE)
     {
       // Note: unlock even on error to avoid lost lock
@@ -6334,9 +6625,9 @@ Errors Database_flush(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
-  sqlite3_wal_checkpoint(databaseHandle->handle,NULL);
+  sqlite3_wal_checkpoint(databaseHandle->handle.sqlite,NULL);
 
   return ERROR_NONE;
 }
@@ -6354,7 +6645,7 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(command != NULL);
 
   va_start(arguments,command);
@@ -6389,7 +6680,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(command != NULL);
 
   // format SQL command string
@@ -6406,12 +6697,12 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return sqliteExecute(databaseHandle,
-                         String_cString(sqlString),
-                         CALLBACK_(databaseRowFunction,databaseRowUserData),
-                         changedRowCount,
-                         databaseHandle->timeout
-                        );
+    return databaseExecute(databaseHandle,
+                           String_cString(sqlString),
+                           CALLBACK_(databaseRowFunction,databaseRowUserData),
+                           changedRowCount,
+                           databaseHandle->timeout
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -6449,7 +6740,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   assert(databaseQueryHandle != NULL);
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(command != NULL);
 
   // initialize variables
@@ -6493,7 +6784,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
 
   DATABASE_DEBUG_TIME_START(databaseQueryHandle);
   {
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &databaseQueryHandle->statementHandle,
@@ -6507,11 +6798,11 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   }
   else if (sqliteResult == SQLITE_MISUSE)
   {
-    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
   }
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
-    error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),sqlString);
+    error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),sqlString);
     Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
     #ifndef NDEBUG
       String_delete(databaseQueryHandle->sqlString);
@@ -6521,7 +6812,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   }
   else
   {
-    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
     #ifndef NDEBUG
       String_delete(databaseQueryHandle->sqlString);
@@ -6532,7 +6823,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   #ifndef NDEBUG
     if (databaseQueryHandle->statementHandle == NULL)
     {
-      fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
       abort();
     }
   #endif /* not NDEBUG */
@@ -6581,11 +6872,11 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle);
   assert(databaseQueryHandle->databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle->databaseHandle);
-  assert(databaseQueryHandle->databaseHandle->handle != NULL);
+  assert(databaseQueryHandle->databaseHandle->handle.sqlite != NULL);
   assert(format != NULL);
 
   DATABASE_DEBUG_TIME_START(databaseQueryHandle);
-  if (sqliteStep(databaseQueryHandle->databaseHandle->handle,databaseQueryHandle->statementHandle,databaseQueryHandle->databaseHandle->timeout) == SQLITE_ROW)
+  if (sqliteStep(databaseQueryHandle->databaseHandle->handle.sqlite,databaseQueryHandle->statementHandle,databaseQueryHandle->databaseHandle->timeout) == SQLITE_ROW)
   {
     // get data
     va_start(arguments,format);
@@ -6837,7 +7128,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle);
   assert(databaseQueryHandle->databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseQueryHandle->databaseHandle);
-  assert(databaseQueryHandle->databaseHandle->handle != NULL);
+  assert(databaseQueryHandle->databaseHandle->handle.sqlite != NULL);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(databaseQueryHandle,DatabaseQueryHandle);
@@ -6889,7 +7180,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -6929,7 +7220,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
 
     existsFlag = FALSE;
 
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -6937,14 +7228,14 @@ bool Database_exists(DatabaseHandle *databaseHandle,
                                      );
     if      (sqliteResult == SQLITE_OK)
     {
-      if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+      if (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
       {
         existsFlag = TRUE;
       }
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else
     {
@@ -6953,7 +7244,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
@@ -6985,7 +7276,7 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
 
@@ -7011,7 +7302,7 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
 
@@ -7048,7 +7339,7 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
       String_set(databaseHandle->debug.current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
 
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -7060,25 +7351,25 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
 
-    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    if (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       (*value) = (DatabaseId)sqlite3_column_int64(statementHandle,0);
     }
@@ -7110,7 +7401,7 @@ Errors Database_getIds(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(values != NULL);
   assert(tableName != NULL);
 
@@ -7137,7 +7428,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(values != NULL);
   assert(tableName != NULL);
 
@@ -7170,7 +7461,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
       String_set(databaseHandle->debug.current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
 
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -7182,25 +7473,25 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
 
-    while (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    while (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       value = (DatabaseId)sqlite3_column_int64(statementHandle,0);
       Array_append(values,&value);
@@ -7233,7 +7524,7 @@ Errors Database_getMaxId(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
 
@@ -7259,7 +7550,7 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
 
@@ -7300,7 +7591,7 @@ fprintf(stderr,"%s, %d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStri
       String_set(databaseHandle->debug.current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
 
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -7312,25 +7603,25 @@ fprintf(stderr,"%s, %d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStri
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
 
-    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    if (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       (*value) = (DatabaseId)sqlite3_column_int64(statementHandle,0);
     }
@@ -7362,7 +7653,7 @@ Errors Database_getInteger64(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -7389,7 +7680,7 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -7411,7 +7702,9 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
                     );
   }
   String_appendCString(sqlString," LIMIT 0,1");
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
+#if 0
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
   DATABASE_DOX(error,
@@ -7424,7 +7717,7 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
       String_set(databaseHandle->debug.current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
 
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -7436,25 +7729,25 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
 
-    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    if (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       (*value) = (int64)sqlite3_column_int64(statementHandle,0);
     }
@@ -7466,9 +7759,20 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
 
     return ERROR_NONE;
   });
+#else
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+  error = databaseExecute(databaseHandle,
+                          String_cString(sqlString),
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
+                          NULL,  // changedRowCount
+                          databaseHandle->timeout
+                         );
+#endif
 
   // free resources
   String_delete(sqlString);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 
   return error;
 }
@@ -7486,7 +7790,7 @@ Errors Database_setInteger64(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -7510,7 +7814,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -7541,12 +7845,12 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    error = sqliteExecute(databaseHandle,
-                          String_cString(sqlString),
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          databaseHandle->timeout
-                         );
+    error = databaseExecute(databaseHandle,
+                            String_cString(sqlString),
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout
+                           );
     if (error != ERROR_NONE)
     {
       // insert
@@ -7560,12 +7864,12 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                       value
                      );
       DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
-      error = sqliteExecute(databaseHandle,
-                            String_cString(sqlString),
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout
-                           );
+      error = databaseExecute(databaseHandle,
+                              String_cString(sqlString),
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
+                              NULL,  // changedRowCount
+                              databaseHandle->timeout
+                             );
     }
 
     return error;
@@ -7595,7 +7899,7 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -7622,7 +7926,7 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -7657,7 +7961,7 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
       String_set(databaseHandle->debug.current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
 
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -7669,25 +7973,25 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
 
-    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    if (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       (*value) = sqlite3_column_double(statementHandle,0);
     }
@@ -7719,7 +8023,7 @@ Errors Database_setDouble(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -7743,7 +8047,7 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
@@ -7774,12 +8078,12 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    error = sqliteExecute(databaseHandle,
-                          String_cString(sqlString),
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          databaseHandle->timeout
-                         );
+    error = databaseExecute(databaseHandle,
+                            String_cString(sqlString),
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout
+                           );
     if (error != ERROR_NONE)
     {
       // insert
@@ -7793,12 +8097,12 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
                       value
                      );
       DATABASE_DEBUG_SQLX(databaseHandle,"set double",sqlString);
-      error = sqliteExecute(databaseHandle,
-                            String_cString(sqlString),
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout
-                           );
+      error = databaseExecute(databaseHandle,
+                              String_cString(sqlString),
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
+                              NULL,  // changedRowCount
+                              databaseHandle->timeout
+                             );
     }
 
     return error;
@@ -7828,7 +8132,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -7855,7 +8159,7 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -7890,7 +8194,7 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
       String_set(databaseHandle->debug.current.sqlCommand,sqlString);
     #endif /* not NDEBUG */
 
-    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle.sqlite,
                                       String_cString(sqlString),
                                       -1,
                                       &statementHandle,
@@ -7902,25 +8206,25 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
     }
     else if (sqliteResult == SQLITE_MISUSE)
     {
-      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle.sqlite));
     }
     else if (sqliteResult == SQLITE_INTERRUPT)
     {
-      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     else
     {
-      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle.sqlite),"%s: %s",sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
     }
     #ifndef NDEBUG
       if (statementHandle == NULL)
       {
-        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle.sqlite),sqlite3_errmsg(databaseHandle->handle.sqlite),String_cString(sqlString));
         abort();
       }
     #endif /* not NDEBUG */
 
-    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    if (sqliteStep(databaseHandle->handle.sqlite,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       String_setCString(string,(const char*)sqlite3_column_text(statementHandle,0));
     }
@@ -7952,7 +8256,7 @@ Errors Database_setString(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -7977,7 +8281,7 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
   assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
@@ -8008,12 +8312,12 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return sqliteExecute(databaseHandle,
-                         String_cString(sqlString),
-                         CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount
-                         databaseHandle->timeout
-                        );
+    return databaseExecute(databaseHandle,
+                           String_cString(sqlString),
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           databaseHandle->timeout
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -8033,9 +8337,9 @@ DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->handle != NULL);
+  assert(databaseHandle->handle.sqlite != NULL);
 
-  databaseId = (DatabaseId)sqlite3_last_insert_rowid(databaseHandle->handle);
+  databaseId = (DatabaseId)sqlite3_last_insert_rowid(databaseHandle->handle.sqlite);
 
   return databaseId;
 }
@@ -8049,7 +8353,15 @@ void Database_debugPrintSimpleLockInfo(void)
   // Note: debug only, no locking
   LIST_ITERATE(&databaseList,databaseNode)
   {
-    printf("Database: %s\n",String_cString(databaseNode->fileName));
+    switch (databaseNode->type)
+    {
+      case DATABASE_TYPE_SQLITE3:
+        printf("Database: %s\n",String_cString(databaseNode->sqlite.fileName));
+        break;
+      case DATABASE_TYPE_MYSQL:
+// TODO:
+        break;
+    }
 
     printf("  Read locks:");
     for (i = 0; i < SIZE_OF_ARRAY(databaseNode->readLPWIds); i++)
@@ -8079,7 +8391,7 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
     databaseDebugCounter++;
 /*
 //TODO
-sqlite3_exec(databaseHandle->handle,
+sqlite3_exec(databaseHandle->handle.sqlite,
                               "PRAGMA vdbe_trace=ON",
                               CALLBACK_(NULL,NULL),
                               NULL
@@ -8091,7 +8403,7 @@ sqlite3_exec(databaseHandle->handle,
     assert(databaseDebugCounter>0);
 
     databaseDebugCounter--;
-if (databaseDebugCounter == 0) sqlite3_exec(databaseHandle->handle,
+if (databaseDebugCounter == 0) sqlite3_exec(databaseHandle->handle.sqlite,
                               "PRAGMA vdbe_trace=OFF",
                               CALLBACK_(NULL,NULL),
                               NULL
