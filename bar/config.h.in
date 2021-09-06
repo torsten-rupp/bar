@@ -325,6 +325,9 @@
 /* mxml installed */
 #undef HAVE_MXML
 
+/* MySQL installed */
+#undef HAVE_MYSQL
+
 /* nanosleep() available */
 #undef HAVE_NANOSLEEP
 

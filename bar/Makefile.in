@@ -593,10 +593,12 @@ BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
                                 release/stackwalk_common.o \
                               )
 
-#TODO
-BAR_SQLITE3_SOURCES         = bar-index.c \
+BAR_INDEX_SOURCES           = bar-index.c \
 
-BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
+BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
+                              index_definition.def \
+
+BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/cmdoptions.c \
                               common/lists.c \
                               common/strings.c \
@@ -611,12 +613,12 @@ BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
                               common/semaphores.c \
                               common/stacktraces.c \
 
-BAR_SQLITE3_HEADERS         = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_SQLITE3_SOURCES))) \
+BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
 
-BAR_SQLITE3_OBJECTS         = $(addprefix release/,$(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.c,%.o,$z))) \
+BAR_INDEX_OBJECTS           = $(addprefix release/,$(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z))) \
                               release/errors.o \
-                              $(addprefix release/,$(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(BAR_SQLITE3_SOURCES_COMMON))),$(patsubst %.c,  %.o,$z))) \
-                              $(addprefix release/,$(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(BAR_SQLITE3_SOURCES_COMMON))),$(patsubst %.cpp,%.o,$z))) \
+                              $(addprefix release/,$(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.c,  %.o,$z))) \
+                              $(addprefix release/,$(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.cpp,%.o,$z))) \
 
 SHOWCHUNKS_SOURCES          = showchunks.c \
 
@@ -662,7 +664,7 @@ clean: \
 	$(RMF) $(BAR_OBJECTS_GCOV)
 	$(RMF) $(BAR_OBJECTS_GPROF)
 	$(RMF) $(BAR_OBJECTS_VALGRIND)
-	$(RMF) $(BAR_SQLITE3_OBJECTS)
+	$(RMF) $(BAR_INDEX_OBJECTS)
 	$(RMF) $(EXTERN_OBJECTS_RELEASE)
 	$(RMF) $(EXTERN_OBJECTS_DEBUG)
 	$(RMF) $(EXTERN_OBJECTS_GCOV)
@@ -766,7 +768,7 @@ depend: Makefile.depend
 Makefile.depend: $(SOURCE_DIR)/Makefile $(SOURCE_DIR)/Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(ECHO) >Makefile.depend
-	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
+	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_INDEX_SOURCES); do \
           $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(foreach header,$(INTERMEDIATE_HEADERS),\
               $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
@@ -819,6 +821,9 @@ bar.tags: \
   $(COMMON_SOURCES_OTHER) \
   $(EXTERN_SOURCES) \
   $(DESTROYER_SOURCES) \
+  $(BAR_INDEX_SOURCES) \
+  $(BAR_INDEX_SOURCES_OTHER) \
+  $(BAR_INDEX_SOURCES_COMMON) \
   $(BAR_MINIDUMP_SOURCES) \
   $(BAR_MINIDUMP_SOURCES_COMMON)
 	$(CTAGS) $(CTAGS_FLAGS) -f $@ $^
@@ -1060,8 +1065,16 @@ gprof/archive_format.o: archive_format.c archive_format.h
 valgrind/archive_format.o: archive_format.c archive_format.h
 
 # index database definition
-index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_definition.def
-	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.def >$@
+index_definition.h: \
+  $(SOURCE_DIR)/index_definition.pl \
+  $(SOURCE_DIR)/index_common.def \
+  $(SOURCE_DIR)/index_sqlite.def \
+  $(SOURCE_DIR)/index_mysql.def
+	$(PERL) $(SOURCE_DIR)/index_definition.pl \
+	  --common $(SOURCE_DIR)/index_common.def \
+	  --sqlite $(SOURCE_DIR)/index_sqlite.def \
+	  --mysql $(SOURCE_DIR)/index_mysql.def \
+  > $@
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: \
@@ -1098,7 +1111,7 @@ showchunks@EXEEXT@: \
 
 # create bar-index
 bar-index@EXEEXT@: \
-  $(BAR_SQLITE3_OBJECTS) \
+  $(BAR_INDEX_OBJECTS) \
   $(SQLITE3_OBJECTS_RELEASE)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
@@ -2436,8 +2449,9 @@ ifneq ($(DIRECTORY),)
                           $(DESTROYER_SOURCES) \
                           $(BAR_MINIDUMP_SOURCES) \
                           $(BAR_MINIDUMP_HEADERS) \
-                          $(BAR_SQLITE3_SOURCES) \
-                          $(BAR_SQLITE3_HEADERS) \
+                          $(BAR_INDEX_SOURCES) \
+                          $(BAR_INDEX_SOURCES_OTHER) \
+                          $(BAR_INDEX_HEADERS) \
                    )
 	$(INSTALL) -d $(DIRECTORY)/bar/common
 	$(INSTALL) -m 644 \

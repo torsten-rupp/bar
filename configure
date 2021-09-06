@@ -741,6 +741,7 @@ HAVE_USLEEP
 HAVE_BFD
 HAVE_BREAKPAD
 HAVE_PTHREADS_W32
+HAVE_MYSQL
 HAVE_PCRE
 HAVE_ISO9660
 HAVE_GNU_TLS
@@ -2724,6 +2725,7 @@ ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
 ENABLE_PCRE="yes"
+ENABLE_MYSQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
@@ -15531,6 +15533,199 @@ $as_echo "$as_me: WARNING: pcre not compiled: pcre package missing" >&2;}
   fi
 fi
 
+# use MySQL
+if test $ENABLE_MYSQL = "yes"; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing mysql_init" >&5
+$as_echo_n "checking for library containing mysql_init... " >&6; }
+if ${ac_cv_search_libraries_mysql_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in mysqlclient ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void mysql_init();"; fi`
+                                         return (int)mysql_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_mysql_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_mysql_init+:} false; then :
+
+else
+  ac_cv_search_libraries_mysql_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mysql_init" >&5
+$as_echo "$ac_cv_search_libraries_mysql_init" >&6; }
+  ac_result=$ac_cv_search_libraries_mysql_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";
+$as_echo "#define HAVE_MYSQL 1" >>confdefs.h
+
+fi
+
+  else
+    if test -z "$HAVE_MYSQL"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing mysql_init" >&5
+$as_echo_n "checking for static library containing mysql_init... " >&6; }
+if ${ac_cv_search_static_mysql_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in mysqlclient ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void mysql_init();"; fi`
+                                         return (int)mysql_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_mysql_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_mysql_init+:} false; then :
+
+else
+  ac_cv_search_static_mysql_init=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_mysql_init" >&5
+$as_echo "$ac_cv_search_static_mysql_init" >&6; }
+  ac_result=$ac_cv_search_static_mysql_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MYSQL=1;CC_DEFINES="$CC_DEFINES MYSQL_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES mysqlclient";
+$as_echo "#define HAVE_MYSQL 1" >>confdefs.h
+
+fi
+
+    fi
+    if test -z "$HAVE_MYSQL"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing mysql_init" >&5
+$as_echo_n "checking for library containing mysql_init... " >&6; }
+if ${ac_cv_search_libraries_mysql_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in mysqlclient ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void mysql_init();"; fi`
+                                         return (int)mysql_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_mysql_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_mysql_init+:} false; then :
+
+else
+  ac_cv_search_libraries_mysql_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mysql_init" >&5
+$as_echo "$ac_cv_search_libraries_mysql_init" >&6; }
+  ac_result=$ac_cv_search_libraries_mysql_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";
+$as_echo "#define HAVE_MYSQL 1" >>confdefs.h
+
+fi
+
+    fi
+  fi
+fi
+
 case "$host_os" in
   linux-*)
     ;;
@@ -16460,6 +16655,11 @@ fi
 else
   as_fn_error $? "PCRE missing" "$LINENO" 5
 fi
+   if test $HAVE_MYSQL  ; then :
+
+else
+  as_fn_error $? "MySQL missing" "$LINENO" 5
+fi
 
 
 fi
@@ -16513,7 +16713,6 @@ fi
 
 
 # headers
-#TODO: compile+link systemd for sd-id128.h?
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -25507,6 +25706,32 @@ fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 fi
+if test $ENABLE_MYSQL = "yes"; then
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+               #include "mysql/mysql.h"
+
+int
+main ()
+{
+MYSQL mysql;
+               mysql_init(&mysql);
+               printf("%s",mysql_get_client_info(mysql));
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_MYSQL=`./conftest$ac_exeext`
+else
+  VERSION_MYSQL=unknown
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
 
 
 ac_config_headers="$ac_config_headers bar/config.h"
@@ -26280,6 +26505,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
+                   HAVE_MYSQL=$HAVE_MYSQL
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -26316,6 +26542,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
+                   VERSION_MYSQL="$VERSION_MYSQL"
 
 
 _ACEOF
@@ -26914,6 +27141,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  MySQL support      : `if test "$HAVE_MYSQL"; then echo "yes ($VERSION_MYSQL)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory      : $SWT_DIR"

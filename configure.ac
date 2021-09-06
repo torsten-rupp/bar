@@ -776,6 +776,7 @@ AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwi
 AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
 AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
 AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
+AC_SUBST(HAVE_MYSQL)                        dnl "1" for MySQL support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
 AC_SUBST(HAVE_BFD)                          dnl "1" for BFD support, "" otherwise
@@ -926,6 +927,7 @@ ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
 ENABLE_PCRE="yes"
+ENABLE_MYSQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
@@ -3628,6 +3630,21 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
+# use MySQL
+if test $ENABLE_MYSQL = "yes"; then
+  dnl search for installed MySQL library
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[MySQL installed])])
+  else
+    if test -z "$HAVE_MYSQL"; then
+      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;CC_DEFINES="$CC_DEFINES MYSQL_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[static MySQL installed])])
+    fi
+    if test -z "$HAVE_MYSQL"; then
+      AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[MySQL installed])])
+    fi
+  fi
+fi
+
 case "$host_os" in
   linux-*)
     ;;
@@ -3947,6 +3964,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_GNU_TLS,,AC_MSG_ERROR([GNU TLS missing]))
    AS_IF(test $HAVE_ISO9660,,AC_MSG_ERROR([ISO9660 missing]))
    AS_IF(test $HAVE_PCRE   ,,AC_MSG_ERROR([PCRE missing]))
+   AS_IF(test $HAVE_MYSQL  ,,AC_MSG_ERROR([MySQL missing]))
   ]
 )
 
@@ -3964,7 +3982,6 @@ AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $LIBRARIES)
 
 # headers
-#TODO: compile+link systemd for sd-id128.h?
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \
@@ -4409,6 +4426,18 @@ if test $ENABLE_PCRE = "yes"; then
               VERSION_PCRE=unknown
              )
 fi
+if test $ENABLE_MYSQL = "yes"; then
+  AC_TRY_LINK([#include <stdio.h>
+               #include "mysql/mysql.h"
+              ],
+              [MYSQL mysql;
+               mysql_init(&mysql);
+               printf("%s",mysql_get_client_info(mysql));
+              ],
+              VERSION_MYSQL=`./conftest$ac_exeext`,
+              VERSION_MYSQL=unknown
+             )
+fi
 
 dnl ------------ autoheader: top/bottom include for config.h -----------
 
@@ -4496,6 +4525,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  MySQL support      : `if test "$HAVE_MYSQL"; then echo "yes ($VERSION_MYSQL)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT directory      : $SWT_DIR"
@@ -4556,6 +4586,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
+                   HAVE_MYSQL=$HAVE_MYSQL
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -4592,6 +4623,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
+                   VERSION_MYSQL="$VERSION_MYSQL"
                   )
 
 AC_OUTPUT

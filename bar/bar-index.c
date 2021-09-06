@@ -3,7 +3,7 @@
 * $Revision: 1458 $
 * $Date: 2012-01-28 09:50:13 +0100 (Sat, 28 Jan 2012) $
 * $Author: trupp $
-* Contents: BAR sqlite3 shell
+* Contents: BAR index tool
 * Systems: Unix
 *
 \***********************************************************************/
@@ -32,6 +32,7 @@
 #include "common/misc.h"
 
 #include "sqlite3.h"
+#include "mysql/mysql.h"
 
 #include "index_definition.h"
 #include "archive_format_const.h"
@@ -114,6 +115,7 @@ LOCAL bool       optimizeFlag                         = FALSE;  // optimize data
 LOCAL bool       reindexFlag                          = FALSE;  // re-create existing indizes
 LOCAL bool       createFlag                           = FALSE;  // create new index database
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
+LOCAL bool       dropTablesFlag                       = FALSE;  // drop tables
 LOCAL bool       dropTriggersFlag                     = FALSE;  // drop triggers
 LOCAL bool       createIndizesFlag                    = FALSE;  // re-create indizes
 LOCAL bool       createFTSIndizesFlag                 = FALSE;  // re-create FTS indizes
@@ -152,14 +154,16 @@ LOCAL bool       xhelpFlag                            = FALSE;
 
 /***************************** Functions *******************************/
 
+// TODO: still not used
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 (
-  CMD_OPTION_BOOLEAN      ("table-names",                       0  ,1,0,showTableNames,                                                                                        "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("index-names",                       0  ,1,0,showIndexNames,                                                                                        "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("drop-triggers",                     0  ,1,0,dropTriggersFlag,                                                                                        "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0  ,1,0,dropIndizesFlag,                                                                                        "output version"                                                           ),
-  CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,helpFlag,                                                                                           "output this help"                                                         ),
-  CMD_OPTION_BOOLEAN      ("xhelp",                             0,  0,0,xhelpFlag,                                                                                          "output help to extended options"                                          ),
+  CMD_OPTION_BOOLEAN      ("table-names",                       0  , 1, 0, showTableNames,   "output version"                  ),
+  CMD_OPTION_BOOLEAN      ("index-names",                       0  , 1, 0, showIndexNames,   "output version"                  ),
+  CMD_OPTION_BOOLEAN      ("drop-tables",                       0  , 1, 0, dropTriggersFlag, "output version"                  ),
+  CMD_OPTION_BOOLEAN      ("drop-triggers",                     0  , 1, 0, dropTriggersFlag, "output version"                  ),
+  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0  , 1, 0, dropIndizesFlag,  "output version"                  ),
+  CMD_OPTION_BOOLEAN      ("help",                              'h', 0, 0, helpFlag,         "output this help"                ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                             0,   0, 0, xhelpFlag,        "output help to extended options" ),
 );
 
 #ifdef __cplusplus
@@ -231,6 +235,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   {
     printf("          --table-names                           - show table names\n");
     printf("          --index-names                           - show index names\n");
+    printf("          --drop-tables                           - drop all tables\n");
     printf("          --drop-triggers                         - drop all triggers\n");
     printf("          --drop-indizes                          - drop all indixes\n");
   }
@@ -446,7 +451,8 @@ LOCAL void clearPercentage(void)
 
 LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *databaseFileName)
 {
-  Errors error;
+  Errors     error;
+  const char *indexDefinition;
 
   printInfo("Create...");
 
@@ -469,10 +475,16 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
   }
 
   // create tables, triggers
+  indexDefinition = NULL;
+  switch (databaseHandle->databaseNode->type)
+  {
+    case DATABASE_TYPE_SQLITE3: indexDefinition = INDEX_DEFINITION_SQLITE; break;
+    case DATABASE_TYPE_MYSQL:   indexDefinition = INDEX_DEFINITION_MYSQL;  break;
+  }
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
-                           INDEX_DEFINITION
+                           indexDefinition
                           );
   if (error != ERROR_NONE)
   {
@@ -1196,7 +1208,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
-                           INDEX_TRIGGERS_DEFINITION
+                           INDEX_TRIGGERS_DEFINITION_SQLITE
                           );
   if (error != ERROR_NONE)
   {
@@ -1271,8 +1283,49 @@ LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
+* Name   : dropTables
+* Purpose: drop all tables
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void dropTables(DatabaseHandle *databaseHandle)
+{
+  Errors     error;
+  const char **tableNames;
+
+  printInfo("Drop tables:\n");
+
+  // delete all existing triggers
+  tableNames = NULL;
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3: tableNames = INDEX_DEFINITION_TABLE_NAMES_SQLITE; break;
+    case DATABASE_TYPE_MYSQL:   tableNames = INDEX_DEFINITION_TABLE_NAMES_MYSQL;  break;
+  }
+  while ((*tableNames) != NULL)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DROP TABLE %s",
+                             *tableNames
+                            );
+    if (error != ERROR_NONE)
+    {
+      printWarning("drop table '%s' fail (error: %s)!", *tableNames, Error_getText(error));
+    }
+    tableNames++;
+  }
+
+  printInfo("OK\n");
+}
+
+/***********************************************************************\
 * Name   : dropTriggers
-* Purpose: drop triggers
+* Purpose: drop all triggers
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : -
@@ -1323,7 +1376,7 @@ LOCAL void dropTriggers(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("create triggers fail (error: %s)!",Error_getText(error));
+    printError("drop triggers fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -1402,7 +1455,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
       error = Database_execute(databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
-                               INDEX_INDIZES_DEFINITION
+                               INDEX_INDIZES_DEFINITION_SQLITE
                               );
       if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
       printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -1465,7 +1518,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
       error = Database_execute(databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
-                               INDEX_FTS_INDIZES_DEFINITION
+                               INDEX_FTS_INDIZES_DEFINITION_SQLITE
                               );
       if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
       printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -7125,6 +7178,11 @@ uint xxxShow=0;
       showIndexNames = TRUE;
       i++;
     }
+    else if (stringEquals(argv[i],"--drop-tables"))
+    {
+      dropTablesFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--drop-triggers"))
     {
       dropTriggersFlag = TRUE;
@@ -7545,6 +7603,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && !optimizeFlag
           && !reindexFlag
           && !createTriggersFlag
+          && !dropTablesFlag
           && !dropTriggersFlag
           && !createIndizesFlag
           && !createFTSIndizesFlag
@@ -7567,6 +7626,7 @@ else if (stringEquals(argv[i],"--xxx"))
          )
      )
   {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     printIndexInfo(&databaseHandle);
   }
 
@@ -7605,6 +7665,12 @@ else if (stringEquals(argv[i],"--xxx"))
   if (showIndexNames)
   {
     printIndexNames(&databaseHandle);
+  }
+
+  // drop tables
+  if (dropTablesFlag)
+  {
+    dropTables(&databaseHandle);
   }
 
   // drop triggeres

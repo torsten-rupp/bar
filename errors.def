@@ -883,7 +883,7 @@ ERROR DELTA_SOURCE_ID_NOT_FOUND
     stringSet(errorText,sizeof(errorText),TR("delta source not found"));
   }
 
-// --- index database (SQLite3) -----------------------------------------
+// --- index database ---------------------------------------------------
 ERROR DATABASE
   stringSet(errorText,sizeof(errorText),TR("database"));
   if (!stringIsEmpty(ERROR_DATA))
@@ -891,6 +891,7 @@ ERROR DATABASE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DATABASE_CONNECTION_LOST         TR("datbase connection lost")
 ERROR DATABASE_EXISTS                  TR("database already exists")
 ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version on index")
 ERROR DATABASE_MISSING_TABLE
@@ -920,6 +921,9 @@ ERROR DATABASE_OBSOLETE_COLUMN
   {
     stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
+
+ERROR DATABASE_BUSY                    TR("database busy")
+ERROR DATABASE_INTERRUPTED             TR("database operation interupted")
 
 ERROR DATABASE_TYPE_MISMATCH
   stringSet(errorText,sizeof(errorText),TR("type mismatch"));

@@ -44,7 +44,7 @@ TEST_BAR_DEBUG    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-debug@EXEEXT@
 TEST_BAR_GCOV     ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gcov@EXEEXT@
 TEST_BAR_GPROF    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gprof@EXEEXT@
 TEST_BAR_VALGRIND ?= $(EXE_PREFIX) $(BAR_DIR)/bar-valgrind@EXEEXT@
-TEST_BAR_SQLITE3  ?= $(EXE_PREFIX) $(BAR_DIR)/bar-sqlite3@EXEEXT@
+TEST_BAR_INDEX    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-index@EXEEXT@
 TEST_DESTROYER    ?= $(EXE_PREFIX) $(BAR_DIR)/destroyer@EXEEXT@
 
 #---------------------------------- commands----------------------------------
@@ -513,8 +513,8 @@ $(BAR_DIR)/bar-gprof@EXEEXT@:
 $(BAR_DIR)/bar-valgrind@EXEEXT@:
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-sqlite3@EXEEXT@
-$(BAR_DIR)/bar-sqlite3@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-index@EXEEXT@
+$(BAR_DIR)/bar-index@EXEEXT@:
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 .PHONY: $(BAR_DIR)/destroyer@EXEEXT@
@@ -2598,11 +2598,11 @@ $(TEST_SLAVE_JOBS_DIRECTORY):
 	$(INSTALL) -d $@
 
 $(TEST_SERVER_DATABASE): \
-  $(TEST_BAR_SQLITE3)
+  $(TEST_BAR_INDEX)
 	@$(call functionVerifyParameter,TEST_SERVER_DATABASE)
 	@
 	$(INSTALL) -d $(@D)
-	$(TEST_BAR_SQLITE3) --force --create $(TEST_SERVER_DATABASE) "INSERT INTO entities (id,jobUUID) VALUES (1,'test')"
+	$(TEST_BAR_INDEX) --force --create $(TEST_SERVER_DATABASE) "INSERT INTO entities (id,jobUUID) VALUES (1,'test')"
 
 data/zero128.dat:
 
@@ -2621,7 +2621,7 @@ functionVerifyParameter = \
 # helper function for index database SQL command
 # call functionIndex,<sql command>
 functionIndex = \
-  $(CD) $(UP_DIR); $(TEST_BAR_SQLITE3) -C $(SUB_DIR) intermediate/index.db $1
+  $(CD) $(UP_DIR); $(TEST_BAR_INDEX) -C $(SUB_DIR) intermediate/index.db $1
 
 # helper function for query of index database
 # call functionIndexQuery,<sql command>
@@ -4240,7 +4240,7 @@ test_index_operations: \
 .PHONY: test_index_operations_base
 test_index_operations_base: \
   $(TEST_BAR) \
-  $(TEST_BAR_SQLITE3) \
+  $(TEST_BAR_INDEX) \
   $(TEST_FILES_SIMPLE)
 	# bar index operations
 	@$(call functionInfoHeader,test index opertations)
@@ -4251,7 +4251,7 @@ test_index_operations_base: \
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(TEST_BAR) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
 	@# add to index
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create --force $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest")
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -4316,7 +4316,7 @@ test_index_operations_base: \
                                         WHERE storages.deletedFlag!=1 \
                                        ") # no special entries
 	@# newest entries in index
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create --force $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
@@ -4447,9 +4447,9 @@ test_index_operations_base: \
 .PHONY: test_index_operations_tool
 test_index_operations_tool: \
   $(TEST_BAR) \
-  $(TEST_BAR_SQLITE3) \
+  $(TEST_BAR_INDEX) \
   $(TEST_FILES)
-	# bar-sqlite3 operations
+	# bar-index operations
 	@$(call functionInfoHeader,test index opertations tool)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@#
@@ -4458,31 +4458,31 @@ test_index_operations_tool: \
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(TEST_BAR) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
 	@# options
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create --force $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create-triggers $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create-newest $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create-indizes $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create-aggregates $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --check $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --clean $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --vacuum $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --optimize $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --info $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --info-jobs $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --info-entities $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --info-entries $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --info-storages $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --info-lost-storages $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --entries $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --entries-newest $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --storages $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --header "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --names "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --time "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_SQLITE3) intermediate/index.db --explain-query "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create-triggers $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create-newest $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create-indizes $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create-aggregates $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --check $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --clean $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --vacuum $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --optimize $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --info $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --info-jobs $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --info-entities $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --info-entries $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --info-storages $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --info-lost-storages $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --entries $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --entries-newest $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --storages $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --header "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --names "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --time "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --explain-query "SELECT * FROM storages" $(LOG)
 	@# newest entries in index
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create --force $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest") # no entries
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -4494,7 +4494,7 @@ test_index_operations_tool: \
            --verbose=2 \
            $(LOG) \
         )
-	$(TEST_BAR_SQLITE3) intermediate/index.db --create-newest $(LOG)
+	$(TEST_BAR_INDEX) intermediate/index.db --create-newest $(LOG)
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId!=1") # only entries of entity 1
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -4515,7 +4515,7 @@ test_index_operations_tool: \
 .PHONY: test_index_operations_server
 test_index_operations_server: \
   $(TEST_BAR) \
-  $(TEST_BAR_SQLITE3) \
+  $(TEST_BAR_INDEX) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
   $(TEST_FILES)
 	# bar server index operations
@@ -4525,7 +4525,7 @@ test_index_operations_server: \
 	@$(call functionCleanTestFiles)
 	for i in 1 2 3 4 6; do \
           $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql" $(LOG); \
-          $(RMF) intermediate/index.db; $(TEST_BAR_SQLITE3) intermediate/index.db - < $(UP_DIR)/archive/index$$i.sql; \
+          $(RMF) intermediate/index.db; $(TEST_BAR_INDEX) intermediate/index.db - < $(UP_DIR)/archive/index$$i.sql; \
 	  ( \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
