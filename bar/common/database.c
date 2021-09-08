@@ -1037,7 +1037,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
   {
     pthread_mutex_lock(&debugConsoleLock);
     {
-      fprintf(stderr,"Database lock info '%s':\n",String_cString(databaseNode->fileName));
+      fprintf(stderr,"Database lock info '%s':\n",String_cString(databaseNode->sqlite.fileName));
       fprintf(stderr,
               "  lock state summary: pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
               databaseNode->pendingReadCount,
@@ -1919,7 +1919,7 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.fileName     = __fileName__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.lineNb       = __lineNb__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter();
-    databaseHandle->databaseNode->debug.lastTrigger.type                    = lockType;
+    databaseHandle->databaseNode->debug.lastTrigger.lockType                = lockType;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadCount        = databaseHandle->databaseNode->pendingReadCount;
     databaseHandle->databaseNode->debug.lastTrigger.readCount               = databaseHandle->databaseNode->readCount;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadWriteCount   = databaseHandle->databaseNode->pendingReadWriteCount;
@@ -2022,7 +2022,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.fileName     = __fileName__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.lineNb       = __lineNb__;
     databaseHandle->databaseNode->debug.lastTrigger.threadInfo.cycleCounter = getCycleCounter();
-    databaseHandle->databaseNode->debug.lastTrigger.type                    = DATABASE_LOCK_TYPE_READ_WRITE;
+    databaseHandle->databaseNode->debug.lastTrigger.lockType                = DATABASE_LOCK_TYPE_READ_WRITE;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadCount        = databaseHandle->databaseNode->pendingReadCount;
     databaseHandle->databaseNode->debug.lastTrigger.readCount               = databaseHandle->databaseNode->readCount;
     databaseHandle->databaseNode->debug.lastTrigger.pendingReadWriteCount   = databaseHandle->databaseNode->pendingReadWriteCount;
@@ -4883,7 +4883,7 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandleReference);
 //TODO: remove
 assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
-  assert(databaseHandleReference->handle != NULL);
+  assert(databaseHandleReference->handle.sqlite != NULL);
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle.sqlite != NULL);
@@ -5026,12 +5026,12 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
   DEBUG_CHECK_RESOURCE_TRACE(fromDatabaseHandle);
 // TODO: remove
 assert(Thread_isCurrentThread(fromDatabaseHandle->debug.threadId));
-  assert(fromDatabaseHandle->handle != NULL);
+  assert(fromDatabaseHandle->handle.sqlite != NULL);
   assert(toDatabaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(toDatabaseHandle);
 // TODO: remove
 assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
-  assert(toDatabaseHandle->handle != NULL);
+  assert(toDatabaseHandle->handle.sqlite != NULL);
   assert(fromTableName != NULL);
   assert(toTableName != NULL);
 
@@ -5314,7 +5314,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       #ifndef NDEBUG
         if (toStatementHandle == NULL)
         {
-          fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(toDatabaseHandle->handle),sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
+          fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(toDatabaseHandle->handle.sqlite),sqlite3_errmsg(toDatabaseHandle->handle.sqlite),String_cString(sqlInsertString));
           abort();
         }
       #endif /* not NDEBUG */
@@ -8431,7 +8431,7 @@ void Database_debugPrintInfo(void)
       {
         fprintf(stderr,
                 "  opened '%s': %u\n",
-                String_cString(databaseNode->fileName),
+                String_cString(databaseNode->sqlite.fileName),
                 databaseNode->openCount
                );
         LIST_ITERATE(&debugDatabaseHandleList,databaseHandle)
@@ -8576,7 +8576,7 @@ void Database_debugPrintInfo(void)
         if (!Thread_isNone(databaseNode->debug.lastTrigger.threadInfo.threadId))
         {
           s = "-";
-          switch (databaseNode->debug.lastTrigger.type)
+          switch (databaseNode->debug.lastTrigger.lockType)
           {
             case DATABASE_LOCK_TYPE_NONE      : s = "- "; break;
             case DATABASE_LOCK_TYPE_READ      : s = "R "; break;
@@ -8677,7 +8677,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
   {
     pthread_mutex_lock(&debugConsoleLock);
     {
-      fprintf(stderr,"Database lock info '%s':\n",String_cString(databaseHandle->databaseNode->fileName));
+      fprintf(stderr,"Database lock info '%s':\n",String_cString(databaseHandle->databaseNode->sqlite.fileName));
       fprintf(stderr,
               "  lock state summary: pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
               databaseHandle->databaseNode->pendingReadCount,
@@ -8751,7 +8751,7 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
   assert(databaseQueryHandle != NULL);
 
 //  DATABASE_DEBUG_SQLX(databaseQueryHandle->databaseHandle,"SQL query",databaseQueryHandle->sqlString);
-  fprintf(stderr,"DEBUG database %s, %lu: %s: %s\n",__fileName__,__lineNb__,String_cString(databaseQueryHandle->databaseHandle->databaseNode->fileName),String_cString(databaseQueryHandle->sqlString)); \
+  fprintf(stderr,"DEBUG database %s, %lu: %s: %s\n",__fileName__,__lineNb__,String_cString(databaseQueryHandle->databaseHandle->databaseNode->sqlite.fileName),String_cString(databaseQueryHandle->sqlString)); \
 }
 
 /***********************************************************************\
