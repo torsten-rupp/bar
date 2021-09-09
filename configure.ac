@@ -3995,6 +3995,8 @@ AC_CHECK_HEADERS(\
                  linux/fs.h \
                  linux/tcp.h \
                  mntent.h \
+                 mysql/mysql.h \
+                 mysql/errmsg.h \
                  netdb.h \
                  netinet/in.h \
                  pwd.h \
