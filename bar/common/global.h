@@ -218,10 +218,8 @@
 #endif /* NDEBUG */
 
 /**************************** Datatypes ********************************/
-#ifndef HAVE_STDBOOL_H
-  #ifndef __cplusplus
-    typedef uint8_t bool;
-  #endif
+#if !defined(__cplusplus) && !defined(HAVE_STDBOOL_H)
+  typedef uint8_t bool;
 #endif
 
 typedef unsigned char       uchar;
@@ -357,6 +355,9 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
+#define __GLOBAL_CONCAT2(s1,s2) s1##s2
+#define __GLOBAL_CONCAT(s1,s2) __GLOBAL_CONCAT2(s1,s2)
+
 #define GLOBAL extern
 #define LOCAL static
 
@@ -415,14 +416,17 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 *                      });
 \***********************************************************************/
 
-#define EXECUTE_ONCE(functionBody) \
+#define __EXECUTE_ONCE(__n, functionBody) \
   ({ \
-    static ExecuteOnceHandle __executeOnceHandle ## COUNTER = PTHREAD_ONCE_INIT; \
+    static ExecuteOnceHandle __GLOBAL_CONCAT(__executeOnceHandle,__n) = PTHREAD_ONCE_INIT; \
     \
     auto void __closure__ (void); \
     void __closure__ (void) functionBody \
-    pthread_once(&__executeOnceHandle ## COUNTER,__closure__); \
+    pthread_once(&__GLOBAL_CONCAT(__executeOnceHandle,__n),__closure__); \
   })
+
+#define EXECUTE_ONCE(functionBody) \
+  __EXECUTE_ONCE(__COUNTER__,functionBody)
 
 /***********************************************************************\
 * Name   : LAMBDA
@@ -495,7 +499,8 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Output : -
 * Return : -
 * Notes  : Windows does not support %ll format token, instead it tries
-*          - as usually according to the MS principle: ignore any standard
+*          - as usually according to the MS principle: ignore any
+*          standard
 *          whenever possible - its own way (and of course fail...).
 *          Thus use the MinGW implementation of printf/fprintf.
 \***********************************************************************/
@@ -631,12 +636,14 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 *            }
 \***********************************************************************/
 
-#define FOR_ENUM(variable,value,...) \
-  typeof(value) __enum_values ## __COUNTER__ ## __[] = {__VA_ARGS__}; \
-  for ((variable) = 0, value = __enum_values ## __COUNTER__ ## __[variable]; \
-       (variable) < SIZE_OF_ARRAY(__enum_values ## __COUNTER__ ## __); \
-       (variable)++, (value) = __enum_values ## __COUNTER__ ## __[variable] \
+#define __FOR_ENUM(__n, variable, value, ...) \
+  typeof(value) __GLOBAL_CONCAT(__enum_values,__n) ## __[] = {__VA_ARGS__}; \
+  for ((variable) = 0, value = __GLOBAL_CONCAT(__enum_values,__n) ## __[variable]; \
+       (variable) < SIZE_OF_ARRAY(__GLOBAL_CONCAT(__enum_values,__n) ## __); \
+       (variable)++, (value) = __GLOBAL_CONCAT(__enum_values,__n) ## __[variable] \
       )
+#define FOR_ENUM(variable,value,...) \
+  __FOR_ENUM(__COUNTER__,variable,value,__VA_ARGS__)
 
 /***********************************************************************\
 * Name   : ALIGN
@@ -1455,8 +1462,8 @@ typedef byte* BitSet;
 * Name   : DEBUG_ADD_RESOURCE_TRACE, DEBUG_REMOVE_RESOURCE_TRACE,
 *          DEBUG_ADD_RESOURCE_TRACEX, DEBUG_REMOVE_RESOURCE_TRACEX,
 *          DEBUG_CHECK_RESOURCE_TRACE
-* Purpose: add/remove debug trace allocated resource functions,
-*          check if resource allocated
+* Purpose: add/remove debug trace allocated resource functions, check if
+*          resource allocated
 * Input  : fileName - file name
 *          lineNb   - line number
 *          resource - resource
@@ -1568,6 +1575,125 @@ typedef byte* BitSet;
     } \
     while (0)
 #endif /* HAVE_BACKTRACE */
+
+/* begin macro iterator
+   Link: http://jhnet.co.uk/articles/cpp_magic
+*/
+#define _ITERATOR_FIRST(a, ...) a
+#define _ITERATOR_SECOND(a, b, ...) b
+
+#define _ITERATOR_EMPTY()
+
+#define _ITERATOR_EVAL(...)     _ITERATOR_EVAL1024(__VA_ARGS__)
+#define _ITERATOR_EVAL1024(...) _ITERATOR_EVAL512 (_ITERATOR_EVAL512(__VA_ARGS__))
+#define _ITERATOR_EVAL512(...)  _ITERATOR_EVAL256 (_ITERATOR_EVAL256(__VA_ARGS__))
+#define _ITERATOR_EVAL256(...)  _ITERATOR_EVAL128 (_ITERATOR_EVAL128(__VA_ARGS__))
+#define _ITERATOR_EVAL128(...)  _ITERATOR_EVAL64  (_ITERATOR_EVAL64 (__VA_ARGS__))
+#define _ITERATOR_EVAL64(...)   _ITERATOR_EVAL32  (_ITERATOR_EVAL32 (__VA_ARGS__))
+#define _ITERATOR_EVAL32(...)   _ITERATOR_EVAL16  (_ITERATOR_EVAL16 (__VA_ARGS__))
+#define _ITERATOR_EVAL16(...)   _ITERATOR_EVAL8   (_ITERATOR_EVAL8  (__VA_ARGS__))
+#define _ITERATOR_EVAL8(...)    _ITERATOR_EVAL4   (_ITERATOR_EVAL4  (__VA_ARGS__))
+#define _ITERATOR_EVAL4(...)    _ITERATOR_EVAL2   (_ITERATOR_EVAL2  (__VA_ARGS__))
+#define _ITERATOR_EVAL2(...)    _ITERATOR_EVAL1   (_ITERATOR_EVAL1  (__VA_ARGS__))
+#define _ITERATOR_EVAL1(...)    __VA_ARGS__
+
+#define _ITERATOR_DEFER1(m) m _ITERATOR_EMPTY()
+#define _ITERATOR_DEFER2(m) m _ITERATOR_EMPTY _ITERATOR_EMPTY()()
+#define _ITERATOR_DEFER3(m) m _ITERATOR_EMPTY _ITERATOR_EMPTY _ITERATOR_EMPTY()()()
+#define _ITERATOR_DEFER4(m) m _ITERATOR_EMPTY _ITERATOR_EMPTY _ITERATOR_EMPTY _ITERATOR_EMPTY()()()()
+
+#define _ITERATOR_IS_PROBE(...) _ITERATOR_SECOND(__VA_ARGS__, 0)
+#define _ITERATOR_PROBE() ~, 1
+
+#define _ITERATOR_CAT(a,b) a ## b
+
+#define _ITERATOR_NOT(x) _ITERATOR_IS_PROBE(_ITERATOR_CAT(_ITERATOR_NOT_, x))
+#define _ITERATOR_NOT_0 _ITERATOR_PROBE()
+
+#define _ITERATOR_BOOL(x) _ITERATOR_NOT(_ITERATOR_NOT(x))
+
+#define _ITERATOR_IF_ELSE(condition)  __ITERATOR_IF_ELSE(_ITERATOR_BOOL(condition))
+#define __ITERATOR_IF_ELSE(condition) _ITERATOR_CAT(_ITERATOR_IF_, condition)
+
+#define _ITERATOR_IF_1(...) __VA_ARGS__ _ITERATOR_IF_1_ELSE
+#define _ITERATOR_IF_0(...)             _ITERATOR_IF_0_ELSE
+
+#define _ITERATOR_IF_1_ELSE(...)
+#define _ITERATOR_IF_0_ELSE(...) __VA_ARGS__
+
+#define _ITERATOR_HAS_ARGS(...) _ITERATOR_BOOL(_ITERATOR_FIRST(_ITERATOR_END_OF_ARGUMENTS_ __VA_ARGS__)())
+#define _ITERATOR_END_OF_ARGUMENTS_() 0
+
+#if 0
+    // original without support of empty va-arg list
+    #define _ITERATOR_MAP(prefix, first, ...) \
+    prefix (first) \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+        _ITERATOR_DEFER2(__ITERATOR_MAP)()(prefix, __VA_ARGS__) \
+    ) \
+    ( \
+        /* Do nothing, just terminate */ \
+    )
+    #define __ITERATOR_MAP() _ITERATOR_MAP
+
+    #define _ITERATOR_MAP_COUNT(first, ...) \
+    1+ \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+        _ITERATOR_DEFER2(__ITERATOR_MAP_COUNT)()(__VA_ARGS__) \
+    ) \
+    ( \
+        /* nothing to do */ \
+    )
+    #define __ITERATOR_MAP_COUNT() _ITERATOR_MAP_COUNT
+#endif /* 0 */
+
+#define __ITERATOR_MAP(prefix, first, ...) \
+  prefix (first) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(___ITERATOR_MAP)()(prefix, __VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define ___ITERATOR_MAP() __ITERATOR_MAP
+
+#define _ITERATOR_MAP(prefix, ...) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_EVAL(__ITERATOR_MAP(prefix, __VA_ARGS__)) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+
+#define __ITERATOR_MAP_COUNT(first, ...) \
+  1+ \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(___ITERATOR_MAP_COUNT)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define ___ITERATOR_MAP_COUNT() __ITERATOR_MAP_COUNT
+
+#define _ITERATOR_MAP_COUNT(...) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_EVAL(__ITERATOR_MAP_COUNT(__VA_ARGS__)) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+
+//#define fooMacro(x) FOO_ ## x
+//#define foo(...) _ITERATOR_EVAL(_ITERATOR_MAP(fooMacro, __VA_ARGS__))
+//#define fooCount(...) _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
+//foo(a,b,...) -> FOO_a, FOO_b, ...
+/* end macro iterator */
 
 #ifndef NDEBUG
   #define allocSecure(...) __allocSecure(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -1848,6 +1974,33 @@ static inline void *memCopyFast(void *p0, size_t n0, const void *p1, size_t n1)
 static inline bool memEquals(const void *p0, size_t n0, const void *p1, size_t n1)
 {
   return (n0 == n1) && (memcmp(p0,p1,n0) == 0);
+}
+
+/***********************************************************************\
+* Name   : duplicate
+* Purpose: duplicate memory block
+* Input  : p0 - memory address variable
+*          n0 - memory block size variable (can be NULL)
+*          p1 - memory block
+*          n1 - memory block size
+* Output : p0 - allocated and copied memory
+*          n9 - memory block size
+* Return : p0
+* Notes  : -
+\***********************************************************************/
+
+static inline void *duplicate(void **p0, size_t *n0, const void *p1, size_t n1)
+{
+  assert(p0 != NULL);
+
+  (*p0) = malloc(n1);
+  if ((*p0) != NULL)
+  {
+    memCopyFast(*p0,n1,p1,n1);
+    if (n0 != NULL) (*n0) = n1;
+  }
+
+  return *p0;
 }
 
 /*---------------------------------------------------------------------*/
@@ -2160,6 +2313,23 @@ static inline char *stringClear(char *s)
 static inline ulong stringLength(const char *s)
 {
   return (s != NULL) ? strlen(s) : 0;
+}
+
+/***********************************************************************\
+* Name   : stringCompare
+* Purpose: compare strings
+* Input  : s1, s2 - strings (can be NULL)
+* Output : -
+* Return : -1/0/-1 if s1 </=/> s2
+* Notes  : -
+\***********************************************************************/
+
+static inline int stringCompare(const char *s1, const char *s2)
+{
+  if      ((s1 != NULL) && (s2 != NULL)) return strcmp(s1,s2);
+  else if (s1 == NULL)                   return -1;
+  else if (s2 == NULL)                   return  1;
+  else                                   return  0;
 }
 
 /***********************************************************************\
@@ -2987,7 +3157,7 @@ static inline char* stringSub(char *destination, ulong n, const char *source, ul
 * Purpose: init string iterator
 * Input  : cStringIterator - string iterator variable
 *          string          - string
-* Output : stringIterator  - string iterator
+* Output : stringIterator - string iterator
 * Return : -
 * Notes  : -
 \***********************************************************************/
@@ -3113,7 +3283,7 @@ static inline void stringIteratorNext(CStringIterator *cStringIterator)
 * Name   : stringIteratorNextX
 * Purpose: increment string iterator
 * Input  : cStringIterator - string iterator
-*          n              - number of chracters
+*          n               - number of chracters
 * Output : -
 * Return : -
 * Notes  : -
@@ -3395,14 +3565,12 @@ static inline int stringScan(const char *string, const char *format, ...)
 * Purpose: match string
 * Input  : string            - string
 *          pattern           - pattern
-*          matchedString     - string matching regular expression (can
-*                              be NULL)
-*          matchedStringSize - size of string matching regular
-*                              expression
+*          matchedString     - string matching regular expression (can be
+*                              NULL)
+*          matchedStringSize - size of string matching regular expression
 *          arguments         - arguments
 *          ...               - optional matching strings of sub-patterns
-*                              (char*,ulong), last value have to be
-*                              NULL!
+*                              (char*,ulong), last value have to be NULL!
 * Output : -
 * Return : TRUE iff pattern match with string
 * Notes  :
@@ -3527,8 +3695,8 @@ Errors debugTestCodeError(const char *__fileName__,
 
 /***********************************************************************\
 * Name   : debugLocalResource
-* Purpose: mark resource as local resource (must be freed before
-*          function exit)
+* Purpose: mark resource as local resource (must be freed before function
+*          exit)
 * Input  : __fileName__ - file name
 *          __lineNb__   - line number
 *          resource     - resource
@@ -3614,7 +3782,8 @@ void debugResourceDone(void);
 * Name   : debugResourceDumpInfo, debugResourcePrintInfo
 * Purpose: resource debug function: output allocated resources
 * Input  : handle                   - output channel
-*          resourceDumpInfoFunction - resource dump info call-back or NULL
+*          resourceDumpInfoFunction - resource dump info call-back or
+*                                     NULL
 *          resourceDumpInfoUserData - resource dump info user data
 *          resourceDumpInfoTypes    - resource dump info types; see
 *                                     DUMP_INFO_TYPE_*
