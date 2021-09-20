@@ -593,16 +593,6 @@ LOCAL Errors createTablesIndicesTriggers(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : importIntoDatabase
-* Purpose: import database
-* Input  : databaseHandle - database handle
-*          uir            - database URI
-* Output :
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-/***********************************************************************\
 * Name   : fixBrokenIds
 * Purpose: fix broken ids
 * Input  : indexHandle - index handle
@@ -681,6 +671,12 @@ LOCAL void progressStep(void *userData)
 
 LOCAL void logImportProgress(const char *format, ...)
 {
+  va_list arguments;
+
+  va_start(arguments,format);
+  vprintf(format,arguments);
+  va_end(arguments);
+  printf("\n");
 }
 
 /***********************************************************************\
@@ -813,6 +809,16 @@ Errors unlockEntity(DatabaseHandle *databaseHandle,
 }
 
 #include "index_current.c"
+
+/***********************************************************************\
+* Name   : importIntoDatabase
+* Purpose: import database
+* Input  : databaseHandle - database handle
+*          uir            - database URI
+* Output :
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uri)
 {

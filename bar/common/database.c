@@ -577,7 +577,7 @@ void x(void) {}
   #define triggerUnlockReadWrite(...)     __triggerUnlockReadWrite    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define triggerUnlockTransaction(...)   __triggerUnlockTransaction  (__FILE__,__LINE__, ## __VA_ARGS__)
 
-  #define databasePrepare(...)            __databasePrepare           (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define prepareStatement(...)           __prepareStatement          (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -3144,7 +3144,7 @@ fprintf(stderr,"%s:%d: %d: text=%s\n",__FILE__,__LINE__,i,databaseStatementHandl
 }
 
 /***********************************************************************\
-* Name   : databasePrepare
+* Name   : prepareStatement
 * Purpose: prepare SQL statement
 * Input  : databaseStatementHandle - database query handle variable
 *          databaseHandle      - database handle
@@ -3156,19 +3156,19 @@ fprintf(stderr,"%s:%d: %d: text=%s\n",__FILE__,__LINE__,i,databaseStatementHandl
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL Errors databasePrepare(DatabaseStatementHandle *databaseStatementHandle,
-                 DatabaseHandle      *databaseHandle,
-                 const char          *command,
-                 ...
-                )
+LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
+                              DatabaseHandle      *databaseHandle,
+                              const char          *command,
+                              ...
+                              )
 #else /* not NDEBUG */
-LOCAL  Errors __databasePrepare(const char          *__fileName__,
-                 ulong               __lineNb__,
-                 DatabaseStatementHandle *databaseStatementHandle,
-                 DatabaseHandle      *databaseHandle,
-                 const char          *command,
-                 ...
-                )
+LOCAL  Errors __prepareStatement(const char          *__fileName__,
+                                 ulong               __lineNb__,
+                                 DatabaseStatementHandle *databaseStatementHandle,
+                                 DatabaseHandle      *databaseHandle,
+                                 const char          *command,
+                                 ...
+                                 )
 #endif /* NDEBUG */
 {
   va_list arguments;
@@ -3191,7 +3191,7 @@ LOCAL  Errors __databasePrepare(const char          *__fileName__,
 }
 
 /***********************************************************************\
-* Name   : databaseBindParameters
+* Name   : bindParameters
 * Purpose: bind SQL parameters
 * Input  : databaseStatementHandle - database query handle variable
 *          columnTypes         - column result data types
@@ -3200,7 +3200,7 @@ LOCAL  Errors __databasePrepare(const char          *__fileName__,
 * Notes  : -
 \***********************************************************************/
 
-Errors databaseBindParameters(DatabaseStatementHandle *databaseStatementHandle,
+Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
                 const DatabaseDataTypes columnTypes[],
                 uint columnCount,
                 const uint parameterMap[],
@@ -3379,7 +3379,7 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(databaseStatemen
 }
 
 /***********************************************************************\
-* Name   : databaseBindResults
+* Name   : bindResults
 * Purpose: bind SQL result values
 * Input  : databaseStatementHandle - database statement query handle variable
 *          columnTypes             - column result data types
@@ -3388,7 +3388,7 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(databaseStatemen
 * Notes  : -
 \***********************************************************************/
 
-Errors databaseBindResults(DatabaseStatementHandle *databaseStatementHandle,
+Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
                 const DatabaseDataTypes columnTypes[],
                 uint columnCount
                )
@@ -3592,7 +3592,7 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 }
 
 /***********************************************************************\
-* Name   : databaseFinalize
+* Name   : finalizeStatement
 * Purpose: finalize SQL statement
 * Input  : databaseStatementHandle - database query handle
 * Output : -
@@ -3600,7 +3600,7 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void databaseFinalize(DatabaseStatementHandle *databaseStatementHandle)
+LOCAL void finalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
 {
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
@@ -3628,7 +3628,7 @@ LOCAL void databaseFinalize(DatabaseStatementHandle *databaseStatementHandle)
 }
 
 /***********************************************************************\
-* Name   : databaseGetNextRow
+* Name   : getNextRow
 * Purpose: get next row
 * Input  : databaseStatementHandle - statement handle
 *          timeout                 - timeout [ms]
@@ -3637,7 +3637,7 @@ LOCAL void databaseFinalize(DatabaseStatementHandle *databaseStatementHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool databaseGetNextRow(DatabaseStatementHandle *databaseStatementHandle, long timeout)
+LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long timeout)
 {
   #define SLEEP_TIME 500L
 
@@ -3822,7 +3822,7 @@ LOCAL bool databaseGetNextRow(DatabaseStatementHandle *databaseStatementHandle, 
 }
 
 /***********************************************************************\
-* Name   : databaseExecuteRow
+* Name   : executeRowStatement
 * Purpose: insert/update/delete a row
 * Input  : handle          - database handle
 *          statementHandle - statement handle
@@ -3832,7 +3832,7 @@ LOCAL bool databaseGetNextRow(DatabaseStatementHandle *databaseStatementHandle, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors databaseExecuteRow(DatabaseStatementHandle *databaseStatementHandle)
+LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandle)
 {
   #define SLEEP_TIME 500L
 
@@ -4066,383 +4066,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors databaseExecute(DatabaseHandle      *databaseHandle,
-                           const char          *sqlCommand,
-                           DatabaseRowFunction databaseRowFunction,
-                           void                *databaseRowUserData,
-                           ulong               *changedRowCount,
-                           long                timeout
-                          )
-{
-  #define SLEEP_TIME 500L  // [ms]
-
-  uint                          maxRetryCount;
-  uint                          retryCount;
-  Errors                        error;
-  uint                          count;
-  const char                    **names,**values;
-  uint                          i;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->databaseNode != NULL);
-  assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
-  assert(databaseHandle->sqlite.handle != NULL);
-  assert(sqlCommand != NULL);
-
-  error         = ERROR_NONE;
-  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-  retryCount    = 0;
-  do
-  {
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlCommand);
-// TODO: reactivate when each thread has his own index handle
-#if 0
-    assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
-#endif
-
-    #ifndef NDEBUG
-      String_setCString(databaseHandle->debug.current.sqlString,sqlCommand);
-    #endif /* not NDEBUG */
-
-    switch (databaseHandle->databaseNode->type)
-    {
-      case DATABASE_TYPE_SQLITE3:
-        {
-          int          sqliteResult;
-          sqlite3_stmt *statementHandle;
-
-//fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,sqlCommand);
-          if (databaseRowFunction != NULL)
-          {
-            // prepare SQL statement
-            sqliteResult = sqlite3_prepare_v2(databaseHandle->sqlite.handle,
-                                              sqlCommand,
-                                              -1,
-                                              &statementHandle,
-                                              NULL  // nextSqlCommand
-                                             );
-            if      (sqliteResult == SQLITE_MISUSE)
-            {
-              HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
-            }
-            else if (sqliteResult == SQLITE_INTERRUPT)
-            {
-              return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),sqlCommand);
-            }
-            else if (sqliteResult != SQLITE_OK)
-            {
-              return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),sqlCommand);
-            }
-            assert(statementHandle != NULL);
-
-            // allocate call-back data
-            names  = NULL;
-            values = NULL;
-            count  = 0;
-            if (databaseRowFunction != NULL)
-            {
-              count = sqlite3_column_count(statementHandle);
-              names = (const char**)malloc(count*sizeof(const char*));
-              if (names == NULL)
-              {
-                HALT_INSUFFICIENT_MEMORY();
-              }
-              values = (const char**)malloc(count*sizeof(const char*));
-              if (values == NULL)
-              {
-                HALT_INSUFFICIENT_MEMORY();
-              }
-            }
-
-            // step and process rows
-            do
-            {
-              // step
-              do
-              {
-                sqliteResult = sqlite3_step(statementHandle);
-                if      (sqliteResult == SQLITE_LOCKED)
-                {
-                  waitUnlockNotify(databaseHandle->sqlite.handle);
-                  sqlite3_reset(statementHandle);
-                }
-                else if (sqliteResult == SQLITE_MISUSE)
-                {
-                  HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
-                }
-              }
-              while (sqliteResult == SQLITE_LOCKED);
-
-              // process row
-              if      (sqliteResult == SQLITE_ROW)
-              {
-                if (databaseRowFunction != NULL)
-                {
-                  for (i = 0; i < count; i++)
-                  {
-                    names[i]  = sqlite3_column_name(statementHandle,i);
-                    values[i] = (const char*)sqlite3_column_text(statementHandle,i);
-                  }
-//                  error = databaseRowFunction(names,values,count,databaseRowUserData);
-                }
-              }
-            }
-            while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
-
-            // free call-back data
-            if (databaseRowFunction != NULL)
-            {
-              free(values);
-              free(names);
-            }
-
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->sqlite.handle);
-            }
-
-            // done SQL statement
-            sqlite3_finalize(statementHandle);
-          }
-          else
-          {
-            // query SQL statement
-            sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                        sqlCommand,
-                                        NULL,  // callback
-                                        NULL,  // userData
-                                        NULL  // errorMsg
-                                       ); \
-            if      (sqliteResult == SQLITE_MISUSE)
-            {
-              HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
-            }
-            else if (sqliteResult == SQLITE_INTERRUPT)
-            {
-              return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),sqlCommand);
-            }
-            else if (sqliteResult != SQLITE_OK)
-            {
-              return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),sqlCommand);
-            }
-          }
-        }
-        break;
-      case DATABASE_TYPE_MYSQL:
-        {
-//fprintf(stderr,"%s:%d: sqlCommand=%s\n",__FILE__,__LINE__,sqlCommand);
-          int mysqlResult;
-
-          if (databaseRowFunction != NULL)
-          {
-            // prepare SQL statement
-            MYSQL_STMT *statementHandle = mysql_stmt_init(databaseHandle->mysql.handle);
-            assert(statementHandle != NULL);
-            mysqlResult = mysql_stmt_prepare(statementHandle,
-                                             sqlCommand,
-                                             stringLength(sqlCommand)
-                                            );
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-            {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_stmt_error(statementHandle));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),sqlCommand);
-            }
-            else if (mysqlResult != 0)
-            {
-              mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),sqlCommand);
-            }
-
-            // allocate call-back data
-            names  = NULL;
-            values = NULL;
-            count  = 0;
-            if (databaseRowFunction != NULL)
-            {
-              //// TODO: msgql_stmt?parameter_count
-              count = mysql_stmt_field_count(statementHandle);
-              names = (const char**)malloc(count*sizeof(const char*));
-              if (names == NULL)
-              {
-                HALT_INSUFFICIENT_MEMORY();
-              }
-              values = (const char**)malloc(count*sizeof(const char*));
-              if (values == NULL)
-              {
-                HALT_INSUFFICIENT_MEMORY();
-              }
-            }
-
-            // step and process rows
-            mysqlResult = mysql_stmt_execute(statementHandle);
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-            {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",mysqlResult,mysql_stmt_error(statementHandle));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),sqlCommand);
-            }
-            else if (mysqlResult != 0)
-            {
-              mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),sqlCommand);
-            }
-
-            if (mysql_stmt_num_rows(statementHandle) > 0)
-            {
-              do
-              {
-                // process row
-                mysqlResult = mysql_stmt_fetch(statementHandle);
-                if      (mysqlResult == 0)
-                {
-                  if (databaseRowFunction != NULL)
-                  {
-                    for (i = 0; i < count; i++)
-                    {
-    // TODO:                  names[i]  = sqlite3_column_name(statementHandle,i);
-    names[i] = "xxx";
-                      values[i] = (const char*)sqlite3_column_text(statementHandle,i);
-                    }
-//                    error = databaseRowFunction(names,values,count,databaseRowUserData);
-                  }
-                }
-                else if (mysqlResult == 1)
-                {
-                  error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),sqlCommand);
-                }
-                else if (mysqlResult == MYSQL_DATA_TRUNCATED)
-                {
-                  error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),sqlCommand);
-                }
-              }
-              while ((error == ERROR_NONE) && (mysqlResult == 0));
-            }
-
-            // free call-back data
-            if (databaseRowFunction != NULL)
-            {
-              free(values);
-              free(names);
-            }
-
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) += (ulong)mysql_stmt_affected_rows(statementHandle);
-            }
-
-            // done SQL statement
-            mysql_stmt_close(statementHandle);
-          }
-          else
-          {
-            // query SQL statement
-            mysqlResult = mysql_query(&mysql,
-                                      sqlCommand
-                                     );
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-            {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&mysql));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              return ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),sqlCommand);
-            }
-            else if (mysqlResult != 0)
-            {
-              return ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),sqlCommand);
-            }
-          }
-        }
-        break;
-      #ifndef NDEBUG
-        default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-      #endif
-    }
-
-    #ifndef NDEBUG
-      // clear SQL command, backtrace
-      String_clear(databaseHandle->debug.current.sqlString);
-    #endif /* not NDEBUG */
-
-    // check result
-    if      (Error_getCode(error) == ERROR_DATABASE_BUSY)
-    {
-//fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
-//Database_debugPrintLockInfo(databaseHandle);
-      // execute registered busy handlers
-//TODO: lock list?
-      LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
-      {
-        assert(busyHandlerNode->function != NULL);
-        busyHandlerNode->function(busyHandlerNode->userData);
-      }
-
-      Misc_mdelay(SLEEP_TIME);
-
-      // retry
-      retryCount++;
-      continue;
-    }
-    else if (Error_getCode(error) == ERROR_DATABASE_INTERRUPTED)
-    {
-      // report interrupt
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),sqlCommand);
-    }
-    else if (error != ERROR_NONE)
-    {
-      // report error
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),sqlCommand);
-    }
-  }
-  while (   (error != ERROR_NONE)
-         && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
-        );
-
-  if      (error != ERROR_NONE)
-  {
-    return error;
-  }
-  else if (retryCount > maxRetryCount)
-  {
-    return ERRORX_(DATABASE_TIMEOUT,0,"");
-  }
-  else
-  {
-    return ERROR_NONE;
-  }
-
-  #undef SLEEP_TIME
-}
-
-/***********************************************************************\
-* Name   : databaseExecute
-* Purpose: execute single database statement with prepared statement or
-*          query
-* Input  : databaseHandle      - database handle
-*          sqlCommand          - SQL command string
-*          databaseRowFunction - row call-back function (can be NULL)
-*          databaseRowUserData - user data for row call-back
-*          changedRowCount     - number of changed rows (can be NULL)
-*          timeout             - timeout [ms]
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors vDatabaseExecute(DatabaseHandle      *databaseHandle,
+LOCAL Errors vexecuteStatement(DatabaseHandle      *databaseHandle,
                               DatabaseRowFunction databaseRowFunction,
                               void                *databaseRowUserData,
                               ulong               *changedRowCount,
@@ -5061,7 +4685,7 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors databaseExecute2(DatabaseHandle      *databaseHandle,
+LOCAL Errors executeStatement(DatabaseHandle      *databaseHandle,
                              DatabaseRowFunction databaseRowFunction,
                              void                *databaseRowUserData,
                              ulong               *changedRowCount,
@@ -5081,15 +4705,15 @@ LOCAL Errors databaseExecute2(DatabaseHandle      *databaseHandle,
   // format SQL command string
   va_start(arguments,command);
   {
-    error = vDatabaseExecute(databaseHandle,
-                             databaseRowFunction,
-                             databaseRowUserData,
-                             changedRowCount,
-                             timeout,
-                             columnTypes,
-                             command,
-                             arguments
-                            );
+    error = vexecuteStatement(databaseHandle,
+                              databaseRowFunction,
+                              databaseRowUserData,
+                              changedRowCount,
+                              timeout,
+                              columnTypes,
+                              command,
+                              arguments
+                             );
   }
   va_end(arguments);
 
@@ -5217,21 +4841,21 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
                      DATABASE_LOCK_TYPE_READ,
                      WAIT_FOREVER,
         {
-          error = databasePrepare(&databaseStatementHandle,
-                                  databaseHandle,
-                                  "PRAGMA table_info(%s)",
-                                  tableName
-                                 );
+          error = prepareStatement(&databaseStatementHandle,
+                                   databaseHandle,
+                                   "PRAGMA table_info(%s)",
+                                   tableName
+                                  );
           if (error != ERROR_NONE)
           {
             return error;
           }
-          error = databaseBindResults(&databaseStatementHandle,
+          error = bindResults(&databaseStatementHandle,
                                       DATABASE_COLUMN_TYPES(INT,TEXT,TEXT,INT,INT,BOOL)
                                      );
           if (error != ERROR_NONE)
           {
-            databaseFinalize(&databaseStatementHandle);
+            finalizeStatement(&databaseStatementHandle);
             return error;
           }
           while (Database_getNextRow(&databaseStatementHandle,
@@ -5316,106 +4940,106 @@ columnNode->value.type            = DATABASE_DATATYPE_BLOB;
         {
 //fprintf(stderr,"%s:%d: 2\n",__FILE__,__LINE__);
 #if 1
-          error = databaseExecute2(databaseHandle,
-                                  CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                                  {
-                                    bool isPrimaryKey;
+          error = executeStatement(databaseHandle,
+                                   CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
+                                   {
+                                     bool isPrimaryKey;
 
-                                    assert(values != NULL);
-                                    assert(valueCount == 6);
+                                     assert(values != NULL);
+                                     assert(valueCount == 6);
 
-                                    UNUSED_VARIABLE(valueCount);
-                                    UNUSED_VARIABLE(userData);
-//fprintf(stderr,"%s:%d: name=%s type=%s key=%s\n",__FILE__,__LINE__,values[0].text.data,values[1].text.data,values[3].text.data);
+                                     UNUSED_VARIABLE(valueCount);
+                                     UNUSED_VARIABLE(userData);
+ //fprintf(stderr,"%s:%d: name=%s type=%s key=%s\n",__FILE__,__LINE__,values[0].text.data,values[1].text.data,values[3].text.data);
 
-                                    isPrimaryKey = stringEqualsIgnoreCase(values[3].text.data,"PRI");
+                                     isPrimaryKey = stringEqualsIgnoreCase(values[3].text.data,"PRI");
 
-                                    if (!isPrimaryKey || includePrimaryKey)
-                                    {
-                                      columnNode = LIST_NEW_NODE(DatabaseColumnNode);
-                                      if (columnNode == NULL)
-                                      {
-                                        List_done(columnList,CALLBACK_((ListNodeFreeFunction)freeColumnNode,NULL));
-                                        return ERROR_INSUFFICIENT_MEMORY;
-                                      }
+                                     if (!isPrimaryKey || includePrimaryKey)
+                                     {
+                                       columnNode = LIST_NEW_NODE(DatabaseColumnNode);
+                                       if (columnNode == NULL)
+                                       {
+                                         List_done(columnList,CALLBACK_((ListNodeFreeFunction)freeColumnNode,NULL));
+                                         return ERROR_INSUFFICIENT_MEMORY;
+                                       }
 
-                                      columnNode->name = stringDuplicate(values[0].text.data);
-                                      if (stringStartsWith(values[1].text.data,"int"))
-                                      {
-                                        if (isPrimaryKey)
-                                        {
-                                          columnNode->type     = DATABASE_DATATYPE_PRIMARY_KEY;
-  columnNode->value.type     = DATABASE_DATATYPE_PRIMARY_KEY;
-  //                                        columnNode->value.id = 0LL;
-                                        }
-                                        else
-                                        {
-                                          columnNode->type    = DATABASE_DATATYPE_INT;
-  columnNode->value.type    = DATABASE_DATATYPE_INT;
-  //                                        columnNode->value.i = String_new();
-                                        }
-                                      }
-                                      else if (stringEquals(values[1].text.data,"tinyint(1)"))
-                                      {
-                                        columnNode->type    = DATABASE_DATATYPE_BOOL;
-  columnNode->value.type    = DATABASE_DATATYPE_BOOL;
-  //                                      columnNode->value.d = String_new();
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"tinyint"))
-                                      {
-                                        columnNode->type    = DATABASE_DATATYPE_INT;
-  columnNode->value.type    = DATABASE_DATATYPE_INT;
-  //                                      columnNode->value.d = String_new();
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"bigint"))
-                                      {
-                                        columnNode->type    = DATABASE_DATATYPE_INT64;
-  columnNode->value.type    = DATABASE_DATATYPE_INT64;
-  //                                      columnNode->value.d = String_new();
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"double"))
-                                      {
-                                        columnNode->type    = DATABASE_DATATYPE_DOUBLE;
-  columnNode->value.type    = DATABASE_DATATYPE_DOUBLE;
-  //                                      columnNode->value.d = String_new();
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"datetime"))
-                                      {
-                                        columnNode->type    = DATABASE_DATATYPE_DATETIME;
-  columnNode->value.type    = DATABASE_DATATYPE_DATETIME;
-  //                                      columnNode->value.d = String_new();
-                                      }
-                                      else if (   stringStartsWith(values[1].text.data,"varchar")
-                                               || stringStartsWith(values[1].text.data,"text")
-                                              )
-                                      {
-                                        columnNode->type            = DATABASE_DATATYPE_TEXT;
-  columnNode->value.type            = DATABASE_DATATYPE_TEXT;
-                                        columnNode->value.text.data = NULL;
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"blob"))
-                                      {
-                                        columnNode->type              = DATABASE_DATATYPE_BLOB;
-  columnNode->value.type              = DATABASE_DATATYPE_BLOB;
-                                        columnNode->value.blob.data   = NULL;
-                                      }
-                                      else
-                                      {
-                                        HALT_INTERNAL_ERROR("Unknown type '%s",values[1].text.data);
-                                      }
-                                      columnNode->usedFlag = FALSE;
+                                       columnNode->name = stringDuplicate(values[0].text.data);
+                                       if (stringStartsWith(values[1].text.data,"int"))
+                                       {
+                                         if (isPrimaryKey)
+                                         {
+                                           columnNode->type     = DATABASE_DATATYPE_PRIMARY_KEY;
+   columnNode->value.type     = DATABASE_DATATYPE_PRIMARY_KEY;
+   //                                        columnNode->value.id = 0LL;
+                                         }
+                                         else
+                                         {
+                                           columnNode->type    = DATABASE_DATATYPE_INT;
+   columnNode->value.type    = DATABASE_DATATYPE_INT;
+   //                                        columnNode->value.i = String_new();
+                                         }
+                                       }
+                                       else if (stringEquals(values[1].text.data,"tinyint(1)"))
+                                       {
+                                         columnNode->type    = DATABASE_DATATYPE_BOOL;
+   columnNode->value.type    = DATABASE_DATATYPE_BOOL;
+   //                                      columnNode->value.d = String_new();
+                                       }
+                                       else if (stringStartsWith(values[1].text.data,"tinyint"))
+                                       {
+                                         columnNode->type    = DATABASE_DATATYPE_INT;
+   columnNode->value.type    = DATABASE_DATATYPE_INT;
+   //                                      columnNode->value.d = String_new();
+                                       }
+                                       else if (stringStartsWith(values[1].text.data,"bigint"))
+                                       {
+                                         columnNode->type    = DATABASE_DATATYPE_INT64;
+   columnNode->value.type    = DATABASE_DATATYPE_INT64;
+   //                                      columnNode->value.d = String_new();
+                                       }
+                                       else if (stringStartsWith(values[1].text.data,"double"))
+                                       {
+                                         columnNode->type    = DATABASE_DATATYPE_DOUBLE;
+   columnNode->value.type    = DATABASE_DATATYPE_DOUBLE;
+   //                                      columnNode->value.d = String_new();
+                                       }
+                                       else if (stringStartsWith(values[1].text.data,"datetime"))
+                                       {
+                                         columnNode->type    = DATABASE_DATATYPE_DATETIME;
+   columnNode->value.type    = DATABASE_DATATYPE_DATETIME;
+   //                                      columnNode->value.d = String_new();
+                                       }
+                                       else if (   stringStartsWith(values[1].text.data,"varchar")
+                                                || stringStartsWith(values[1].text.data,"text")
+                                               )
+                                       {
+                                         columnNode->type            = DATABASE_DATATYPE_TEXT;
+   columnNode->value.type            = DATABASE_DATATYPE_TEXT;
+                                         columnNode->value.text.data = NULL;
+                                       }
+                                       else if (stringStartsWith(values[1].text.data,"blob"))
+                                       {
+                                         columnNode->type              = DATABASE_DATATYPE_BLOB;
+   columnNode->value.type              = DATABASE_DATATYPE_BLOB;
+                                         columnNode->value.blob.data   = NULL;
+                                       }
+                                       else
+                                       {
+                                         HALT_INTERNAL_ERROR("Unknown type '%s",values[1].text.data);
+                                       }
+                                       columnNode->usedFlag = FALSE;
 
-                                      List_append(columnList,columnNode);
-                                    }
+                                       List_append(columnList,columnNode);
+                                     }
 
-                                    return ERROR_NONE;
-                                  },NULL),
-                                  NULL,  // changedRowCount
-                                  databaseHandle->timeout,
-                                  DATABASE_COLUMN_TYPES(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),
-                                  "SHOW COLUMNS FROM %s",
-                                  tableName
-                                 );
+                                     return ERROR_NONE;
+                                   },NULL),
+                                   NULL,  // changedRowCount
+                                   databaseHandle->timeout,
+                                   DATABASE_COLUMN_TYPES(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),
+                                   "SHOW COLUMNS FROM %s",
+                                   tableName
+                                  );
 //fprintf(stderr,"%s:%d: error=%s %d\n",__FILE__,__LINE__,Error_getText(error),List_count(columnList));
 #else
           error = Database_prepare(&databaseStatementHandle,
@@ -5662,90 +5286,90 @@ abort();
                      DATABASE_LOCK_TYPE_READ,
                      WAIT_FOREVER,
         {
-          return databaseExecute2(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   bool isPrimaryKey;
+          return executeStatement(databaseHandle,
+                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                  {
+                                    bool isPrimaryKey;
 
-                                   assert(values != NULL);
-                                   assert(valueCount == 6);
+                                    assert(values != NULL);
+                                    assert(valueCount == 6);
 
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
+                                    UNUSED_VARIABLE(valueCount);
+                                    UNUSED_VARIABLE(userData);
 
-                                   isPrimaryKey = stringEqualsIgnoreCase(values[3].text.data,"PRI");
+                                    isPrimaryKey = stringEqualsIgnoreCase(values[3].text.data,"PRI");
 
-                                   if (i < maxColumnCount)
-                                   {
-                                     if (stringStartsWith(values[1].text.data,"int"))
-                                     {
-                                       if (isPrimaryKey)
-                                       {
-                                         stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                         columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
-                                         i++;
-                                       }
-                                       else
-                                       {
-                                         stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                         columnTypes[i] = DATABASE_DATATYPE_INT;
-                                         i++;
-                                       }
-                                     }
-                                     else if (stringEquals(values[1].text.data,"tinyint(1)"))
-                                     {
-                                       stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                       columnTypes[i] = DATABASE_DATATYPE_BOOL;
-                                       i++;
-                                     }
-                                     else if (stringStartsWith(values[1].text.data,"tinyint"))
-                                     {
-                                       stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                       columnTypes[i] = DATABASE_DATATYPE_INT;
-                                       i++;
-                                     }
-                                     else if (stringStartsWith(values[1].text.data,"bigint"))
-                                     {
-                                       stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                       columnTypes[i] = DATABASE_DATATYPE_INT64;
-                                       i++;
-                                     }
-                                     else if (stringStartsWith(values[1].text.data,"double"))
-                                     {
-                                       stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                       columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
-                                       i++;
-                                     }
-                                     else if (stringStartsWith(values[1].text.data,"datetime"))
-                                     {
-                                       stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                       columnTypes[i] = DATABASE_DATATYPE_DATETIME;
-                                       i++;
-                                     }
-                                     else if (   stringStartsWith(values[1].text.data,"varchar")
-                                              || stringStartsWith(values[1].text.data,"text")
-                                             )
-                                     {
-                                       stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                       columnTypes[i] = DATABASE_DATATYPE_TEXT;
-                                       i++;
-                                     }
-                                     else if (stringStartsWith(values[1].text.data,"blob"))
-                                     {
-                                       stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                       columnTypes[i] = DATABASE_DATATYPE_BLOB;
-                                       i++;
-                                     }
-                                   }
+                                    if (i < maxColumnCount)
+                                    {
+                                      if (stringStartsWith(values[1].text.data,"int"))
+                                      {
+                                        if (isPrimaryKey)
+                                        {
+                                          stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                          columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
+                                          i++;
+                                        }
+                                        else
+                                        {
+                                          stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                          columnTypes[i] = DATABASE_DATATYPE_INT;
+                                          i++;
+                                        }
+                                      }
+                                      else if (stringEquals(values[1].text.data,"tinyint(1)"))
+                                      {
+                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                        columnTypes[i] = DATABASE_DATATYPE_BOOL;
+                                        i++;
+                                      }
+                                      else if (stringStartsWith(values[1].text.data,"tinyint"))
+                                      {
+                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                        columnTypes[i] = DATABASE_DATATYPE_INT;
+                                        i++;
+                                      }
+                                      else if (stringStartsWith(values[1].text.data,"bigint"))
+                                      {
+                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                        columnTypes[i] = DATABASE_DATATYPE_INT64;
+                                        i++;
+                                      }
+                                      else if (stringStartsWith(values[1].text.data,"double"))
+                                      {
+                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                        columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
+                                        i++;
+                                      }
+                                      else if (stringStartsWith(values[1].text.data,"datetime"))
+                                      {
+                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                        columnTypes[i] = DATABASE_DATATYPE_DATETIME;
+                                        i++;
+                                      }
+                                      else if (   stringStartsWith(values[1].text.data,"varchar")
+                                               || stringStartsWith(values[1].text.data,"text")
+                                              )
+                                      {
+                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                        columnTypes[i] = DATABASE_DATATYPE_TEXT;
+                                        i++;
+                                      }
+                                      else if (stringStartsWith(values[1].text.data,"blob"))
+                                      {
+                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                        columnTypes[i] = DATABASE_DATATYPE_BLOB;
+                                        i++;
+                                      }
+                                    }
 
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 databaseHandle->timeout,
-                                 DATABASE_COLUMN_TYPES(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),
-                                 "SHOW COLUMNS FROM %s",
-                                 tableName
-                                );
+                                    return ERROR_NONE;
+                                  },NULL),
+                                  NULL,  // changedRowCount
+                                  databaseHandle->timeout,
+                                  DATABASE_COLUMN_TYPES(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT),
+                                  "SHOW COLUMNS FROM %s",
+                                  tableName
+                                 );
         });
       }
       break;
@@ -7569,42 +7193,42 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 //fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
 
   // create select+insert statements
-  error = databasePrepare(&fromDatabaseStatementHandle,
-                          fromDatabaseHandle,
-                          String_cString(sqlSelectString)
-                         );
+  error = prepareStatement(&fromDatabaseStatementHandle,
+                           fromDatabaseHandle,
+                           String_cString(sqlSelectString)
+                          );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
-  error = databaseBindResults(&fromDatabaseStatementHandle,fromColumnTypes,fromColumnCount);
+  error = bindResults(&fromDatabaseStatementHandle,fromColumnTypes,fromColumnCount);
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-    databaseFinalize(&fromDatabaseStatementHandle);
+    finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
   fromColumns.names  = fromColumnNames;
   fromColumns.values = fromDatabaseStatementHandle.values;
   fromColumns.count  = fromColumnCount;
 
-  error = databasePrepare(&toDatabaseStatementHandle,
-                          toDatabaseHandle,
-                          String_cString(sqlInsertString)
-                         );
+  error = prepareStatement(&toDatabaseStatementHandle,
+                           toDatabaseHandle,
+                           String_cString(sqlInsertString)
+                          );
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-    databaseFinalize(&fromDatabaseStatementHandle);
+    finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-  error = databaseBindParameters(&toDatabaseStatementHandle,toColumnTypes,toColumnCount,parameterMap,parameterMapCount);
+  error = bindParameters(&toDatabaseStatementHandle,toColumnTypes,toColumnCount,parameterMap,parameterMapCount);
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-    databaseFinalize(&toDatabaseStatementHandle);
-    databaseFinalize(&fromDatabaseStatementHandle);
+    finalizeStatement(&toDatabaseStatementHandle);
+    finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
   toColumns.names  = toColumnMapNames;
@@ -7630,15 +7254,15 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
       if (error != ERROR_NONE)
       {
-        databaseFinalize(&toDatabaseStatementHandle);
-        databaseFinalize(&fromDatabaseStatementHandle);
+        finalizeStatement(&toDatabaseStatementHandle);
+        finalizeStatement(&fromDatabaseStatementHandle);
         return error;
       }
     }
 
     // copy rows
     n = 0;
-    while (databaseGetNextRow(&fromDatabaseStatementHandle,fromDatabaseHandle->timeout))
+    while (getNextRow(&fromDatabaseStatementHandle,fromDatabaseHandle->timeout))
     {
 //fprintf(stderr,"%s:%d: a\n",__FILE__,__LINE__); dumpStatementHandle(&fromDatabaseStatementHandle);
       #ifdef DATABASE_DEBUG_COPY_TABLE
@@ -7659,8 +7283,8 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         });
         if (error != ERROR_NONE)
         {
-          databaseFinalize(&toDatabaseStatementHandle);
-          databaseFinalize(&fromDatabaseStatementHandle);
+          finalizeStatement(&toDatabaseStatementHandle);
+          finalizeStatement(&fromDatabaseStatementHandle);
           if (transactionFlag)
           {
             (void)Database_rollbackTransaction(toDatabaseHandle);
@@ -7690,11 +7314,11 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
 
       // insert row
 //fprintf(stderr,"%s:%d: b\n",__FILE__,__LINE__); dumpStatementHandle(&toDatabaseStatementHandle);
-      error = databaseExecuteRow(&toDatabaseStatementHandle);
+      error = executeRowStatement(&toDatabaseStatementHandle);
       if (error != ERROR_NONE)
       {
-        databaseFinalize(&toDatabaseStatementHandle);
-        databaseFinalize(&fromDatabaseStatementHandle);
+        finalizeStatement(&toDatabaseStatementHandle);
+        finalizeStatement(&fromDatabaseStatementHandle);
         if (transactionFlag)
         {
           (void)Database_rollbackTransaction(toDatabaseHandle);
@@ -7725,8 +7349,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
         });
         if (error != ERROR_NONE)
         {
-          databaseFinalize(&toDatabaseStatementHandle);
-          databaseFinalize(&fromDatabaseStatementHandle);
+          finalizeStatement(&toDatabaseStatementHandle);
+          finalizeStatement(&fromDatabaseStatementHandle);
           if (transactionFlag)
           {
             (void)Database_rollbackTransaction(toDatabaseHandle);
@@ -7752,8 +7376,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
           error = Database_endTransaction(toDatabaseHandle);
           if (error != ERROR_NONE)
           {
-            databaseFinalize(&toDatabaseStatementHandle);
-            databaseFinalize(&fromDatabaseStatementHandle);
+            finalizeStatement(&toDatabaseStatementHandle);
+            finalizeStatement(&fromDatabaseStatementHandle);
             return error;
           }
         }
@@ -7783,8 +7407,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
           error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
           if (error != ERROR_NONE)
           {
-            databaseFinalize(&toDatabaseStatementHandle);
-            databaseFinalize(&fromDatabaseStatementHandle);
+            finalizeStatement(&toDatabaseStatementHandle);
+            finalizeStatement(&fromDatabaseStatementHandle);
             return error;
           }
         }
@@ -7803,8 +7427,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
             error = Database_endTransaction(toDatabaseHandle);
             if (error != ERROR_NONE)
             {
-              databaseFinalize(&toDatabaseStatementHandle);
-              databaseFinalize(&fromDatabaseStatementHandle);
+              finalizeStatement(&toDatabaseStatementHandle);
+              finalizeStatement(&fromDatabaseStatementHandle);
               return error;
             }
           }
@@ -7821,8 +7445,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
             error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
             if (error != ERROR_NONE)
             {
-              databaseFinalize(&toDatabaseStatementHandle);
-              databaseFinalize(&fromDatabaseStatementHandle);
+              finalizeStatement(&toDatabaseStatementHandle);
+              finalizeStatement(&fromDatabaseStatementHandle);
               return error;
             }
           }
@@ -7838,8 +7462,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
       error = Database_endTransaction(toDatabaseHandle);
       if (error != ERROR_NONE)
       {
-        databaseFinalize(&toDatabaseStatementHandle);
-        databaseFinalize(&fromDatabaseStatementHandle);
+        finalizeStatement(&toDatabaseStatementHandle);
+        finalizeStatement(&fromDatabaseStatementHandle);
         return error;
       }
     }
@@ -7847,8 +7471,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
     END_TIMER();
 
     // free resources
-    databaseFinalize(&toDatabaseStatementHandle);
-    databaseFinalize(&fromDatabaseStatementHandle);
+    finalizeStatement(&toDatabaseStatementHandle);
+    finalizeStatement(&fromDatabaseStatementHandle);
 
     return ERROR_NONE;
   });
@@ -8665,12 +8289,13 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
                  WAIT_FOREVER,
     {
-      return databaseExecute(databaseHandle,
-                             String_cString(sqlString),
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             databaseHandle->timeout
-                            );
+      return executeStatement(databaseHandle,
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
+                              NULL,  // changedRowCount
+                              databaseHandle->timeout,
+                              DATABASE_COLUMN_TYPES(),
+                              String_cString(sqlString)
+                             );
     });
     if (error != ERROR_NONE)
     {
@@ -8776,12 +8401,13 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                    DATABASE_LOCK_TYPE_READ_WRITE,
                    WAIT_FOREVER,
       {
-        return databaseExecute(databaseHandle,
-                               String_cString(sqlString),
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               databaseHandle->timeout
-                              );
+        return executeStatement(databaseHandle,
+                                CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                NULL,  // changedRowCount
+                                databaseHandle->timeout,
+                                DATABASE_COLUMN_TYPES(),
+                                String_cString(sqlString)
+                               );
       });
       if (error != ERROR_NONE)
       {
@@ -8967,12 +8593,13 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // begin transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-    error = databaseExecute(databaseHandle,
-                            String_cString(sqlString),
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout
-                           );
+    error = executeStatement(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_COLUMN_TYPES(),
+                             String_cString(sqlString)
+                            );
     if (error != ERROR_NONE)
     {
       Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
@@ -9088,12 +8715,13 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // end transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-    error = databaseExecute(databaseHandle,
-                            String_cString(sqlString),
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout
-                           );
+    error = executeStatement(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_COLUMN_TYPES(),
+                             String_cString(sqlString)
+                            );
     if (error != ERROR_NONE)
     {
       // Note: unlock even on error to avoid lost lock
@@ -9206,12 +8834,13 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     // rollback transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-    error = databaseExecute(databaseHandle,
-                            String_cString(sqlString),
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout
-                           );
+    error = executeStatement(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_COLUMN_TYPES(),
+                             String_cString(sqlString)
+                            );
     if (error != ERROR_NONE)
     {
       // Note: unlock even on error to avoid lost lock
@@ -9363,12 +8992,13 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute(databaseHandle,
-                           String_cString(sqlString),
-                           CALLBACK_(databaseRowFunction,databaseRowUserData),
-                           changedRowCount,
-                           databaseHandle->timeout
-                          );
+    return executeStatement(databaseHandle,
+                            CALLBACK_(databaseRowFunction,databaseRowUserData),
+                            changedRowCount,
+                            databaseHandle->timeout,
+                            DATABASE_COLUMN_TYPES(),
+                            String_cString(sqlString)
+                           );
   });
   if (error != ERROR_NONE)
   {
@@ -9413,14 +9043,14 @@ Errors Database_vexecute2(DatabaseHandle      *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute2(databaseHandle,
-                           CALLBACK_(databaseRowFunction,databaseRowUserData),
-                           changedRowCount,
-                           databaseHandle->timeout,
-                           columnTypes,
-                           valueCount,
-                           String_cString(sqlString)
-                          );
+    return executeStatement(databaseHandle,
+                            CALLBACK_(databaseRowFunction,databaseRowUserData),
+                            changedRowCount,
+                            databaseHandle->timeout,
+                            columnTypes,
+                            valueCount,
+                            String_cString(sqlString)
+                           );
   });
   if (error != ERROR_NONE)
   {
@@ -9473,7 +9103,7 @@ Errors Database_vexecute2(DatabaseHandle      *databaseHandle,
 
   if (error == ERROR_NONE)
   {
-    error = databaseBindResults(databaseStatementHandle,columnTypes,valueCount);
+    error = bindResults(databaseStatementHandle,columnTypes,valueCount);
   }
 
   return error;
@@ -10473,24 +10103,24 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute2(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+    return executeStatement(databaseHandle,
+                            CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
+                            {
+                              assert(values != NULL);
+                              assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                              UNUSED_VARIABLE(valueCount);
+                              UNUSED_VARIABLE(userData);
 
-                             (*value) = values[0].i;
+                              (*value) = values[0].i;
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout,
-                           DATABASE_COLUMN_TYPES(INT),
-                           String_cString(sqlString)
-                          );
+                              return ERROR_NONE;
+                            },NULL),
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout,
+                            DATABASE_COLUMN_TYPES(INT),
+                            String_cString(sqlString)
+                           );
   });
 
   // free resources
@@ -10569,24 +10199,24 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute2(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+    return executeStatement(databaseHandle,
+                            CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
+                            {
+                              assert(values != NULL);
+                              assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                              UNUSED_VARIABLE(valueCount);
+                              UNUSED_VARIABLE(userData);
 
-                             (*value) = values[0].i;
+                              (*value) = values[0].i;
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout,
-                           DATABASE_COLUMN_TYPES(INT),
-                           String_cString(sqlString)
-                          );
+                              return ERROR_NONE;
+                            },NULL),
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout,
+                            DATABASE_COLUMN_TYPES(INT),
+                            String_cString(sqlString)
+                           );
   });
 
   // free resources
@@ -10663,12 +10293,13 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    error = databaseExecute(databaseHandle,
-                            String_cString(sqlString),
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout
-                           );
+    error = executeStatement(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_COLUMN_TYPES(),
+                             String_cString(sqlString)
+                            );
     if (error != ERROR_NONE)
     {
       // insert
@@ -10682,12 +10313,13 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                       value
                      );
       DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
-      error = databaseExecute(databaseHandle,
-                              String_cString(sqlString),
-                              CALLBACK_(NULL,NULL),  // databaseRowFunction
-                              NULL,  // changedRowCount
-                              databaseHandle->timeout
-                             );
+      error = executeStatement(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_COLUMN_TYPES(),
+                               String_cString(sqlString)
+                              );
     }
 
     return error;
@@ -10774,24 +10406,24 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute2(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+    return executeStatement(databaseHandle,
+                            CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
+                            {
+                              assert(values != NULL);
+                              assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                              UNUSED_VARIABLE(valueCount);
+                              UNUSED_VARIABLE(userData);
 
-                             (*value) = values[0].d;
+                              (*value) = values[0].d;
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout,
-                           DATABASE_COLUMN_TYPES(DOUBLE),
-                           String_cString(sqlString)
-                          );
+                              return ERROR_NONE;
+                            },NULL),
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout,
+                            DATABASE_COLUMN_TYPES(DOUBLE),
+                            String_cString(sqlString)
+                           );
   });
 
   // free resources
@@ -10870,12 +10502,13 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    error = databaseExecute(databaseHandle,
-                            String_cString(sqlString),
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout
-                           );
+    error = executeStatement(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             databaseHandle->timeout,
+                             DATABASE_COLUMN_TYPES(),
+                             String_cString(sqlString)
+                            );
     if (error != ERROR_NONE)
     {
       // insert
@@ -10889,12 +10522,13 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
                       value
                      );
       DATABASE_DEBUG_SQLX(databaseHandle,"set double",sqlString);
-      error = databaseExecute(databaseHandle,
-                              String_cString(sqlString),
-                              CALLBACK_(NULL,NULL),  // databaseRowFunction
-                              NULL,  // changedRowCount
-                              databaseHandle->timeout
-                             );
+      error = executeStatement(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_COLUMN_TYPES(),
+                               String_cString(sqlString)
+                              );
     }
 
     return error;
@@ -11007,24 +10641,24 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute2(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+    return executeStatement(databaseHandle,
+                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                            {
+                              assert(values != NULL);
+                              assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                              UNUSED_VARIABLE(valueCount);
+                              UNUSED_VARIABLE(userData);
 
-                             String_setBuffer(string, values[0].text.data, values[0].text.length);
+                              String_setBuffer(string, values[0].text.data, values[0].text.length);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout,
-                           DATABASE_COLUMN_TYPES(TEXT),
-                           String_cString(sqlString)
-                          );
+                              return ERROR_NONE;
+                            },NULL),
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout,
+                            DATABASE_COLUMN_TYPES(TEXT),
+                            String_cString(sqlString)
+                           );
   });
 
   // free resources
@@ -11079,24 +10713,24 @@ Errors Database_vgetCString(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute2(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+    return executeStatement(databaseHandle,
+                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                            {
+                              assert(values != NULL);
+                              assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                              UNUSED_VARIABLE(valueCount);
+                              UNUSED_VARIABLE(userData);
 
-                             stringSet(string,maxStringLength,values[0].text.data);
+                              stringSet(string,maxStringLength,values[0].text.data);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout,
-                           DATABASE_COLUMN_TYPES(TEXT),
-                           String_cString(sqlString)
-                          );
+                              return ERROR_NONE;
+                            },NULL),
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout,
+                            DATABASE_COLUMN_TYPES(TEXT),
+                            String_cString(sqlString)
+                           );
   });
 
   // free resources
@@ -11174,12 +10808,13 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return databaseExecute(databaseHandle,
-                           String_cString(sqlString),
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout
-                          );
+    return executeStatement(databaseHandle,
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+                            NULL,  // changedRowCount
+                            databaseHandle->timeout,
+                            DATABASE_COLUMN_TYPES(),
+                            String_cString(sqlString)
+                           );
   });
   if (error != ERROR_NONE)
   {
