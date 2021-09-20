@@ -7506,34 +7506,6 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.va
   #undef START_TIMER
 }
 
-// TODO: remove
-#if 0
-DatabaseId Database_getTableColumnListId(const DatabaseColumnList *columnList, const char *columnName, DatabaseId defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_KEY) || (columnNode->type == DATABASE_DATATYPE_INT));
-    if ((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_KEY))
-    {
-      return columnNode->value.id;
-    }
-    else
-    {
-      return (DatabaseId)String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
-    }
-  }
-  else
-  {
-    return defaultValue;
-  }
-}
-#endif
 DatabaseId Database_getTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7563,31 +7535,6 @@ DatabaseId Database_getTableColumnId(DatabaseColumns *columns, const char *colum
   }
 }
 
-// TODO: remove
-#if 0
-int Database_getTableColumnListInt(const DatabaseColumnList *columnList, const char *columnName, int defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_KEY) || (columnNode->type == DATABASE_DATATYPE_INT) || (columnNode->type == DATABASE_DATATYPE_INT64));
-    if ((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_KEY))
-    {
-      return columnNode->value.id;
-    }
-    else
-    {
-      return String_toInteger(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
-    }
-  }
-  else
-  {
-    return defaultValue;
-  }
-}
-#endif
 int Database_getTableColumnInt(DatabaseColumns *columns, const char *columnName, int defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7618,41 +7565,6 @@ int Database_getTableColumnInt(DatabaseColumns *columns, const char *columnName,
   }
 }
 
-// TODO: remove
-#if 0
-uint Database_getTableColumnListUInt(const DatabaseColumnList *columnList, const char *columnName, uint defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-#if 0
-//  databaseValue = findTableColumn(columns,columnName);
-//  if (databaseValue != NULL)
-if (
-  {
-    assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
-           || (databaseValue->type == DATABASE_DATATYPE_KEY)
-           || (databaseValue->type == DATABASE_DATATYPE_INT)
-           || (databaseValue->type == DATABASE_DATATYPE_INT64)
-          );
-    if ((databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY) || (databaseValue->type == DATABASE_DATATYPE_KEY))
-    {
-      return (uint)databaseValue->id;
-    }
-    else
-    {
-      return (uint)databaseValue->i;
-    }
-  }
-  else
-#endif
-  {
-    return defaultValue;
-  }
-}
-#endif
 uint Database_getTableColumnUInt(DatabaseColumns *columns, const char *columnName, uint defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7683,34 +7595,6 @@ uint Database_getTableColumnUInt(DatabaseColumns *columns, const char *columnNam
   }
 }
 
-// TODO: remove
-#if 0
-int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) ||  (columnNode->type == DATABASE_DATATYPE_KEY) || (columnNode->type == DATABASE_DATATYPE_INT) || (columnNode->type == DATABASE_DATATYPE_INT64));
-    if ((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_KEY))
-    {
-      return columnNode->value.id;
-    }
-    else
-    {
-      return String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
-    }
-  }
-  else
-  {
-    return defaultValue;
-  }
-}
-#endif
 int64 Database_getTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7741,34 +7625,6 @@ int64 Database_getTableColumnInt64(DatabaseColumns *columns, const char *columnN
   }
 }
 
-// TODO: remove
-#if 0
-uint64 Database_getTableColumnListUInt64(const DatabaseColumnList *columnList, const char *columnName, uint64 defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) ||  (columnNode->type == DATABASE_DATATYPE_KEY) || (columnNode->type == DATABASE_DATATYPE_INT) || (columnNode->type == DATABASE_DATATYPE_INT64));
-    if ((columnNode->type == DATABASE_DATATYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_DATATYPE_KEY))
-    {
-      return columnNode->value.id;
-    }
-    else
-    {
-      return (uint64)String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
-    }
-  }
-  else
-  {
-    return defaultValue;
-  }
-}
-#endif
 uint64 Database_getTableColumnUInt64(DatabaseColumns *columns, const char *columnName, uint64 defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7817,49 +7673,7 @@ double Database_getTableColumnDouble(DatabaseColumns *columns, const char *colum
     return defaultValue;
   }
 }
-// TODO: remove
-#if 0
-double Database_getTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double defaultValue)
-{
-  DatabaseColumnNode *columnNode;
 
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert(columnNode->type == DATABASE_DATATYPE_DOUBLE);
-    return columnNode->value.d;
-  }
-  else
-  {
-    return defaultValue;
-  }
-}
-#endif
-
-// TODO: remove
-#if 0
-uint64 Database_getTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert(columnNode->type == DATABASE_DATATYPE_DATETIME);
-    return String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
-  }
-  else
-  {
-    return defaultValue;
-  }
-}
-#endif
 uint64 Database_getTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7879,29 +7693,6 @@ uint64 Database_getTableColumnDateTime(DatabaseColumns *columns, const char *col
   }
 }
 
-// TODO: remove
-#if 0
-String Database_getTableColumnList(const DatabaseColumnList *columnList, const char *columnName, String value, const char *defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert(columnNode->type == DATABASE_DATATYPE_TEXT);
-    return String_setBuffer(value,columnNode->value.text.data,columnNode->value.text.length);
-  }
-  else
-  {
-    return String_setCString(value,defaultValue);
-  }
-
-  return value;
-}
-#endif
 String Database_getTableColumnString(DatabaseColumns *columns, const char *columnName, String value, const char *defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7923,27 +7714,6 @@ String Database_getTableColumnString(DatabaseColumns *columns, const char *colum
   return value;
 }
 
-// TODO: remove
-#if 0
-const char *Database_getTableColumnListCString(const DatabaseColumnList *columnList, const char *columnName, const char *defaultValue)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-//  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert(columnNode->type == DATABASE_DATATYPE_TEXT);
-    return columnNode->value.text.data;
-  }
-  else
-  {
-    return defaultValue;
-  }
-}
-#endif
 const char *Database_getTableColumnCString(DatabaseColumns *columns, const char *columnName, const char *defaultValue)
 {
   DatabaseValue *databaseValue;
@@ -7963,30 +7733,6 @@ const char *Database_getTableColumnCString(DatabaseColumns *columns, const char 
   }
 }
 
-// TODO: remove
-#if 0
-void Database_getTableColumnListBlob(const DatabaseColumnList *columnList, const char *columnName, void *data, uint length)
-{
-  DatabaseColumnNode *columnNode;
-
-  assert(columnList != NULL);
-  assert(columnName != NULL);
-
-UNUSED_VARIABLE(data);
-UNUSED_VARIABLE(length);
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-  columnNode = findTableColumnNode(columnList,columnName);
-  if (columnNode != NULL)
-  {
-    assert(columnNode->type == DATABASE_DATATYPE_BLOB);
-//    return columnNode->value.blob.data;
-  }
-  else
-  {
-//    return data;
-  }
-}
-#endif
 void Database_getTableColumnBlob(DatabaseColumns *columns, const char *columnName, void *data, uint length)
 {
   DatabaseValue *databaseValue;
