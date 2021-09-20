@@ -1190,11 +1190,11 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(TEXT),
                            "SELECT name FROM storages \
                             WHERE deletedFlag!=1 \
                             ORDER BY name \
-                           ",
-                           DATABASE_COLUMN_TYPES(TEXT)
+                           "
                           );
   if (error == ERROR_NONE)
   {
@@ -1254,8 +1254,8 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "SELECT name FROM sqlite_master WHERE type='table'",
-                           DATABASE_COLUMN_TYPES(TEXT)
+                           DATABASE_COLUMN_TYPES(TEXT),
+                           "SELECT name FROM sqlite_master WHERE type='table'"
                           );
   if (error != ERROR_NONE)
   {
@@ -1434,6 +1434,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
 
   // delete all existing triggers
 // TODO:
+error = ERROR_NONE;
   INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGER_NAMES_SQLITE, name, error == ERROR_NONE)
   {
   }

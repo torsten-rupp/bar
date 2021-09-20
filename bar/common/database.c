@@ -613,6 +613,57 @@ LOCAL_INLINE bool checkDatabaseInitialized(DatabaseHandle *databaseHandle)
   return FALSE;
 }
 
+/***********************************************************************\
+* Name   :
+* Purpose: check if data types are compatible
+* Input  : dataType0, dataType1 - data types
+* Output : -
+* Return : TRUE if compatible
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseTypes dataType1)
+{
+  switch (dataType0)
+  {
+    case DATABASE_DATATYPE_NONE:
+      return FALSE;
+
+    case DATABASE_DATATYPE_PRIMARY_KEY:
+      return (dataType1 == DATABASE_DATATYPE_PRIMARY_KEY);
+    case DATABASE_DATATYPE_KEY:
+      return (dataType1 == DATABASE_DATATYPE_KEY);
+
+    case DATABASE_DATATYPE_BOOL:
+      return    (dataType1 == DATABASE_DATATYPE_BOOL)
+             || (dataType1 == DATABASE_DATATYPE_INT);
+    case DATABASE_DATATYPE_INT:
+      return    (dataType1 == DATABASE_DATATYPE_BOOL)
+             || (dataType1 == DATABASE_DATATYPE_INT)
+             || (dataType1 == DATABASE_DATATYPE_INT64)
+             || (dataType1 == DATABASE_DATATYPE_DATETIME);
+    case DATABASE_DATATYPE_INT64:
+      return    (dataType1 == DATABASE_DATATYPE_INT)
+             || (dataType1 == DATABASE_DATATYPE_INT64)
+             || (dataType1 == DATABASE_DATATYPE_DATETIME);
+    case DATABASE_DATATYPE_DOUBLE:
+      return (dataType1 == DATABASE_DATATYPE_DOUBLE);
+    case DATABASE_DATATYPE_DATETIME:
+      return    (dataType1 == DATABASE_DATATYPE_INT)
+             || (dataType1 == DATABASE_DATATYPE_INT64)
+             || (dataType1 == DATABASE_DATATYPE_DATETIME);
+    case DATABASE_DATATYPE_TEXT:
+      return (dataType1 == DATABASE_DATATYPE_TEXT);
+    case DATABASE_DATATYPE_BLOB:
+      return (dataType1 == DATABASE_DATATYPE_BLOB);
+
+    case DATABASE_DATATYPE_UNKNOWN:
+      return FALSE;
+  }
+
+  return FALSE;
+}
+
 #ifdef DATABASE_DEBUG_LOCK
 /***********************************************************************\
 * Name   : debugAddThreadLWPId
@@ -2856,18 +2907,18 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 
 #ifdef NDEBUG
   Errors vDatabasePrepare(DatabaseStatementHandle *databaseStatementHandle,
-                  DatabaseHandle      *databaseHandle,
-                  const char          *command,
-                  va_list             arguments
-                 )
+                          DatabaseHandle          *databaseHandle,
+                          const char              *command,
+                          va_list                 arguments
+                         )
 #else /* not NDEBUG */
-  Errors vDatabasePrepare(const char          *__fileName__,
-                  ulong               __lineNb__,
-                  DatabaseStatementHandle *databaseStatementHandle,
-                  DatabaseHandle      *databaseHandle,
-                  const char          *command,
-                  va_list             arguments
-                 )
+  Errors vDatabasePrepare(const char              *__fileName__,
+                          ulong                   __lineNb__,
+                          DatabaseStatementHandle *databaseStatementHandle,
+                          DatabaseHandle          *databaseHandle,
+                          const char              *command,
+                          va_list                 arguments
+                         )
 #endif /* NDEBUG */
 {
   String sqlString;
@@ -3000,23 +3051,25 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
         }
         else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
         {
+          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
           mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
             String_delete(databaseStatementHandle->sqlString);
           #endif /* not NDEBUG */
           String_delete(sqlString);
-          return ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+          return error;
         }
         else if (mysqlResult != 0)
         {
+          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
           mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
             String_delete(databaseStatementHandle->sqlString);
           #endif /* not NDEBUG */
           String_delete(sqlString);
-          return ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+          return error;
         }
 
         databaseStatementHandle->mysql.bind     = NULL;
@@ -5057,9 +5110,9 @@ LOCAL Errors getTableList(StringList     *tableList,
                           DatabaseHandle *databaseHandle
                          )
 {
-  Errors              error;
+  Errors                  error;
   DatabaseStatementHandle databaseStatementHandle;
-  const char          *name;
+  const char              *name;
 
   assert(tableList != NULL);
   assert(databaseHandle != NULL);
@@ -5067,31 +5120,53 @@ LOCAL Errors getTableList(StringList     *tableList,
 
   StringList_init(tableList);
 
-//TODO: remove
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
                WAIT_FOREVER,
   {
-    error = Database_prepare(&databaseStatementHandle,
-                             databaseHandle,
-                             DATABASE_COLUMN_TYPES(TEXT),
-                             "SELECT name FROM sqlite_master where type='table'"
-                            );
-    if (error != ERROR_NONE)
+    switch (Database_getType(databaseHandle))
     {
-      return error;
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_execute2(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
+
+                                   UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+
+                                   StringList_appendCString(tableList,values[0].text.data);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(TEXT),
+                                 "SELECT name FROM sqlite_master where type='table'"
+                                );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        error = Database_execute2(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
+
+                                   UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+
+                                   StringList_appendCString(tableList,values[0].text.data);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(TEXT),
+                                 "SHOW TABLES"
+                                );
+        break;
     }
-    while (Database_getNextRow(&databaseStatementHandle,
-                               "%p",
-                               &name
-                              )
-          )
-    {
-      StringList_appendCString(tableList,name);
-    }
-    Database_finalize(&databaseStatementHandle);
 
     return error;
   });
@@ -7181,28 +7256,30 @@ Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
                          );
 }
 
-Errors Database_compare(DatabaseHandle *databaseHandleReference,
+Errors Database_compare(DatabaseHandle *referenceDatabaseHandle,
                         DatabaseHandle *databaseHandle
                        )
 {
   Errors             error;
-  StringList         tableListReference,tableList;
-//  DatabaseColumnList columnListReference,columnList;
-  StringNode         *tableNameNodeReference,*tableNameNode;
-  String             tableNameReference,tableName;
-//  DatabaseColumnNode *columnNodeReference,*columnNode;
+  StringList         referenceTableList,tableList;
+  StringNode         *tableNameNode;
+  String             tableName;
+  DatabaseColumnName referenceColumnNames[DATABASE_MAX_TABLE_COLUMNS],columnNames[DATABASE_MAX_TABLE_COLUMNS];
+  DatabaseDataTypes  referenceColumnTypes[DATABASE_MAX_TABLE_COLUMNS],columnTypes[DATABASE_MAX_TABLE_COLUMNS];
+  uint               referenceColumnCount,columnCount;
+  uint               i,j;
 
-  assert(databaseHandleReference != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandleReference);
+  assert(referenceDatabaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(referenceDatabaseHandle);
 //TODO: remove
 assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
-  assert(checkDatabaseInitialized(databaseHandleReference));
+  assert(checkDatabaseInitialized(referenceDatabaseHandle));
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
 
   // get table lists
-  error = getTableList(&tableListReference,databaseHandleReference);
+  error = getTableList(&referenceTableList,referenceDatabaseHandle);
   if (error != ERROR_NONE)
   {
     return error;
@@ -7210,75 +7287,88 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   error = getTableList(&tableList,databaseHandle);
   if (error != ERROR_NONE)
   {
-    StringList_done(&tableListReference);
+    StringList_done(&referenceTableList);
     return error;
   }
 
   // compare tables
-  STRINGLIST_ITERATEX(&tableListReference,tableNameNodeReference,tableNameReference,error == ERROR_NONE)
+  STRINGLIST_ITERATEX(&referenceTableList,tableNameNode,tableName,error == ERROR_NONE)
   {
-    if (StringList_contains(&tableList,tableNameReference))
+    if (StringList_contains(&tableList,tableName))
     {
       // get column lists
-// TODO:
-#if 0
-      error = getTableColumns(&columnListReference,databaseHandleReference,String_cString(tableNameReference),TRUE);
-  error = getTableColumns(fromColumnNames,fromColumnTypes,&fromColumnCount,DATABASE_MAX_TABLE_COLUMNS,fromDatabaseHandle,fromTableName);
+      error = getTableColumns(referenceColumnNames,
+                              referenceColumnTypes,
+                              &referenceColumnCount,
+                              DATABASE_MAX_TABLE_COLUMNS,
+                              referenceDatabaseHandle,
+                              String_cString(tableName)
+                             );
       if (error != ERROR_NONE)
       {
         break;
       }
-      error = getTableColumnList(&columnList,databaseHandle,String_cString(tableNameReference),TRUE);
-  error = getTableColumns(fromColumnNames,fromColumnTypes,&fromColumnCount,DATABASE_MAX_TABLE_COLUMNS,fromDatabaseHandle,fromTableName);
+      error = getTableColumns(columnNames,
+                              columnTypes,
+                              &columnCount,
+                              DATABASE_MAX_TABLE_COLUMNS,
+                              databaseHandle,
+                              String_cString(tableName)
+                             );
       if (error != ERROR_NONE)
       {
-        freeTableColumnList(&columnListReference);
         break;
       }
-#endif
 
       // compare columns
-// TODO:
-#if 0
-      LIST_ITERATEX(&columnListReference,columnNodeReference,error == ERROR_NONE)
+      for (i = 0; i < referenceColumnCount; i++)
       {
-        columnNode = LIST_FIND(&columnList,columnNode,stringEquals(columnNodeReference->name,columnNode->name));
-        if (columnNode != NULL)
+        // find column
+        j = ARRAY_FIND(columnNames,columnCount,j,stringEquals(referenceColumnNames[i],columnNames[j]));
+        if (j < columnCount)
         {
-          if (columnNodeReference->type != columnNode->type)
+          if (!areCompatibleTypes(referenceColumnTypes[j],columnTypes[i]))
           {
-            error = ERRORX_(DATABASE_TYPE_MISMATCH,0,"%s",columnNodeReference->name);
+            error = ERRORX_(DATABASE_TYPE_MISMATCH,0,"%s",referenceColumnNames[i]);
           }
         }
         else
         {
-          error = ERRORX_(DATABASE_MISSING_COLUMN,0,"%s",columnNodeReference->name);
+          error = ERRORX_(DATABASE_MISSING_COLUMN,0,"%s",referenceColumnNames[i]);
         }
+      }
+      if (error != ERROR_NONE)
+      {
+        break;
       }
 
       // check for obsolete columns
-      LIST_ITERATEX(&columnList,columnNode,error == ERROR_NONE)
+      for (i = 0; i < columnCount; i++)
       {
-        if (LIST_FIND(&columnListReference,columnNodeReference,stringEquals(columnNodeReference->name,columnNode->name)) == NULL)
+        // find column
+        j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEquals(columnNames[i],referenceColumnNames[j]));
+        if (j >= referenceColumnCount)
         {
-          error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s",columnNode->name);
+          error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s",referenceColumnNames[j]);
         }
       }
-#endif
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
+
       // free resources
-//      freeTableColumnList(&columnList);
-//      freeTableColumnList(&columnListReference);
     }
     else
     {
-      error = ERRORX_(DATABASE_MISSING_TABLE,0,"%s",String_cString(tableNameReference));
+      error = ERRORX_(DATABASE_MISSING_TABLE,0,"%s",String_cString(tableName));
     }
   }
 
   // check for obsolete tables
   STRINGLIST_ITERATEX(&tableList,tableNameNode,tableName,error == ERROR_NONE)
   {
-    if (!StringList_contains(&tableListReference,tableName))
+    if (!StringList_contains(&referenceTableList,tableName))
     {
       error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,"%s",String_cString(tableName));
     }
@@ -7286,7 +7376,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
 
   // free resources
   StringList_done(&tableList);
-  StringList_done(&tableListReference);
+  StringList_done(&referenceTableList);
 
   return error;
 }
