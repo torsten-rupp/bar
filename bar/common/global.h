@@ -620,6 +620,35 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
   array[SIZE_OF_ARRAY(array)-1]
 
 /***********************************************************************\
+* Name   : ARRAY_FIND
+* Purpose: find index of value in array
+* Input  : array - array
+*          size  - size of array (number of elements)
+*          i     - iterator
+* Output : -
+* Return : index or size
+* Notes  : -
+\***********************************************************************/
+
+#define ARRAY_FIND(array,size,i,condition) \
+  ({ \
+    auto uint __closure__ (void); \
+    uint __closure__ (void) \
+    { \
+      uint i; \
+      \
+      i = 0; \
+      while ((i) < (size) && !(condition)) \
+      { \
+        (i)++; \
+      } \
+      \
+      return i; \
+    }; \
+    __closure__; \
+  })()
+
+/***********************************************************************\
 * Name   : FOR_ENUM
 * Purpose: iterate over enum and execute block
 * Input  : enumMin,enumMax - enum min./max.
