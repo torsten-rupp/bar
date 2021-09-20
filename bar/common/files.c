@@ -1149,8 +1149,8 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
 {
   #if   defined(PLATFORM_LINUX)
     FILE *handle;
-    char line[FILE_MAX_PATH_MAX_LENGTH+256];
-    char name[FILE_MAX_PATH_MAX_LENGTH];
+    char line[FILE_MAX_PATH_LENGTH+256];
+    char name[FILE_MAX_PATH_LENGTH];
     uint n0,n1;
   #elif defined(PLATFORM_WINDOWS)
     uint n;

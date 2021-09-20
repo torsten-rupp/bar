@@ -38,7 +38,7 @@
 /***************************** Constants *******************************/
 
 // max. length of a path
-#define FILE_MAX_PATH_MAX_LENGTH PATH_MAX
+#define FILE_MAX_PATH_LENGTH PATH_MAX
 
 // Note: always use '/' and never brain dead '\'
 #define FILE_PATH_SEPARATOR_CHAR   '/'
@@ -260,9 +260,9 @@ typedef struct
   #if   defined(PLATFORM_LINUX)
     StringList fileSystemNames;
     FILE       *mounts;
-    char       line[FILE_MAX_PATH_MAX_LENGTH+256];
+    char       line[FILE_MAX_PATH_LENGTH+256];
     bool       parseFlag;
-    char       name[FILE_MAX_PATH_MAX_LENGTH];
+    char       name[FILE_MAX_PATH_LENGTH];
   #elif defined(PLATFORM_WINDOWS)
     DWORD  logicalDrives;
     uint   i;
