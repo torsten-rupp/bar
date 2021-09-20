@@ -52,62 +52,61 @@ CREATE TABLE IF NOT EXISTS meta(
   name  VARCHAR(255) UNIQUE,
   value TEXT
 );
-INSERT IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
-INSERT IGNORE INTO meta (name,value) VALUES ('datetime',NOW());
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',NOW());
 
 // --- uuids -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uuids(
-  id      INTEGER PRIMARY KEY,
+  id      INT AUTO_INCREMENT PRIMARY KEY,
   jobUUID VARCHAR($UUID_LENGTH) UNIQUE NOT NULL,
 
   INDEX(jobUUID)
 );
-//CREATE INDEX ON uuids (jobUUID);
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
-  id                        INTEGER PRIMARY KEY,
+  id                        INT AUTO_INCREMENT PRIMARY KEY,
   jobUUID                   VARCHAR($UUID_LENGTH) NOT NULL,
   scheduleUUID              VARCHAR($UUID_LENGTH) NOT NULL DEFAULT '',
-  hostName                  VARCHAR($MAX_TEXT_LENGTH),
+  hostName                  VARCHAR($MAX_TEXT_LENGTH) DEFAULT '',
 //TODO: use
   userName                  TEXT,
-  created                   INTEGER,
-  type                      INTEGER,
-  parentJobUUID             INTEGER,
-  bidFlag                   INTEGER DEFAULT 0,
-  lockedCount               INTEGER DEFAULT 0,
-  deletedFlag               INTEGER DEFAULT 0,
+  created                   DATETIME,
+  type                      INT,
+  parentJobUUID             INT DEFAULT 0,
+  bidFlag                   BOOL DEFAULT FALSE,
+  lockedCount               INT DEFAULT 0,
+  deletedFlag               INT DEFAULT 0,
 
   // Note: updated via Index_updateEntitiesInfos()
-  totalEntryCount           INTEGER DEFAULT 0,  // total number of entries
-  totalEntrySize            INTEGER DEFAULT 0,  // total size of entries [bytes]
+  totalEntryCount           BIGINT DEFAULT 0,  // total number of entries
+  totalEntrySize            BIGINT DEFAULT 0,  // total size of entries [bytes]
 
-  totalFileCount            INTEGER DEFAULT 0,  // total number of file entries
-  totalFileSize             INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
-  totalImageCount           INTEGER DEFAULT 0,  // total number of image entries
-  totalImageSize            INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
-  totalDirectoryCount       INTEGER DEFAULT 0,  // total number of directory entries
-  totalLinkCount            INTEGER DEFAULT 0,  // total number of link entries
-  totalHardlinkCount        INTEGER DEFAULT 0,  // total number of hardlink entries
-  totalHardlinkSize         INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
-  totalSpecialCount         INTEGER DEFAULT 0,  // total number of special entries
+  totalFileCount            BIGINT DEFAULT 0,  // total number of file entries
+  totalFileSize             BIGINT DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           BIGINT DEFAULT 0,  // total number of image entries
+  totalImageSize            BIGINT DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalLinkCount            BIGINT DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        BIGINT DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         BIGINT DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         BIGINT DEFAULT 0,  // total number of special entries
 
-  totalEntryCountNewest     INTEGER DEFAULT 0,  // total number of newest entries
-  totalEntrySizeNewest      INTEGER DEFAULT 0,  // total size of newest entries [bytes]
+  totalEntryCountNewest     BIGINT DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      BIGINT DEFAULT 0,  // total size of newest entries [bytes]
 
-  totalFileCountNewest      INTEGER DEFAULT 0,  // total number of newest file entries
-  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
-  totalImageCountNewest     INTEGER DEFAULT 0,  // total number of newest image entries
-  totalImageSizeNewest      INTEGER DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
-  totalDirectoryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
-  totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
-  totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
-  totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
-  totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
+  totalFileCountNewest      BIGINT DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       BIGINT DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     BIGINT DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      BIGINT DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      BIGINT DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  BIGINT DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   BIGINT DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   BIGINT DEFAULT 0,  // total number of newest special entries
 
   // Note: redundancy for faster access
-  uuidId                    INTEGER DEFAULT 0,
+  uuidId                    INT DEFAULT 0,
 
   INDEX(jobUUID,created,type),
   INDEX(hostName),
@@ -120,57 +119,59 @@ INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUU
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON entities
   FOR EACH ROW
+  BEGIN
     INSERT IGNORE INTO uuids
       (jobUUID) VALUES (NEW.jobUUID);
+  END;
 
 // --- storages --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storages(
-  id                        INTEGER PRIMARY KEY,
+  id                        INT AUTO_INCREMENT PRIMARY KEY,
 
-  entityId                  INTEGER REFERENCES entities(id) ON DELETE CASCADE,
+  entityId                  INT REFERENCES entities(id) ON DELETE CASCADE,
   name                      VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
-  created                   INTEGER,
-  size                      INTEGER DEFAULT 0,
+  created                   DATETIME,
+  size                      BIGINT DEFAULT 0,
 //TODO: use
   hostName                  TEXT,
 //TODO: use
   userName                  VARCHAR(255),
   comment                   TEXT,
-  state                     INTEGER DEFAULT $STATE_CREATE,
-  mode                      INTEGER DEFAULT $MODE_MANUAL,
-  lastChecked               INTEGER DEFAULT 0,
+  state                     INT DEFAULT $STATE_CREATE,
+  mode                      INT DEFAULT $MODE_MANUAL,
+  lastChecked               DATETIME DEFAULT "1970-01-01 00:00:00",
   errorMessage              TEXT,
-  deletedFlag               INTEGER DEFAULT 0,
+  deletedFlag               BOOL DEFAULT FALSE,
 
   // Note: updated via Index_updateStorageInfos()
-  totalEntryCount           INTEGER DEFAULT 0,  // total number of entries
-  totalEntrySize            INTEGER DEFAULT 0,  // total size of entries [bytes]
+  totalEntryCount           BIGINT DEFAULT 0,  // total number of entries
+  totalEntrySize            BIGINT DEFAULT 0,  // total size of entries [bytes]
 
-  totalFileCount            INTEGER DEFAULT 0,  // total number of file entries
-  totalFileSize             INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
-  totalImageCount           INTEGER DEFAULT 0,  // total number of image entries
-  totalImageSize            INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
-  totalDirectoryCount       INTEGER DEFAULT 0,  // total number of directory entries
-  totalLinkCount            INTEGER DEFAULT 0,  // total number of link entries
-  totalHardlinkCount        INTEGER DEFAULT 0,  // total number of hardlink entries
-  totalHardlinkSize         INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
-  totalSpecialCount         INTEGER DEFAULT 0,  // total number of special entries
+  totalFileCount            BIGINT DEFAULT 0,  // total number of file entries
+  totalFileSize             BIGINT DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           BIGINT DEFAULT 0,  // total number of image entries
+  totalImageSize            BIGINT DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalLinkCount            BIGINT DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        BIGINT DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         BIGINT DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         BIGINT DEFAULT 0,  // total number of special entries
 
-  totalEntryCountNewest     INTEGER DEFAULT 0,  // total number of newest entries
-  totalEntrySizeNewest      INTEGER DEFAULT 0,  // total size of newest entries [bytes]
+  totalEntryCountNewest     BIGINT DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      BIGINT DEFAULT 0,  // total size of newest entries [bytes]
 
-  totalFileCountNewest      INTEGER DEFAULT 0,  // total number of newest file entries
-  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
-  totalImageCountNewest     INTEGER DEFAULT 0,  // total number of newest image entries
-  totalImageSizeNewest      INTEGER DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
-  totalDirectoryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
-  totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
-  totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
-  totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
-  totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
+  totalFileCountNewest      BIGINT DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       BIGINT DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     BIGINT DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      BIGINT DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      BIGINT DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  BIGINT DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   BIGINT DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   BIGINT DEFAULT 0,  // total number of newest special entries
 
   // Note: redundancy for faster access
-  uuidId                    INTEGER DEFAULT 0,
+  uuidId                    INT DEFAULT 0,
 
   INDEX(uuidId,entityId,name,created,state),
   INDEX(entityId,name,created,state),
@@ -180,17 +181,8 @@ CREATE TABLE IF NOT EXISTS storages(
   INDEX(state,name,totalEntryCount,created),
   INDEX(deletedFlag)
 );
-/*
-CREATE INDEX ON storages (uuidId,entityId,name,created,state);
-CREATE INDEX ON storages (entityId,name,created,state);
 //TODO: add?
 //CREATE INDEX ON storages (hostName);
-CREATE INDEX ON storages (name,totalEntryCount,created,state);
-CREATE INDEX ON storages (created,name,totalEntryCount,state);
-CREATE INDEX ON storages (userName);
-CREATE INDEX ON storages (state,name,totalEntryCount,created);
-CREATE INDEX ON storages (deletedFlag);
-*/
 
 // full-text-search
 /*
@@ -205,25 +197,25 @@ CREATE VIRTUAL TABLE FTS_storages USING FTS5(
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
-  id              INTEGER PRIMARY KEY,
+  id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entityId        INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-  type            INTEGER,
+  entityId        INT REFERENCES entities(id) ON DELETE CASCADE,
+  type            INT,
   name            VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
-  timeLastAccess  INTEGER,
-  timeModified    INTEGER,
-  timeLastChanged INTEGER,
-  userId          INTEGER,
-  groupId         INTEGER,
-  permission      INTEGER,
-  deletedFlag     INTEGER DEFAULT 0,
+  timeLastAccess  DATETIME,
+  timeModified    DATETIME,
+  timeLastChanged DATETIME,
+  userId          INT,
+  groupId         INT,
+  permission      INT,
+  deletedFlag     BOOL DEFAULT FALSE,
 
 //TODO: still not used
-  archiveOffset   INTEGER,
+  archiveOffset   BIGINT,
 
   // Note: redundancy for faster access
-  uuidId          INTEGER DEFAULT 0,
-  size            INTEGER DEFAULT 0,
+  uuidId          INT DEFAULT 0,
+  size            BIGINT DEFAULT 0,
 
   INDEX(uuidId,entityId,type,name),
   INDEX(entityId,type,name),
@@ -232,32 +224,24 @@ CREATE TABLE IF NOT EXISTS entries(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type)
 );
-/*
-CREATE INDEX ON entries (uuidId,entityId,type,name);
-CREATE INDEX ON entries (entityId,type,name);
-CREATE INDEX ON entries (name,size,type,timeLastChanged);
-CREATE INDEX ON entries (type,size,name,timeLastChanged);
-CREATE INDEX ON entries (size,type,name,timeLastChanged);
-CREATE INDEX ON entries (timeLastChanged,name,size,type);
-*/
 
 // newest entries (updated by triggers)
 CREATE TABLE IF NOT EXISTS entriesNewest(
-  id              INTEGER PRIMARY KEY,
+  id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INTEGER REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
+  entryId         INT REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
 
   // Note: redundancy for faster access
-  uuidId          INTEGER DEFAULT 0,
-  entityId        INTEGER DEFAULT 0,
-  type            INTEGER DEFAULT 0,
+  uuidId          INT DEFAULT 0,
+  entityId        INT DEFAULT 0,
+  type            INT DEFAULT 0,
   name            VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
-  timeLastChanged INTEGER DEFAULT 0,
-  userId          INTEGER DEFAULT 0,
-  groupId         INTEGER DEFAULT 0,
-  permission      INTEGER DEFAULT 0,
+  timeLastChanged DATETIME DEFAULT "1970-01-01 00:00:00",
+  userId          INT DEFAULT 0,
+  groupId         INT DEFAULT 0,
+  permission      INT DEFAULT 0,
 
-  size            INTEGER DEFAULT 0,       // file/image/hardlink size
+  size            BIGINT DEFAULT 0,       // file/image/hardlink size
 
   CONSTRAINT entriesNewest UNIQUE (name),
 
@@ -269,15 +253,6 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   INDEX(timeLastChanged,name,size,type),
   INDEX(entityId,type,entryId,name,size,timeLastChanged)
 );
-/*
-CREATE INDEX ON entriesNewest (entryId,name,size,timeLastChanged);
-CREATE INDEX ON entriesNewest (name,size,type,timeLastChanged);
-CREATE INDEX ON entriesNewest (type,entryId,name,size,timeLastChanged);
-CREATE INDEX ON entriesNewest (type,size,name,timeLastChanged);
-CREATE INDEX ON entriesNewest (size,type,name,timeLastChanged);
-CREATE INDEX ON entriesNewest (timeLastChanged,name,size,type);
-CREATE INDEX ON entriesNewest (entityId,type,entryId,name,size,timeLastChanged);
-*/
 
 // full-text-search
 /*
@@ -290,32 +265,23 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS5(
 );
 */
 
-/*
-CREATE TRIGGER AFTER UPDATE OF uuidId ON entries
+CREATE TRIGGER AFTER UPDATE ON entries
+  FOR EACH ROW
   BEGIN
     // update newest entries
     UPDATE entriesNewest
       SET uuidId=NEW.uuidId
       WHERE entryId=OLD.id;
-  END;
 
-CREATE TRIGGER AFTER UPDATE OF entityId ON entries
-  BEGIN
     // update newest entries
     UPDATE entriesNewest
       SET entityId=NEW.entityId
       WHERE entryId=OLD.id;
-  END;
 
-CREATE TRIGGER AFTER UPDATE OF name ON entries
-  BEGIN
     // update FTS
-    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
-    INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
-  END;
+    DELETE FROM FTS_entries WHERE entryId=OLD.id;
+    INSERT INTO FTS_entries (id,name) VALUES (NEW.id,NEW.name);
 
-CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
-  BEGIN
 // insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
     // update if entry is newer
     UPDATE entriesNewest
@@ -333,89 +299,77 @@ CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
             AND type=NEW.type
             AND NEW.timeLastChanged>timeLastChanged;
   END;
-*/
 
 //TODO
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
-  id          INTEGER PRIMARY KEY,
-  entityId    INTEGER NOT NULL REFERENCES entities(id),
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  entityId    INT NOT NULL REFERENCES entities(id),
   name        VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
-  type        INTEGER,
+  type        INT,
 
-  deletedFlag INTEGER DEFAULT 0,
+  deletedFlag INT DEFAULT 0,
 
   INDEX(entityId,type,name),
   INDEX(name),
   INDEX(type,name)
 );
-/*
-CREATE INDEX ON skippedEntries (entityId,type,name);
-CREATE INDEX ON skippedEntries (name);
-CREATE INDEX ON skippedEntries (type,name);
-*/
 
 // --- entry fragments -------------------------------------------------
 CREATE TABLE IF NOT EXISTS entryFragments(
-  id        INTEGER PRIMARY KEY,
-  entryId   INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
-  offset    INTEGER,
-  size      INTEGER,
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  entryId   INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  offset    BIGINT,
+  size      BIGINT,
 
   CONSTRAINT entryFragments UNIQUE (entryId,offset),
 
   INDEX(entryId),
   INDEX(storageId)
 );
-/*
-CREATE INDEX ON entryFragments (entryId);
-CREATE INDEX ON entryFragments (storageId);
-*/
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
-  id              INTEGER PRIMARY KEY,
+  id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  size            INTEGER,
+  entryId         INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size            BIGINT,
 
   CONSTRAINT fileEntries UNIQUE (entryId),
 
   INDEX(entryId)
 );
-//CREATE INDEX ON fileEntries (entryId);
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
-  id             INTEGER PRIMARY KEY,
+  id             INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId        INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  size           INTEGER,
-  fileSystemType INTEGER,
-  blockSize      INTEGER,                 // size of image block
+  entryId        INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size           BIGINT,
+  fileSystemType INT,
+  blockSize      INT,                 // size of image block
 
   CONSTRAINT imageEntries UNIQUE (entryId),
 
   INDEX(entryId)
 );
-//CREATE INDEX ON imageEntries (entryId);
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
-  id                    INTEGER PRIMARY KEY,
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId               INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId             INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  entryId               INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId             INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
 
   // Note: redundancy for faster access
   name                  VARCHAR($MAX_TEXT_LENGTH),
 
   // updated by updateDirectoryContentAggregates()
-  totalEntryCount       INTEGER DEFAULT 0,  // total number of directory entries
-  totalEntrySize        INTEGER DEFAULT 0,  // total size of directory entries [bytes]
-  totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
-  totalEntrySizeNewest  INTEGER DEFAULT 0,  // total size of newest directory entries [bytes]
+  totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalEntrySize        BIGINT DEFAULT 0,  // total size of directory entries [bytes]
+  totalEntryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalEntrySizeNewest  BIGINT DEFAULT 0,  // total size of newest directory entries [bytes]
 
   CONSTRAINT directoryEntries UNIQUE (entryId),
 
@@ -423,18 +377,13 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   INDEX(storageId,name),
   INDEX(name)
 );
-/*
-CREATE INDEX ON directoryEntries (entryId);
-CREATE INDEX ON directoryEntries (storageId,name);
-CREATE INDEX ON directoryEntries (name);
-*/
 
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
-  id              INTEGER PRIMARY KEY,
+  id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId       INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  entryId         INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId       INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
   destinationName TEXT,
 
   CONSTRAINT linkEntries UNIQUE (entryId),
@@ -442,71 +391,57 @@ CREATE TABLE IF NOT EXISTS linkEntries(
   INDEX(entryId),
   INDEX(storageId)
 );
-/*
-CREATE INDEX ON linkEntries (entryId);
-CREATE INDEX ON linkEntries (storageId);
-*/
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
-  id      INTEGER PRIMARY KEY,
+  id      INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  size    INTEGER,
+  entryId INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size    BIGINT,
 
   CONSTRAINT hardlinkEntries UNIQUE (entryId),
 
   INDEX(entryId)
 );
-//CREATE INDEX ON hardlinkEntries (entryId);
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
-  id          INTEGER PRIMARY KEY,
+  id          INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId     INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId   INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
-  specialType INTEGER,
-  major       INTEGER,
-  minor       INTEGER,
+  entryId     INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId   INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  specialType INT,
+  major       INT,
+  minor       INT,
 
   CONSTRAINT specialEntries UNIQUE (entryId),
 
   INDEX(entryId),
   INDEX(storageId)
 );
-/*
-CREATE INDEX ON specialEntries (entryId);
-CREATE INDEX ON specialEntries (storageId);
-*/
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
-  id                INTEGER PRIMARY KEY,
+  id                INT AUTO_INCREMENT PRIMARY KEY,
   jobUUID           VARCHAR($UUID_LENGTH) NOT NULL,
   scheduleUUID      TEXT,
   hostName          TEXT,
   userName          TEXT,
-  type              INTEGER,
-  created           INTEGER,
+  type              INT,
+  created           DATETIME,
   errorMessage      VARCHAR($MAX_TEXT_LENGTH),
-  duration          INTEGER,
-  totalEntryCount   INTEGER,
-  totalEntrySize    INTEGER,
-  skippedEntryCount INTEGER,
-  skippedEntrySize  INTEGER,
-  errorEntryCount   INTEGER,
-  errorEntrySize    INTEGER,
+  duration          BIGINT,
+  totalEntryCount   BIGINT,
+  totalEntrySize    BIGINT,
+  skippedEntryCount BIGINT,
+  skippedEntrySize  BIGINT,
+  errorEntryCount   BIGINT,
+  errorEntrySize    BIGINT,
 
   INDEX(jobUUID,created,type),
   INDEX(created),
   INDEX(errorMessage)
 );
-/*
-CREATE INDEX ON history (jobUUID,created,type);
-CREATE INDEX ON history (created);
-CREATE INDEX ON history (errorMessage);
-*/
 
 // --- debug only ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS log(

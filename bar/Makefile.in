@@ -458,6 +458,7 @@ BAR_SOURCES_OTHER           = forward.h \
                               index_version5.c \
                               index_version6.c \
                               index_version7.c \
+                              index_current.c \
                               \
                               archive_format.pl \
                               archive_format.def \
@@ -481,6 +482,7 @@ BAR_OBJECTS                 = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOUR
                               $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
                               errors.o \
                               archive_format.o \
+                              index_definition.o \
                               $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                               $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
 
@@ -545,8 +547,6 @@ SQLITE3_HEADERS             = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sql
 
 SQLITE3_OBJECTS             = $(foreach z,$(filter %.c,  $(notdir $(SQLITE3_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                               $(foreach z,$(filter %.cpp,$(notdir $(SQLITE3_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
-
-SQLITE3_OBJECTS_RELEASE     = $(addprefix release/,$(SQLITE3_OBJECTS))
 
 EXTERN_SOURCES              = $(SQLITE3_SOURCES) \
 
@@ -615,10 +615,16 @@ BAR_INDEX_SOURCES_COMMON    = common/global.c \
 
 BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
 
-BAR_INDEX_OBJECTS           = $(addprefix release/,$(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z))) \
-                              release/errors.o \
-                              $(addprefix release/,$(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.c,  %.o,$z))) \
-                              $(addprefix release/,$(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.cpp,%.o,$z))) \
+BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
+                              $(SQLITE3_OBJECTS) \
+                              index_definition.o \
+                              errors.o \
+                              $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.cpp,%.o,$z)) \
+
+BAR_INDEX_OBJECTS_RELEASE   = $(addprefix release/,$(BAR_INDEX_OBJECTS))
+
+BAR_INDEX_OBJECTS_DEBUG     = $(addprefix debug/,$(BAR_INDEX_OBJECTS))
 
 SHOWCHUNKS_SOURCES          = showchunks.c \
 
@@ -627,6 +633,7 @@ SHOWCHUNKS_OBJECTS          = $(addprefix release/,$(foreach z,$(SHOWCHUNKS_SOUR
 
 INTERMEDIATE_SOURCES        = errors.c \
                               archive_format.c \
+                              index_definition.c \
 
 INTERMEDIATE_HEADERS        = errors.h \
                               archive_format.h \
@@ -1065,7 +1072,7 @@ gprof/archive_format.o: archive_format.c archive_format.h
 valgrind/archive_format.o: archive_format.c archive_format.h
 
 # index database definition
-index_definition.h: \
+index_definition.c index_definition.h: \
   $(SOURCE_DIR)/index_definition.pl \
   $(SOURCE_DIR)/index_common.def \
   $(SOURCE_DIR)/index_sqlite.def \
@@ -1074,7 +1081,13 @@ index_definition.h: \
 	  --common $(SOURCE_DIR)/index_common.def \
 	  --sqlite $(SOURCE_DIR)/index_sqlite.def \
 	  --mysql $(SOURCE_DIR)/index_mysql.def \
-  > $@
+	  --source index_definition.c \
+	  --header index_definition.h
+release/index_definition.o: index_definition.c index_definition.h
+debug/index_definition.o: index_definition.c index_definition.h
+gcov/index_definition.o: index_definition.c index_definition.h
+gprof/index_definition.o: index_definition.c index_definition.h
+valgrind/index_definition.o: index_definition.c index_definition.h
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: \
@@ -1111,9 +1124,16 @@ showchunks@EXEEXT@: \
 
 # create bar-index
 bar-index@EXEEXT@: \
-  $(BAR_INDEX_OBJECTS) \
-  $(SQLITE3_OBJECTS_RELEASE)
+  $(BAR_INDEX_OBJECTS_RELEASE)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+
+bar-index-debug@EXEEXT@: \
+  $(BAR_INDEX_OBJECTS_DEBUG)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
@@ -1122,10 +1142,10 @@ bar-index@EXEEXT@: \
 # ----------------------------------------------------------------------------
 
 /tmp/bar.cfg: bar.cfg
-	$(INSTALL) -m 600 bar.cfg /tmp/bar.cfg
+	$(INSTALL) -m 600 bar.cfg $@
 
 /tmp/bar-slave.cfg: bar.cfg
-	$(INSTALL) -m 600 bar.cfg /tmp/bar-slave.cfg
+	$(INSTALL) -m 600 bar.cfg $@
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
 	$(MAKE) -C .. keys

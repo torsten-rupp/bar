@@ -229,41 +229,41 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
 *          scheduleUUID   - schedule UUID
-* Output : databaseQueryHandle - database query handle
+* Output : databaseStatementHandle - database query handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
-                           DatabaseHandle      *databaseHandle,
-                           ConstString         jobUUID,
-                           ConstString         scheduleUUID
+Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
+                           DatabaseHandle          *databaseHandle,
+                           ConstString             jobUUID,
+                           ConstString             scheduleUUID
                           );
 
 /***********************************************************************\
 * Name   : Continuous_doneList
 * Purpose: done index list
-* Input  : databaseQueryHandle - database query handle
+* Input  : databaseStatementHandle - database query handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Continuous_doneList(DatabaseQueryHandle *databaseQueryHandle);
+void Continuous_doneList(DatabaseStatementHandle *databaseStatementHandle);
 
 /***********************************************************************\
 * Name   : Continuous_getNext
 * Purpose: get next special entry
-* Input  : databaseQueryHandle - database query handle
+* Input  : databaseStatementHandle - database query handle
 * Output : databaseId - database id of entry
 *          name       - name
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
-                        DatabaseId          *databaseId,
-                        String              name
+bool Continuous_getNext(DatabaseStatementHandle *databaseStatementHandle,
+                        DatabaseId              *databaseId,
+                        String                  name
                        );
 
 #ifndef NDEBUG

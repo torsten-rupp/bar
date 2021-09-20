@@ -787,6 +787,7 @@ typedef struct
   PatternList                 excludePatternList;             // excluded entry patterns
 
   const char                  *changeToDirectory;
+  const char                  *importFileName;
 
   Commands                    command;
   uint                        generateKeyBits;

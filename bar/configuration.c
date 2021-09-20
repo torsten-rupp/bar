@@ -1664,6 +1664,7 @@ LOCAL void initGlobalOptions(void)
   PatternList_init(&globalOptions.excludePatternList);
 
   globalOptions.changeToDirectory                               = NULL;
+  globalOptions.importFileName                                  = NULL;
 
   globalOptions.command                                         = COMMAND_NONE;
 

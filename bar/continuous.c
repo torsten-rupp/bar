@@ -1857,7 +1857,7 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                          String         name
                         )
 {
-  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseStatementHandle databaseStatementHandle;
   bool                result;
   DatabaseId          databaseId_;
 
@@ -1871,7 +1871,7 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
 //            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
 //  {
     // prepare list
-    if (Database_prepare(&databaseQueryHandle,
+    if (Database_prepare(&databaseStatementHandle,
                          databaseHandle,
                          "SELECT id,name \
                           FROM names \
@@ -1891,19 +1891,19 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
     }
 
     // get next entry
-    if (!Database_getNextRow(&databaseQueryHandle,
+    if (!Database_getNextRow(&databaseStatementHandle,
                              "%lld %S",
                              &databaseId_,
                              name
                             )
        )
     {
-      Database_finalize(&databaseQueryHandle);
+      Database_finalize(&databaseStatementHandle);
       return FALSE;
     }
 
     // done list
-    Database_finalize(&databaseQueryHandle);
+    Database_finalize(&databaseStatementHandle);
 
     // mark entry stored
     if (markEntryStored(databaseHandle,databaseId_) != ERROR_NONE)
@@ -1944,7 +1944,7 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                         );
 }
 
-Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
+Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                            DatabaseHandle      *databaseHandle,
                            ConstString         jobUUID,
                            ConstString         scheduleUUID
@@ -1953,13 +1953,13 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
   Errors error;
 
   assert(initFlag);
-  assert(databaseQueryHandle != NULL);
+  assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
   // prepare list
-  error = Database_prepare(databaseQueryHandle,
+  error = Database_prepare(databaseStatementHandle,
                            databaseHandle,
                            "SELECT id,name \
                             FROM names \
@@ -1980,23 +1980,23 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
   return ERROR_NONE;
 }
 
-void Continuous_doneList(DatabaseQueryHandle *databaseQueryHandle)
+void Continuous_doneList(DatabaseStatementHandle *databaseStatementHandle)
 {
   assert(initFlag);
-  assert(databaseQueryHandle != NULL);
+  assert(databaseStatementHandle != NULL);
 
-  Database_finalize(databaseQueryHandle);
+  Database_finalize(databaseStatementHandle);
 }
 
-bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
+bool Continuous_getNext(DatabaseStatementHandle *databaseStatementHandle,
                         DatabaseId          *databaseId,
                         String              name
                        )
 {
   assert(initFlag);
-  assert(databaseQueryHandle != NULL);
+  assert(databaseStatementHandle != NULL);
 
-  return Database_getNextRow(databaseQueryHandle,
+  return Database_getNextRow(databaseStatementHandle,
                              "%lld %S",
                              databaseId,
                              name
@@ -2009,15 +2009,15 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                             const char     *scheduleUUID
                            )
 {
-  DatabaseQueryHandle databaseQueryHandle;
-  uint64              dateTime;
-  DatabaseId          databaseId;
-  String              name;
-  uint                storedFlag;
+  DatabaseStatementHandle databaseStatementHandle;
+  uint64                  dateTime;
+  DatabaseId              databaseId;
+  String                  name;
+  uint                    storedFlag;
 
   name = String_new();
 
-  Database_prepare(&databaseQueryHandle,
+  Database_prepare(&databaseStatementHandle,
                          databaseHandle,
                          "SELECT id,UNIXTIMESTAMP(dateTime),name,storedFlag \
                           FROM names \
@@ -2027,7 +2027,7 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                          jobUUID,
                          scheduleUUID
                         );
-  while (Database_getNextRow(&databaseQueryHandle,
+  while (Database_getNextRow(&databaseStatementHandle,
                            "%lld %lld %S %d",
                            &databaseId,
                            &dateTime,
@@ -2038,7 +2038,7 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
   {
      fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
   }
-  Database_finalize(&databaseQueryHandle);
+  Database_finalize(&databaseStatementHandle);
 
   String_delete(name);
 }
