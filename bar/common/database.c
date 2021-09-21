@@ -4341,7 +4341,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
 
             // allocate call-back data
             valueCount = mysql_stmt_field_count(statementHandle);
-            assert(valueCount == columnTypeCount);
+            assertx(valueCount == columnTypeCount,"valueCount == columnTypeCount fail: %d != %d",valueCount,columnTypeCount);
 
             bind = (MYSQL_BIND*)calloc(valueCount, sizeof(MYSQL_BIND));
             if (bind == NULL)

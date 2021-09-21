@@ -6482,7 +6482,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              String     idsString;
 
                              assert(values != NULL);
-                             assert(valueCount == 14);
+                             assert(valueCount == 27);
 
                              UNUSED_VARIABLE(valueCount);
                              UNUSED_VARIABLE(userData);
@@ -6554,7 +6554,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                                  INT,INT64,
                                                  INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
                                                  INT,INT64,
-                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT
+                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
+                                                 KEY
                                                 ),
                            "SELECT id,\
                                    type, \
@@ -6589,11 +6590,11 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                    \
                                    uuidId \
                             FROM entities \
-                            WHERE     (%d OR id IN (%S)) \
+                            WHERE     (%d OR id IN (%s)) \
                                   AND deletedFlag!=1 \
                            ",
                            String_isEmpty(entityIdsString) ? 1 : 0,
-                           entityIdsString
+                           !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
                           );
   if (error != ERROR_NONE)
   {
@@ -7387,7 +7388,6 @@ int main(int argc, const char *argv[])
   const char       *token;
   DatabaseId       databaseId;
   const char       *databaseFileName;
-  String           path;
   String           command;
   char             line[MAX_LINE_LENGTH];
   Errors           error;
@@ -8273,13 +8273,16 @@ if (xxxId != DATABASE_ID_NONE)
     Database_execute(&databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
+                       double d;
+
                        assert(values != NULL);
                        assert(valueCount == 2);
 
                        UNUSED_VARIABLE(valueCount);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = 1+(uint)log10((double)values[0].i);
+                       d = log10((double)values[0].i);
+                       maxIdLength          = 1+(uint)d;
                        maxStorageNameLength = (uint)values[1].i;
 
                        return ERROR_NONE;
@@ -8341,13 +8344,16 @@ if (xxxId != DATABASE_ID_NONE)
     Database_execute(&databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
+                       double d;
+
                        assert(values != NULL);
                        assert(valueCount == 3);
 
                        UNUSED_VARIABLE(valueCount);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = 1+(uint)log10((double)values[0].i);
+                       d = log10((double)values[0].i);
+                       maxIdLength          = 1+(uint)d;
                        maxEntryNameLength   = values[1].i;
                        maxStorageNameLength = values[2].i;
 
@@ -8400,13 +8406,16 @@ if (xxxId != DATABASE_ID_NONE)
     Database_execute(&databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
+                       double d;
+
                        assert(values != NULL);
                        assert(valueCount == 3);
 
                        UNUSED_VARIABLE(valueCount);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = 1+(uint)log10((double)values[0].i);
+                       d = log10((double)values[0].i);
+                       maxIdLength          = 1+(uint)d;
                        maxEntryNameLength   = values[1].i;
                        maxStorageNameLength = values[2].i;
 
