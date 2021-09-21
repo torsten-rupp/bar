@@ -4071,19 +4071,26 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 *          databaseRowUserData - user data for row call-back
 *          changedRowCount     - number of changed rows (can be NULL)
 *          timeout             - timeout [ms]
+*          columnTypes         - result column types; use macro
+*                                DATABASE_COLUMN_TYPES()
+*          columnTypeCount     - number of result columns
+*          command             - SQL command string with %[l]d, %[']S,
+*                                %[']s
+*          arguments           - arguments for SQL command
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors vexecuteStatement(DatabaseHandle      *databaseHandle,
-                              DatabaseRowFunction databaseRowFunction,
-                              void                *databaseRowUserData,
-                              ulong               *changedRowCount,
-                              long                timeout,
+LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
+                              DatabaseRowFunction     databaseRowFunction,
+                              void                    *databaseRowUserData,
+                              ulong                   *changedRowCount,
+                              long                    timeout,
                               const DatabaseDataTypes *columnTypes,
-                              const char          *command,
-                              va_list             arguments
+                              uint                    columnTypeCount,
+                              const char              *command,
+                              va_list                 arguments
                              )
 {
   #define SLEEP_TIME 500L  // [ms]
@@ -4690,19 +4697,26 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle)
 *          databaseRowUserData - user data for row call-back
 *          changedRowCount     - number of changed rows (can be NULL)
 *          timeout             - timeout [ms]
+*          columnTypes         - result column types; use macro
+*                                DATABASE_COLUMN_TYPES()
+*          columnTypeCount     - number of result columns
+*          command             - SQL command string with %[l]d, %[']S,
+*                                %[']s
+*          ...                 - optional arguments for SQL command
+*                                string
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors executeStatement(DatabaseHandle      *databaseHandle,
-                             DatabaseRowFunction databaseRowFunction,
-                             void                *databaseRowUserData,
-                             ulong               *changedRowCount,
-                             long                timeout,
+LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
+                             DatabaseRowFunction     databaseRowFunction,
+                             void                    *databaseRowUserData,
+                             ulong                   *changedRowCount,
+                             long                    timeout,
                              const DatabaseDataTypes *columnTypes,
-                             uint valueCount,
-                             const char          *command,
+                             uint                    columnTypeCount,
+                             const char              *command,
                              ...
                             )
 {
@@ -4721,6 +4735,7 @@ LOCAL Errors executeStatement(DatabaseHandle      *databaseHandle,
                               changedRowCount,
                               timeout,
                               columnTypes,
+                              columnTypeCount,
                               command,
                               arguments
                              );
@@ -8712,6 +8727,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                                databaseRowFunction,
                                databaseRowUserData,
                                changedRowCount,
+                               databaseHandle->timeout,
                                columnTypes,
                                columnTypeCount,
                                command,
@@ -8751,6 +8767,7 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
                              databaseRowFunction,
                              databaseRowUserData,
                              changedRowCount,
+                             databaseHandle->timeout,
                              columnTypes,
                              columnTypeCount,
                              command,
@@ -11061,7 +11078,7 @@ LOCAL void debugPrintSpaces(int n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL size_t* debugGetColumnsWidth(DatabaseColumns *columns)
+LOCAL size_t* debugGetColumnsWidth(const DatabaseColumns *columns)
 {
   size_t *widths;
   uint   i;
@@ -11097,7 +11114,7 @@ LOCAL size_t* debugGetColumnsWidth(DatabaseColumns *columns)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors debugCalculateColumnWidths(DatabaseColumns *columns, void *userData)
+LOCAL Errors debugCalculateColumnWidths(const DatabaseColumns *columns, void *userData)
 {
   DumpTableData *dumpTableData = (DumpTableData*)userData;
   uint          i;
@@ -11132,7 +11149,7 @@ LOCAL Errors debugCalculateColumnWidths(DatabaseColumns *columns, void *userData
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors debugPrintRow(DatabaseColumns *columns, void *userData)
+LOCAL Errors debugPrintRow(const DatabaseColumns *columns, void *userData)
 {
   DumpTableData *dumpTableData = (DumpTableData*)userData;
   uint          i;

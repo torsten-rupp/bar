@@ -1208,7 +1208,6 @@ Errors Database_flush(DatabaseHandle *databaseHandle);
 *                                string
 *                                special functions:
 *                                  REGEXP(pattern,case-flag,text)
-*          arguments           - arguments for SQL command string
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
