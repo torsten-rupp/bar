@@ -230,7 +230,10 @@ LOCAL ProgressInfo importProgressInfo;
 
 LOCAL void printUsage(const char *programName, bool extendedFlag)
 {
-  printf("Usage %s: [<options>] <database file> [<SQL command>...|-]\n",programName);
+  printf("Usage %s: [<options>] <URI> [<SQL command>...|-]\n",programName);
+  printf("\n");
+  printf("URI: [sqlite:]<file name>\n");
+  printf("     mysql:<server>:<user>:<password>\n");
   printf("\n");
   printf("Options:  -C|--directory=<name>                   - change to directory\n");
   printf("          --info                                  - output index database infos\n");
@@ -256,6 +259,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --create-aggregates-directory-content   - re-create aggregated data directory content\n");
   printf("          --create-aggregates-entities            - re-create aggregated data entities\n");
   printf("          --create-aggregates-storages            - re-create aggregated data storages\n");
+  printf("          --import <URI>                          - import database\n");
   printf("          --optimize                              - optimize database (analyze and collect statistics data)\n");
   printf("          --reindex                               - re-create all existing indizes\n");
   printf("          --check                                 - check index database\n");
@@ -6363,34 +6367,11 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,
-                                                 TEXT,
-
-                                                 INT,
-                                                 INT64,
-
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-
-                                                 INT,
-                                                 INT64,
-
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT,
-                                                 INT,
-                                                 INT64,
-                                                 INT
+                           DATABASE_COLUMN_TYPES(KEY,TEXT,
+                                                 INT,INT64,
+                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
+                                                 INT,INT64,
+                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT
                                                 ),
                            "SELECT id,\
                                    jobUUID, \
