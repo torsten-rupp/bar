@@ -5496,7 +5496,6 @@ void Database_doneAll(void)
   databaseName = String_new();
 
   // get database type and open/connect data
-fprintf(stderr,"%s:%d: uri='%s'\n",__FILE__,__LINE__,uri);
   if      (String_matchCString(uri,
                                STRING_BEGIN,
                                "^(sqlite|sqlite3):(.*)",
@@ -5529,7 +5528,6 @@ fprintf(stderr,"%s:%d: uri='%s'\n",__FILE__,__LINE__,uri);
     type = DATABASE_TYPE_SQLITE3;
     String_setCString(fileName,uri);
   }
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(fileName));
 
   switch (type)
   {

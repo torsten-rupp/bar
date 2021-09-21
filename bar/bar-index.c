@@ -3642,11 +3642,11 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                            DATABASE_COLUMN_TYPES(INT),
                            "SELECT COUNT(id) \
                             FROM entities \
-                            WHERE     (%d OR id IN (%S)) \
+                            WHERE     (%d OR id IN (%s)) \
                                   AND deletedFlag!=1 \
                            ",
                            String_isEmpty(entityIdsString) ? 1 : 0,
-                           entityIdsString
+                           !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
                           );
   if (error != ERROR_NONE)
   {
@@ -3889,11 +3889,11 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                              DATABASE_COLUMN_TYPES(KEY),
                              "SELECT id \
                               FROM entities \
-                              WHERE     (%d OR id IN (%S)) \
+                              WHERE     (%d OR id IN (%s)) \
                                     AND deletedFlag!=1 \
                              ", \
                              String_isEmpty(entityIdsString) ? 1 : 0,
-                             entityIdsString
+                             !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
@@ -3960,11 +3960,11 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                            DATABASE_COLUMN_TYPES(INT),
                            "SELECT COUNT(id) \
                             FROM storages \
-                            WHERE     (%d OR id IN (%S)) \
+                            WHERE     (%d OR id IN (%s)) \
                                   AND deletedFlag!=1 \
                            ",
                            String_isEmpty(storageIdsString) ? 1 : 0,
-                           storageIdsString
+                           !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
                           );
   if (error != ERROR_NONE)
   {
@@ -4217,11 +4217,11 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                              DATABASE_COLUMN_TYPES(KEY),
                              "SELECT id \
                               FROM storages \
-                              WHERE     (%d OR id IN (%S)) \
+                              WHERE     (%d OR id IN (%s)) \
                                     AND deletedFlag!=1 \
                              ",
                              String_isEmpty(storageIdsString) ? 1 : 0,
-                             storageIdsString
+                             !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
                             );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
@@ -6831,7 +6831,7 @@ UNUSED_VARIABLE(lostFlag);
                                                         uint type;
 
                                                         assert(values != NULL);
-                                                        assert(valueCount == 8);
+                                                        assert(valueCount == 13);
 
                                                         UNUSED_VARIABLE(valueCount);
                                                         UNUSED_VARIABLE(userData);
@@ -6886,20 +6886,8 @@ UNUSED_VARIABLE(lostFlag);
                                                         return ERROR_NONE;
                                                       },NULL),
                                                       NULL,  // changedRowCount
-                                                      DATABASE_COLUMN_TYPES(KEY,
-                                                                            TEXT,
-                                                                            INT,
-
-                                                                            INT64,
-                                                                            INT64,
-                                                                            KEY,
-                                                                            KEY,
-                                                                            INT64,
-                                                                            KEY,
-                                                                            KEY,
-                                                                            KEY,
-                                                                            INT64,
-                                                                            INT64
+                                                      DATABASE_COLUMN_TYPES(KEY,TEXT,INT,
+                                                                            INT64,INT64,KEY,KEY,INT64,KEY,KEY,KEY,INT64,INT64
                                                                            ),
                                                       "SELECT entries.id,\
                                                               entries.name, \
@@ -6946,11 +6934,11 @@ UNUSED_VARIABLE(lostFlag);
                                                 ),
                            "SELECT id,uuidId \
                             FROM entities \
-                            WHERE     (%d OR id IN (%S)) \
+                            WHERE     (%d OR id IN (%s)) \
                                   AND deletedFlag!=1 \
                            ",
                            String_isEmpty(entityIdsString) ? 1 : 0,
-                           entityIdsString
+                           !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
                           );
   if (error != ERROR_NONE)
   {

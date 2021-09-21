@@ -647,7 +647,8 @@ LOCAL void indexThreadInterrupt(void)
                           )
 #endif /* NDEBUG */
 {
-  Errors error;
+  Errors     error;
+  const char *indexDefinition;
 
   assert(indexHandle != NULL);
 
