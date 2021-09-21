@@ -581,7 +581,6 @@ void x(void) {}
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
-LOCAL const char *debugDatabaseValueToString(char *buffer, uint bufferSize, const DatabaseValue *databaseValue);
 
 /***************************** Functions *******************************/
 
@@ -8697,6 +8696,86 @@ Errors Database_flush(DatabaseHandle *databaseHandle)
   return ERROR_NONE;
 }
 
+const String Database_valueToString(String string, const DatabaseValue *databaseValue)
+{
+  assert(databaseValue != NULL);
+
+  switch (databaseValue->type)
+  {
+    case DATABASE_DATATYPE_PRIMARY_KEY:
+      String_format(string,"%lld",databaseValue->id);
+      break;
+    case DATABASE_DATATYPE_KEY:
+      String_format(string,"%lld",databaseValue->id);
+      break;
+    case DATABASE_DATATYPE_BOOL:
+      String_format(string,"%s",databaseValue->b ? "TRUE" : "FALSE");
+      break;
+    case DATABASE_DATATYPE_INT:
+      String_format(string,"%lld",databaseValue->i);
+      break;
+    case DATABASE_DATATYPE_INT64:
+      String_format(string,"%lld",databaseValue->i);
+      break;
+    case DATABASE_DATATYPE_DOUBLE:
+      String_format(string,"%lf",databaseValue->d);
+      break;
+    case DATABASE_DATATYPE_DATETIME:
+      Misc_formatDateTime(string,databaseValue->dateTime,NULL);
+      break;
+    case DATABASE_DATATYPE_TEXT:
+      String_format(string,"%s",databaseValue->text.data);
+      break;
+    case DATABASE_DATATYPE_BLOB:
+      String_format(string,"");
+      break;
+    default:
+      break;
+  }
+
+  return string;
+}
+
+const char *Database_valueToCString(char *buffer, uint bufferSize, const DatabaseValue *databaseValue)
+{
+  assert(databaseValue != NULL);
+
+  switch (databaseValue->type)
+  {
+    case DATABASE_DATATYPE_PRIMARY_KEY:
+      stringFormat(buffer,bufferSize,"%lld",databaseValue->id);
+      break;
+    case DATABASE_DATATYPE_KEY:
+      stringFormat(buffer,bufferSize,"%lld",databaseValue->id);
+      break;
+    case DATABASE_DATATYPE_BOOL:
+      stringFormat(buffer,bufferSize,"%s",databaseValue->b ? "TRUE" : "FALSE");
+      break;
+    case DATABASE_DATATYPE_INT:
+      stringFormat(buffer,bufferSize,"%lld",databaseValue->i);
+      break;
+    case DATABASE_DATATYPE_INT64:
+      stringFormat(buffer,bufferSize,"%lld",databaseValue->i);
+      break;
+    case DATABASE_DATATYPE_DOUBLE:
+      stringFormat(buffer,bufferSize,"%lf",databaseValue->d);
+      break;
+    case DATABASE_DATATYPE_DATETIME:
+      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,NULL);
+      break;
+    case DATABASE_DATATYPE_TEXT:
+      stringFormat(buffer,bufferSize,"%s",databaseValue->text.data);
+      break;
+    case DATABASE_DATATYPE_BLOB:
+      stringFormat(buffer,bufferSize,"");
+      break;
+    default:
+      break;
+  }
+
+  return buffer;
+}
+
 Errors Database_execute(DatabaseHandle          *databaseHandle,
                         DatabaseRowFunction     databaseRowFunction,
                         void                    *databaseRowUserData,
@@ -11092,7 +11171,7 @@ LOCAL size_t* debugGetColumnsWidth(const DatabaseColumns *columns)
   for (i = 0; i < columns->count; i++)
   {
     widths[i] = 0;
-    debugDatabaseValueToString(buffer,sizeof(buffer),&columns->values[i]);
+    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
     if (stringLength(buffer) > widths[i])
     {
       widths[i] = stringLength(buffer);
@@ -11130,7 +11209,7 @@ LOCAL Errors debugCalculateColumnWidths(const DatabaseColumns *columns, void *us
 
   for (i = 0; i < columns->count; i++)
   {
-    debugDatabaseValueToString(buffer,sizeof(buffer),&columns->values[i]);
+    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
     dumpTableData->widths[i] = MAX(stringLength(buffer),dumpTableData->widths[i]);
   }
 
@@ -11173,7 +11252,7 @@ LOCAL Errors debugPrintRow(const DatabaseColumns *columns, void *userData)
   }
   for (i = 0; i < columns->count; i++)
   {
-    debugDatabaseValueToString(buffer,sizeof(buffer),&columns->values[i]);
+    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
     printf("%s ",buffer);
     if (dumpTableData->showHeaderFlag)
     {
@@ -11240,57 +11319,6 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
 
   // free resources
   String_delete(sqlString);
-}
-
-/***********************************************************************\
-* Name   : debugDatabaseValueToString
-* Purpose: convert debug value to string
-* Input  : buffer        - buffer
-*          bufferSize    - size of buffer
-*          databaseValue - database value
-* Output : -
-* Return : buffer
-* Notes  : -
-\***********************************************************************/
-
-LOCAL const char *debugDatabaseValueToString(char *buffer, uint bufferSize, const DatabaseValue *databaseValue)
-{
-  assert(databaseValue != NULL);
-
-  switch (databaseValue->type)
-  {
-    case DATABASE_DATATYPE_PRIMARY_KEY:
-      stringFormat(buffer,bufferSize,"%lld",databaseValue->id);
-      break;
-    case DATABASE_DATATYPE_KEY:
-      stringFormat(buffer,bufferSize,"%lld",databaseValue->id);
-      break;
-    case DATABASE_DATATYPE_BOOL:
-      stringFormat(buffer,bufferSize,"%s",databaseValue->b ? "TRUE" : "FALSE");
-      break;
-    case DATABASE_DATATYPE_INT:
-      stringFormat(buffer,bufferSize,"%lld",databaseValue->i);
-      break;
-    case DATABASE_DATATYPE_INT64:
-      stringFormat(buffer,bufferSize,"%lld",databaseValue->i);
-      break;
-    case DATABASE_DATATYPE_DOUBLE:
-      stringFormat(buffer,bufferSize,"%lf",databaseValue->d);
-      break;
-    case DATABASE_DATATYPE_DATETIME:
-      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,NULL);
-      break;
-    case DATABASE_DATATYPE_TEXT:
-      stringFormat(buffer,bufferSize,"%s",databaseValue->text.data);
-      break;
-    case DATABASE_DATATYPE_BLOB:
-      stringFormat(buffer,bufferSize,"");
-      break;
-    default:
-      break;
-  }
-
-  return buffer;
 }
 
 #endif /* not NDEBUG */

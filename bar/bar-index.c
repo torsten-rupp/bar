@@ -2947,7 +2947,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              DATABASE_COLUMN_TYPES(KEY,TEXT,INT64),
                              "SELECT entryFragments.storageId, \
                                      entries.name, \
-                                     TOTAL(entryFragments.size) \
+                                     SUM(entryFragments.size) \
                               FROM fileEntries \
                                 LEFT JOIN entries        ON entries.id=fileEntries.entryId \
                                 LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
@@ -3689,17 +3689,17 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                                                   WHERE entries.type=%d AND entries.entityId=%lld \
                                                                                  ), \
                                                              \
-                                                             totalFileSize      =(SELECT TOTAL(entryFragments.size) \
+                                                             totalFileSize      =(SELECT SUM(entryFragments.size) \
                                                                                   FROM entries \
                                                                                     LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                   WHERE entries.type=%d AND entries.entityId=%lld \
                                                                                  ), \
-                                                             totalImageSize     =(SELECT TOTAL(entryFragments.size) \
+                                                             totalImageSize     =(SELECT SUM(entryFragments.size) \
                                                                                   FROM entries \
                                                                                     LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                   WHERE entries.type=%d AND entries.entityId=%lld \
                                                                                  ), \
-                                                             totalHardlinkSize  =(SELECT TOTAL(entryFragments.size) \
+                                                             totalHardlinkSize  =(SELECT SUM(entryFragments.size) \
                                                                                   FROM entries \
                                                                                     LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                   WHERE entries.type=%d AND entries.entityId=%lld \
@@ -3794,17 +3794,17 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                                                         WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
                                                                                        ), \
                                                              \
-                                                             totalFileSizeNewest      =(SELECT TOTAL(entryFragments.size) \
+                                                             totalFileSizeNewest      =(SELECT SUM(entryFragments.size) \
                                                                                         FROM entriesNewest \
                                                                                           LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
                                                                                         WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
                                                                                        ), \
-                                                             totalImageSizeNewest     =(SELECT TOTAL(entryFragments.size) \
+                                                             totalImageSizeNewest     =(SELECT SUM(entryFragments.size) \
                                                                                         FROM entriesNewest \
                                                                                           LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
                                                                                         WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
                                                                                        ), \
-                                                             totalHardlinkSizeNewest  =(SELECT TOTAL(entryFragments.size) \
+                                                             totalHardlinkSizeNewest  =(SELECT SUM(entryFragments.size) \
                                                                                         FROM entriesNewest \
                                                                                           LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
                                                                                         WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
@@ -4013,17 +4013,17 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                                                   WHERE entries.type=%d AND specialEntries.storageId=%lld \
                                                                                  ), \
                                                              \
-                                                             totalFileSize      =(SELECT TOTAL(entryFragments.size) \
+                                                             totalFileSize      =(SELECT SUM(entryFragments.size) \
                                                                                   FROM entries \
                                                                                     LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                   WHERE entries.type=%d AND entryFragments.storageId=%lld \
                                                                                  ), \
-                                                             totalImageSize     =(SELECT TOTAL(entryFragments.size) \
+                                                             totalImageSize     =(SELECT SUM(entryFragments.size) \
                                                                                   FROM entries \
                                                                                     LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                   WHERE entries.type=%d AND entryFragments.storageId=%lld \
                                                                                  ), \
-                                                             totalHardlinkSize  =(SELECT TOTAL(entryFragments.size) \
+                                                             totalHardlinkSize  =(SELECT SUM(entryFragments.size) \
                                                                                   FROM entries \
                                                                                     LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                   WHERE entries.type=%d AND entryFragments.storageId=%lld \
@@ -4121,17 +4121,17 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                                                         WHERE entriesNewest.type=%d AND specialEntries.storageId=%lld \
                                                                                        ), \
                                                              \
-                                                             totalFileSizeNewest      =(SELECT TOTAL(entryFragments.size) \
+                                                             totalFileSizeNewest      =(SELECT SUM(entryFragments.size) \
                                                                                         FROM entriesNewest \
                                                                                           LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
                                                                                         WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
                                                                                        ), \
-                                                             totalImageSizeNewest     =(SELECT TOTAL(entryFragments.size) \
+                                                             totalImageSizeNewest     =(SELECT SUM(entryFragments.size) \
                                                                                         FROM entriesNewest \
                                                                                           LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
                                                                                         WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
                                                                                        ), \
-                                                             totalHardlinkSizeNewest  =(SELECT TOTAL(entryFragments.size) \
+                                                             totalHardlinkSizeNewest  =(SELECT SUM(entryFragments.size) \
                                                                                         FROM entriesNewest \
                                                                                           LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
                                                                                         WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
@@ -5317,27 +5317,31 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 /***********************************************************************\
 * Name   : getColumnsWidth
 * Purpose: get columns width
-* Input  : columns - column names
-*          count   - number of values
+* Input  : columns - database columns
 * Output : -
 * Return : widths
 * Notes  : -
 \***********************************************************************/
 
-LOCAL size_t* getColumnsWidth(const char *columns[], uint count)
+LOCAL size_t* getColumnsWidth(const DatabaseColumns *columns)
 {
   size_t *widths;
   uint   i;
+  char   buffer[1024];
 
   assert(columns != NULL);
 
-  widths = (size_t*)malloc(count*sizeof(size_t));
+  widths = (size_t*)malloc(columns->count*sizeof(size_t));
   assert(widths != NULL);
 
-  for (i = 0; i < count; i++)
+  for (i = 0; i < columns->count; i++)
   {
     widths[i] = 0;
-    if ((columns[i] != NULL) && (stringLength(columns[i]) > widths[i])) widths[i] = stringLength(columns[i]);
+    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
+    if (stringLength(buffer) > widths[i])
+    {
+      widths[i] = stringLength(buffer);
+    }
   }
 
   return widths;
@@ -5388,26 +5392,24 @@ LOCAL void printSpaces(int n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors calculateColumnWidths(const char *columns[], const char *values[], uint count, void *userData)
+LOCAL Errors calculateColumnWidths(const DatabaseColumns *columns, void *userData)
 {
   PrintTableData *printTableData = (PrintTableData*)userData;
   uint           i;
+  char           buffer[1024];
 
   assert(columns != NULL);
-  assert(values != NULL);
   assert(printTableData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  if (printTableData->widths == NULL) printTableData->widths = getColumnsWidth(columns,count);
+  if (printTableData->widths == NULL) printTableData->widths = getColumnsWidth(columns);
   assert(printTableData->widths != NULL);
 
-  for (i = 0; i < count; i++)
+  for (i = 0; i < columns->count; i++)
   {
-    if (values[i] != NULL)
-    {
-      printTableData->widths[i] = MAX(stringLength(values[i]),printTableData->widths[i]);
-    }
+    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
+    printTableData->widths[i] = MAX(stringLength(buffer),printTableData->widths[i]);
   }
 
   return ERROR_NONE;
@@ -5425,13 +5427,13 @@ LOCAL Errors calculateColumnWidths(const char *columns[], const char *values[], 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors printRow(const char *columns[], const char *values[], uint count, void *userData)
+LOCAL Errors printRow(const DatabaseColumns *columns, void *userData)
 {
   PrintTableData *printTableData = (PrintTableData*)userData;
   uint           i;
+  char           buffer[1024];
 
   assert(columns != NULL);
-  assert(values != NULL);
   assert(printTableData != NULL);
   assert(printTableData->widths != NULL);
 
@@ -5439,23 +5441,21 @@ LOCAL Errors printRow(const char *columns[], const char *values[], uint count, v
 
   if (printTableData->showHeaderFlag && !printTableData->headerPrintedFlag)
   {
-    for (i = 0; i < count; i++)
+    for (i = 0; i < columns->count; i++)
     {
-      printf("%s ",columns[i]); printSpaces(printTableData->widths[i]-stringLength(columns[i]));
+      printf("%s ",columns->names[i]); printSpaces(printTableData->widths[i]-stringLength(columns->names[i]));
     }
     printf("\n");
 
     printTableData->headerPrintedFlag = TRUE;
   }
-  for (i = 0; i < count; i++)
+  for (i = 0; i < columns->count; i++)
   {
-    if (values[i] != NULL)
+    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
+    printf("%s ",buffer);
+    if (printTableData->showHeaderFlag)
     {
-      printf("%s ",!stringIsEmpty(values[i]) ? values[i] : "''"); if (printTableData->showHeaderFlag) { printSpaces(printTableData->widths[i]-(!stringIsEmpty(values[i]) ? stringLength(values[i]) : 2)); }
-    }
-    else
-    {
-      printf("- "); if (printTableData->showHeaderFlag) { printSpaces(printTableData->widths[i]-1); }
+      printSpaces(printTableData->widths[i]-stringLength(buffer));
     }
   }
   printf("\n");
@@ -6395,31 +6395,31 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                            "SELECT id,\
                                    jobUUID, \
                                    \
-                                   (SELECT TOTAL(totalEntryCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalEntrySize) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalEntryCount) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalEntrySize) FROM entities WHERE entities.uuidId=uuids.id), \
                                    \
-                                   (SELECT TOTAL(totalFileCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalFileSize) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalImageCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalImageSize) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalDirectoryCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalLinkCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalHardlinkCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalHardlinkSize) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalSpecialCount) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalFileCount) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalFileSize) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalImageCount) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalImageSize) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalDirectoryCount) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalLinkCount) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalHardlinkCount) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalHardlinkSize) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalSpecialCount) FROM entities WHERE entities.uuidId=uuids.id), \
                                    \
-                                   (SELECT TOTAL(totalEntryCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalEntrySizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalEntryCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalEntrySizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
                                    \
-                                   (SELECT TOTAL(totalFileCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalFileSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalImageCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalImageSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalDirectoryCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalLinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalHardlinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalHardlinkSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT TOTAL(totalSpecialCountNewest) FROM entities WHERE entities.uuidId=uuids.id) \
+                                   (SELECT SUM(totalFileCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalFileSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalImageCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalImageSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalDirectoryCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalLinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalHardlinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalHardlinkSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
+                                   (SELECT SUM(totalSpecialCountNewest) FROM entities WHERE entities.uuidId=uuids.id) \
                             FROM uuids \
                             WHERE     (%d OR id IN (%S)) \
                                   AND (%d OR jobUUID IN (%S)) \

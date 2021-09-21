@@ -1192,6 +1192,21 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 Errors Database_flush(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
+* Name   : Database_valueToString, Database_valueToCString
+* Purpose: convert database value to string
+* Input  : string        - string variable
+*          buffer        - buffer
+*          bufferSize    - size of buffer
+*          databaseValue - database value
+* Output : -
+* Return : string/buffer
+* Notes  : -
+\***********************************************************************/
+
+const String Database_valueToString(String string, const DatabaseValue *databaseValue);
+const char *Database_valueToCString(char *buffer, uint bufferSize, const DatabaseValue *databaseValue);
+
+/***********************************************************************\
 * Name   : Database_execute, Database_vexecute
 * Purpose: execute SQL statement
 * Input  : databaseHandle - database handle
@@ -1248,20 +1263,20 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
 
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
-                          DatabaseHandle      *databaseHandle,
+                          DatabaseHandle          *databaseHandle,
                           const DatabaseDataTypes *columnTypes,
-                          uint valueCount,
-                          const char          *command,
+                          uint                    columnTypeCount,
+                          const char              *command,
                           ...
                          );
 #else /* not NDEBUG */
-  Errors __Database_prepare(const char          *__fileName__,
-                            ulong               __lineNb__,
+  Errors __Database_prepare(const char              *__fileName__,
+                            ulong                   __lineNb__,
                             DatabaseStatementHandle *databaseStatementHandle,
-                            DatabaseHandle      *databaseHandle,
+                            DatabaseHandle          *databaseHandle,
                             const DatabaseDataTypes *columnTypes,
-                            uint valueCount,
-                            const char          *command,
+                            uint                    columnTypeCount,
+                            const char              *command,
                             ...
                            );
 #endif /* NDEBUG */
@@ -1285,7 +1300,7 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
 \***********************************************************************/
 
 bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                         const char          *format,
+                         const char              *format,
                          ...
                         );
 
