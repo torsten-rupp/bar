@@ -415,13 +415,13 @@ typedef struct
 // TODO: use String?
     struct
     {
-      const char *data;
-      ulong      length;
+      char  *data;
+      ulong length;
     } text;
     struct
     {
-      const void *data;
-      ulong      length;
+      void  *data;
+      ulong length;
     } blob;
 // TODO: remove
     struct
@@ -440,7 +440,7 @@ typedef struct
   {
     struct
     {
-      sqlite3_stmt *statementHandle
+      sqlite3_stmt *statementHandle;
     }
     sqlite;
     struct
@@ -465,16 +465,15 @@ typedef struct
 /***********************************************************************\
 * Name   : DatabaseRowFunction
 * Purpose: execute row callback function
-* Input  : names    - column names
-*          values   - column values
-*          count    - number of columns
-*          userData - user data
+* Input  : values     - column values
+*          valueCount - number of values
+*          userData   - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*DatabaseRowFunction)(const DatabaseValue values[], uint count, void *userData);
+typedef Errors(*DatabaseRowFunction)(const DatabaseValue values[], uint valueCount, void *userData);
 
 // database id
 typedef int64 DatabaseId;
@@ -678,9 +677,9 @@ void Database_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-INLINE DatabaseTypes Database_getType(DatabaseHandle *databaseHandle);
+INLINE DatabaseTypes Database_getType(const DatabaseHandle *databaseHandle);
 #if defined(NDEBUG) || defined(__DATABASE_IMPLEMENTATION__)
-INLINE DatabaseTypes Database_getType(DatabaseHandle *databaseHandle)
+INLINE DatabaseTypes Database_getType(const DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
@@ -1076,6 +1075,7 @@ void Database_getTableColumnBlob(DatabaseColumns *columns, const char *columnNam
 \***********************************************************************/
 
 bool Database_setTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId value);
+bool Database_setTableColumnBool(DatabaseColumns *columns, const char *columnName, bool value);
 bool Database_setTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 value);
 bool Database_setTableColumnDouble(DatabaseColumns *columns, const char *columnName, double value);
 bool Database_setTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 value);
@@ -1203,7 +1203,7 @@ Errors Database_flush(DatabaseHandle *databaseHandle);
 * Notes  : -
 \***********************************************************************/
 
-const String Database_valueToString(String string, const DatabaseValue *databaseValue);
+String Database_valueToString(String string, const DatabaseValue *databaseValue);
 const char *Database_valueToCString(char *buffer, uint bufferSize, const DatabaseValue *databaseValue);
 
 /***********************************************************************\

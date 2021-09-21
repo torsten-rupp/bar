@@ -1104,8 +1104,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                      void            *userData
                                                     ),
                              {
-                               Errors       error;
-                               StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+                               Errors error;
 
                                assert(fromColumns != NULL);
                                assert(toColumns != NULL);

@@ -608,6 +608,8 @@ LOCAL Errors createTablesIndicesTriggers(DatabaseHandle *databaseHandle)
 
 LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 {
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(tableName);
 }
 
 /***********************************************************************\
@@ -621,6 +623,8 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 
 LOCAL void initProgress(ProgressInfo *progressInfo, const char *text)
 {
+  UNUSED_VARIABLE(progressInfo);
+  UNUSED_VARIABLE(text);
 }
 
 /***********************************************************************\
@@ -635,6 +639,8 @@ LOCAL void initProgress(ProgressInfo *progressInfo, const char *text)
 
 LOCAL void resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
 {
+  UNUSED_VARIABLE(progressInfo);
+  UNUSED_VARIABLE(maxSteps);
 }
 
 /***********************************************************************\
@@ -648,6 +654,7 @@ LOCAL void resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
 
 LOCAL void doneProgress(ProgressInfo *progressInfo)
 {
+  UNUSED_VARIABLE(progressInfo);
 }
 
 /***********************************************************************\
@@ -661,6 +668,7 @@ LOCAL void doneProgress(ProgressInfo *progressInfo)
 
 LOCAL void progressStep(void *userData)
 {
+  UNUSED_VARIABLE(userData);
 }
 
 /***********************************************************************\
@@ -697,11 +705,11 @@ LOCAL_INLINE DatabaseCopyPauseCallbackFunction getCopyPauseCallback(void)
   return NULL;
 }
 
-Errors initEntity(DatabaseHandle *oldDatabaseHandle,
-                  DatabaseHandle *newDatabaseHandle,
-                  DatabaseId     storageId,
-                  DatabaseId     *entityId
-                 )
+LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
+                        DatabaseHandle *newDatabaseHandle,
+                        DatabaseId     storageId,
+                        DatabaseId     *entityId
+                       )
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   Errors     error;
@@ -765,6 +773,7 @@ Errors initEntity(DatabaseHandle *oldDatabaseHandle,
       error = Database_execute(newDatabaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO entities \
                                   ( \
                                    uuidId, \
@@ -796,12 +805,10 @@ Errors initEntity(DatabaseHandle *oldDatabaseHandle,
   return error;
 }
 
-Errors unlockEntity(DatabaseHandle *databaseHandle,
-                    DatabaseId     entityId
-                   )
+LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
+                          DatabaseId     entityId
+                         )
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
 
   return Database_execute(databaseHandle,
@@ -1438,15 +1445,15 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
 {
   Errors error;
 // TODO:
-  char   name[1024];
   const char *indexDefinition;
+  char  *name;
 
   printInfo("Create triggers...");
 
   // delete all existing triggers
 // TODO:
 error = ERROR_NONE;
-  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGER_NAMES_SQLITE, name, error == ERROR_NONE)
+  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGER_NAMES_SQLITE, indexDefinition, error == ERROR_NONE)
   {
   }
   do
@@ -1578,12 +1585,12 @@ LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-                           printf("%s\n",values[0]);
+                           printf("%s\n",values[0].text.data);
 
                            return ERROR_NONE;
                          },NULL),
                          NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(),
+                         DATABASE_COLUMN_TYPES(TEXT),
                          "SELECT name FROM sqlite_master WHERE type='index'"
                         );
 #endif
@@ -1616,12 +1623,12 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-                           printf("%s\n",values[0]);
+                           printf("%s\n",values[0].text.data);
 
                            return ERROR_NONE;
                          },NULL),
                          NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(),
+                         DATABASE_COLUMN_TYPES(TEXT),
                          "SELECT name FROM sqlite_master WHERE type='trigger'"
                         );
 #endif
@@ -2921,6 +2928,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCount=totalEntryCount+1, \
                                                                totalEntrySize =totalEntrySize +%llu \
@@ -2987,6 +2995,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCountNewest=totalEntryCountNewest+1, \
                                                                totalEntrySizeNewest =totalEntrySizeNewest +%llu \
@@ -3061,12 +3070,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCount=totalEntryCount+1 \
                                                            WHERE     storageId=%llu \
                                                                  AND name=%'S \
                                                           ",
-                                                          NULL,
                                                           storageId,
                                                           name
                                                          );
@@ -3121,6 +3130,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCountNewest=totalEntryCountNewest+1 \
                                                            WHERE     storageId=%llu \
@@ -3193,12 +3203,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCount=totalEntryCount+1 \
                                                            WHERE     storageId=%llu \
                                                                  AND name=%'S \
                                                           ",
-                                                          NULL,
                                                           storageId,
                                                           name
                                                          );
@@ -3218,9 +3228,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT),
                              "SELECT linkEntries.storageId, \
                                      COUNT(entries.id) \
                               FROM linkEntries \
@@ -3254,6 +3262,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCountNewest=totalEntryCountNewest+1 \
                                                            WHERE     storageId=%llu \
@@ -3328,6 +3337,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCount=totalEntryCount+1, \
                                                                totalEntrySize =totalEntrySize +%llu \
@@ -3396,13 +3406,13 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCountNewest=totalEntryCountNewest+1, \
                                                                totalEntrySizeNewest =totalEntrySizeNewest +%llu \
                                                            WHERE     storageId=%llu \
                                                                  AND name=%'S \
                                                           ",
-                                                          NULL,
                                                           totalSize,
                                                           storageId,
                                                           name
@@ -3474,12 +3484,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCount=totalEntryCount+1 \
                                                            WHERE     storageId=%llu \
                                                                  AND name=%'S \
                                                           ",
-                                                          NULL,
                                                           storageId,
                                                           name
                                                          );
@@ -3534,12 +3544,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                  error = Database_execute(databaseHandle,
                                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                           NULL,  // changedRowCount
+                                                          DATABASE_COLUMN_TYPES(),
                                                           "UPDATE directoryEntries \
                                                            SET totalEntryCountNewest=totalEntryCountNewest+1 \
                                                            WHERE     storageId=%lld \
                                                                  AND name=%'S \
                                                           ",
-                                                          NULL,
                                                           storageId,
                                                           name
                                                          );
@@ -3667,6 +3677,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE entities \
                                                          SET totalFileCount     =(SELECT COUNT(entries.id) \
                                                                                   FROM entries \
@@ -3710,7 +3721,6 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                                                  ) \
                                                          WHERE id=%lld \
                                                         ",
-                                                        NULL,
                                                         INDEX_CONST_TYPE_FILE,
                                                         entityId,
                                                         INDEX_CONST_TYPE_IMAGE,
@@ -3743,6 +3753,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE entities \
                                                          SET totalEntryCount= totalFileCount \
                                                                              +totalImageCount \
@@ -3755,7 +3766,6 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                                              +totalHardlinkSize \
                                                          WHERE id=%llu \
                                                         ",
-                                                        NULL,
                                                         entityId
                                                        );
                                if (error != ERROR_NONE)
@@ -3769,6 +3779,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE entities \
                                                          SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
                                                                                         FROM entriesNewest \
@@ -3815,7 +3826,6 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                                                        ) \
                                                          WHERE id=%lld \
                                                         ",
-                                                        NULL,
                                                         INDEX_CONST_TYPE_FILE,
                                                         entityId,
                                                         INDEX_CONST_TYPE_IMAGE,
@@ -3848,6 +3858,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE entities \
                                                          SET totalEntryCountNewest= totalFileCountNewest \
                                                                                    +totalImageCountNewest \
@@ -3860,7 +3871,6 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                                                    +totalHardlinkSizeNewest \
                                                          WHERE id=%lld \
                                                         ",
-                                                        NULL,
                                                         entityId
                                                        );
                                if (error != ERROR_NONE)
@@ -3985,6 +3995,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE storages \
                                                          SET totalFileCount     =(SELECT COUNT(DISTINCT entries.id) \
                                                                                   FROM entries \
@@ -4034,7 +4045,6 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                                                  ) \
                                                          WHERE id=%lld \
                                                         ",
-                                                        NULL,
                                                         INDEX_CONST_TYPE_FILE,
                                                         storageId,
                                                         INDEX_CONST_TYPE_IMAGE,
@@ -4067,6 +4077,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE storages \
                                                          SET totalEntryCount= totalFileCount \
                                                                              +totalImageCount \
@@ -4079,7 +4090,6 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                                              +totalHardlinkSize \
                                                          WHERE id=%llu \
                                                         ",
-                                                        NULL,
                                                         storageId
                                                        );
                                if (error != ERROR_NONE)
@@ -4093,6 +4103,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE storages \
                                                          SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
                                                                                         FROM entriesNewest \
@@ -4175,6 +4186,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
+                                                        DATABASE_COLUMN_TYPES(),
                                                         "UPDATE storages \
                                                          SET totalEntryCountNewest= totalFileCountNewest \
                                                                                    +totalImageCountNewest \
@@ -4187,7 +4199,6 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                                                    +totalHardlinkSizeNewest \
                                                          WHERE id=%lld \
                                                         ",
-                                                        NULL,
                                                         storageId
                                                        );
                                if (error != ERROR_NONE)
@@ -5095,10 +5106,10 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           error = Database_execute(databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount,
+                                   DATABASE_COLUMN_TYPES(),
                                    "DELETE FROM entryFragments \
                                     WHERE storageId=%lld \
                                    ",
-                                   NULL,
                                    storageId
                                   );
         }
@@ -5114,10 +5125,10 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
               error = Database_execute(databaseHandle,
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
                                        &n,
+                                       DATABASE_COLUMN_TYPES(),
                                        "DELETE FROM FTS_entries \
                                         WHERE entryId MATCH %lld \
                                        ",
-                                       NULL,
                                        entryId
                                       );
             }
@@ -5132,10 +5143,10 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           error = Database_execute(databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount,
+                                   DATABASE_COLUMN_TYPES(),
                                    "DELETE FROM directoryEntries \
                                     WHERE storageId=%lld \
                                    ",
-                                   NULL,
                                    storageId
                                   );
         }
@@ -5171,10 +5182,10 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           error = Database_execute(databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    &n,
+                                   DATABASE_COLUMN_TYPES(),
                                    "DELETE FROM FTS_storages \
                                     WHERE storageId MATCH %lld \
                                    ",
-                                   NULL,
                                    storageId
                                   );
         }
@@ -5185,10 +5196,10 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           error = Database_execute(databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount,
+                                   DATABASE_COLUMN_TYPES(),
                                    "DELETE FROM storages \
                                     WHERE id=%lld \
                                    ",
-                                   NULL,
                                    storageId
                                   );
         }
@@ -5204,10 +5215,10 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
               error = Database_execute(databaseHandle,
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
                                        &n,
+                                       DATABASE_COLUMN_TYPES(),
                                        "DELETE FROM entries \
                                         WHERE id=%lld \
                                        ",
-                                       NULL,
                                        entryId
                                       );
             }
@@ -5327,21 +5338,21 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL size_t* getColumnsWidth(const DatabaseColumns *columns)
+LOCAL size_t* getColumnsWidth(const DatabaseValue values[], uint valueCount)
 {
   size_t *widths;
   uint   i;
   char   buffer[1024];
 
-  assert(columns != NULL);
+  assert(values != NULL);
 
-  widths = (size_t*)malloc(columns->count*sizeof(size_t));
+  widths = (size_t*)malloc(valueCount*sizeof(size_t));
   assert(widths != NULL);
 
-  for (i = 0; i < columns->count; i++)
+  for (i = 0; i < valueCount; i++)
   {
     widths[i] = 0;
-    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
+    Database_valueToCString(buffer,sizeof(buffer),&values[i]);
     if (stringLength(buffer) > widths[i])
     {
       widths[i] = stringLength(buffer);
@@ -5396,23 +5407,23 @@ LOCAL void printSpaces(int n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors calculateColumnWidths(const DatabaseColumns *columns, void *userData)
+LOCAL Errors calculateColumnWidths(const DatabaseValue values[], uint valueCount, void *userData)
 {
   PrintTableData *printTableData = (PrintTableData*)userData;
   uint           i;
   char           buffer[1024];
 
-  assert(columns != NULL);
+  assert(values != NULL);
   assert(printTableData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  if (printTableData->widths == NULL) printTableData->widths = getColumnsWidth(columns);
+  if (printTableData->widths == NULL) printTableData->widths = getColumnsWidth(values,valueCount);
   assert(printTableData->widths != NULL);
 
-  for (i = 0; i < columns->count; i++)
+  for (i = 0; i < valueCount; i++)
   {
-    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
+    Database_valueToCString(buffer,sizeof(buffer),&values[i]);
     printTableData->widths[i] = MAX(stringLength(buffer),printTableData->widths[i]);
   }
 
@@ -5431,18 +5442,20 @@ LOCAL Errors calculateColumnWidths(const DatabaseColumns *columns, void *userDat
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors printRow(const DatabaseColumns *columns, void *userData)
+LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userData)
 {
   PrintTableData *printTableData = (PrintTableData*)userData;
   uint           i;
   char           buffer[1024];
 
-  assert(columns != NULL);
+  assert(values != NULL);
   assert(printTableData != NULL);
   assert(printTableData->widths != NULL);
 
   UNUSED_VARIABLE(userData);
 
+// TODO: get column names
+#if 0
   if (printTableData->showHeaderFlag && !printTableData->headerPrintedFlag)
   {
     for (i = 0; i < columns->count; i++)
@@ -5453,9 +5466,10 @@ LOCAL Errors printRow(const DatabaseColumns *columns, void *userData)
 
     printTableData->headerPrintedFlag = TRUE;
   }
-  for (i = 0; i < columns->count; i++)
+#endif
+  for (i = 0; i < valueCount; i++)
   {
-    Database_valueToCString(buffer,sizeof(buffer),&columns->values[i]);
+    Database_valueToCString(buffer,sizeof(buffer),&values[i]);
     printf("%s ",buffer);
     if (printTableData->showHeaderFlag)
     {
@@ -5687,7 +5701,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(valueCount);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  OK              : %lld\n",values[0].i);
+                             printf("  OK              : %"PRIi64"\n",values[0].i);
 
                              return ERROR_NONE;
                            },NULL),
@@ -5713,7 +5727,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(valueCount);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Update requested: %lld\n",values[0].i);
+                             printf("  Update requested: %"PRIi64"\n",values[0].i);
 
                              return ERROR_NONE;
                            },NULL),
@@ -5739,7 +5753,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(valueCount);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Error           : %lld\n",values[0].i);
+                             printf("  Error           : %"PRIi64"\n",values[0].i);
 
                              return ERROR_NONE;
                            },NULL),
@@ -5765,7 +5779,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(valueCount);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Deleted         : %lld\n",values[0].i);
+                             printf("  Deleted         : %"PRIi64"\n",values[0].i);
 
                              return ERROR_NONE;
                            },NULL),
@@ -6280,7 +6294,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                              String     idsString;
 
                              assert(values != NULL);
-                             assert(valueCount == 14);
+                             assert(valueCount == 24);
 
                              UNUSED_VARIABLE(valueCount);
                              UNUSED_VARIABLE(userData);
@@ -6402,13 +6416,13 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                    (SELECT SUM(totalHardlinkSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
                                    (SELECT SUM(totalSpecialCountNewest) FROM entities WHERE entities.uuidId=uuids.id) \
                             FROM uuids \
-                            WHERE     (%d OR id IN (%S)) \
-                                  AND (%d OR jobUUID IN (%S)) \
+                            WHERE     (%d OR id IN (%s)) \
+                                  AND (%d OR jobUUID IN (%s)) \
                            ",
                            String_isEmpty(uuidIdsString) ? 1 : 0,
-                           uuidIdsString,
+                           !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0",
                            String_isEmpty(uuidsString) ? 1 : 0,
-                           uuidsString
+                           !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0"
                           );
   if (error != ERROR_NONE)
   {
@@ -6491,8 +6505,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 
                              printf("  Id              : %"PRIi64"\n",entityId);
                              printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : "xxx");//TODO values[ 1]);
-                             printf("    Job UUID      : %s\n",values[ 2]);
-                             printf("    Schedule UUID : %s\n",values[ 3]);
+                             printf("    Job UUID      : %s\n",values[ 2].text.data);
+                             printf("    Schedule UUID : %s\n",values[ 3].text.data);
                              printf("\n");
                              printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                              printf("\n");
@@ -6536,36 +6550,11 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,
-                                                 INT,
-                                                 TEXT,
-                                                 TEXT,
-
-                                                 INT,
-                                                 INT64,
-
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-
-                                                 INT,
-                                                 INT64,
-
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT,
-                                                 INT,
-                                                 INT64,
-                                                 INT
+                           DATABASE_COLUMN_TYPES(KEY,INT,TEXT,TEXT,
+                                                 INT,INT64,
+                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
+                                                 INT,INT64,
+                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT
                                                 ),
                            "SELECT id,\
                                    type, \
@@ -6639,6 +6628,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   ulong      i;
   DatabaseId storageId;
   Errors     error;
+  char       buffer[64];
 
   storageIdsString = String_new();
   ARRAY_ITERATE(&storageIds,i,storageId)
@@ -6687,13 +6677,13 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 
                              printf("  Id              : %"PRIi64"\n",values[ 0].id);
                              printf("    Name          : %s\n",values[ 5].text.data);
-                             printf("    Created       : %d\n",values[ 6].dateTime);
+                             printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,NULL));
                              printf("    Host name     : %s\n",(values[ 7].text.data != NULL) ? values[ 7].text.data : "");
                              printf("    User name     : %s\n",(values[ 8].text.data != NULL) ? values[ 8].text.data : "");
                              printf("    Comment       : %s\n",(values[ 9].text.data != NULL) ? values[ 9].text.data : "");
                              printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : "xxx");//TODO values[10].i);
                              printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : "xxx");//TODO values[11].i);
-                             printf("    Last checked  : %d\n",values[12].dateTime);
+                             printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
                              printf("    Error message : %s\n",(values[13].text.data != NULL) ? values[13].text.data : "");
                              printf("\n");
                              printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
@@ -7159,15 +7149,13 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%s: %s\n",values[0],values[1]);
+fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,values[1].text.data);
 n++;
 
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   TEXT
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT),
                              "SELECT entryFragments.storageId,storages.name FROM entryFragments \
                                 LEFT JOIN storages ON storages.id=entryFragments.storageId \
                               WHERE storages.deletedFlag!=1 \
@@ -7193,17 +7181,13 @@ fprintf(stdout,"%lu storages\n",n);
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%s entryId=%s name=%s timeLastChanged=%s\n",values[0],values[1],values[2],values[3]);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime);
 n++;
 
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   KEY,
-                                                   TEXT,
-                                                   DATETIME
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,KEY,TEXT,DATETIME),
                              "      SELECT entryFragments.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
                                     FROM entriesNewest \
                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
@@ -7242,18 +7226,13 @@ fprintf(stdout,"%lu newest entries\n",n);
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%s entryId=%s name=%s timeLastChanged=%s entriesNewestId=%s\n",values[0],values[1],values[2],values[3],values[4]);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64" entriesNewestId=%"PRIi64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime,values[4].id);
 n++;
 
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   KEY,
-                                                   TEXT,
-                                                   DATETIME,
-                                                   KEY
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,KEY,TEXT,DATETIME,KEY),
                              "SELECT storageId,entryId,name,timeLastChanged,entriesNewestId FROM %1 \
                              "
                             );
@@ -7276,17 +7255,13 @@ fprintf(stdout,"%lu entries\n",n);
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%d entryId=%d name=%s timeLastChanged=%d\n",values[0].i,values[1].i,values[2].i,values[3].dateTime);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime);
 n++;
 
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   KEY,
-                                                   TEXT,
-                                                   DATETIME
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,KEY,TEXT,DATETIME),
                              "SELECT storageId,entryId,name,timeLastChanged FROM %1 \
                               WHERE %1.entriesNewestId!=0 \
                              "
@@ -7310,16 +7285,13 @@ fprintf(stderr,"%s, %d: newest entry to remove\n",__FILE__,__LINE__);
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"entryId=%s name=%s timeLastChanged=%s\n",values[0],values[1],values[2]);
+fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].text.data,values[2].dateTime);
 n++;
 
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   TEXT,
-                                                   DATETIME
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME),
                              "SELECT entryId,name,timeLastChanged FROM %1 \
                               WHERE %1.entriesNewestId!=0 \
                              "
@@ -7343,16 +7315,13 @@ fprintf(stderr,"%s, %d: newest entry to add from entries\n",__FILE__,__LINE__);
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"new entryId=%s name=%s timeLastChanged=%s\n",values[0],values[1],values[2]);
+fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].text.data,values[2].dateTime);
 n++;
 
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   TEXT,
-                                                   DATETIME
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME),
                              "SELECT entries.id AS entryId,%1.name,entries.timeLastChanged FROM %1 \
                                 LEFT JOIN entries ON entries.id=(SELECT id \
                                                                  FROM entries \
@@ -8317,7 +8286,7 @@ if (xxxId != DATABASE_ID_NONE)
                        UNUSED_VARIABLE(valueCount);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = 1+(uint)log10(values[0].i);
+                       maxIdLength          = 1+(uint)log10((double)values[0].i);
                        maxStorageNameLength = (uint)values[1].i;
 
                        return ERROR_NONE;
@@ -8360,6 +8329,7 @@ if (xxxId != DATABASE_ID_NONE)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
+                     DATABASE_COLUMN_TYPES(INT,TEXT,TEXT,INT),
                      "SELECT storages.id,storages.name,entities.jobUUID,entities.type FROM storages \
                         LEFT JOIN entities on storages.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
@@ -8384,13 +8354,14 @@ if (xxxId != DATABASE_ID_NONE)
                        UNUSED_VARIABLE(valueCount);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = 1+(uint)log10(values[0].i);
+                       maxIdLength          = 1+(uint)log10((double)values[0].i);
                        maxEntryNameLength   = values[1].i;
                        maxStorageNameLength = values[2].i;
 
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
+                     DATABASE_COLUMN_TYPES(INT,INT,INT),
                      "SELECT MAX(entries.id),MAX(LENGTH(entries.name)),MAX(LENGTH(storages.name)) FROM entries \
                         LEFT JOIN storages ON entries.storageId=storages.id \
                         LEFT JOIN entities ON storages.entityId=entities.id \
@@ -8416,6 +8387,7 @@ if (xxxId != DATABASE_ID_NONE)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
+                     DATABASE_COLUMN_TYPES(INT,TEXT,TEXT),
                      "SELECT entries.id,entries.name,storages.name FROM entries \
                         LEFT JOIN storages ON entries.storageId=storages.id \
                         LEFT JOIN entities ON storages.entityId=entities.id \
@@ -8441,13 +8413,14 @@ if (xxxId != DATABASE_ID_NONE)
                        UNUSED_VARIABLE(valueCount);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = 1+(uint)log10(values[0].i);
+                       maxIdLength          = 1+(uint)log10((double)values[0].i);
                        maxEntryNameLength   = values[1].i;
                        maxStorageNameLength = values[2].i;
 
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
+                     DATABASE_COLUMN_TYPES(INT,INT,INT),
                      "SELECT MAX(entriesNewest.id),MAX(LENGTH(entriesNewest.name)),MAX(LENGTH(storages.name)) FROM entriesNewest \
                         LEFT JOIN storages ON entriesNewest.storageId=storages.id \
                         LEFT JOIN entities ON storages.entityId=entities.id \
@@ -8473,6 +8446,7 @@ if (xxxId != DATABASE_ID_NONE)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
+                     DATABASE_COLUMN_TYPES(INT,TEXT,TEXT),
                      "SELECT entriesNewest.id,entriesNewest.name,storages.name FROM entriesNewest \
                         LEFT JOIN storages ON entriesNewest.storageId=storages.id \
                         LEFT JOIN entities ON storages.entityId=entities.id \
