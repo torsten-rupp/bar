@@ -5176,8 +5176,7 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-// TODO:
-  (*columnCount) = 0;
+  i = 0;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -7126,15 +7125,12 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   toColumnMapCount = 0;
   for (i = 0; i < toColumnCount; i++)
   {
-    for (j = 0; j < fromColumnCount; j++)
+    j = ARRAY_FIND(fromColumnNames,fromColumnCount,j,stringEquals(toColumnNames[i],fromColumnNames[j]));
+    if (j < fromColumnCount)
     {
-      if (stringEquals(toColumnNames[i],fromColumnNames[j]))
-      {
-        toColumnMap[toColumnMapCount] = j;
-        stringSet(toColumnMapNames[toColumnMapCount],sizeof(toColumnMapNames[toColumnMapCount]),toColumnNames[i]);
-        toColumnMapCount++;
-        break;
-      }
+      toColumnMap[toColumnMapCount] = j;
+      stringSet(toColumnMapNames[toColumnMapCount],sizeof(toColumnMapNames[toColumnMapCount]),toColumnNames[i]);
+      toColumnMapCount++;
     }
   }
 //fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (int i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",toColumnMap[i],i,toColumnMapNames[i],toColumnMapTypes[i]); } fprintf(stderr,"\n");
