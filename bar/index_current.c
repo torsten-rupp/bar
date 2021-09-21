@@ -98,6 +98,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
       error = Database_execute(newDatabaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO fileEntries \
                                   ( \
                                    entryId, \
@@ -135,6 +136,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
           error = Database_execute(newDatabaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
@@ -221,6 +223,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
       error = Database_execute(newDatabaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO imageEntries \
                                   ( \
                                    entryId, \
@@ -258,6 +261,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
           error = Database_execute(newDatabaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
@@ -344,6 +348,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
       error = Database_execute(newDatabaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO hardlinkEntries \
                                   ( \
                                    entryId, \
@@ -381,6 +386,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
           error = Database_execute(newDatabaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
@@ -803,8 +809,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  return error;
                                }
 
-#if 1
-                               // get storage id filter
+                              // get storage id filter
                                String_clear(storageIdsString);
                                Dictionary_initIterator(&dictionaryIterator,&storageIdDictionary);
                                while (Dictionary_getNext(&dictionaryIterator,
@@ -1066,7 +1071,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  return error;
                                }
                                t1 = Misc_getTimestamp();
-#endif
 
                                logImportProgress("Imported entity #%"PRIi64": '%s' (%llus)",
                                                  toEntityId,

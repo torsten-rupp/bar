@@ -333,6 +333,7 @@ LOCAL void printNotifies(void)
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            CONTINUOUS_TABLE_DEFINITION
                           );
   if (error != ERROR_NONE)
@@ -1173,6 +1174,7 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "DELETE FROM names \
                             WHERE     storedFlag=1 \
                                   AND DATETIME('now','-%u seconds')>=dateTime;",
@@ -1187,6 +1189,7 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "INSERT INTO names \
                               (\
                                jobUUID,\
@@ -1234,6 +1237,7 @@ LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
   return Database_execute(databaseHandle,
                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
+                          DATABASE_COLUMN_TYPES(),
                           "DELETE FROM names WHERE id=%lld;",
                           databaseId
                          );
@@ -1258,6 +1262,7 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
   return Database_execute(databaseHandle,
                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
+                          DATABASE_COLUMN_TYPES(),
                           "UPDATE names SET dateTime=DATETIME('now'),storedFlag=1 WHERE id=%lld;",
                           databaseId
                          );

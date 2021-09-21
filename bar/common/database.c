@@ -2894,7 +2894,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 }
 
 /***********************************************************************\
-* Name   : vDatabasePrepare
+* Name   : vprepareStatement
 * Purpose: prepare SQL statement
 * Input  : databaseStatementHandle - database query handle variable
 *          databaseHandle      - database handle
@@ -2906,13 +2906,13 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors vDatabasePrepare(DatabaseStatementHandle *databaseStatementHandle,
+  Errors vprepareStatement(DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
                           const char              *command,
                           va_list                 arguments
                          )
 #else /* not NDEBUG */
-  Errors vDatabasePrepare(const char              *__fileName__,
+  Errors vprepareStatement(const char              *__fileName__,
                           ulong                   __lineNb__,
                           DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
@@ -3181,9 +3181,9 @@ LOCAL  Errors __prepareStatement(const char          *__fileName__,
 
   va_start(arguments,command);
   #ifdef NDEBUG
-    error = vDatabasePrepare(databaseStatementHandle,databaseHandle,command,arguments);
+    error = vprepareStatement(databaseStatementHandle,databaseHandle,command,arguments);
   #else /* not NDEBUG */
-    error = vDatabasePrepare(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
+    error = vprepareStatement(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
   #endif /* NDEBUG */
   va_end(arguments);
 
@@ -3201,11 +3201,11 @@ LOCAL  Errors __prepareStatement(const char          *__fileName__,
 \***********************************************************************/
 
 Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
-                const DatabaseDataTypes columnTypes[],
-                uint columnCount,
-                const uint parameterMap[],
-                uint parameterMapCount
-               )
+                      const DatabaseDataTypes columnTypes[],
+                      uint columnCount,
+                      const uint parameterMap[],
+                      uint parameterMapCount
+                     )
 {
   uint          i;
   Errors        error;
@@ -3389,9 +3389,9 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(databaseStatemen
 \***********************************************************************/
 
 Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
-                const DatabaseDataTypes columnTypes[],
-                uint columnCount
-               )
+                   const DatabaseDataTypes columnTypes[],
+                   uint columnCount
+                  )
 {
   Errors        error;
   DatabaseValue *databaseValue;
@@ -4052,7 +4052,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 }
 
 /***********************************************************************\
-* Name   : databaseExecute
+* Name   : vexecuteStatement
 * Purpose: execute single database statement with prepared statement or
 *          query
 * Input  : databaseHandle      - database handle
@@ -4753,7 +4753,7 @@ LOCAL Errors getTableList(StringList     *tableList,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        error = Database_execute2(databaseHandle,
+        error = Database_execute(databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                  {
                                    assert(values != NULL);
@@ -4772,7 +4772,7 @@ LOCAL Errors getTableList(StringList     *tableList,
                                 );
         break;
       case DATABASE_TYPE_MYSQL:
-        error = Database_execute2(databaseHandle,
+        error = Database_execute(databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                  {
                                    assert(values != NULL);
@@ -6764,6 +6764,7 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
     error = Database_execute(databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "PRAGMA synchronous=%s",
                              enabled ? "ON" : "OFF"
                             );
@@ -6773,6 +6774,7 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
     error = Database_execute(databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "PRAGMA journal_mode=%s",
                              enabled ? "ON" : "WAL"
                             );
@@ -6798,6 +6800,7 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
       error = Database_execute(databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "PRAGMA foreign_keys=%s",
                                enabled ? "ON" : "OFF"
                               );
@@ -6806,6 +6809,7 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
       error = Database_execute(databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "SET FOREIGN_KEY_CHECKS=%d",
                                enabled ? 1 : 0
                               );
@@ -6832,6 +6836,7 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
       error = Database_execute(databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "PRAGMA temp_store_directory='%s'",
                                directoryName
                               );
@@ -8176,6 +8181,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "ALTER TABLE %s RENAME TO __old__",
                            tableName
                           );
@@ -8184,6 +8190,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "DROP TABLE __new__"
                           );
     return error;
@@ -8191,6 +8198,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "ALTER TABLE __new__ RENAME TO %s",
                            tableName
                           );
@@ -8199,12 +8207,14 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "ALTER TABLE __old__ RENAME TO %s",
                            tableName
                           );
     (void)Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "DROP TABLE __new__"
                           );
     return error;
@@ -8212,6 +8222,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "DROP TABLE __old__"
                           );
   if (error != ERROR_NONE)
@@ -8634,11 +8645,13 @@ Errors Database_flush(DatabaseHandle *databaseHandle)
   return ERROR_NONE;
 }
 
-Errors Database_execute(DatabaseHandle      *databaseHandle,
-                        DatabaseRowFunction databaseRowFunction,
-                        void                *databaseRowUserData,
-                        ulong               *changedRowCount,
-                        const char          *command,
+Errors Database_execute(DatabaseHandle          *databaseHandle,
+                        DatabaseRowFunction     databaseRowFunction,
+                        void                    *databaseRowUserData,
+                        ulong                   *changedRowCount,
+                        const DatabaseDataTypes columnTypes[],
+                        uint                    columnTypeCount,
+                        const char              *command,
                         ...
                        )
 {
@@ -8652,122 +8665,38 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 
   va_start(arguments,command);
   {
-    error = Database_vexecute(databaseHandle,
-                              databaseRowFunction,
-                              databaseRowUserData,
-                              changedRowCount,
-                              command,
-                              arguments
-                             );
-  }
-  va_end(arguments);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
-Errors Database_execute2(DatabaseHandle      *databaseHandle,
-                        DatabaseRowFunction databaseRowFunction,
-                        void                *databaseRowUserData,
-                        ulong               *changedRowCount,
-                        const DatabaseDataTypes columnTypes[],
-                        uint valueCount,
-                        const char          *command,
-                        ...
-                       )
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(command != NULL);
-
-  va_start(arguments,columnTypes);
-  {
-    error = Database_vexecute2(databaseHandle,
-                              databaseRowFunction,
-                              databaseRowUserData,
-                              changedRowCount,
-                              columnTypes,
-                              valueCount,
-                              command,
-                              arguments
-                             );
-  }
-  va_end(arguments);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
-Errors Database_vexecute(DatabaseHandle      *databaseHandle,
-                         DatabaseRowFunction databaseRowFunction,
-                         void                *databaseRowUserData,
-                         ulong               *changedRowCount,
-                         const char          *command,
-                         va_list             arguments
-                        )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(command != NULL);
-
-  // format SQL command string
-  sqlString = vformatSQLString(String_new(),
+    DATABASE_DOX(error,
+                 ERRORX_(DATABASE_TIMEOUT,0,""),
+                 databaseHandle,
+                 DATABASE_LOCK_TYPE_READ_WRITE,
+                 databaseHandle->timeout,
+    {
+      return vexecuteStatement(databaseHandle,
+                               databaseRowFunction,
+                               databaseRowUserData,
+                               changedRowCount,
+                               columnTypes,
+                               columnTypeCount,
                                command,
                                arguments
                               );
-
-  // execute SQL command
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    return executeStatement(databaseHandle,
-                            CALLBACK_(databaseRowFunction,databaseRowUserData),
-                            changedRowCount,
-                            databaseHandle->timeout,
-                            DATABASE_COLUMN_TYPES(),
-                            String_cString(sqlString)
-                           );
-  });
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
+    });
   }
+  va_end(arguments);
 
-  // free resources
-  String_delete(sqlString);
-
-  return ERROR_NONE;
+  return error;
 }
-Errors Database_vexecute2(DatabaseHandle      *databaseHandle,
-                         DatabaseRowFunction databaseRowFunction,
-                         void                *databaseRowUserData,
-                         ulong               *changedRowCount,
+
+Errors Database_vexecute(DatabaseHandle         *databaseHandle,
+                         DatabaseRowFunction     databaseRowFunction,
+                         void                    *databaseRowUserData,
+                         ulong                   *changedRowCount,
                          const DatabaseDataTypes *columnTypes,
-                         uint valueCount,
-                         const char          *command,
-                         va_list             arguments
+                         uint                    columnTypeCount,
+                         const char              *command,
+                         va_list                 arguments
                         )
 {
-  String sqlString;
   Errors error;
 
   assert(databaseHandle != NULL);
@@ -8775,57 +8704,42 @@ Errors Database_vexecute2(DatabaseHandle      *databaseHandle,
   assert(checkDatabaseInitialized(databaseHandle));
   assert(command != NULL);
 
-  // format SQL command string
-  sqlString = vformatSQLString(String_new(),
-                               command,
-                               arguments
-                              );
-
-  // execute SQL command
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    return executeStatement(databaseHandle,
-                            CALLBACK_(databaseRowFunction,databaseRowUserData),
-                            changedRowCount,
-                            databaseHandle->timeout,
-                            columnTypes,
-                            valueCount,
-                            String_cString(sqlString)
-                           );
+    return vexecuteStatement(databaseHandle,
+                             databaseRowFunction,
+                             databaseRowUserData,
+                             changedRowCount,
+                             columnTypes,
+                             columnTypeCount,
+                             command,
+                             arguments
+                            );
   });
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
-  }
 
-  // free resources
-  String_delete(sqlString);
-
-  return ERROR_NONE;
+  return error;
 }
 
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
-                          DatabaseHandle      *databaseHandle,
+                          DatabaseHandle          *databaseHandle,
                           const DatabaseDataTypes *columnTypes,
-                          uint valueCount,
-                          const char          *command,
+                          uint                    columnTypeCount,
+                          const char              *command,
                           ...
                          )
 #else /* not NDEBUG */
-  Errors __Database_prepare(const char          *__fileName__,
-                            ulong               __lineNb__,
+  Errors __Database_prepare(const char              *__fileName__,
+                            ulong                   __lineNb__,
                             DatabaseStatementHandle *databaseStatementHandle,
-                            DatabaseHandle      *databaseHandle,
+                            DatabaseHandle          *databaseHandle,
                             const DatabaseDataTypes *columnTypes,
-                            uint valueCount,
-                            const char          *command,
+                            uint                    columnTypeCount,
+                            const char              *command,
                             ...
                            )
 #endif /* NDEBUG */
@@ -8838,18 +8752,19 @@ Errors Database_vexecute2(DatabaseHandle      *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(command != NULL);
 
-  // format SQL command string
+  // prepare statement
   va_start(arguments,command);
   #ifdef NDEBUG
-    error = vDatabasePrepare(databaseStatementHandle,databaseHandle,command,arguments);
+    error = vprepareStatement(databaseStatementHandle,databaseHandle,command,arguments);
   #else /* not NDEBUG */
-    error = vDatabasePrepare(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
+    error = vprepareStatement(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
   #endif /* NDEBUG */
   va_end(arguments);
 
+  // bind results
   if (error == ERROR_NONE)
   {
-    error = bindResults(databaseStatementHandle,columnTypes,valueCount);
+    error = bindResults(databaseStatementHandle,columnTypes,columnTypeCount);
   }
 
   return error;
@@ -10601,7 +10516,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
       switch (databaseCheck)
       {
         case DATABASE_CHECK_QUICK:
-          error = Database_execute2(databaseHandle,
+          error = Database_execute(databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    DATABASE_COLUMN_TYPES(),
@@ -10609,7 +10524,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
                                   );
           break;
         case DATABASE_CHECK_KEYS:
-          error = Database_execute2(databaseHandle,
+          error = Database_execute(databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    DATABASE_COLUMN_TYPES(),
@@ -10617,7 +10532,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
                                   );
           break;
         case DATABASE_CHECK_FULL:
-          error = Database_execute2(databaseHandle,
+          error = Database_execute(databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    DATABASE_COLUMN_TYPES(),
@@ -10653,7 +10568,7 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      error = Database_execute2(databaseHandle,
+      error = Database_execute(databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                DATABASE_COLUMN_TYPES(),
@@ -11246,11 +11161,15 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
   Database_execute(databaseHandle,
                            CALLBACK_(debugCalculateColumnWidths,&dumpTableData),
                            NULL,  // changedRowCount
+// TODO:
+                           DATABASE_COLUMN_TYPES(),
                            String_cString(sqlString)
                           );
   Database_execute(databaseHandle,
                            CALLBACK_(debugPrintRow,&dumpTableData),
                            NULL,  // changedRowCount
+// TODO:
+                           DATABASE_COLUMN_TYPES(),
                            String_cString(sqlString)
                           );
   debugFreeColumnsWidth(dumpTableData.widths);

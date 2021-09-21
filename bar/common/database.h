@@ -1199,6 +1199,9 @@ Errors Database_flush(DatabaseHandle *databaseHandle);
 *                                NULL)
 *          databaseRowUserData - user data for callback function
 *          changedRowCount     - number of changd rows (can be NULL)
+*          columnTypes         - result column types; use macro
+*                                DATABASE_COLUMN_TYPES()
+*          columnTypeCount     - number of result columns
 *          command             - SQL command string with %[l]d, %[']S,
 *                                %[']s
 *          ...                 - optional arguments for SQL command
@@ -1211,38 +1214,24 @@ Errors Database_flush(DatabaseHandle *databaseHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_execute(DatabaseHandle      *databaseHandle,
-                        DatabaseRowFunction databaseRowFunction,
-                        void                *databaseRowUserData,
-                        ulong               *changedRowCount,
-                        const char          *command,
-                        ...
-                       );
-Errors Database_execute2(DatabaseHandle      *databaseHandle,
-                        DatabaseRowFunction databaseRowFunction,
-                        void                *databaseRowUserData,
-                        ulong               *changedRowCount,
+Errors Database_execute(DatabaseHandle          *databaseHandle,
+                        DatabaseRowFunction     databaseRowFunction,
+                        void                    *databaseRowUserData,
+                        ulong                   *changedRowCount,
                         const DatabaseDataTypes columnTypes[],
-                        uint valueCount,
-                        const char          *command,
+                        uint                    columnTypeCount,
+                        const char              *command,
                         ...
                        );
 
-Errors Database_vexecute(DatabaseHandle      *databaseHandle,
-                         DatabaseRowFunction databaseRowFunction,
-                         void                *databaseRowUserData,
-                         ulong               *changedRowCount,
-                         const char          *command,
-                         va_list             arguments
-                       );
-Errors Database_vexecute2(DatabaseHandle      *databaseHandle,
-                         DatabaseRowFunction databaseRowFunction,
-                         void                *databaseRowUserData,
-                         ulong               *changedRowCount,
+Errors Database_vexecute(DatabaseHandle          *databaseHandle,
+                         DatabaseRowFunction     databaseRowFunction,
+                         void                    *databaseRowUserData,
+                         ulong                   *changedRowCount,
                          const DatabaseDataTypes columnTypes[],
-                         uint valueCount,
-                         const char          *command,
-                         va_list             arguments
+                         uint                    columnTypeCount,
+                         const char              *command,
+                         va_list                 arguments
                        );
 
 /***********************************************************************\
