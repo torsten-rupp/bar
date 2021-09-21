@@ -8045,13 +8045,6 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     error = Database_setTmpDirectory(&databaseHandle,tmpDirectory);
   }
-  else
-  {
-    path = File_getDirectoryNameCString(String_new(),databaseFileName);
-    if (String_isEmpty(path)) File_getCurrentDirectory(path);
-    error = Database_setTmpDirectory(&databaseHandle,String_cString(path));
-    String_delete(path);
-  }
   if (error != ERROR_NONE)
   {
     printError("%s",Error_getText(error));

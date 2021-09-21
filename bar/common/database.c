@@ -4238,7 +4238,6 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               }
             }
             while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
             // free call-back data
             for (i = 0; i < valueCount; i++)
@@ -5497,10 +5496,12 @@ void Database_doneAll(void)
   databaseName = String_new();
 
   // get database type and open/connect data
+fprintf(stderr,"%s:%d: uri='%s'\n",__FILE__,__LINE__,uri);
   if      (String_matchCString(uri,
                                STRING_BEGIN,
-                               "^sqlite3:(.*)",
+                               "^(sqlite|sqlite3):(.*)",
                                NULL,
+                               STRING_NO_ASSIGN,
                                STRING_NO_ASSIGN,
                                fileName,
                                NULL
@@ -5528,6 +5529,7 @@ void Database_doneAll(void)
     type = DATABASE_TYPE_SQLITE3;
     String_setCString(fileName,uri);
   }
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(fileName));
 
   switch (type)
   {
@@ -5571,7 +5573,7 @@ void Database_doneAll(void)
         }
       }
 
-      // get Sqlite database name
+      // get sqlite database name
       if (!String_isEmpty(fileName))
       {
         // open file
