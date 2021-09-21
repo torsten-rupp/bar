@@ -6704,46 +6704,11 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,
-                                                 KEY,
-                                                 KEY,
-                                                 TEXT,
-                                                 TEXT,
-                                                 TEXT,
-                                                 DATETIME,
-                                                 TEXT,
-                                                 TEXT,
-                                                 TEXT,
-                                                 INT,
-                                                 INT,
-                                                 DATETIME,
-                                                 TEXT,
-
-                                                 INT,
-                                                 INT64,
-
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-
-                                                 INT,
-                                                 INT64,
-
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT64,
-                                                 INT,
-                                                 INT,
-                                                 INT,
-                                                 INT64,
-                                                 INT
+                           DATABASE_COLUMN_TYPES(KEY,KEY,KEY,TEXT,TEXT,TEXT,DATETIME,TEXT,TEXT,TEXT,INT,INT,DATETIME,TEXT,
+                                                 INT,INT64,
+                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
+                                                 INT,INT64,
+                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT
                                                 ),
                            "SELECT storages.id,\
                                    storages.uuidId, \
@@ -6788,12 +6753,12 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                             FROM storages \
                             LEFT JOIN entities ON entities.id=storages.entityId \
                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE     (%d OR storages.id IN (%S)) \
+                            WHERE     (%d OR storages.id IN (%s)) \
                                   AND (%d OR entities.id IS NULL) \
                                   AND storages.deletedFlag!=1 \
                            ",
                            String_isEmpty(storageIdsString) ? 1 : 0,
-                           storageIdsString,
+                           !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0",
                            !lostFlag
                           );
   if (error != ERROR_NONE)
