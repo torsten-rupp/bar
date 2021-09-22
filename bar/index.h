@@ -164,7 +164,7 @@ typedef struct
 // index query handle
 typedef struct
 {
-  IndexHandle         *indexHandle;
+  IndexHandle             *indexHandle;
   DatabaseStatementHandle databaseStatementHandle;
 } IndexQueryHandle;
 

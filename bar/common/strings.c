@@ -5505,7 +5505,7 @@ bool String_match(ConstString string, ulong index, ConstString pattern, long *ne
   return matchFlag;
 }
 
-bool String_matchCString(const char *string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...)
+bool String_matchCString(ConstString string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...)
 {
   va_list arguments;
   bool    matchFlag;
@@ -5513,12 +5513,12 @@ bool String_matchCString(const char *string, ulong index, const char *pattern, l
   if (matchedString != NULL)
   {
     va_start(arguments,matchedString);
-    matchFlag = vmatchString(string,index,pattern,nextIndex,matchedString,arguments);
+    matchFlag = vmatchString(String_cString(string),index,pattern,nextIndex,matchedString,arguments);
     va_end(arguments);
   }
   else
   {
-    matchFlag = matchString(string,index,pattern,nextIndex);
+    matchFlag = matchString(String_cString(string),index,pattern,nextIndex);
   }
 
   return matchFlag;

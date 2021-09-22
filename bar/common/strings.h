@@ -1239,7 +1239,7 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
 \***********************************************************************/
 
 bool String_match(ConstString string, ulong index, ConstString pattern, long *nextIndex, String matchedString, ...);
-bool String_matchCString(const char *string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...);
+bool String_matchCString(ConstString string, ulong index, const char *pattern, long *nextIndex, String matchedString, ...);
 
 /***********************************************************************\
 * Name   : String_toInteger, String_toInteger64, String_toDouble,

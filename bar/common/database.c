@@ -5481,29 +5481,30 @@ void Database_doneAll(void)
   databaseName = String_new();
 
   // get database type and open/connect data
-  if      (String_matchCString(uri,
-                               STRING_BEGIN,
-                               "^(sqlite|sqlite3):(.*)",
-                               NULL,
-                               STRING_NO_ASSIGN,
-                               STRING_NO_ASSIGN,
-                               fileName,
-                               NULL
-                              )
+  if (uri != NULL)
+  if      (   (uri != NULL)
+           && stringMatch(uri,
+                          "^(sqlite|sqlite3):(.*)",
+                          NULL,
+                          STRING_NO_ASSIGN,
+                          STRING_NO_ASSIGN,
+                          fileName,
+                          NULL
+                         )
           )
   {
     type = DATABASE_TYPE_SQLITE3;
   }
-  else if (String_matchCString(uri,
-                               STRING_BEGIN,
-                               "^mysql:([^:]+):([^:]+):(.*)",
-                               NULL,
-                               STRING_NO_ASSIGN,
-                               serverName,
-                               userName,
-                               password,
-                               NULL
-                              )
+  else if (   (uri != NULL)
+           && stringMatch(uri,
+                          "^mysql:([^:]+):([^:]+):(.*)",
+                          NULL,
+                          STRING_NO_ASSIGN,
+                          serverName,
+                          userName,
+                          password,
+                          NULL
+                         )
           )
   {
     type = DATABASE_TYPE_MYSQL;
