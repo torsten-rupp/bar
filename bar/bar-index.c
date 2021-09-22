@@ -1101,62 +1101,70 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
 
-  // check FTS entries without entry
-  printInfo("  FTS entries without entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "FTS_entries",
-                                "COUNT(entryId)",
-                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)"
-                               );
-  if (error == ERROR_NONE)
+  switch (Database_getType(databaseHandle))
   {
-    printInfo("%lld\n",n);
-  }
-  else
-  {
-    printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
-  }
-  totalCount += (ulong)n;
+    case DATABASE_TYPE_SQLITE3:
+      // check FTS entries without entry
+      printInfo("  FTS entries without entry...");
+      error = Database_getInteger64(databaseHandle,
+                                    &n,
+                                    "FTS_entries",
+                                    "COUNT(entryId)",
+                                    "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)"
+                                   );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%lld\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
 
-  // check FTS storages without storage
-  printInfo("  FTS storages without storage...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "FTS_storages",
-                                "COUNT(storageId)",
-                                "WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)"
-                               );
-  if (error == ERROR_NONE)
-  {
-    printInfo("%lld\n",n);
-  }
-  else
-  {
-    printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
-  }
-  totalCount += (ulong)n;
+      // check FTS storages without storage
+      printInfo("  FTS storages without storage...");
+      error = Database_getInteger64(databaseHandle,
+                                    &n,
+                                    "FTS_storages",
+                                    "COUNT(storageId)",
+                                    "WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)"
+                                   );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%lld\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
 
-  // check newest entries without entry
-  printInfo("  newest entries without entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entriesNewest",
-                                "COUNT(id)",
-                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)"
-                               );
-  if (error == ERROR_NONE)
-  {
-    printInfo("%lld\n",n);
+      // check newest entries without entry
+      printInfo("  newest entries without entry...");
+      error = Database_getInteger64(databaseHandle,
+                                    &n,
+                                    "entriesNewest",
+                                    "COUNT(id)",
+                                    "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)"
+                                   );
+      if (error == ERROR_NONE)
+      {
+        printInfo("%lld\n",n);
+      }
+      else
+      {
+        printInfo("FAIL!\n");
+        printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+      }
+      totalCount += (ulong)n;
+      break;
+    case DATABASE_TYPE_MYSQL:
+      // nothing to do
+      break;
   }
-  else
-  {
-    printInfo("FAIL!\n");
-    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
-  }
-  totalCount += (ulong)n;
 
   if (totalCount > 0LL)
   {
