@@ -179,21 +179,9 @@ CREATE TABLE IF NOT EXISTS storages(
   INDEX(created,name,totalEntryCount,state),
   INDEX(userName),
   INDEX(state,name,totalEntryCount,created),
-  INDEX(deletedFlag)
+  INDEX(deletedFlag),
+  FULLTEXT(name)
 );
-//TODO: add?
-//CREATE INDEX ON storages (hostName);
-
-// full-text-search
-/*
-CREATE VIRTUAL TABLE FTS_storages USING FTS5(
-  storageId,
-  name,
-
-//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
-  tokenize=unicode61
-);
-*/
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
@@ -222,7 +210,8 @@ CREATE TABLE IF NOT EXISTS entries(
   INDEX(name,size,type,timeLastChanged),
   INDEX(type,size,name,timeLastChanged),
   INDEX(size,type,name,timeLastChanged),
-  INDEX(timeLastChanged,name,size,type)
+  INDEX(timeLastChanged,name,size,type),
+  FULLTEXT(name)
 );
 
 // newest entries (updated by triggers)
@@ -254,17 +243,6 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   INDEX(entityId,type,entryId,name,size,timeLastChanged)
 );
 
-// full-text-search
-/*
-CREATE VIRTUAL TABLE FTS_entries USING FTS5(
-  entryId,
-  name,
-
-//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
-  tokenize=unicode61
-);
-*/
-
 CREATE TRIGGER AFTER UPDATE ON entries
   FOR EACH ROW
   BEGIN
@@ -279,8 +257,8 @@ CREATE TRIGGER AFTER UPDATE ON entries
       WHERE entryId=OLD.id;
 
     // update FTS
-    DELETE FROM FTS_entries WHERE entryId=OLD.id;
-    INSERT INTO FTS_entries (id,name) VALUES (NEW.id,NEW.name);
+//    DELETE FROM FTS_entries WHERE entryId=OLD.id;
+//    INSERT INTO FTS_entries (id,name) VALUES (NEW.id,NEW.name);
 
 // insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
     // update if entry is newer

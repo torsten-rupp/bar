@@ -5126,6 +5126,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
                                        &n,
                                        DATABASE_COLUMN_TYPES(),
+// TODO:
                                        "DELETE FROM FTS_entries \
                                         WHERE entryId MATCH %lld \
                                        ",
@@ -5183,6 +5184,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    &n,
                                    DATABASE_COLUMN_TYPES(),
+// TODO:
                                    "DELETE FROM FTS_storages \
                                     WHERE storageId MATCH %lld \
                                    ",
@@ -6789,7 +6791,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   const char *TYPE_TEXT[] = {"","uuid","entity","storage","entry","file","image","directory","link","hardlink","special","history"};
 
   String     entityIdsString;
-  String     ftsName;
+  String     ftsName,ftsSubSelect;
   ulong      i;
   DatabaseId entityId;
   Errors     error;
@@ -6806,6 +6808,17 @@ UNUSED_VARIABLE(lostFlag);
 
   ftsName = String_new();
   getFTSString(ftsName,name);
+
+  ftsSubSelect = String_new();
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      String_format(ftsSubSelect,"SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S'",ftsName);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      String_format(ftsSubSelect,"SELECT id FROM entries WHERE MATCH(name) AGAINST ('%S')",ftsName);
+      break;
+  }
 
   printf("Entries:\n");
   error = Database_execute(databaseHandle,
@@ -6914,12 +6927,12 @@ UNUSED_VARIABLE(lostFlag);
                                                        LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                        WHERE     entries.entityId=%lld \
                                                              AND ((%u=0) OR (type=%u)) \
-                                                             AND (%d OR entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')) \
+                                                             AND (%d OR entries.id IN (%S)) \
                                                       ",
                                                       entityId,
                                                       entryType,entryType,
                                                       String_isEmpty(ftsName) ? 1 : 0,
-                                                      ftsName
+                                                      ftsSubSelect
                                                      );
                              if (error != ERROR_NONE)
                              {
@@ -6929,9 +6942,7 @@ UNUSED_VARIABLE(lostFlag);
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,
-                                                 KEY
-                                                ),
+                           DATABASE_COLUMN_TYPES(KEY,KEY),
                            "SELECT id,uuidId \
                             FROM entities \
                             WHERE     (%d OR id IN (%s)) \
@@ -6947,6 +6958,7 @@ UNUSED_VARIABLE(lostFlag);
   }
 
   // free resources
+  String_delete(ftsSubSelect);
   String_delete(ftsName);
   String_delete(entityIdsString);
 }

@@ -4053,9 +4053,10 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
   #define SLEEP_TIME 500L  // [ms]
 
   String                        sqlString;
+  bool                          done;
+  Errors                        error;
   uint                          maxRetryCount;
   uint                          retryCount;
-  Errors                        error;
   DatabaseValue                 *values;
   uint                          valueCount;
   uint                          i;
@@ -4074,6 +4075,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                                arguments
                               );
 
+  done          = FALSE;
   error         = ERROR_NONE;
   maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
   retryCount    = 0;
@@ -4112,11 +4114,13 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             }
             else if (sqliteResult == SQLITE_INTERRUPT)
             {
-              return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              break;
             }
             else if (sqliteResult != SQLITE_OK)
             {
-              return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              break;
             }
             assert(statementHandle != NULL);
 
@@ -4129,49 +4133,6 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             {
               HALT_INSUFFICIENT_MEMORY();
             }
-
-// TODO: remove
-#if 0
-            for (i = 0; i < valueCount; i++)
-            {
-              switch (columnTypes[i])
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  values[i].id = DATABASE_ID_NONE;
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  values[i].b = FALSE;
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  values[i].i = 0LL;
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  values[i].i = 0LL;
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  values[i].d = 0.0;
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  values[i].dateTime = 0LL;
-                  break;
-                case DATABASE_DATATYPE_TEXT:
-                  values[i].text.data   = NULL;
-                  values[i].text.length = 0;
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                  break;
-                #ifndef NDEBUG
-                  default:
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    break;
-                #endif /* NDEBUG */
-              }
-            }
-#endif
 
             // step and process rows
             do
@@ -4284,23 +4245,26 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
           else
           {
             // query SQL statement
-            sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                        String_cString(sqlString),
-                                        NULL,  // callback
-                                        NULL,  // userData
-                                        NULL  // errorMsg
-                                       ); \
-            if      (sqliteResult == SQLITE_MISUSE)
+            if (error == ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
-            }
-            else if (sqliteResult == SQLITE_INTERRUPT)
-            {
-              return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
-            }
-            else if (sqliteResult != SQLITE_OK)
-            {
-              return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
+                                          String_cString(sqlString),
+                                          NULL,  // callback
+                                          NULL,  // userData
+                                          NULL  // errorMsg
+                                         ); \
+              if      (sqliteResult == SQLITE_MISUSE)
+              {
+                HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
+              }
+              else if (sqliteResult == SQLITE_INTERRUPT)
+              {
+                error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              }
+              else if (sqliteResult != SQLITE_OK)
+              {
+                error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              }
             }
           }
         }
@@ -4309,7 +4273,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
         {
           const uint MAX_TEXT_LENGTH = 4096;
 
-//fprintf(stderr,"%s:%d: sqlCommand=%s\n",__FILE__,__LINE__,String_cString(sqlCommand));
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
           MYSQL_STMT    *statementHandle;
           int           mysqlResult;
           MYSQL_BIND    *bind;
@@ -4331,12 +4295,14 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
             {
               mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
             }
             else if (mysqlResult != 0)
             {
               mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
             }
 
             // allocate call-back data
@@ -4361,6 +4327,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               HALT_INSUFFICIENT_MEMORY();
             }
 
+            // bind results
             for (i = 0; i < valueCount; i++)
             {
               switch (columnTypes[i])
@@ -4434,18 +4401,13 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               }
             }
 
+// TODO:
             if (mysql_stmt_bind_result(statementHandle, bind) != 0)
             {
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 abort();
             }
-#if 0
-if (mysql_stmt_store_result(statementHandle) != 0)
-{
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle));
-//abort();
-}
-#endif
+
             // step and process rows
             mysqlResult = mysql_stmt_execute(statementHandle);
             if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
@@ -4454,14 +4416,30 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle)
             }
             else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
             {
+              free(values);
+              free(dateTime);
+              free(bind);
               mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
             }
             else if (mysqlResult != 0)
             {
+              free(values);
+              free(dateTime);
+              free(bind);
               mysql_stmt_close(statementHandle);
-              return ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
             }
+
+#if 1
+if (mysql_stmt_store_result(statementHandle) != 0)
+{
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle));
+abort();
+}
+#endif
 
 //fprintf(stderr,"%s:%d: mysql_stmt_num_rows(statementHandle)=%d\n",__FILE__,__LINE__,mysql_stmt_num_rows(statementHandle));
 //            if (mysql_stmt_num_rows(statementHandle) > 0)
@@ -4580,11 +4558,13 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle)
             }
             else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
             {
-              return ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              break;
             }
             else if (mysqlResult != 0)
             {
-              return ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              break;
             }
           }
         }
@@ -4602,7 +4582,11 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle)
     #endif /* not NDEBUG */
 
     // check result
-    if      (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+    if      (error == ERROR_NONE)
+    {
+      done = TRUE;
+    }
+    else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
     {
 //fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
 //Database_debugPrintLockInfo(databaseHandle);
@@ -4627,7 +4611,8 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle)
       error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
     }
   }
-  while (   (error != ERROR_NONE)
+  while (   !done
+         && (error == ERROR_NONE)
          && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
         );
 
@@ -7270,6 +7255,26 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         rowCount++;
       #endif /* DATABASE_DEBUG_COPY_TABLE */
 
+      // set to values
+      for (i = 0; i < parameterMapCount; i++)
+      {
+// TODO: copy text values
+        toDatabaseStatementHandle.values[parameterMap[i]].data = fromDatabaseStatementHandle.values[toColumnMap[parameterMap[i]]].data;
+#if 0
+fprintf(stderr,"%s:%d: index: f=%d->t=%d->p=%d name: f=%s->t=%s types: f=%s->t=%s values: f=%s->t=%s\n",__FILE__,__LINE__,
+(i < parameterMapCount) ? toColumnMap[parameterMap[i]] : -1,
+(i < parameterMapCount) ? parameterMap[i] : -1,
+i,
+fromColumnNames[toColumnMap[parameterMap[i]]],
+toColumnNames[parameterMap[i]],
+DATABASE_DATATYPE_NAMES[fromColumnTypes[toColumnMap[parameterMap[i]]]],
+DATABASE_DATATYPE_NAMES[toColumnTypes[parameterMap[i]]],
+debugDatabaseValueToString(buffer1,sizeof(buffer1),&fromDatabaseStatementHandle.values[toColumnMap[parameterMap[i]]]),
+debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.values[parameterMap[i]])
+);
+#endif
+      }
+
       // call pre-copy callback (if defined)
       if (preCopyTableFunction != NULL)
       {
@@ -7292,25 +7297,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
           }
           return error;
         }
-      }
-
-      // set to values
-      for (i = 0; i < parameterMapCount; i++)
-      {
-        toDatabaseStatementHandle.values[parameterMap[i]].data = fromDatabaseStatementHandle.values[toColumnMap[parameterMap[i]]].data;
-#if 0
-fprintf(stderr,"%s:%d: index: f=%d->t=%d->p=%d name: f=%s->t=%s types: f=%s->t=%s values: f=%s->t=%s\n",__FILE__,__LINE__,
-(i < parameterMapCount) ? toColumnMap[parameterMap[i]] : -1,
-(i < parameterMapCount) ? parameterMap[i] : -1,
-i,
-fromColumnNames[toColumnMap[parameterMap[i]]],
-toColumnNames[parameterMap[i]],
-DATABASE_DATATYPE_NAMES[fromColumnTypes[toColumnMap[parameterMap[i]]]],
-DATABASE_DATATYPE_NAMES[toColumnTypes[parameterMap[i]]],
-debugDatabaseValueToString(buffer1,sizeof(buffer1),&fromDatabaseStatementHandle.values[toColumnMap[parameterMap[i]]]),
-debugDatabaseValueToString(buffer2,sizeof(buffer2),&toDatabaseStatementHandle.values[parameterMap[i]])
-);
-#endif
       }
 
       // insert row
@@ -7772,6 +7758,7 @@ bool Database_setTableColumnId(DatabaseColumns *columns, const char *columnName,
   }
   else
   {
+abort();
     return FALSE;
   }
 }

@@ -747,6 +747,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                assert(fromEntityId != DATABASE_ID_NONE);
                                toEntityId = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                assert(toEntityId != DATABASE_ID_NONE);
+fprintf(stderr,"%s:%d: fromEntityId=%lld toEntityId=%lld\n",__FILE__,__LINE__,fromEntityId,toEntityId);
 
                                // transfer storages of entity
                                t0 = Misc_getTimestamp();
@@ -769,7 +770,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                             UNUSED_VARIABLE(toColumns);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnInt64(toColumns,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -846,7 +847,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                             UNUSED_VARIABLE(fromColumns);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnInt64(toColumns,"entityId",toEntityId);
+fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -931,8 +933,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -981,8 +983,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1040,8 +1042,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1116,7 +1118,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                   Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE),
                                                   &toEntityId
                                                  );
-                               (void)Database_setTableColumnInt64(toColumns,"entityId",toEntityId);
+                               (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                return error;
                              },NULL),
@@ -1161,7 +1163,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                             UNUSED_VARIABLE(fromColumns);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnInt64(toColumns,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -1246,8 +1248,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1297,8 +1299,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1355,8 +1357,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnInt64(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
