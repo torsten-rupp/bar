@@ -4530,7 +4530,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  MySQL support      : `if test "$HAVE_MYSQL"; then echo "yes ($VERSION_MYSQL)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SWT directory      : $SWT_DIR"
+                    echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
                     echo ""
                     echo "  Debug version      : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
