@@ -247,8 +247,6 @@ LOCAL bool vmatchString(const char *string,
   assert(string != NULL);
   assert(pattern != NULL);
 
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-
   #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
     // compile pattern
     if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
