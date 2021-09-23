@@ -3599,14 +3599,15 @@ static inline int stringScan(const char *string, const char *format, ...)
 *          matchedStringSize - size of string matching regular expression
 *          arguments         - arguments
 *          ...               - optional matching strings of sub-patterns
-*                              (char*,ulong), last value have to be NULL!
+*                              (const char**,size_t*), last value have
+*                              to be NULL!
 * Output : -
 * Return : TRUE iff pattern match with string
-* Notes  :
+* Notes  : sub-match strings are _not_ copied!
 \***********************************************************************/
 
-bool stringVMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, va_list arguments);
-static inline bool stringMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, ...)
+bool stringVMatch(const char *string, const char *pattern, const char **matchedString, size_t *matchedStringSize, va_list arguments);
+static inline bool stringMatch(const char *string, const char *pattern, const char **matchedString, size_t *matchedStringSize, ...)
 {
   va_list arguments;
   bool    result;
