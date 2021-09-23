@@ -5481,7 +5481,6 @@ void Database_doneAll(void)
   databaseName = String_new();
 
   // get database type and open/connect data
-  if (uri != NULL)
   if      (   (uri != NULL)
            && stringMatch(uri,
                           "^(sqlite|sqlite3):(.*)",
