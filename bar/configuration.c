@@ -6700,10 +6700,6 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
          && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[.*",NULL,NULL,NULL)
         )
   {
-if (String_equalsCString(line,"[end]")) { fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3"); }
-
-fprintf(stderr,"%s:%d: mah %d '%s'\n",__FILE__,__LINE__,String_matchCString(line,STRING_BEGIN,"\\[end\\]",NULL,NULL,NULL),String_cString(line));
-
     if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
     {
       // discard comments if separator or empty line
