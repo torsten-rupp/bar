@@ -325,9 +325,11 @@ TEST_JOB_NAME                    =  __test__
 TEST_JOB_UUID                    =  00000000-0000-0000-0000-000000000000
 TEST_SCHEDULE_UUID               =  00000000-0000-0000-0000-000000000000
 
-TEST_INDEX_DATABASE_SQLITE       = sqlite:intermediate/index.db
-TEST_INDEX_DATABASE_MYSQL        = mysql:localhost:bar:test
-TEST_INDEX_DATABASE              = $(TEST_INDEX_DATABASE_SQLITE)
+TEST_INDEX_DATABASE_SQLITE       =  sqlite:intermediate/index.db
+TEST_INDEX_DATABASE_MYSQL        =  mysql:localhost:bar:test
+TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
+
+TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MYSQL)
 
 # MySQL test database
 TEST_MYSQL_SERVER                = localhost
@@ -1726,12 +1728,15 @@ test12-valgrind test_device-valgrind: \
 
 test13 test_index:
 	@$(call functionInfoBegin,Test 13: index)
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
-          test_index_operations \
-          ;
+	for testIndexDatabase in $(TEST_INDEX_DATABASES); do \
+          $(MAKE) \
+            BAR_FILE="test" \
+            BAR_PATTERN="test" \
+            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
+            TEST_INDEX_DATABASE=$$testIndexDatabase \
+            test_index_operations \
+            ; \
+        done
 	@$(call functionInfoEnd,OK)
 
 test13-debug test_index-debug: \
