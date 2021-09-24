@@ -1878,6 +1878,7 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
     // prepare list
     if (Database_prepare(&databaseStatementHandle,
                          databaseHandle,
+                         DATABASE_COLUMN_TYPES(KEY,TEXT),
                          "SELECT id,name \
                           FROM names \
                           WHERE     storedFlag=0 \
@@ -1966,6 +1967,7 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
   // prepare list
   error = Database_prepare(databaseStatementHandle,
                            databaseHandle,
+                           DATABASE_COLUMN_TYPES(KEY,TEXT),
                            "SELECT id,name \
                             FROM names \
                             WHERE     storedFlag=0 \
@@ -2024,6 +2026,7 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
   Database_prepare(&databaseStatementHandle,
                          databaseHandle,
+                         DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,BOOL),
                          "SELECT id,UNIXTIMESTAMP(dateTime),name,storedFlag \
                           FROM names \
                           WHERE     jobUUID=%'s \

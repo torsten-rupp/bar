@@ -4126,7 +4126,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
 
             // allocate call-back data
             valueCount = sqlite3_column_count(statementHandle);
-            assert(valueCount == columnTypeCount);
+            assert(valueCount >= columnTypeCount);
 
             values = (DatabaseValue*)malloc(valueCount*sizeof(DatabaseValue));
             if (values == NULL)
@@ -4158,7 +4158,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               {
                 for (i = 0; i < valueCount; i++)
                 {
-                  switch (columnTypes[i])
+                  switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
                   {
                     case DATABASE_DATATYPE_NONE:
                       break;
@@ -4203,7 +4203,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             // free call-back data
             for (i = 0; i < valueCount; i++)
             {
-              switch (columnTypes[i])
+              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
               {
                 case DATABASE_DATATYPE_NONE:
                   break;
@@ -4330,7 +4330,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             // bind results
             for (i = 0; i < valueCount; i++)
             {
-              switch (columnTypes[i])
+              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
               {
                 case DATABASE_DATATYPE_NONE:
                   break;
@@ -4454,7 +4454,7 @@ abort();
                 {
                   for (i = 0; i < valueCount; i++)
                   {
-                    switch (columnTypes[i])
+                    switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
                     {
                       case DATABASE_DATATYPE_NONE:
                         break;
@@ -4503,7 +4503,7 @@ abort();
             // free call-back data
             for (i = 0; i < valueCount; i++)
             {
-              switch (columnTypes[i])
+              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
               {
                 case DATABASE_DATATYPE_NONE:
                   break;
@@ -5453,6 +5453,8 @@ void Database_doneAll(void)
   String        serverName;
   String        userName;
   String        password;
+  char          *s1,*s2,*s3;
+  size_t        n1,n2,n3;
   String        databaseName;
   int           sqliteMode;
   int           sqliteResult;
@@ -5484,29 +5486,34 @@ void Database_doneAll(void)
   if      (   (uri != NULL)
            && stringMatch(uri,
                           "^(sqlite|sqlite3):(.*)",
-                          NULL,
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
-                          fileName,
+                          STRING_NO_ASSIGN,
+                          STRING_NO_ASSIGN,
+                          &s1,&n1,
                           NULL
                          )
           )
   {
     type = DATABASE_TYPE_SQLITE3;
+    String_setBuffer(fileName,s1,n1);
   }
   else if (   (uri != NULL)
            && stringMatch(uri,
                           "^mysql:([^:]+):([^:]+):(.*)",
-                          NULL,
                           STRING_NO_ASSIGN,
-                          serverName,
-                          userName,
-                          password,
+                          STRING_NO_ASSIGN,
+                          &s1,&n1,
+                          &s2,&n2,
+                          &s3,&n3,
                           NULL
                          )
           )
   {
     type = DATABASE_TYPE_MYSQL;
+    String_setBuffer(serverName,s1,n1);
+    String_setBuffer(userName,s2,n2);
+    String_setBuffer(password,s3,n3);
   }
   else
   {
@@ -5541,14 +5548,14 @@ void Database_doneAll(void)
       }
 
       // create database
-      if (databaseOpenMode == DATABASE_OPENMODE_FORCE_CREATE)
+      if ((databaseOpenMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
       {
         // delete existing file
         (void)File_delete(fileName,FALSE);
       }
 
       // check if exists
-      if (databaseOpenMode == DATABASE_OPENMODE_CREATE)
+      if ((databaseOpenMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_CREATE)
       {
         if (File_exists(fileName))
         {
@@ -9046,7 +9053,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                   value.d = va_arg(arguments,double*);
                   if (value.d != NULL)
                   {
-                    (*value.d) = atof((const char*)sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,column));
+                    (*value.d) = sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,column);
                   }
                 }
                 else
@@ -9054,7 +9061,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                   value.f = va_arg(arguments,float*);
                   if (value.f != NULL)
                   {
-                    (*value.f) = (float)atof((const char*)sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,column));
+                    (*value.f) = (float)sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,column);
                   }
                 }
                 break;

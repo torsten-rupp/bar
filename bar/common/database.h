@@ -410,6 +410,7 @@ typedef struct
     uint64 id;
     bool   b;
     int64  i;
+    uint64 u;
     double d;
     uint64 dateTime;
 // TODO: use String?

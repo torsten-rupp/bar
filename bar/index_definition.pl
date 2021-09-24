@@ -234,7 +234,7 @@ sub processFile($$)
 
           print CFILE_HANDLE "#define INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
-          print CFILE_HANDLE "CREATE INDEX IF NOT EXISTS $indexName ON $tableName ($columns);\\\n";
+          print CFILE_HANDLE "CREATE INDEX IF NOT EXISTS $indexName ON $tableName ($columns)\\\n";
           print CFILE_HANDLE "\"\n";
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
           print CFILE_HANDLE "\n";
@@ -248,7 +248,7 @@ sub processFile($$)
 
           print CFILE_HANDLE "#define INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
-          print CFILE_HANDLE "CREATE INDEX $indexName ON $tableName ($columns);\\\n";
+          print CFILE_HANDLE "CREATE INDEX $indexName ON $tableName ($columns)\\\n";
           print CFILE_HANDLE "\"\n";
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
           print CFILE_HANDLE "\n";
@@ -320,7 +320,7 @@ sub processFile($$)
       elsif ($line =~ /^\s*END;\s*$/)
       {
         # end trigger
-        $definition = append($definition,expandMacros($line));
+        $definition = append($definition,"END");
 
         if    ($type eq $TYPE_TABLE)
         {
@@ -382,11 +382,11 @@ sub processFile($$)
                  || ($type eq $TYPE_FTS)
                  || ($type eq $TYPE_INDEX)
                 )
-             && ($line =~ /\);/)
+             && ($line =~ /\);\s*$/)
             )
       {
         # end table/index
-        $definition = append($definition,expandMacros($line));
+        $definition = append($definition,")");
 
         if    ($type eq $TYPE_TABLE)
         {
@@ -484,7 +484,7 @@ sub processFile($$)
         {
           print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
-          print CFILE_HANDLE "INSERT OR IGNORE INTO $tableName $values;\\\n";
+          print CFILE_HANDLE "INSERT OR IGNORE INTO $tableName $values\\\n";
           print CFILE_HANDLE "\"\n";
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
@@ -493,7 +493,7 @@ sub processFile($$)
         {
           print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
-          print CFILE_HANDLE "INSERT IGNORE INTO $tableName $values;\\\n";
+          print CFILE_HANDLE "INSERT IGNORE INTO $tableName $values\\\n";
           print CFILE_HANDLE "\"\n";
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";

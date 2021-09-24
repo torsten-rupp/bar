@@ -38,14 +38,18 @@ endif
 
 #------------------------------- test commands--------------------------------
 
-# test bar executables
-TEST_BAR          ?= $(EXE_PREFIX) $(BAR_DIR)/bar@EXEEXT@
-TEST_BAR_DEBUG    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-debug@EXEEXT@
-TEST_BAR_GCOV     ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gcov@EXEEXT@
-TEST_BAR_GPROF    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gprof@EXEEXT@
-TEST_BAR_VALGRIND ?= $(EXE_PREFIX) $(BAR_DIR)/bar-valgrind@EXEEXT@
-TEST_BAR_INDEX    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-index@EXEEXT@
-TEST_DESTROYER    ?= $(EXE_PREFIX) $(BAR_DIR)/destroyer@EXEEXT@
+# test executables
+TEST_BAR                ?= $(EXE_PREFIX) $(BAR_DIR)/bar@EXEEXT@
+TEST_BAR_DEBUG          ?= $(EXE_PREFIX) $(BAR_DIR)/bar-debug@EXEEXT@
+TEST_BAR_GCOV           ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gcov@EXEEXT@
+TEST_BAR_GPROF          ?= $(EXE_PREFIX) $(BAR_DIR)/bar-gprof@EXEEXT@
+TEST_BAR_VALGRIND       ?= $(EXE_PREFIX) $(BAR_DIR)/bar-valgrind@EXEEXT@
+TEST_BAR_INDEX          ?= $(EXE_PREFIX) $(BAR_DIR)/bar-index@EXEEXT@
+TEST_BAR_INDEX_DEBUG    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-index-debug@EXEEXT@
+TEST_BAR_INDEX_GCOV     ?= $(EXE_PREFIX) $(BAR_DIR)/bar-index-gcov@EXEEXT@
+TEST_BAR_INDEX_GPROF    ?= $(EXE_PREFIX) $(BAR_DIR)/bar-index-gprof@EXEEXT@
+TEST_BAR_INDEX_VALGRIND ?= $(EXE_PREFIX) $(BAR_DIR)/bar-index-valgrind@EXEEXT@
+TEST_DESTROYER          ?= $(EXE_PREFIX) $(BAR_DIR)/destroyer@EXEEXT@
 
 #---------------------------------- commands----------------------------------
 
@@ -321,6 +325,15 @@ TEST_JOB_NAME                    =  __test__
 TEST_JOB_UUID                    =  00000000-0000-0000-0000-000000000000
 TEST_SCHEDULE_UUID               =  00000000-0000-0000-0000-000000000000
 
+TEST_INDEX_DATABASE_SQLITE       = sqlite:intermediate/index.db
+TEST_INDEX_DATABASE_MYSQL        = mysql:localhost:bar:test
+TEST_INDEX_DATABASE              = $(TEST_INDEX_DATABASE_SQLITE)
+
+# MySQL test database
+TEST_MYSQL_SERVER                = localhost
+TEST_MYSQL_USER                  = bar
+TEST_MYSQL_PASSWORD              = test
+
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
 ifeq ($(COMBINED_COMPRESS_NAMES),)
@@ -463,7 +476,7 @@ help_output:
 	@$(ECHO) ""
 	@$(ECHO) "  test_device_operations"
 	@$(ECHO) ""
-	@$(ECHO) "  test_index_operations[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test_index[$(HELP_SUFFIXES)]"
 	@$(ECHO) ""
 	@$(ECHO) "  test_keys"
 	@$(ECHO) "  test_keys_clean"
@@ -970,19 +983,19 @@ test1 test_basic:
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-verify-signatures $(OPTIONS)" \
           test_file_operations \
           ;
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --skip-verify-signatures $(OPTIONS)" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
 	@$(call functionInfoEnd,OK)
@@ -1723,19 +1736,19 @@ test13 test_index:
 
 test13-debug test_index-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_index
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index
 
 test13-gcov test_index-gcov: \
   $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_index
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index
 
 test13-gprof test_index-gprof: \
   $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_index
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index
 
 test13-valgrind test_index-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_index
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)"  test_index
 
 test14 test_server:
 	@$(call functionInfoBegin,Test 14: server)
@@ -2621,7 +2634,7 @@ functionVerifyParameter = \
 # helper function for index database SQL command
 # call functionIndex,<sql command>
 functionIndex = \
-  $(CD) $(UP_DIR); $(TEST_BAR_INDEX) -C $(SUB_DIR) intermediate/index.db $1
+  $(CD) $(UP_DIR); $(TEST_BAR_INDEX) -C $(SUB_DIR) $(TEST_INDEX_DATABASE) -q $1
 
 # helper function for query of index database
 # call functionIndexQuery,<sql command>
@@ -4233,9 +4246,77 @@ test_device_operations: \
 
 .PHONY: test_index_operations
 test_index_operations: \
-  test_index_operations_base \
   test_index_operations_tool \
+  test_index_operations_base \
   test_index_operations_server
+
+.PHONY: test_index_operations_tool
+test_index_operations_tool: \
+  $(TEST_BAR) \
+  $(TEST_BAR_INDEX) \
+  $(TEST_FILES)
+	# bar-index operations
+	@$(call functionInfoHeader,test index opertations tool)
+	@$(call functionVerifyParameter,TEST_BAR)
+	@#
+	@$(call functionCleanTestFiles)
+	@$(TEST_BAR) -c intermediate/test0.bar $(TEST_FILES_SIMPLE) >/dev/null
+	@$(TOUCH) data/random128.dat data/zero128.dat
+	@$(TEST_BAR) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
+	@# options
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-triggers $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-newest $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-indizes $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-aggregates $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --clean $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --vacuum $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --optimize $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-jobs $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-entities $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-entries $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-storages $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-lost-storages $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --entries $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --entries-newest $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --storages $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --header "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --names "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --time "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --explain-query "SELECT * FROM storages" $(LOG)
+	@# newest entries in index
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
+	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest") # no entries
+	($(CD) $(UP_DIR); \
+         $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
+           -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
+           $(BAR_OPTIONS) \
+           --index-database=$(TEST_INDEX_DATABASE) \
+           --debug-index-add-storage intermediate/test0.bar \
+           --verbose=2 \
+           $(LOG) \
+        )
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-newest $(LOG)
+	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId!=1") # only entries of entity 1
+	($(CD) $(UP_DIR); \
+         $(ULIMIT) -Sv $(MEMORY_LIMIT); \
+         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
+           -C $(SUB_DIR) \
+           -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
+           $(BAR_OPTIONS) \
+           --index-database=$(TEST_INDEX_DATABASE) \
+           --debug-index-add-storage intermediate/test1.bar \
+           --verbose=2 \
+           $(LOG) \
+        )
+	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId=1 AND    (name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 1
+	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId=2 AND NOT(name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 2
+	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_index_operations_base
 test_index_operations_base: \
@@ -4251,7 +4332,7 @@ test_index_operations_base: \
 	@$(TOUCH) data/random128.dat data/zero128.dat
 	@$(TEST_BAR) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
 	@# add to index
-	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
 	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest")
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -4259,7 +4340,7 @@ test_index_operations_base: \
            -C $(SUB_DIR) \
            -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
+           --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-add-storage intermediate/test0.bar \
            --verbose=2 \
            $(LOG) \
@@ -4273,7 +4354,7 @@ test_index_operations_base: \
            -C $(SUB_DIR) \
            -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
+           --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-refresh-storage intermediate/test0.bar \
            --verbose=2 \
            $(LOG) \
@@ -4286,7 +4367,7 @@ test_index_operations_base: \
            -C $(SUB_DIR) \
            -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
+           --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-remove-storage intermediate/test0.bar \
            --verbose=2 \
            $(LOG) \
@@ -4316,14 +4397,14 @@ test_index_operations_base: \
                                         WHERE storages.deletedFlag!=1 \
                                        ") # no special entries
 	@# newest entries in index
-	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
            -C $(SUB_DIR) \
            -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
+           --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-add-storage intermediate/test0.bar \
            --verbose=2 \
            $(LOG) \
@@ -4361,7 +4442,7 @@ test_index_operations_base: \
          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
            -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
+           --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-add-storage intermediate/test1.bar \
            --verbose=2 \
            $(LOG) \
@@ -4373,7 +4454,7 @@ test_index_operations_base: \
          $(T\EST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
            -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
+           --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-remove-storage intermediate/test0.bar \
            --verbose=2 \
            $(LOG) \
@@ -4411,7 +4492,7 @@ test_index_operations_base: \
          $(T\EST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
            -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
+           --index-database=$(TEST_INDEX_DATABASE) \
            --debug-index-remove-storage intermediate/test1.bar \
            --verbose=2 \
            $(LOG) \
@@ -4444,74 +4525,6 @@ test_index_operations_base: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_index_operations_tool
-test_index_operations_tool: \
-  $(TEST_BAR) \
-  $(TEST_BAR_INDEX) \
-  $(TEST_FILES)
-	# bar-index operations
-	@$(call functionInfoHeader,test index opertations tool)
-	@$(call functionVerifyParameter,TEST_BAR)
-	@#
-	@$(call functionCleanTestFiles)
-	@$(TEST_BAR) -c intermediate/test0.bar $(TEST_FILES_SIMPLE) >/dev/null
-	@$(TOUCH) data/random128.dat data/zero128.dat
-	@$(TEST_BAR) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
-	@# options
-	$(TEST_BAR_INDEX) intermediate/index.db --create $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --create-triggers $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --create-newest $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --create-indizes $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --create-aggregates $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --check $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --clean $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --vacuum $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --optimize $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --info $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --info-jobs $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --info-entities $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --info-entries $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --info-storages $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --info-lost-storages $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --entries $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --entries-newest $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --storages $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --header "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --names "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --time "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) intermediate/index.db --explain-query "SELECT * FROM storages" $(LOG)
-	@# newest entries in index
-	$(TEST_BAR_INDEX) intermediate/index.db --create --force $(LOG)
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest") # no entries
-	($(CD) $(UP_DIR); \
-         $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
-           -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
-           $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
-           --debug-index-add-storage intermediate/test0.bar \
-           --verbose=2 \
-           $(LOG) \
-        )
-	$(TEST_BAR_INDEX) intermediate/index.db --create-newest $(LOG)
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId!=1") # only entries of entity 1
-	($(CD) $(UP_DIR); \
-         $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
-           -C $(SUB_DIR) \
-           -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
-           $(BAR_OPTIONS) \
-           --index-database=intermediate/index.db \
-           --debug-index-add-storage intermediate/test1.bar \
-           --verbose=2 \
-           $(LOG) \
-        )
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId=1 AND    (name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 1
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId=2 AND NOT(name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 2
-	@$(call functionDoneTestFiles)
-	@$(call functionInfoFooter)
-
 .PHONY: test_index_operations_server
 test_index_operations_server: \
   $(TEST_BAR) \
@@ -4525,14 +4538,14 @@ test_index_operations_server: \
 	@$(call functionCleanTestFiles)
 	for i in 1 2 3 4 6; do \
           $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql" $(LOG); \
-          $(RMF) intermediate/index.db; $(TEST_BAR_INDEX) intermediate/index.db - < $(UP_DIR)/archive/index$$i.sql; \
+          $(RMF) $(TEST_INDEX_DATABASE); $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) - < $(UP_DIR)/archive/index$$i.sql; \
 	  ( \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
               $(TEST_OPTIONS) \
-              --index-database=intermediate/index.db \
+              --index-database=$(TEST_INDEX_DATABASE) \
               --debug-index-wait-operations \
               $(ADDITIONAL_OPTIONS); \
           ) $(LOG); \
@@ -4543,22 +4556,22 @@ test_index_operations_server: \
 .PHONY: test_index_operations-debug
 test_index_operations-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index_operations
 
 .PHONY: test_index_operations-gcov
 test_index_operations-gcov: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index_operations
 
 .PHONY: test_index_operations-gprof
 test_index_operations-gprof: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index_operations
 
 .PHONY: test_index_operations-valgrind
 test_index_operations-valgrind: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index_operations
 
 # send command to server
 functionServerCommandSocket = \

@@ -526,7 +526,11 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFi
   {
     if (createFlag)
     {
-      error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE|DATABASE_OPENMODE_AUX,WAIT_FOREVER);
+      error = Database_open(databaseHandle,
+                            databaseFileName,
+                            DATABASE_OPENMODE_CREATE|DATABASE_OPENMODE_AUX,
+                            WAIT_FOREVER
+                           );
     }
   }
   if (error != ERROR_NONE)
@@ -837,7 +841,11 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uri)
   Errors         error;
   DatabaseHandle oldDatabaseHandle;
 
-  error = Database_open(&oldDatabaseHandle,uri,DATABASE_OPENMODE_READ,WAIT_FOREVER);
+  error = Database_open(&oldDatabaseHandle,
+                        uri,
+                        DATABASE_OPENMODE_READ,
+                        WAIT_FOREVER
+                       );
   if (error == ERROR_NONE)
   {
     error = importIndexVersion7XXX(&oldDatabaseHandle, databaseHandle);
@@ -1451,52 +1459,24 @@ LOCAL String getFTSString(String string, ConstString patternText)
 
 LOCAL void createTriggers(DatabaseHandle *databaseHandle)
 {
-  Errors error;
+  Errors     error;
+  const char *triggerName;
 // TODO:
   const char *indexDefinition;
-  char  *name;
 
   printInfo("Create triggers...");
 
   // delete all existing triggers
-// TODO:
-error = ERROR_NONE;
-  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGER_NAMES_SQLITE, indexDefinition, error == ERROR_NONE)
+  INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TRIGGER_NAMES[Database_getType(databaseHandle)], triggerName)
   {
-  }
-  do
-  {
-    stringClear(name);
     error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
-
-                               stringSet(name,sizeof(name),values[0].text.data);
-
-                               return ERROR_NONE;
-                             },NULL),
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(TEXT),
-                             "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trigger%%'"
+                             DATABASE_COLUMN_TYPES(),
+                             "DROP TRIGGER %s",
+                             triggerName
                             );
-
-    if ((error == ERROR_NONE) && !stringIsEmpty(name))
-    {
-      error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "DROP TRIGGER %s",
-                               name
-                              );
-    }
   }
-  while ((error == ERROR_NONE) && !stringIsEmpty(name));
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
@@ -1505,7 +1485,7 @@ error = ERROR_NONE;
   }
 
   // create new triggeres
-  INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TRIGGERS_SQLITE, indexDefinition)
+  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS_SQLITE, indexDefinition, error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -1699,7 +1679,6 @@ LOCAL void dropTriggers(DatabaseHandle *databaseHandle)
   // delete all existing triggers
   printInfo("Drop triggers...");
   failCount = 0;
-// TODO:
   do
   {
     stringClear(name);
@@ -2336,7 +2315,6 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
                                       %llu \
                                     ) \
                                  ",
-                                 NULL,
                                  entryNode->entryId,
                                  entryNode->uuidId,
                                  entryNode->entityId,
@@ -3103,9 +3081,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT),
                              "SELECT directoryEntries.storageId, \
                                      COUNT(entries.id) \
                               FROM directoryEntries \
@@ -3163,9 +3139,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT),
                              "SELECT directoryEntries.storageId, \
                                      COUNT(entriesNewest.id) \
                               FROM directoryEntries \
@@ -3295,9 +3269,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT),
                              "SELECT linkEntries.storageId, \
                                      COUNT(entriesNewest.id) \
                               FROM linkEntries \
@@ -3372,10 +3344,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT,
-                                                   INT64
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT,INT64),
                              "SELECT entryFragments.storageId, \
                                      COUNT(entries.id), \
                                      SUM(entryFragments.size) \
@@ -3441,10 +3410,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT,
-                                                   INT64
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT,INT64),
                              "SELECT entryFragments.storageId, \
                                      COUNT(entriesNewest.id), \
                                      SUM(entryFragments.size) \
@@ -3517,9 +3483,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT),
                              "SELECT specialEntries.storageId, \
                                      COUNT(entries.id) \
                               FROM specialEntries \
@@ -3577,9 +3541,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   INT
-                                                  ),
+                             DATABASE_COLUMN_TYPES(KEY,INT),
                              "SELECT specialEntries.storageId, \
                                      COUNT(entriesNewest.id) \
                               FROM specialEntries \
@@ -4161,7 +4123,6 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                                                        ) \
                                                          WHERE id=%lld \
                                                         ",
-                                                        NULL,
                                                         INDEX_CONST_TYPE_FILE,
                                                         storageId,
                                                         INDEX_CONST_TYPE_IMAGE,
@@ -4718,7 +4679,6 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                     NULL,  // changedRowCount
                                                     "DELETE FROM fileEntries WHERE id=%lld",
-                                                    NULL,
                                                     databaseId
                                                    );
                            if (error != ERROR_NONE)
@@ -5460,7 +5420,8 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
 
   assert(values != NULL);
   assert(printTableData != NULL);
-  assert(printTableData->widths != NULL);
+// TODO:
+//  assert(printTableData->widths != NULL);
 
   UNUSED_VARIABLE(userData);
 
@@ -6211,9 +6172,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(INT,
-                                                 INT64
-                                                ),
+                           DATABASE_COLUMN_TYPES(INT,INT64),
                            "SELECT SUM(totalHardlinkCountNewest),SUM(totalHardlinkSizeNewest) \
                             FROM storages \
                             WHERE deletedFlag!=1 \

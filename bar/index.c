@@ -678,14 +678,14 @@ LOCAL void indexThreadInterrupt(void)
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,
                              databaseFileName,
-                             DATABASE_OPENMODE_CREATE,
+                             DATABASE_OPENMODE_READWRITE,
                              DATABASE_TIMEOUT
                             );
       #else /* not NDEBUG */
         return __Database_open(__fileName__,__lineNb__,
                                &indexHandle->databaseHandle,
                                databaseFileName,
-                               DATABASE_OPENMODE_CREATE,
+                               DATABASE_OPENMODE_READWRITE,
                                DATABASE_TIMEOUT
                               );
       #endif /* NDEBUG */
@@ -1532,6 +1532,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
         (void)Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "DELETE FROM meta \
                                 WHERE     name=%'S \
                                       AND (rowid NOT IN (SELECT rowid FROM meta WHERE name=%'S ORDER BY rowId DESC LIMIT 0,1)) \
@@ -1977,6 +1978,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   {
     error = Database_prepare(&databaseStatementHandle1,
                              &indexHandle->databaseHandle,
+                             DATABASE_COLUMN_TYPES(TEXT,TEXT,DATETIME),
                              "SELECT uuid, \
                                      name, \
                                      UNIXTIMESTAMP(created) \
@@ -1998,7 +2000,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
         // find matching entity/create default entity
         error = Database_prepare(&databaseStatementHandle2,
                                  &oldIndexHandle->databaseHandle,
-                                 DATABASE_COLUMN_TYPES(INT,TEXT),
+                                 DATABASE_COLUMN_TYPES(KEY,TEXT),
                                  "SELECT id, \
                                          name \
                                   FROM storages \
@@ -2033,6 +2035,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
               (void)Database_execute(&newIndexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "UPDATE storages \
                                       SET entityId=%lld \
                                       WHERE id=%lld \
@@ -2048,6 +2051,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
         error = Database_execute(&newIndexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "INSERT INTO entities \
                                     ( \
                                      jobUUID, \
@@ -2073,7 +2077,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
           // assign entity id for all storage entries with same uuid and matching name (equals except digits)
           error = Database_prepare(&databaseStatementHandle2,
                                    &oldIndexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT,TEXT),
+                                   DATABASE_COLUMN_TYPES(KEY,TEXT),
                                    "SELECT id, \
                                            name \
                                     FROM storages \
@@ -2108,6 +2112,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                 (void)Database_execute(&newIndexHandle->databaseHandle,
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
                                        NULL,  // changedRowCount
+                                       DATABASE_COLUMN_TYPES(),
                                        "UPDATE storages \
                                         SET entityId=%lld \
                                         WHERE id=%lld \
@@ -2283,7 +2288,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
   {
     error = Database_prepare(&databaseStatementHandle1,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT,TEXT,DATETIME),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME),
                              "SELECT id, \
                                      name, \
                                      UNIXTIMESTAMP(created) \
@@ -2305,7 +2310,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
         // find matching entity/create default entity
         error = Database_prepare(&databaseStatementHandle2,
                                  &oldIndexHandle->databaseHandle,
-                                 DATABASE_COLUMN_TYPES(INT,TEXT),
+                                 DATABASE_COLUMN_TYPES(KEY,TEXT),
                                  "SELECT id, \
                                          name \
                                   FROM storages \
@@ -2340,6 +2345,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
               (void)Database_execute(&newIndexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "UPDATE storages \
                                       SET entityId=%lld \
                                       WHERE id=%lld \
@@ -2355,6 +2361,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
         error = Database_execute(&newIndexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "INSERT INTO entities \
                                     ( \
                                      jobUUID, \
@@ -2588,6 +2595,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE directoryEntries \
                               SET totalEntryCount=totalEntryCount+1, \
                                   totalEntrySize =totalEntrySize +%llu \
@@ -2608,6 +2616,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE directoryEntries \
                                 SET totalEntryCountNewest=totalEntryCountNewest+1, \
                                     totalEntrySizeNewest =totalEntrySizeNewest +%llu \
@@ -2869,6 +2878,7 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "UPDATE entities \
                             SET totalEntryCount    =%llu, \
                                 totalEntrySize     =%llu, \
@@ -3085,6 +3095,7 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "UPDATE entities \
                             SET totalEntryCountNewest    =%llu, \
                                 totalEntrySizeNewest     =%llu, \
@@ -3272,10 +3283,10 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   // get hardlink aggregate data
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entries.size?
                            "SELECT COUNT(DISTINCT entries.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entryFragments \
                               LEFT JOIN entries ON entries.id=entryFragments.entryId \
                             WHERE     entryFragments.storageId=%lld \
@@ -3331,6 +3342,7 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "UPDATE storages \
                             SET totalEntryCount    =%llu, \
                                 totalEntrySize     =%llu, \
@@ -3368,9 +3380,9 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   // get newest file aggregate data
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMN_TYPES(INT,INT64),
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entryFragments \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
                             WHERE     entryFragments.storageId=%lld \
@@ -3400,9 +3412,9 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   // get newest image aggregate data
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMN_TYPES(INT,INT64),
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entryFragments \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
                             WHERE     entryFragments.storageId=%lld \
@@ -3482,10 +3494,10 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   // get newest hardlink aggregate data
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entriesNewest.size?
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entryFragments \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
                             WHERE     entryFragments.storageId=%lld \
@@ -3541,6 +3553,7 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
                            "UPDATE storages \
                             SET totalEntryCountNewest    =%llu, \
                                 totalEntrySizeNewest     =%llu, \
@@ -3701,6 +3714,7 @@ LOCAL Errors purge(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              &changedRowCount,
+                             DATABASE_COLUMN_TYPES(),
                              "DELETE FROM %s \
                               WHERE %S \
                               LIMIT %u \
@@ -3980,7 +3994,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
       // get uuid id, job UUID, created date/time, archive type
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME,INT),
                                "SELECT uuids.id, \
                                        entities.jobUUID, \
                                        UNIXTIMESTAMP(entities.created), \
@@ -4172,6 +4186,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "DELETE FROM FTS_entries \
                               WHERE entryId=%lld \
                              ",
@@ -4185,6 +4200,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "DELETE FROM entriesNewest \
                               WHERE entryId=%lld \
                              ",
@@ -4195,6 +4211,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "INSERT OR IGNORE INTO entriesNewest \
                                 ( \
                                  uuidId,\
@@ -4237,6 +4254,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "DELETE FROM entries \
                               WHERE id=%lld \
                              ",
@@ -4411,7 +4429,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
 
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMN_TYPES(INT,DATETIME,TEXT),
                            "SELECT state, \
                                    UNIXTIMESTAMP(lastChecked), \
                                    errorMessage \
@@ -4577,7 +4595,7 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
     {
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(KEY,KEY,KEY,INT,TEXT,DATETIME,INT,INT,INT,INT64),
                                "      SELECT entries.id, \
                                              entries.uuidId, \
                                              entries.entityId, \
@@ -4701,21 +4719,20 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
               indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                               {
-                                assert(count == 2);
                                 assert(values != NULL);
+                                assert(valueCount == 2);
 
-                                UNUSED_VARIABLE(columns);
-                                UNUSED_VARIABLE(count);
                                 UNUSED_VARIABLE(userData);
 
-                                entryNode->newest.entryId         = (values[0] != NULL) ? (DatabaseId)strtoll(values[0],NULL,10) : DATABASE_ID_NONE;
-                                entryNode->newest.timeLastChanged = (values[1] != NULL) ? (uint64)strtoull(values[1],NULL,10) : 0LL;
+                                entryNode->newest.entryId         = values[0].id;
+                                entryNode->newest.timeLastChanged = values[1].dateTime;
 
                                 return ERROR_NONE;
                               },NULL),
                               NULL,  // changedRowCount
+                              DATABASE_COLUMN_TYPES(KEY,DATETIME),
                               "      SELECT entriesNewest.id, \
                                             UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                      FROM entryFragments \
@@ -4777,6 +4794,7 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
           return Database_execute(&indexHandle->databaseHandle,
                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                   NULL,  // changedRowCount
+                                  DATABASE_COLUMN_TYPES(),
                                   "INSERT OR REPLACE INTO entriesNewest \
                                      ( \
                                       entryId, \
@@ -4926,7 +4944,7 @@ LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
     {
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(KEY,TEXT),
                                "      SELECT entries.id, \
                                              entries.name \
                                       FROM entryFragments \
@@ -5006,28 +5024,27 @@ LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
                 indexHandle,
       {
         return Database_execute(&indexHandle->databaseHandle,
-                                CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                 {
-                                  assert(count == 9);
                                   assert(values != NULL);
+                                  assert(valueCount == 9);
 
-                                  UNUSED_VARIABLE(columns);
-                                  UNUSED_VARIABLE(count);
                                   UNUSED_VARIABLE(userData);
 
-                                  entryNode->newest.entryId         = (values[0] != NULL) ? (DatabaseId)strtoll(values[0],NULL,10) : DATABASE_ID_NONE;
-                                  entryNode->newest.uuidId          = (values[1] != NULL) ? (DatabaseId)strtoll(values[1],NULL,10) : DATABASE_ID_NONE;
-                                  entryNode->newest.entityId        = (values[2] != NULL) ? (DatabaseId)strtoll(values[2],NULL,10) : DATABASE_ID_NONE;
-                                  entryNode->newest.indexType       = (values[3] != NULL) ? (IndexTypes)(uint)strtoul(values[3],NULL,10) : INDEX_TYPE_NONE;
-                                  entryNode->newest.timeLastChanged = (values[4] != NULL) ? (uint64)strtoull(values[4],NULL,10) : 0LL;
-                                  entryNode->newest.userId          = (values[5] != NULL) ? (uint32)strtoul(values[5],NULL,10) : 0;
-                                  entryNode->newest.groupId         = (values[6] != NULL) ? (uint32)strtoul(values[6],NULL,10) : 0;
-                                  entryNode->newest.permission      = (values[7] != NULL) ? (uint32)strtoul(values[7],NULL,10) : 0;
-                                  entryNode->newest.size            = (values[8] != NULL) ? (uint64)strtoull(values[8],NULL,10) : 0LL;
+                                  entryNode->newest.entryId         = values[0].id;
+                                  entryNode->newest.uuidId          = values[1].id;
+                                  entryNode->newest.entityId        = values[2].id;
+                                  entryNode->newest.indexType       = (IndexTypes)values[3].i;
+                                  entryNode->newest.timeLastChanged = values[4].dateTime;
+                                  entryNode->newest.userId          = values[5].i;
+                                  entryNode->newest.groupId         = values[6].i;
+                                  entryNode->newest.permission      = values[7].i;
+                                  entryNode->newest.size            = values[8].i;
 
                                   return ERROR_NONE;
                                 },NULL),
                                 NULL,  // changedRowCount
+                                DATABASE_COLUMN_TYPES(KEY,KEY,KEY,INT,DATETIME,INT,INT,INT,INT64),
                                 "      SELECT entries.id, \
                                               entries.uuidId, \
                                               entries.entityId, \
@@ -5161,6 +5178,7 @@ LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT OR REPLACE INTO entriesNewest \
                                       ( \
                                        entryId, \
@@ -5987,8 +6005,8 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                              DATABASE_COLUMN_TYPES(),
                               NULL,  // changedRowCount
+                              DATABASE_COLUMN_TYPES(),
                               "UPDATE storages \
                                SET totalEntryCount          =0, \
                                    totalEntrySize           =0, \
@@ -6429,7 +6447,7 @@ LOCAL Errors purgeStorage(IndexHandle  *indexHandle,
   // get storage name, created date/time
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMN_TYPES(TEXT,DATETIME),
                            "SELECT storages.name, \
                                    UNIXTIMESTAMP(entities.created) \
                             FROM storages \
@@ -7275,7 +7293,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
       // get existing newest entry
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(KEY,DATETIME),
                                "SELECT id, \
                                        UNIXTIMESTAMP(timeLastChanged) \
                                 FROM entriesNewest\
@@ -7309,6 +7327,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "UPDATE entriesNewest \
                                       SET entryId=%lld, \
                                           uuidId=%lld, \
@@ -7337,6 +7356,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "INSERT INTO entriesNewest \
                                         ( \
                                          entryId, \
@@ -7414,6 +7434,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "DELETE FROM entriesNewest \
                               WHERE id=%lld \
                              ",
@@ -7427,6 +7448,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "INSERT OR IGNORE INTO entriesNewest \
                                 ( \
                                  entryId, \
@@ -7642,7 +7664,7 @@ LOCAL void indexThreadCode(void)
           {
             error = Database_prepare(&databaseStatementHandle,
                                      &indexHandle.databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT),
+                                     DATABASE_COLUMN_TYPES(KEY,KEY,TEXT),
                                      "SELECT id, \
                                              entityId, \
                                              name \
@@ -7810,7 +7832,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,KEY),
                              "SELECT uuids.id, \
                                      entities.id \
                               FROM storages \
@@ -7841,6 +7863,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE entries \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
@@ -7863,6 +7886,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE entriesNewest \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
@@ -7887,6 +7911,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE entryFragments \
                               SET storageId=%lld \
                               WHERE storageId=%lld \
@@ -7900,6 +7925,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE directoryEntries \
                               SET storageId=%lld \
                               WHERE storageId=%lld \
@@ -7913,6 +7939,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE linkEntries \
                               SET storageId=%lld \
                               WHERE storageId=%lld \
@@ -7926,6 +7953,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE specialEntries \
                               SET storageId=%lld \
                               WHERE storageId=%lld \
@@ -7988,6 +8016,7 @@ LOCAL Errors assignEntityStoragesToEntity(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE storages \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
@@ -8029,6 +8058,7 @@ LOCAL Errors assignEntityEntriesToEntity(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE entries \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
@@ -8044,6 +8074,7 @@ LOCAL Errors assignEntityEntriesToEntity(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE entriesNewest \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
@@ -8102,7 +8133,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,KEY),
                              "SELECT uuids.id, \
                                      entities.id \
                               FROM storages \
@@ -8147,6 +8178,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE storages \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
@@ -8164,6 +8196,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
                              "UPDATE entries \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
@@ -8302,6 +8335,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE entities \
                                 SET type=%d \
                                 WHERE id=%lld \
@@ -8402,6 +8436,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE entities \
                                 SET uuidId =%lld, \
                                     jobUUID=%'S \
@@ -8432,6 +8467,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE entities \
                                 SET type=%d \
                                 WHERE id=%lld \
@@ -8540,6 +8576,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE entities \
                                 SET type=%d \
                                 WHERE jobUUID=%'S \
@@ -9357,7 +9394,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 //TODO: explain
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(KEY,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT64,INT,INT64),
                                "SELECT uuids.id, \
                                        (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%u), \
                                        (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%u), \
@@ -9532,7 +9569,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,DATETIME,INT,TEXT,INT,INT64),
                              "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
@@ -9625,7 +9662,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,TEXT,DATETIME,INT64,INT,INT,DATETIME,TEXT,INT,INT64),
                              "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
@@ -9729,7 +9766,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 //TODO: optimize: search for part of name?
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,KEY,TEXT,TEXT,DATETIME,INT64,INT,INT,DATETIME,TEXT,INT,INT64),
                              "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
@@ -9848,7 +9885,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,KEY,TEXT,TEXT,DATETIME,INT64,INT,DATETIME,TEXT,INT,INT64),
                              "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
@@ -9989,6 +10026,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "UPDATE storages \
                                     SET state       =%d, \
                                         errorMessage=NULL \
@@ -10007,6 +10045,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "UPDATE storages \
                                       SET lastChecked=DATETIME(%llu,'unixepoch') \
                                       WHERE entityId=%lld \
@@ -10025,6 +10064,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "UPDATE storages \
                                       SET errorMessage=%'S \
                                       WHERE entityId=%lld \
@@ -10042,6 +10082,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "UPDATE storages \
                                     SET state       =%d, \
                                         errorMessage=NULL \
@@ -10060,6 +10101,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "UPDATE storages \
                                       SET lastChecked=DATETIME(%llu,'unixepoch') \
                                       WHERE id=%lld \
@@ -10078,6 +10120,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "UPDATE storages \
                                       SET errorMessage=%'S \
                                       WHERE id=%lld \
@@ -10319,35 +10362,41 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total * count/size, total newest count/size
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
-                               "SELECT TOTAL(storages.totalEntryCount), \
-                                       TOTAL(storages.totalEntrySize), \
+                               DATABASE_COLUMN_TYPES(INT,INT64,
+                                                     INT,
+                                                     INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
+                                                     INT,INT64,
+                                                     INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
+                                                     INT,INT64
+                                                    ),
+                               "SELECT SUM(storages.totalEntryCount), \
+                                       SUM(storages.totalEntrySize), \
                                        0, \
-                                       TOTAL(storages.totalFileCount), \
-                                       TOTAL(storages.totalFileSize), \
-                                       TOTAL(storages.totalImageCount), \
-                                       TOTAL(storages.totalImageSize), \
-                                       TOTAL(storages.totalDirectoryCount), \
-                                       TOTAL(storages.totalLinkCount), \
-                                       TOTAL(storages.totalHardlinkCount), \
-                                       TOTAL(storages.totalHardlinkSize), \
-                                       TOTAL(storages.totalSpecialCount), \
+                                       SUM(storages.totalFileCount), \
+                                       SUM(storages.totalFileSize), \
+                                       SUM(storages.totalImageCount), \
+                                       SUM(storages.totalImageSize), \
+                                       SUM(storages.totalDirectoryCount), \
+                                       SUM(storages.totalLinkCount), \
+                                       SUM(storages.totalHardlinkCount), \
+                                       SUM(storages.totalHardlinkSize), \
+                                       SUM(storages.totalSpecialCount), \
                                        \
-                                       TOTAL(storages.totalEntryCountNewest), \
-                                       TOTAL(storages.totalEntrySizeNewest), \
+                                       SUM(storages.totalEntryCountNewest), \
+                                       SUM(storages.totalEntrySizeNewest), \
                                        0, \
-                                       TOTAL(storages.totalFileCountNewest), \
-                                       TOTAL(storages.totalFileSizeNewest), \
-                                       TOTAL(storages.totalImageCountNewest), \
-                                       TOTAL(storages.totalImageSizeNewest), \
-                                       TOTAL(storages.totalDirectoryCountNewest), \
-                                       TOTAL(storages.totalLinkCountNewest), \
-                                       TOTAL(storages.totalHardlinkCountNewest), \
-                                       TOTAL(storages.totalHardlinkSizeNewest), \
-                                       TOTAL(storages.totalSpecialCountNewest), \
+                                       SUM(storages.totalFileCountNewest), \
+                                       SUM(storages.totalFileSizeNewest), \
+                                       SUM(storages.totalImageCountNewest), \
+                                       SUM(storages.totalImageSizeNewest), \
+                                       SUM(storages.totalDirectoryCountNewest), \
+                                       SUM(storages.totalLinkCountNewest), \
+                                       SUM(storages.totalHardlinkCountNewest), \
+                                       SUM(storages.totalHardlinkSizeNewest), \
+                                       SUM(storages.totalSpecialCountNewest), \
                                        \
                                        COUNT(id), \
-                                       TOTAL(storages.size) \
+                                       SUM(storages.size) \
                                 FROM storages \
                                 WHERE deletedFlag!=1 \
                                "
@@ -10495,7 +10544,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,KEY,TEXT,TEXT,TEXT,TEXT,INT,DATETIME,TEXT,INT,INT,INT64,INT,INT64,INT,INT64),
                             "SELECT history.id, \
                                     IFNULL(uuids.id,0), \
                                     history.jobUUID, \
@@ -10633,56 +10682,57 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
-                              "INSERT INTO history \
-                                 ( \
-                                  jobUUID, \
-                                  scheduleUUID, \
-                                  hostName, \
-                                  userName, \
-                                  type, \
-                                  created, \
-                                  errorMessage, \
-                                  duration, \
-                                  totalEntryCount, \
-                                  totalEntrySize, \
-                                  skippedEntryCount, \
-                                  skippedEntrySize, \
-                                  errorEntryCount, \
-                                  errorEntrySize \
-                                 ) \
-                               VALUES \
-                                 ( \
-                                  %'S, \
-                                  %'S, \
-                                  %'S, \
-                                  %'S, \
-                                  %u, \
-                                  %llu, \
-                                  %'s, \
-                                  %llu, \
-                                  %lu, \
-                                  %llu, \
-                                  %lu, \
-                                  %llu, \
-                                  %lu, \
-                                  %llu \
-                                 ) \
-                              ",
-                              jobUUID,
-                              scheduleUUID,
-                              hostName,
-                              userName,
-                              archiveType,
-                              createdDateTime,
-                              errorMessage,
-                              duration,
-                              totalEntryCount,
-                              totalEntrySize,
-                              skippedEntryCount,
-                              skippedEntrySize,
-                              errorEntryCount,
-                              errorEntrySize
-                             );
+                               DATABASE_COLUMN_TYPES(),
+                               "INSERT INTO history \
+                                  ( \
+                                   jobUUID, \
+                                   scheduleUUID, \
+                                   hostName, \
+                                   userName, \
+                                   type, \
+                                   created, \
+                                   errorMessage, \
+                                   duration, \
+                                   totalEntryCount, \
+                                   totalEntrySize, \
+                                   skippedEntryCount, \
+                                   skippedEntrySize, \
+                                   errorEntryCount, \
+                                   errorEntrySize \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %'S, \
+                                   %'S, \
+                                   %'S, \
+                                   %'S, \
+                                   %u, \
+                                   %llu, \
+                                   %'s, \
+                                   %llu, \
+                                   %lu, \
+                                   %llu, \
+                                   %lu, \
+                                   %llu, \
+                                   %lu, \
+                                   %llu \
+                                  ) \
+                               ",
+                               jobUUID,
+                               scheduleUUID,
+                               hostName,
+                               userName,
+                               archiveType,
+                               createdDateTime,
+                               errorMessage,
+                               duration,
+                               totalEntryCount,
+                               totalEntrySize,
+                               skippedEntryCount,
+                               skippedEntrySize,
+                               errorEntryCount,
+                               errorEntrySize
+                              );
       if (error != ERROR_NONE)
       {
         return error;
@@ -10831,11 +10881,11 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
     // get last executed, total entities count, total entry count, total entry size
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(DATETIME,INT,INT,INT64),
                              "SELECT MAX(UNIXTIMESTAMP(entities.created)), \
                                      COUNT(entities.id), \
-                                     TOTAL(storages.totalEntryCount), \
-                                     TOTAL(storages.totalEntrySize) \
+                                     SUM(storages.totalEntryCount), \
+                                     SUM(storages.totalEntrySize) \
                               FROM uuids \
                                 LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                 LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
@@ -10914,10 +10964,10 @@ UNUSED_VARIABLE(uuidId);
       // get file aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-
+                               DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entries.size?
                                "SELECT COUNT(DISTINCT entries.id), \
-                                       TOTAL(entryFragments.size) \
+                                       SUM(entryFragments.size) \
                                 FROM entries \
                                   LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                                   LEFT JOIN uuids ON uuids.jobUUID=entries.jobUUID \
@@ -10943,7 +10993,7 @@ UNUSED_VARIABLE(uuidId);
       // get image aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entries.size?
                                "SELECT COUNT(DISTINCT entries.id), \
                                        TOTAL(entryFragments.size) \
@@ -11021,10 +11071,10 @@ UNUSED_VARIABLE(uuidId);
       // get hardlink aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entries.size?
                                "SELECT COUNT(DISTINCT entries.id), \
-                                       TOTAL(entryFragments.size) \
+                                       SUM(entryFragments.size) \
                                 FROM entries \
                                   LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                                   LEFT JOIN entities ON entities.id=entries.entityId \
@@ -11077,6 +11127,7 @@ UNUSED_VARIABLE(uuidId);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE uuids \
                                 SET totalEntryCount    =%llu, \
                                     totalEntrySize     =%llu, \
@@ -11114,9 +11165,9 @@ UNUSED_VARIABLE(uuidId);
       // get newest file aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(INT,INT64),
                                "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                       TOTAL(entryFragments.size) \
+                                       SUM(entryFragments.size) \
                                 FROM entriesNewest \
                                   LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
                                   LEFT JOIN entities ON entities.id=entriesNewest.entityId \
@@ -11143,9 +11194,9 @@ UNUSED_VARIABLE(uuidId);
       // get newest image aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(INT,INT64),
                                "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                       TOTAL(entryFragments.size) \
+                                       SUM(entryFragments.size) \
                                 FROM entriesNewest \
                                   LEFT JOIN entities ON entities.id=entries.entityId \
                                   LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -11219,10 +11270,10 @@ UNUSED_VARIABLE(uuidId);
       // get newest hardlink aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entriesNewest.size?
                                "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                       TOTAL(entryFragments.size) \
+                                       SUM(entryFragments.size) \
                                 FROM entriesNewest \
                                   LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
                                   LEFT JOIN entities ON entities.id=entriesNewest.entityId \
@@ -11249,7 +11300,7 @@ UNUSED_VARIABLE(uuidId);
       // get newest special aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-
+                               DATABASE_COLUMN_TYPES(INT),
                                "SELECT COUNT(DISTINCT entriesNewest.id) \
                                 FROM entriesNewest \
                                   LEFT JOIN entities ON entities.id=entriesNewest.entityId \
@@ -11275,6 +11326,7 @@ UNUSED_VARIABLE(uuidId);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE uuids \
                                 SET totalEntryCountNewest    =%llu, \
                                     totalEntrySizeNewest     =%llu, \
@@ -11373,14 +11425,14 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME,TEXT,INT64,INT,INT64),
                             "SELECT uuids.id, \
                                     uuids.jobUUID, \
                                     (SELECT MAX(UNIXTIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID), \
                                     (SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1), \
-                                    TOTAL(storages.size), \
-                                    TOTAL(storages.totalEntryCount), \
-                                    TOTAL(storages.totalEntrySize) \
+                                    SUM(storages.size), \
+                                    SUM(storages.totalEntryCount), \
+                                    SUM(storages.totalEntrySize) \
                              FROM uuids \
                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
@@ -11765,7 +11817,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,DATETIME,INT,TEXT,INT64,INT,INT64,BOOL),
                             "SELECT IFNULL(uuids.id,0), \
                                     entities.jobUUID, \
                                     entities.id, \
@@ -11773,9 +11825,9 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                                     UNIXTIMESTAMP(entities.created), \
                                     entities.type, \
                                     (SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
-                                    TOTAL(storages.size), \
-                                    TOTAL(storages.totalEntryCount), \
-                                    TOTAL(storages.totalEntrySize), \
+                                    SUM(storages.size), \
+                                    SUM(storages.totalEntryCount), \
+                                    SUM(storages.totalEntrySize), \
                                     entities.lockedCount \
                              FROM entities \
                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
@@ -11938,6 +11990,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO entities \
                                   ( \
                                    uuidId, \
@@ -12047,6 +12100,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE entities \
                                 SET jobUUID=%'S, \
                                     scheduleUUID=%'S, \
@@ -12476,12 +12530,12 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
     // get storage count, storage size, entry count, entry size
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,INT64,INT,INT64),
 //TODO newest
                              "SELECT COUNT(storages.id), \
-                                     TOTAL(storages.size), \
-                                     TOTAL(storages.totalEntryCount), \
-                                     TOTAL(storages.totalEntrySize) \
+                                     SUM(storages.size), \
+                                     SUM(storages.totalEntryCount), \
+                                     SUM(storages.totalEntrySize) \
                               FROM storages \
                                 LEFT JOIN entities ON entities.id=storages.entityId \
                                 LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
@@ -12522,9 +12576,9 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseStatementHandle,
                                  &indexHandle->databaseHandle,
-                                 DATABASE_COLUMN_TYPES(INT),
+                                 DATABASE_COLUMN_TYPES(INT64),
 //TODO newest
-                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                 "SELECT SUM(directoryEntries.totalEntrySize) \
                                   FROM storages \
                                     LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
                                     LEFT JOIN entities ON entities.id=storages.entityId \
@@ -12558,9 +12612,9 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
       {
         error = Database_prepare(&databaseStatementHandle,
                                  &indexHandle->databaseHandle,
-                                 DATABASE_COLUMN_TYPES(INT),
+                                 DATABASE_COLUMN_TYPES(INT64),
 //TODO newest
-                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                 "SELECT SUM(directoryEntries.totalEntrySize) \
                                   FROM storages \
                                     LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
                                   WHERE %S \
@@ -12772,7 +12826,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,TEXT,TEXT,TEXT,DATETIME,INT,KEY,TEXT,DATETIME,INT64,INT,INT,DATETIME,TEXT,INT,INT64),
 //TODO newest
                             "SELECT IFNULL(uuids.id,0), \
                                     entities.jobUUID, \
@@ -12946,6 +13000,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO storages \
                                   ( \
                                    uuidId, \
@@ -12995,6 +13050,7 @@ String_isEmpty(storageName) ? s : storageName,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO FTS_storages \
                                   ( \
                                    storageId, \
@@ -13115,6 +13171,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "UPDATE storages \
                                   SET hostName=%'S \
                                   WHERE id=%lld \
@@ -13133,6 +13190,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "UPDATE storages \
                                   SET userName=%'S \
                                   WHERE id=%lld \
@@ -13151,6 +13209,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "UPDATE storages \
                                   SET name=%'S \
                                   WHERE id=%lld \
@@ -13166,6 +13225,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "UPDATE FTS_storages \
                                   SET name=%'S \
                                   WHERE storageId=%lld \
@@ -13184,6 +13244,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "UPDATE storages \
                                   SET created=DATETIME(%llu,'unixepoch') \
                                   WHERE id=%lld \
@@ -13200,6 +13261,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE storages \
                                 SET size=%llu \
                                 WHERE id=%lld \
@@ -13217,6 +13279,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
                                  "UPDATE storages \
                                   SET comment=%'S \
                                   WHERE id=%lld \
@@ -13428,6 +13491,7 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "UPDATE entities \
                                 SET totalEntryCount    =totalEntryCount    -%lu, \
                                     totalEntrySize     =totalEntrySize     -%llu, \
@@ -13626,7 +13690,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,INT,TEXT,DATETIME,INT64,INT,INT,DATETIME,TEXT,INT,INT64),
                              "SELECT uuids.id, \
                                      uuids.jobUUID, \
                                      entities.id, \
@@ -13798,11 +13862,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_ANY:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalEntryCountNewest), \
-                                                 TOTAL(entities.totalEntrySizeNewest) \
+                                                 SUM(entities.totalEntryCountNewest), \
+                                                 SUM(entities.totalEntrySizeNewest) \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                           WHERE     %S \
@@ -13814,11 +13878,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_FILE:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalFileCountNewest), \
-                                                 TOTAL(entities.totalFileSizeNewest) \
+                                                 SUM(entities.totalFileCountNewest), \
+                                                 SUM(entities.totalFileSizeNewest) \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                           WHERE     %S \
@@ -13830,10 +13894,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_IMAGE:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalImageCountNewest), \
+                                                 SUM(entities.totalImageCountNewest), \
                                                  0 \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -13846,10 +13910,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_DIRECTORY:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalDirectoryCountNewest), \
+                                                 SUM(entities.totalDirectoryCountNewest), \
                                                  0 \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -13862,10 +13926,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_LINK:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalLinkCountNewest), \
+                                                 SUM(entities.totalLinkCountNewest), \
                                                  0 \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -13878,11 +13942,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_HARDLINK:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalHardlinkCountNewest), \
-                                                 TOTAL(entities.totalHardlinkSizeNewest) \
+                                                 SUM(entities.totalHardlinkCountNewest), \
+                                                 SUM(entities.totalHardlinkSizeNewest) \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                           WHERE     %S \
@@ -13894,10 +13958,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_SPECIAL:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalSpecialCountNewest), \
+                                                 SUM(entities.totalSpecialCountNewest), \
                                                  0 \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -13916,11 +13980,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           {
             error = Database_prepare(&databaseStatementHandle,
                                      &indexHandle->databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT),
+                                     DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                      "SELECT 0, \
-                                                 0, \
-                                                 COUNT(entriesNewest.id), \
-                                             TOTAL(entriesNewest.size) \
+                                             0, \
+                                             COUNT(entriesNewest.id), \
+                                             SUM(entriesNewest.size) \
                                       FROM entriesNewest \
                                         LEFT JOIN entities ON entities.id=entriesNewest.entityId \
                                         LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
@@ -13942,11 +14006,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_ANY:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalEntryCount), \
-                                                 TOTAL(entities.totalEntrySize) \
+                                                 SUM(entities.totalEntryCount), \
+                                                 SUM(entities.totalEntrySize) \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                           WHERE     entities.deletedFlag!=1 \
@@ -13958,11 +14022,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_FILE:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalEntryCount), \
-                                                 TOTAL(entities.totalEntrySize) \
+                                                 SUM(entities.totalEntryCount), \
+                                                 SUM(entities.totalEntrySize) \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                           WHERE     entities.deletedFlag!=1 \
@@ -13974,11 +14038,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_IMAGE:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalImageCount), \
-                                                 TOTAL(entities.totalImageSize) \
+                                                 SUM(entities.totalImageCount), \
+                                                 SUM(entities.totalImageSize) \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                           WHERE     entities.deletedFlag!=1 \
@@ -13990,10 +14054,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_DIRECTORY:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalDirectoryCount), \
+                                                 SUM(entities.totalDirectoryCount), \
                                                  0 \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -14006,10 +14070,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_LINK:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalLinkCount), \
+                                                 SUM(entities.totalLinkCount), \
                                                  0 \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -14022,11 +14086,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_HARDLINK:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
+                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                          "SELECT 0, \
                                                  0, \
-                                                 TOTAL(entities.totalHardlinkCount), \
-                                                 TOTAL(entities.totalHardlinkSize) \
+                                                 SUM(entities.totalHardlinkCount), \
+                                                 SUM(entities.totalHardlinkSize) \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                           WHERE     entities.deletedFlag!=1 \
@@ -14038,8 +14102,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
               case INDEX_TYPE_SPECIAL:
                 error = Database_prepare(&databaseStatementHandle,
                                          &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT),
-                                         "SELECT TOTAL(entities.totalSpecialCount), \
+                                         DATABASE_COLUMN_TYPES(INT,INT),
+                                         "SELECT SUM(entities.totalSpecialCount), \
                                                  0 \
                                           FROM entities \
                                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -14058,11 +14122,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           {
             error = Database_prepare(&databaseStatementHandle,
                                      &indexHandle->databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT),
+                                     DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
                                      "SELECT 0, \
                                              0, \
                                              COUNT(entries.id), \
-                                             TOTAL(entries.size) \
+                                             SUM(entries.size) \
                                       FROM entries \
                                         LEFT JOIN entities ON entities.id=entries.entityId \
                                         LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
@@ -14161,7 +14225,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
             // entries selected -> get aggregated data from entries
             error = Database_prepare(&databaseStatementHandle,
                                      &indexHandle->databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT),
+                                     DATABASE_COLUMN_TYPES(INT64),
                                      "SELECT TOTAL(directoryEntries.totalEntrySize) \
                                       FROM entries \
                                         LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
@@ -14240,9 +14304,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           error = Database_prepare(&databaseStatementHandle,
                                    &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT),
+                                   DATABASE_COLUMN_TYPES(INT,INT64),
                                    "SELECT COUNT(entriesNewest.id), \
-                                           TOTAL(entriesNewest.size) \
+                                           SUM(entriesNewest.size) \
                                     FROM FTS_entries \
                                       LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
                                       LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
@@ -14258,9 +14322,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           error = Database_prepare(&databaseStatementHandle,
                                    &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT),
+                                   DATABASE_COLUMN_TYPES(INT,INT64),
                                    "SELECT COUNT(entries.id), \
-                                           TOTAL(entries.size) \
+                                           SUM(entries.size) \
                                     FROM FTS_entries \
                                       LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
                                       LEFT JOIN entities ON entities.id=entries.entityId \
@@ -14319,7 +14383,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           error = Database_prepare(&databaseStatementHandle,
                                    &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT),
+                                   DATABASE_COLUMN_TYPES(INT64),
                                    "SELECT TOTAL(directoryEntries.totalEntrySize) \
                                     FROM FTS_entries \
                                       LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
@@ -14338,7 +14402,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         {
           error = Database_prepare(&databaseStatementHandle,
                                    &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT),
+                                   DATABASE_COLUMN_TYPES(INT64),
                                    "SELECT TOTAL(directoryEntries.totalEntrySize) \
                                     FROM FTS_entries \
                                       LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
@@ -14522,7 +14586,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       {
         return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                                 &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(INT),
+                                DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,TEXT,TEXT,INT,KEY,INT,TEXT,DATETIME,INT,INT,INT,INT64,INT,KEY,TEXT,INT64,INT64,INT,INT,INT64,TEXT,INT64),
                                 "SELECT uuids.id, \
                                         uuids.jobUUID, \
                                         entities.id, \
@@ -14604,7 +14668,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       {
         return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                                 &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(INT),
+                                DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,TEXT,TEXT,INT,KEY,INT,TEXT,DATETIME,INT,INT,INT,INT64,INT,KEY,TEXT,INT64,INT64,INT,INT,INT64,TEXT,INT64),
                                 "SELECT uuids.id, \
                                         uuids.jobUUID, \
                                         entities.id, \
@@ -14705,7 +14769,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       {
         return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                                 &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(INT),
+                                DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,TEXT,TEXT,INT,KEY,INT,TEXT,DATETIME,INT,INT,INT,INT64,INT,KEY,TEXT,INT64,INT64,INT,INT,INT64,TEXT,INT64),
                                 "SELECT uuids.id, \
                                         uuids.jobUUID, \
                                         entities.id, \
@@ -14792,7 +14856,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       {
         return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                                 &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(INT),
+                                DATABASE_COLUMN_TYPES(KEY,TEXT,KEY,TEXT,TEXT,TEXT,INT,KEY,INT,TEXT,DATETIME,INT,INT,INT,INT64,INT,KEY,TEXT,INT64,INT64,INT,INT,INT64,TEXT,INT64),
                                 "SELECT uuids.id, \
                                         uuids.jobUUID, \
                                         entities.id, \
@@ -15021,7 +15085,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,KEY,TEXT,DATETIME,INT64,INT64),
                             "SELECT entryFragments.id, \
                                     storages.id, \
                                     storages.name, \
@@ -15310,7 +15374,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,INT64,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
                                     UNIXTIMESTAMP(entities.created), \
                                     entries.name, \
@@ -15455,7 +15519,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,INT,INT,INT64),
                             "SELECT entries.id, \
                                     UNIXTIMESTAMP(entities.created), \
                                     entries.name, \
@@ -15609,7 +15673,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
                                     UNIXTIMESTAMP(entities.created), \
                                     entries.name, \
@@ -15753,7 +15817,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,TEXT,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
                                     UNIXTIMESTAMP(entities.created), \
                                     entries.name, \
@@ -15898,7 +15962,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,INT64,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
                                     UNIXTIMESTAMP(entities.created), \
                                     entries.name, \
@@ -16043,7 +16107,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   {
     return Database_prepare(&indexQueryHandle->databaseStatementHandle,
                             &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(INT),
+                            DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
                                     UNIXTIMESTAMP(entities.created), \
                                     entries.name, \
@@ -16187,6 +16251,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT OR IGNORE INTO entries \
                                       ( \
                                        entityId, \
@@ -16244,6 +16309,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "INSERT INTO FTS_entries \
                                         ( \
                                          entryId,\
@@ -16266,6 +16332,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "INSERT INTO fileEntries \
                                         ( \
                                          entryId, \
@@ -16292,6 +16359,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO entryFragments \
                                   ( \
                                    entryId, \
@@ -16421,6 +16489,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT OR IGNORE INTO entries \
                                       ( \
                                        entityId, \
@@ -16477,6 +16546,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "INSERT INTO FTS_entries \
                                         ( \
                                          entryId,\
@@ -16624,6 +16694,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO entries \
                                   ( \
                                    entityId, \
@@ -16679,6 +16750,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO FTS_entries \
                                   ( \
                                    entryId,\
@@ -16702,6 +16774,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO directoryEntries \
                                   ( \
                                    entryId, \
@@ -16810,6 +16883,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO entries \
                                   ( \
                                    entityId, \
@@ -16865,6 +16939,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO FTS_entries \
                                   ( \
                                    entryId,\
@@ -16888,6 +16963,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO linkEntries \
                                   ( \
                                    entryId, \
@@ -17006,6 +17082,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT OR IGNORE INTO entries \
                                       ( \
                                        entityId, \
@@ -17063,6 +17140,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "INSERT INTO FTS_entries \
                                         ( \
                                          entryId,\
@@ -17085,6 +17163,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
             error = Database_execute(&indexHandle->databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
                                      "INSERT INTO hardlinkEntries \
                                         ( \
                                          entryId, \
@@ -17111,6 +17190,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO entryFragments \
                                   ( \
                                    entryId, \
@@ -17226,6 +17306,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO entries \
                                   ( \
                                    entityId, \
@@ -17281,6 +17362,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO FTS_entries \
                                   ( \
                                    entryId,\
@@ -17304,6 +17386,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO specialEntries \
                                   ( \
                                    entryId, \
