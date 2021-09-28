@@ -20173,7 +20173,8 @@ Errors Server_socket(void)
       error = File_makeDirectory(globalOptions.jobsDirectory,
                                  FILE_DEFAULT_USER_ID,
                                  FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSION
+                                 FILE_DEFAULT_PERMISSION,
+                                 FALSE
                                 );
       if (error != ERROR_NONE)
       {

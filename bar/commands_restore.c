@@ -208,6 +208,11 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
     HALT_FATAL_ERROR("Cannot initialize name dictionary semaphore!");
   }
   Dictionary_init(&restoreInfo->namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  if (!Semaphore_init(&restoreInfo->fragmentListLock,SEMAPHORE_TYPE_BINARY))
+  {
+    HALT_FATAL_ERROR("Cannot initialize fragment list semaphore!");
+  }
   FragmentList_init(&restoreInfo->fragmentList);
 
   if (!Semaphore_init(&restoreInfo->statusInfoLock,SEMAPHORE_TYPE_BINARY))
@@ -252,6 +257,7 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
   doneStatusInfo(&restoreInfo->statusInfo);
 
   FragmentList_done(&restoreInfo->fragmentList);
+  Semaphore_done(&restoreInfo->fragmentListLock);
   Dictionary_done(&restoreInfo->namesDictionary);
   Semaphore_done(&restoreInfo->namesDictionaryLock);
 }
@@ -418,6 +424,9 @@ LOCAL SemaphoreLock statusInfoUpdateLock(RestoreInfo *restoreInfo, ConstString n
 
   if (foundFragmentNode != NULL)
   {
+    // lock
+    Semaphore_lock(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
     // find fragment node
     (*foundFragmentNode) = FragmentList_find(&restoreInfo->fragmentList,name);
   }
@@ -428,14 +437,15 @@ LOCAL SemaphoreLock statusInfoUpdateLock(RestoreInfo *restoreInfo, ConstString n
 /***********************************************************************\
 * Name   : statusInfoUpdateUnlock
 * Purpose: status info update unlock
-* Input  : createInfo - create info structure
-*          name       - name of entry
+* Input  : createInfo   - create info structure
+*          name         - name of entry
+*          fragmentNode - fragment node (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name)
+LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name, const FragmentNode *fragmentNode)
 {
   const FragmentNode *fragmentNode;
 
@@ -448,9 +458,6 @@ LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name)
         || ((Misc_getTimestamp()-restoreInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
        )
     {
-      // find fragment node
-      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,name);
-
       // set new current status info
       String_set(restoreInfo->statusInfo.entry.name,name);
       if (fragmentNode != NULL)
@@ -474,6 +481,10 @@ LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name)
   updateStatusInfo(restoreInfo,TRUE);
 
   // unlock
+  if (fragmentNode != NULL)
+  {
+    Semaphore_unlock(&restoreInfo->fragmentListLock);
+  }
   Semaphore_unlock(&restoreInfo->statusInfoLock);
 }
 
@@ -522,6 +533,86 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 }
 
 /***********************************************************************\
+* Name   : createParentDirectory
+* Purpose: create parent directory for file if it does not exists
+* Input  : restoreInfo    - restore info
+*          fileName       - file name
+*          userId,groupId - user/group id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors createParentDirectory(const RestoreInfo *restoreInfo,
+                                   ConstString       fileName,
+                                   uint32            userId,
+                                   uint32            groupId
+                                  )
+{
+  String parentDirectoryName;
+  Errors error;
+
+  assert(fileName != NULL);
+
+  parentDirectoryName = File_getDirectoryName(String_new(),fileName);
+
+  SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (!String_isEmpty(parentDirectoryName))
+    {
+      // add to known names
+      if (!Dictionary_contains(&restoreInfo->namesDictionary,
+                               String_cString(parentDirectoryName),
+                               String_length(parentDirectoryName)
+                              )
+         )
+      {
+        Dictionary_add(&restoreInfo->namesDictionary,
+                       String_cString(parentDirectoryName),
+                       String_length(parentDirectoryName),
+                       NULL,
+                       0
+                      );
+      }
+
+      if (!File_exists(parentDirectoryName))
+      {
+        // create parent directories (ignore error if it already exists now)
+        error = File_makeDirectory(parentDirectoryName,
+                                   FILE_DEFAULT_USER_ID,
+                                   FILE_DEFAULT_GROUP_ID,
+                                   FILE_DEFAULT_PERMISSION,
+                                   TRUE
+                                  );
+        if (error != ERROR_NONE)
+        {
+          String_delete(parentDirectoryName);
+          Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+          return error;
+        }
+
+        // set parent directory owner/group
+        error = File_setOwner(parentDirectoryName,
+                              (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : userId,
+                              (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : groupId
+                             );
+        if (error != ERROR_NONE)
+        {
+          String_delete(parentDirectoryName);
+          Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+          return error;
+        }
+      }
+    }
+  }
+
+  // free resources
+  String_delete(parentDirectoryName);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : restoreFileEntry
 * Purpose: restore file entry
 * Input  : restoreInfo          - restore info
@@ -553,7 +644,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   String                    prefixFileName,postfixFileName;
   uint                      n;
   FragmentNode              *fragmentNode;
-  String                    parentDirectoryName;
 //            FileInfo                      localFileInfo;
   FileHandle                fileHandle;
   uint64                    length;
@@ -619,93 +709,28 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // check if file already exists
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      if (   !Dictionary_contains(&restoreInfo->namesDictionary,
-                                  String_cString(destinationFileName),
-                                  String_length(destinationFileName)
-                                 )
-          && File_exists(destinationFileName)
+      if (!Dictionary_contains(&restoreInfo->namesDictionary,
+                               String_cString(destinationFileName),
+                               String_length(destinationFileName)
+                              )
          )
       {
-        switch (restoreInfo->jobOptions->restoreEntryMode)
-        {
-          case RESTORE_ENTRY_MODE_STOP:
-            // stop
-            printInfo(1,
-                      "  Restore file      '%s'...skipped (file exists)\n",
-                      String_cString(destinationFileName)
-                     );
-            Semaphore_unlock(&restoreInfo->namesDictionaryLock);
-            AutoFree_cleanup(&autoFreeList);
-            return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-            break;
-          case RESTORE_ENTRY_MODE_RENAME:
-            // rename new entry
-            prefixFileName  = String_new();
-            postfixFileName = String_new();
-            index = String_findLastChar(destinationFileName,STRING_END,'.');
-            if (index >= 0)
-            {
-              String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-              String_sub(postfixFileName,destinationFileName,index,STRING_END);
-            }
-            else
-            {
-              String_set(prefixFileName,destinationFileName);
-            }
-            String_set(destinationFileName,prefixFileName);
-            Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-            String_append(destinationFileName,postfixFileName);
-            if (File_exists(destinationFileName))
-            {
-              n = 0;
-              do
-              {
-                String_set(destinationFileName,prefixFileName);
-                Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                String_appendFormat(destinationFileName,"-%u",n);
-                String_append(destinationFileName,postfixFileName);
-                n++;
-              }
-              while (File_exists(destinationFileName));
-            }
-            String_delete(postfixFileName);
-            String_delete(prefixFileName);
-            break;
-          case RESTORE_ENTRY_MODE_OVERWRITE:
-            // nothing to do
-            break;
-        }
-
-        Dictionary_add(&restoreInfo->namesDictionary,
-                       String_cString(destinationFileName),
-                       String_length(destinationFileName),
-                       NULL,
-                       0
-                      );
-      }
-    }
-
-    // check if file fragment already exists
-    if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
-    {
-      // check if fragment already exist -> get/create file fragment node
-      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
-      if (fragmentNode != NULL)
-      {
-        if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
+        if (File_exists(destinationFileName))
         {
           switch (restoreInfo->jobOptions->restoreEntryMode)
           {
             case RESTORE_ENTRY_MODE_STOP:
               // stop
               printInfo(1,
-                        "  Restore file      '%s'...skipped (file part %llu..%llu exists)\n",
-                        String_cString(destinationFileName),
-                        fragmentOffset,
-                        (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
+                        "  Restore file      '%s'...skipped (file exists)\n",
+                        String_cString(destinationFileName)
                        );
+              error = !restoreInfo->jobOptions->noStopOnErrorFlag
+                        ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                        : ERROR_NONE;
+              Semaphore_unlock(&restoreInfo->namesDictionaryLock);
               AutoFree_cleanup(&autoFreeList);
-              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+              return error;
               break;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
@@ -745,21 +770,91 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               break;
           }
         }
+
+        Dictionary_add(&restoreInfo->namesDictionary,
+                       String_cString(destinationFileName),
+                       String_length(destinationFileName),
+                       NULL,
+                       0
+                      );
       }
-      else
-      {
-        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
-                                        fileName,
-                                        fileInfo.size,
-                                        &fileInfo,sizeof(FileInfo),
-                                        0
-                                       );
-      }
-      assert(fragmentNode != NULL);
     }
-    else
+
+    // check if file fragment already exists
+    if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
     {
-      fragmentNode = NULL;
+      // check if fragment already exist -> get/create file fragment node
+      SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
+        if (fragmentNode != NULL)
+        {
+          if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
+          {
+            switch (restoreInfo->jobOptions->restoreEntryMode)
+            {
+              case RESTORE_ENTRY_MODE_STOP:
+                // stop
+                printInfo(1,
+                          "  Restore file      '%s'...skipped (file part %llu..%llu exists)\n",
+                          String_cString(destinationFileName),
+                          fragmentOffset,
+                          (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
+                         );
+                Semaphore_unlock(&restoreInfo->fragmentListLock);
+                AutoFree_cleanup(&autoFreeList);
+                return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                break;
+              case RESTORE_ENTRY_MODE_RENAME:
+                // rename new entry
+                prefixFileName  = String_new();
+                postfixFileName = String_new();
+                index = String_findLastChar(destinationFileName,STRING_END,'.');
+                if (index >= 0)
+                {
+                  String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                  String_sub(postfixFileName,destinationFileName,index,STRING_END);
+                }
+                else
+                {
+                  String_set(prefixFileName,destinationFileName);
+                }
+                String_set(destinationFileName,prefixFileName);
+                Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                String_append(destinationFileName,postfixFileName);
+                if (File_exists(destinationFileName))
+                {
+                  n = 0;
+                  do
+                  {
+                    String_set(destinationFileName,prefixFileName);
+                    Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                    String_appendFormat(destinationFileName,"-%u",n);
+                    String_append(destinationFileName,postfixFileName);
+                    n++;
+                  }
+                  while (File_exists(destinationFileName));
+                }
+                String_delete(postfixFileName);
+                String_delete(prefixFileName);
+                break;
+              case RESTORE_ENTRY_MODE_OVERWRITE:
+                // nothing to do
+                break;
+            }
+          }
+        }
+        else
+        {
+          fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
+                                          fileName,
+                                          fileInfo.size,
+                                          &fileInfo,sizeof(FileInfo),
+                                          0
+                                         );
+        }
+        assert(fragmentNode != NULL);
+      }
     }
 
     // restore file
@@ -768,55 +863,27 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
     {
-      parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
-      if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
+      error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+      if (error != ERROR_NONE)
       {
-        // create directory
-        error = File_makeDirectory(parentDirectoryName,
-                                   FILE_DEFAULT_USER_ID,
-                                   FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION
-                                  );
-        if (error != ERROR_NONE)
+        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)",
-                     String_cString(parentDirectoryName),
+          printError("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                     String_cString(destinationFileName),
                      Error_getText(error)
                     );
-          String_delete(parentDirectoryName);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-
-        // set file owner/group
-        error = File_setOwner(parentDirectoryName,
-                              (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
-                              (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
-                             );
-        if (error != ERROR_NONE)
+        else
         {
-          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
-          {
-            printInfo(1,"FAIL!\n");
-            printError("Cannot set owner/grouyp of directory '%s' (error: %s)",
-                       String_cString(parentDirectoryName),
+          printWarning("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                       String_cString(destinationFileName),
                        Error_getText(error)
                       );
-            String_delete(parentDirectoryName);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-          else
-          {
-            printWarning("Cannot set owner/group of directory '%s' (error: %s)",
-                         String_cString(parentDirectoryName),
-                         Error_getText(error)
-                        );
-          }
         }
       }
-      String_delete(parentDirectoryName);
     }
 
     if (!restoreInfo->storageFlags.dryRun)
@@ -1031,12 +1098,16 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         }
       }
     }
-    if (fragmentNode != NULL)
+    SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      if (FragmentList_isComplete(fragmentNode))
+      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
+      if (fragmentNode != NULL)
       {
-        // discard fragment list
-        FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+        if (FragmentList_isComplete(fragmentNode))
+        {
+          // discard fragment list
+          FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+        }
       }
     }
 
@@ -1143,7 +1214,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   String           prefixFileName,postfixFileName;
   uint             n;
   FragmentNode     *fragmentNode;
-  String           parentDirectoryName;
   enum
   {
     DEVICE,
@@ -1222,72 +1292,70 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
     {
       // check if image fragment already exists
-
-      // get/create image fragment node
-      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
-      if (fragmentNode != NULL)
+      SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        if (FragmentList_rangeExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
+        fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
+        if (fragmentNode != NULL)
         {
-          switch (restoreInfo->jobOptions->restoreEntryMode)
+          if (FragmentList_rangeExists(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize))
           {
-            case RESTORE_ENTRY_MODE_STOP:
-              // stop
-              printInfo(1,
-                        "  Restore image     '%s'...skipped (image part %llu..%llu exists)\n",
-                        String_cString(destinationDeviceName),
-                        blockOffset*(uint64)deviceInfo.blockSize,
-                        ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
-                       );
-              AutoFree_cleanup(&autoFreeList);
-              return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-              break;
-            case RESTORE_ENTRY_MODE_RENAME:
-              // rename new entry
-              prefixFileName  = String_new();
-              postfixFileName = String_new();
-              index = String_findLastChar(destinationDeviceName,STRING_END,'.');
-              if (index >= 0)
-              {
-                String_sub(prefixFileName,destinationDeviceName,STRING_BEGIN,index);
-                String_sub(postfixFileName,destinationDeviceName,index,STRING_END);
-              }
-              else
-              {
-                String_set(prefixFileName,destinationDeviceName);
-              }
-              n = 0;
-              do
-              {
-                String_set(destinationDeviceName,prefixFileName);
-                String_appendFormat(destinationDeviceName,"-%04u",n);
-                String_append(destinationDeviceName,postfixFileName);
-                n++;
-              }
-              while (File_exists(destinationDeviceName));
-              String_delete(postfixFileName);
-              String_delete(prefixFileName);
-              break;
-            case RESTORE_ENTRY_MODE_OVERWRITE:
-              // nothing to do
-              break;
+            switch (restoreInfo->jobOptions->restoreEntryMode)
+            {
+              case RESTORE_ENTRY_MODE_STOP:
+                // stop
+                printInfo(1,
+                          "  Restore image     '%s'...skipped (image part %llu..%llu exists)\n",
+                          String_cString(destinationDeviceName),
+                          blockOffset*(uint64)deviceInfo.blockSize,
+                          ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
+                         );
+                Semaphore_unlock(&restoreInfo->fragmentListLock);
+                AutoFree_cleanup(&autoFreeList);
+                return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                break;
+              case RESTORE_ENTRY_MODE_RENAME:
+                // rename new entry
+                prefixFileName  = String_new();
+                postfixFileName = String_new();
+                index = String_findLastChar(destinationDeviceName,STRING_END,'.');
+                if (index >= 0)
+                {
+                  String_sub(prefixFileName,destinationDeviceName,STRING_BEGIN,index);
+                  String_sub(postfixFileName,destinationDeviceName,index,STRING_END);
+                }
+                else
+                {
+                  String_set(prefixFileName,destinationDeviceName);
+                }
+                n = 0;
+                do
+                {
+                  String_set(destinationDeviceName,prefixFileName);
+                  String_appendFormat(destinationDeviceName,"-%04u",n);
+                  String_append(destinationDeviceName,postfixFileName);
+                  n++;
+                }
+                while (File_exists(destinationDeviceName));
+                String_delete(postfixFileName);
+                String_delete(prefixFileName);
+                break;
+              case RESTORE_ENTRY_MODE_OVERWRITE:
+                // nothing to do
+                break;
+            }
           }
         }
+        else
+        {
+          fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
+                                          deviceName,
+                                          deviceInfo.size,
+                                          NULL,0,
+                                          0
+                                         );
+        }
+        assert(fragmentNode != NULL);
       }
-      else
-      {
-        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
-                                        deviceName,
-                                        deviceInfo.size,
-                                        NULL,0,
-                                        0
-                                       );
-      }
-      assert(fragmentNode != NULL);
-    }
-    else
-    {
-      fragmentNode = NULL;
     }
 
     // restore image
@@ -1296,55 +1364,27 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
     {
-      parentDirectoryName = File_getDirectoryName(String_new(),destinationDeviceName);
-      if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
+      error = createParentDirectory(restoreInfo,destinationDeviceName,deviceInfo.userId,deviceInfo.groupId);
+      if (error != ERROR_NONE)
       {
-        // create directory
-        error = File_makeDirectory(parentDirectoryName,
-                                   FILE_DEFAULT_USER_ID,
-                                   FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION
-                                  );
-        if (error != ERROR_NONE)
+        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)",
-                     String_cString(parentDirectoryName),
+          printError("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                     String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
-          String_delete(parentDirectoryName);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-
-        // set directory owner/group
-        error = File_setOwner(parentDirectoryName,
-                              (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : deviceInfo.userId,
-                              (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : deviceInfo.groupId
-                             );
-        if (error != ERROR_NONE)
+        else
         {
-          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
-          {
-            printInfo(1,"FAIL!\n");
-            printError("Cannot set owner/gorup of directory '%s' (error: %s)",
-                       String_cString(parentDirectoryName),
+          printWarning("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                       String_cString(destinationDeviceName),
                        Error_getText(error)
                       );
-            String_delete(parentDirectoryName);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-          else
-          {
-            printWarning("Cannot set owner/group of directory '%s' (error: %s)",
-                         String_cString(parentDirectoryName),
-                         Error_getText(error)
-                        );
-          }
         }
       }
-      String_delete(parentDirectoryName);
     }
 
     type = UNKNOWN;
@@ -1539,16 +1579,20 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (fragmentNode != NULL)
+    SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      // add fragment to file fragment list
-      FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
-//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
-
-      // discard fragment list if file is complete
-      if (FragmentList_isComplete(fragmentNode))
+      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
+      if (fragmentNode != NULL)
       {
-        FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+        // add fragment to file fragment list
+        FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
+  //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
+
+        // discard fragment list if file is complete
+        if (FragmentList_isComplete(fragmentNode))
+        {
+          FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+        }
       }
     }
 
@@ -1703,61 +1747,66 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     // check if directory already exists
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      if (   !Dictionary_contains(&restoreInfo->namesDictionary,
-                                  String_cString(destinationFileName),
-                                  String_length(destinationFileName)
-                                 )
-          && File_exists(destinationFileName)
+      if (!Dictionary_contains(&restoreInfo->namesDictionary,
+                               String_cString(destinationFileName),
+                               String_length(destinationFileName)
+                              )
          )
       {
-        switch (restoreInfo->jobOptions->restoreEntryMode)
+        if (File_exists(destinationFileName))
         {
-          case RESTORE_ENTRY_MODE_STOP:
-            // stop
-            printInfo(1,
-                      "  Restore directory '%s'...skipped (file exists)\n",
-                      String_cString(destinationFileName)
-                     );
-            Semaphore_unlock(&restoreInfo->namesDictionaryLock);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-            break;
-          case RESTORE_ENTRY_MODE_RENAME:
-            // rename new entry
-            prefixFileName  = String_new();
-            postfixFileName = String_new();
-            index = String_findLastChar(destinationFileName,STRING_END,'.');
-            if (index >= 0)
-            {
-              String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-              String_sub(postfixFileName,destinationFileName,index,STRING_END);
-            }
-            else
-            {
-              String_set(prefixFileName,destinationFileName);
-            }
-            String_set(destinationFileName,prefixFileName);
-            Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-            String_append(destinationFileName,postfixFileName);
-            if (File_exists(destinationFileName))
-            {
-              n = 0;
-              do
+          switch (restoreInfo->jobOptions->restoreEntryMode)
+          {
+            case RESTORE_ENTRY_MODE_STOP:
+              // stop
+              printInfo(1,
+                        "  Restore directory '%s'...skipped (file exists)\n",
+                        String_cString(destinationFileName)
+                       );
+              error = !restoreInfo->jobOptions->noStopOnErrorFlag
+                        ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                        : ERROR_NONE;
+              Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+              AutoFree_cleanup(&autoFreeList);
+              return error;
+              break;
+            case RESTORE_ENTRY_MODE_RENAME:
+              // rename new entry
+              prefixFileName  = String_new();
+              postfixFileName = String_new();
+              index = String_findLastChar(destinationFileName,STRING_END,'.');
+              if (index >= 0)
               {
-                String_set(destinationFileName,prefixFileName);
-                Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                String_appendFormat(destinationFileName,"-%u",n);
-                String_append(destinationFileName,postfixFileName);
-                n++;
+                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                String_sub(postfixFileName,destinationFileName,index,STRING_END);
               }
-              while (File_exists(destinationFileName));
-            }
-            String_delete(postfixFileName);
-            String_delete(prefixFileName);
-            break;
-          case RESTORE_ENTRY_MODE_OVERWRITE:
-            // nothing to do
-            break;
+              else
+              {
+                String_set(prefixFileName,destinationFileName);
+              }
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_append(destinationFileName,postfixFileName);
+              if (File_exists(destinationFileName))
+              {
+                n = 0;
+                do
+                {
+                  String_set(destinationFileName,prefixFileName);
+                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                  String_appendFormat(destinationFileName,"-%u",n);
+                  String_append(destinationFileName,postfixFileName);
+                  n++;
+                }
+                while (File_exists(destinationFileName));
+              }
+              String_delete(postfixFileName);
+              String_delete(prefixFileName);
+              break;
+            case RESTORE_ENTRY_MODE_OVERWRITE:
+              // nothing to do
+              break;
+          }
         }
 
         Dictionary_add(&restoreInfo->namesDictionary,
@@ -1778,7 +1827,8 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       error = File_makeDirectory(destinationFileName,
                                  FILE_DEFAULT_USER_ID,
                                  FILE_DEFAULT_GROUP_ID,
-                                 fileInfo.permission
+                                 fileInfo.permission,
+                                 FALSE
                                 );
       if (error != ERROR_NONE)
       {
@@ -1944,7 +1994,6 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   long                      index;
   String                    prefixFileName,postfixFileName;
   uint                      n;
-  String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
   UNUSED_VARIABLE(buffer);
@@ -2004,64 +2053,65 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     // check if link areadly exists
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      if (   !Dictionary_contains(&restoreInfo->namesDictionary,
-                                  String_cString(destinationFileName),
-                                  String_length(destinationFileName)
-                                 )
-          && File_exists(destinationFileName)
+      if (!Dictionary_contains(&restoreInfo->namesDictionary,
+                               String_cString(destinationFileName),
+                               String_length(destinationFileName)
+                              )
          )
       {
-        switch (restoreInfo->jobOptions->restoreEntryMode)
+        if (File_exists(destinationFileName))
         {
-          case RESTORE_ENTRY_MODE_STOP:
-            // stop
-            printInfo(1,
-                      "  Restore link      '%s'...skipped (file exists)\n",
-                      String_cString(destinationFileName)
-                     );
-            if (!restoreInfo->jobOptions->noStopOnErrorFlag)
-            {
-              error = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
-            }
-            Semaphore_unlock(&restoreInfo->namesDictionaryLock);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          case RESTORE_ENTRY_MODE_RENAME:
-            // rename new entry
-            prefixFileName  = String_new();
-            postfixFileName = String_new();
-            index = String_findLastChar(destinationFileName,STRING_END,'.');
-            if (index >= 0)
-            {
-              String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-              String_sub(postfixFileName,destinationFileName,index,STRING_END);
-            }
-            else
-            {
-              String_set(prefixFileName,destinationFileName);
-            }
-            String_set(destinationFileName,prefixFileName);
-            Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-            String_append(destinationFileName,postfixFileName);
-            if (File_exists(destinationFileName))
-            {
-              n = 0;
-              do
+          switch (restoreInfo->jobOptions->restoreEntryMode)
+          {
+            case RESTORE_ENTRY_MODE_STOP:
+              // stop
+              printInfo(1,
+                        "  Restore link      '%s'...skipped (file exists)\n",
+                        String_cString(destinationFileName)
+                       );
+              error = !restoreInfo->jobOptions->noStopOnErrorFlag
+                        ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                        : ERROR_NONE;
+              Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+              AutoFree_cleanup(&autoFreeList);
+              return error;
+            case RESTORE_ENTRY_MODE_RENAME:
+              // rename new entry
+              prefixFileName  = String_new();
+              postfixFileName = String_new();
+              index = String_findLastChar(destinationFileName,STRING_END,'.');
+              if (index >= 0)
               {
-                String_set(destinationFileName,prefixFileName);
-                Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                String_appendFormat(destinationFileName,"-%u",n);
-                String_append(destinationFileName,postfixFileName);
-                n++;
+                String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                String_sub(postfixFileName,destinationFileName,index,STRING_END);
               }
-              while (File_exists(destinationFileName));
-            }
-            String_delete(postfixFileName);
-            String_delete(prefixFileName);
-            break;
-          case RESTORE_ENTRY_MODE_OVERWRITE:
-            // nothing to do
-            break;
+              else
+              {
+                String_set(prefixFileName,destinationFileName);
+              }
+              String_set(destinationFileName,prefixFileName);
+              Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+              String_append(destinationFileName,postfixFileName);
+              if (File_exists(destinationFileName))
+              {
+                n = 0;
+                do
+                {
+                  String_set(destinationFileName,prefixFileName);
+                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                  String_appendFormat(destinationFileName,"-%u",n);
+                  String_append(destinationFileName,postfixFileName);
+                  n++;
+                }
+                while (File_exists(destinationFileName));
+              }
+              String_delete(postfixFileName);
+              String_delete(prefixFileName);
+              break;
+            case RESTORE_ENTRY_MODE_OVERWRITE:
+              // nothing to do
+              break;
+          }
         }
 
         Dictionary_add(&restoreInfo->namesDictionary,
@@ -2079,55 +2129,27 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
     {
-      parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
-      if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
+      error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+      if (error != ERROR_NONE)
       {
-        // create directory
-        error = File_makeDirectory(parentDirectoryName,
-                                   FILE_DEFAULT_USER_ID,
-                                   FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION
-                                  );
-        if (error != ERROR_NONE)
+        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)",
-                     String_cString(parentDirectoryName),
+          printError("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                     String_cString(destinationFileName),
                      Error_getText(error)
                     );
-          String_delete(parentDirectoryName);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-
-        // set directory owner/group
-        error = File_setOwner(parentDirectoryName,
-                              (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
-                              (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
-                             );
-        if (error != ERROR_NONE)
+        else
         {
-          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
-          {
-            printInfo(1,"FAIL!\n");
-            printError("Cannot set owner/group of directory '%s' (error: %s)",
-                       String_cString(parentDirectoryName),
+          printWarning("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                       String_cString(destinationFileName),
                        Error_getText(error)
                       );
-            String_delete(parentDirectoryName);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-          else
-          {
-            printWarning("Cannot set owner/group of directory '%s' (error: %s)",
-                         String_cString(parentDirectoryName),
-                         Error_getText(error)
-                        );
-          }
         }
       }
-      String_delete(parentDirectoryName);
     }
 
     // create link
@@ -2281,8 +2303,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   FragmentNode              *fragmentNode;
   const StringNode          *stringNode;
   String                    fileName;
-  String                    parentDirectoryName;
-//            FileInfo                  localFileInfo;
+              FileInfo                  localFileInfo;
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
@@ -2366,55 +2387,27 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       // create parent directories if not existing
       if (!restoreInfo->storageFlags.dryRun)
       {
-        parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
-        if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
+        error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+        if (error != ERROR_NONE)
         {
-          // create directory
-          error = File_makeDirectory(parentDirectoryName,
-                                     FILE_DEFAULT_USER_ID,
-                                     FILE_DEFAULT_GROUP_ID,
-                                     FILE_DEFAULT_PERMISSION
-                                    );
-          if (error != ERROR_NONE)
+          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot create directory '%s' (error: %s)",
-                       String_cString(parentDirectoryName),
+            printError("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                       String_cString(destinationFileName),
                        Error_getText(error)
                       );
-            String_delete(parentDirectoryName);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
-
-          // set hardlink owner/group
-          error = File_setOwner(parentDirectoryName,
-                                (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
-                                (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
-                               );
-          if (error != ERROR_NONE)
+          else
           {
-            if (!restoreInfo->jobOptions->noStopOnErrorFlag)
-            {
-              printInfo(1,"FAIL!\n");
-              printError("Cannot set owner/group directory '%s' (error: %s)",
-                         String_cString(parentDirectoryName),
+            printWarning("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                         String_cString(destinationFileName),
                          Error_getText(error)
                         );
-              String_delete(parentDirectoryName);
-              AutoFree_cleanup(&autoFreeList);
-              return error;
-            }
-            else
-            {
-              printWarning("Cannot set owner/group of directory '%s' (error: %s)",
-                           String_cString(parentDirectoryName),
-                           Error_getText(error)
-                          );
-            }
           }
         }
-        String_delete(parentDirectoryName);
       }
 
       // check if hardlink already exists
@@ -2478,76 +2471,76 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         if (!restoreInfo->jobOptions->noFragmentsCheckFlag)
         {
           // check if fragment already exist -> get/create file fragment node
-          fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
-          if (fragmentNode != NULL)
+          SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
+            fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
+            if (fragmentNode != NULL)
             {
-              switch (restoreInfo->jobOptions->restoreEntryMode)
+              if (FragmentList_rangeExists(fragmentNode,fragmentOffset,fragmentSize))
               {
-                case RESTORE_ENTRY_MODE_STOP:
-                  // stop
-                  printInfo(1,"skipped (file part %llu..%llu exists)\n",
-                            String_cString(destinationFileName),
-                            fragmentOffset,
-                            (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
-                           );
-                  AutoFree_cleanup(&autoFreeList);
-                  return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
-                  break;
-                case RESTORE_ENTRY_MODE_RENAME:
-                  // rename new entry
-                  prefixFileName  = String_new();
-                  postfixFileName = String_new();
-                  index = String_findLastChar(destinationFileName,STRING_END,'.');
-                  if (index >= 0)
-                  {
-                    String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
-                    String_sub(postfixFileName,destinationFileName,index,STRING_END);
-                  }
-                  else
-                  {
-                    String_set(prefixFileName,destinationFileName);
-                  }
-                  String_set(destinationFileName,prefixFileName);
-                  Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                  String_append(destinationFileName,postfixFileName);
-                  if (File_exists(destinationFileName))
-                  {
-                    n = 0;
-                    do
+                switch (restoreInfo->jobOptions->restoreEntryMode)
+                {
+                  case RESTORE_ENTRY_MODE_STOP:
+                    // stop
+                    printInfo(1,"skipped (file part %llu..%llu exists)\n",
+                              String_cString(destinationFileName),
+                              fragmentOffset,
+                              (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
+                             );
+                    Semaphore_unlock(&restoreInfo->fragmentListLock);
+                    AutoFree_cleanup(&autoFreeList);
+                    return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                    break;
+                  case RESTORE_ENTRY_MODE_RENAME:
+                    // rename new entry
+                    prefixFileName  = String_new();
+                    postfixFileName = String_new();
+                    index = String_findLastChar(destinationFileName,STRING_END,'.');
+                    if (index >= 0)
                     {
-                      String_set(destinationFileName,prefixFileName);
-                      Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
-                      String_appendFormat(destinationFileName,"-%u",n);
-                      String_append(destinationFileName,postfixFileName);
-                      n++;
+                      String_sub(prefixFileName,destinationFileName,STRING_BEGIN,index);
+                      String_sub(postfixFileName,destinationFileName,index,STRING_END);
                     }
-                    while (File_exists(destinationFileName));
-                  }
-                  String_delete(postfixFileName);
-                  String_delete(prefixFileName);
-                  break;
-                case RESTORE_ENTRY_MODE_OVERWRITE:
-                  // nothing to do
-                  break;
+                    else
+                    {
+                      String_set(prefixFileName,destinationFileName);
+                    }
+                    String_set(destinationFileName,prefixFileName);
+                    Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                    String_append(destinationFileName,postfixFileName);
+                    if (File_exists(destinationFileName))
+                    {
+                      n = 0;
+                      do
+                      {
+                        String_set(destinationFileName,prefixFileName);
+                        Misc_formatDateTime(destinationFileName,fileInfo.timeModified,"-%H:%M:%S");
+                        String_appendFormat(destinationFileName,"-%u",n);
+                        String_append(destinationFileName,postfixFileName);
+                        n++;
+                      }
+                      while (File_exists(destinationFileName));
+                    }
+                    String_delete(postfixFileName);
+                    String_delete(prefixFileName);
+                    break;
+                  case RESTORE_ENTRY_MODE_OVERWRITE:
+                    // nothing to do
+                    break;
+                }
               }
             }
+            else
+            {
+              fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
+                                              fileName,
+                                              fileInfo.size,
+                                              &fileInfo,sizeof(FileInfo),
+                                              0
+                                             );
+            }
+            assert(fragmentNode != NULL);
           }
-          else
-          {
-            fragmentNode = FragmentList_add(&restoreInfo->fragmentList,
-                                            fileName,
-                                            fileInfo.size,
-                                            &fileInfo,sizeof(FileInfo),
-                                            0
-                                           );
-          }
-          assert(fragmentNode != NULL);
-        }
-        else
-        {
-          fragmentNode = NULL;
         }
 
         if (!restoreInfo->storageFlags.dryRun)
@@ -2767,12 +2760,16 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
         }
 
-        if (fragmentNode != NULL)
+        SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          // discard fragment list if file is complete
-          if (FragmentList_isComplete(fragmentNode))
+          fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
+          if (fragmentNode != NULL)
           {
-            FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+            // discard fragment list if file is complete
+            if (FragmentList_isComplete(fragmentNode))
+            {
+              FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+            }
           }
         }
 
@@ -2966,7 +2963,6 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   long                      index;
   String                    prefixFileName,postfixFileName;
   uint                      n;
-  String                    parentDirectoryName;
 //            FileInfo localFileInfo;
 
   UNUSED_VARIABLE(buffer);
@@ -3033,10 +3029,9 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                       "  Restore special   '%s'...skipped (file exists)\n",
                       String_cString(destinationFileName)
                      );
-            if (!restoreInfo->jobOptions->noStopOnErrorFlag)
-            {
-              error = ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName));
-            }
+            error = !restoreInfo->jobOptions->noStopOnErrorFlag
+                      ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                      : ERROR_NONE;
             Semaphore_unlock(&restoreInfo->namesDictionaryLock);
             AutoFree_cleanup(&autoFreeList);
             return error;
@@ -3094,55 +3089,27 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
     {
-      parentDirectoryName = File_getDirectoryName(String_new(),destinationFileName);
-      if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
+      error = createParentDirectory(restoreInfo,destinationFileName,fileInfo.userId,fileInfo.groupId);
+      if (error != ERROR_NONE)
       {
-        // create directory
-        error = File_makeDirectory(parentDirectoryName,
-                                   FILE_DEFAULT_USER_ID,
-                                   FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION
-                                  );
-        if (error != ERROR_NONE)
+        if (!restoreInfo->jobOptions->noStopOnErrorFlag)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)",
-                     String_cString(parentDirectoryName),
+          printError("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                     String_cString(destinationFileName),
                      Error_getText(error)
                     );
-          String_delete(parentDirectoryName);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
-
-        // set special entry owner/group
-        error = File_setOwner(parentDirectoryName,
-                              (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ? restoreInfo->jobOptions->owner.userId  : fileInfo.userId,
-                              (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ? restoreInfo->jobOptions->owner.groupId : fileInfo.groupId
-                             );
-        if (error != ERROR_NONE)
+        else
         {
-          if (!restoreInfo->jobOptions->noStopOnErrorFlag)
-          {
-            printInfo(1,"FAIL!\n");
-            printError("Cannot set owner/group of directory '%s' (error: %s)",
-                       String_cString(parentDirectoryName),
+          printWarning("Cannot set owner/group of parent directory for '%s' (error: %s)",
+                       String_cString(destinationFileName),
                        Error_getText(error)
                       );
-            String_delete(parentDirectoryName);
-            AutoFree_cleanup(&autoFreeList);
-            return error;
-          }
-          else
-          {
-            printWarning("Cannot set owner/group of directory '%s' (error: %s)",
-                         String_cString(parentDirectoryName),
-                         Error_getText(error)
-                        );
-          }
         }
       }
-      String_delete(parentDirectoryName);
     }
 
     // create special device
@@ -3909,7 +3876,7 @@ Errors Command_restore(const StringList                *storageNameList,
       && !jobOptions->noFragmentsCheckFlag
      )
   {
-    // check fragment lists, set file info also for incomplete entries
+    // check fragment lists, set file info/owner/attributes also for incomplete entries
     if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
     {
       FRAGMENTLIST_ITERATE(&restoreInfo.fragmentList,fragmentNode)

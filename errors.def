@@ -504,10 +504,13 @@ ERROR READ_DIRECTORY                   TR("read directory fail")
 
 // Note: because of name clash with Windows include use FILE_EXISTS_ instead of FILE_EXISTS
 ERROR FILE_EXISTS_
-  stringSet(errorText,sizeof(errorText),TR("file already exists"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),"file '%s' already exists",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("file already exists"));
   }
 
 // Note: because of name clash with Windows include use FILE_NOT_FOUND_ instead of FILE_NOT_FOUND
