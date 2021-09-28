@@ -455,7 +455,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                 }
                 else
                 {
-                  HALT_INTERNAL_ERROR("Process signal QUIT for thread %s ==-- %s fail %d %s",
+                  HALT_INTERNAL_ERROR("Process signal QUIT for thread %s == %s fail (error %d: %s)",
                   Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),
                   Thread_getCurrentIdString(),
                   errno,strerror(errno));
