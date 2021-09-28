@@ -42,18 +42,18 @@ def build()
       }
     }
 
-    stage("Simple test")
+    stage("Tests")
     {
       docker.image(dockerImageName).inside
       {
 //TODO
-//        sh "make test1"
+        sh "make test1"
       }
     }
   }
   finally
   {
-    archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.zip', allowEmptyArchive: 'true' 
+    archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.zip', allowEmptyArchive: 'true'
     cleanWs notFailBuild: true
   }
 }
