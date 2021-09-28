@@ -44,6 +44,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define DEFAULT_DATABASE_NAME "bar-continuous"
+
 #define LOG_PREFIX "CONTINUOUS"
 
 #ifdef HAVE_IN_EXCL_UNLINK
@@ -127,6 +129,7 @@ typedef struct
 LOCAL bool              initFlag = FALSE;
 //TODO
 LOCAL const char        *continuousDatabaseFileName;
+LOCAL DatabaseSpecifier *continuousDatabaseSpecifier;
 LOCAL DatabaseOpenModes continuousDatabaseOpenMode;
 LOCAL DatabaseHandle    continuousDatabaseHandle;
 LOCAL Semaphore         notifyLock;                  // lock
@@ -147,8 +150,8 @@ LOCAL bool              quitFlag;
 #define IS_INOTIFY(mask,event) (((mask) & (event)) == (event))
 
 #ifndef NDEBUG
-  #define openContinuous(...)   __openContinuous  (__FILE__,__LINE__, ## __VA_ARGS__)
   #define createContinuous(...) __createContinuous(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define openContinuous(...)   __openContinuous  (__FILE__,__LINE__, ## __VA_ARGS__)
   #define closeContinuous(...)  __closeContinuous (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
@@ -218,7 +221,8 @@ LOCAL void printNotifies(void)
 /***********************************************************************\
 * Name   : openContinuous
 * Purpose: open continuous database
-* Input  : databaseHandle - database handle variable
+* Input  : databaseHandle    - database handle variable
+*          databaseSpecifier - database specifier
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -226,12 +230,14 @@ LOCAL void printNotifies(void)
 
 //TODO: always create new
 #ifdef NDEBUG
-  LOCAL Errors openContinuous(DatabaseHandle *databaseHandle
+  LOCAL Errors openContinuous(DatabaseHandle          *databaseHandle,
+                              const DatabaseSpecifier *databaseSpecifier
                              )
 #else /* not NDEBUG */
-  LOCAL Errors __openContinuous(const char     *__fileName__,
-                                ulong          __lineNb__,
-                                DatabaseHandle *databaseHandle
+  LOCAL Errors __openContinuous(const char              *__fileName__,
+                                ulong                   __lineNb__,
+                                DatabaseHandle          *databaseHandle,
+                                const DatabaseSpecifier *databaseSpecifier
                                )
 #endif /* NDEBUG */
 {
@@ -242,14 +248,14 @@ LOCAL void printNotifies(void)
   // open continuous database
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
-                          continuousDatabaseFileName,
+                          databaseSpecifier,
                           continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
                           DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
-                            continuousDatabaseFileName,
+                            databaseSpecifier,
                             continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
                             DATABASE_TIMEOUT
                            );
@@ -258,14 +264,14 @@ LOCAL void printNotifies(void)
   {
     #ifdef NDEBUG
       error = Database_open(databaseHandle,
-                            continuousDatabaseFileName,
+                            databaseSpecifier,
                             DATABASE_OPENMODE_CREATE,
                             DATABASE_TIMEOUT
                            );
     #else /* not NDEBUG */
       error = __Database_open(__fileName__,__lineNb__,
                               databaseHandle,
-                              continuousDatabaseFileName,
+                              databaseSpecifier,
                               DATABASE_OPENMODE_CREATE,
                               DATABASE_TIMEOUT
                              );
@@ -292,12 +298,14 @@ LOCAL void printNotifies(void)
 \***********************************************************************/
 
 #ifdef NDEBUG
-  LOCAL Errors createContinuous(DatabaseHandle *databaseHandle
+  LOCAL Errors createContinuous(DatabaseHandle          *databaseHandle,
+                                const DatabaseSpecifier *databaseSpecifier
                                )
 #else /* not NDEBUG */
-  LOCAL Errors __createContinuous(const char     *__fileName__,
-                                  ulong          __lineNb__,
-                                  DatabaseHandle *databaseHandle
+  LOCAL Errors __createContinuous(const char              *__fileName__,
+                                  ulong                   __lineNb__,
+                                  DatabaseHandle          *databaseHandle,
+                                  const DatabaseSpecifier *databaseSpecifier
                                  )
 #endif /* NDEBUG */
 {
@@ -306,17 +314,17 @@ LOCAL void printNotifies(void)
   assert(databaseHandle != NULL);
 
   // create continuous database
-  if (!stringIsEmpty(continuousDatabaseFileName)) (void)File_deleteCString(continuousDatabaseFileName,FALSE);
+// TODO:  if (!stringIsEmpty(continuousDatabaseFileName)) (void)File_deleteCString(continuousDatabaseFileName,FALSE);
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
-                          continuousDatabaseFileName,
+                          databaseSpecifier,
                           continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
                           DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
-                            continuousDatabaseFileName,
+                            databaseSpecifier,
                             continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
                             DATABASE_TIMEOUT
                            );
@@ -381,19 +389,19 @@ LOCAL void printNotifies(void)
 /***********************************************************************\
 * Name   : getContinuousVersion
 * Purpose: get continuous version
-* Input  : -
+* Input  : databaseSpecifier - database specifier
 * Output : continuousVersion - continuous version
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getContinuousVersion(int64 *continuousVersion)
+LOCAL Errors getContinuousVersion(int64 *continuousVersion, const DatabaseSpecifier *databaseSpecifier)
 {
   Errors         error;
   DatabaseHandle databaseHandle;
 
   // open continuous database
-  error = openContinuous(&databaseHandle);
+  error = openContinuous(&databaseHandle,databaseSpecifier);
   if (error != ERROR_NONE)
   {
     return error;
@@ -1639,10 +1647,10 @@ void Continuous_doneAll(void)
 
 bool Continuous_isAvailable(void)
 {
-  return initFlag;
+  return continuousDatabaseSpecifier != NULL;
 }
 
-Errors Continuous_init(const char *databaseFileName)
+Errors Continuous_init(const char *uriString)
 {
   Errors error;
   int64  continuousVersion;
@@ -1652,38 +1660,38 @@ Errors Continuous_init(const char *databaseFileName)
     // init variables
     quitFlag = FALSE;
 
-    // get continiuous database name, mode
-    if (!stringIsEmpty(databaseFileName))
+    // get database specifier
+    assert(continuousDatabaseSpecifier == NULL);
+    continuousDatabaseSpecifier = Database_newSpecifier(uriString);
+    if (continuousDatabaseSpecifier == NULL)
     {
-      continuousDatabaseFileName = databaseFileName;
-      continuousDatabaseOpenMode = DATABASE_OPENMODE_SHARED;
+      return ERROR_DATABASE;
     }
-    else
-    {
-      continuousDatabaseFileName = "continuous.db";
-      continuousDatabaseOpenMode = DATABASE_OPENMODE_SHARED|DATABASE_OPENMODE_MEMORY;
-    }
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+
 
     // check if continuous database exists in expected version, create database
-    error = getContinuousVersion(&continuousVersion);
+    error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
     if (error == ERROR_NONE)
     {
       if (continuousVersion < CONTINUOUS_VERSION)
       {
         // discard existing continuous database, create new database
-        if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(databaseFileName,FALSE);
-        error = createContinuous(&continuousDatabaseHandle);
+// TODO:        if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(databaseFileName,FALSE);
+        error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
         if (error != ERROR_NONE)
         {
+          Database_deleteSpecifier(continuousDatabaseSpecifier);
           return error;
         }
       }
       else
       {
         // open continuous database
-        error = openContinuous(&continuousDatabaseHandle);
+        error = openContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
         if (error != ERROR_NONE)
         {
+          Database_deleteSpecifier(continuousDatabaseSpecifier);
           return error;
         }
       }
@@ -1691,9 +1699,10 @@ Errors Continuous_init(const char *databaseFileName)
     else
     {
       // create new database
-      error = createContinuous(&continuousDatabaseHandle);
+      error = createContinuous(&continuousDatabaseHandle,continuousDatabaseSpecifier);
       if (error != ERROR_NONE)
       {
+        Database_deleteSpecifier(continuousDatabaseSpecifier);
         return error;
       }
     }
@@ -1734,6 +1743,7 @@ void Continuous_done(void)
     Thread_done(&continuousInitThread);
 
     (void)closeContinuous(&continuousDatabaseHandle);
+    Database_deleteSpecifier(continuousDatabaseSpecifier);
   }
 }
 
@@ -1809,10 +1819,11 @@ Errors Continuous_open(DatabaseHandle *databaseHandle)
   Errors error;
 
   assert(databaseHandle != NULL);
+  assert(continuousDatabaseSpecifier != NULL);
 
   if (initFlag)
   {
-    error = openContinuous(databaseHandle);
+    error = openContinuous(databaseHandle,continuousDatabaseSpecifier);
   }
   else
   {
@@ -1936,18 +1947,18 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-  return Database_exists(databaseHandle,
-                         "names",
-                         "id",
-                         "WHERE     DATETIME('now','-%u seconds')>=dateTime \
-                                AND jobUUID=%'S \
-                                AND scheduleUUID=%'S \
-                                AND storedFlag=0 \
-                         ",
-                         globalOptions.continuousMinTimeDelta,
-                         jobUUID,
-                         scheduleUUID
-                        );
+  return Database_existsValue(databaseHandle,
+                              "names",
+                              "id",
+                              "WHERE     DATETIME('now','-%u seconds')>=dateTime \
+                                     AND jobUUID=%'S \
+                                     AND scheduleUUID=%'S \
+                                     AND storedFlag=0 \
+                              ",
+                              globalOptions.continuousMinTimeDelta,
+                              jobUUID,
+                              scheduleUUID
+                             );
 }
 
 Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
@@ -2027,7 +2038,7 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
   Database_prepare(&databaseStatementHandle,
                          databaseHandle,
                          DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,BOOL),
-                         "SELECT id,UNIXTIMESTAMP(dateTime),name,storedFlag \
+                         "SELECT id,UNIX_TIMESTAMP(dateTime),name,storedFlag \
                           FROM names \
                           WHERE     jobUUID=%'s \
                                 AND scheduleUUID=%'s \

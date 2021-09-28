@@ -71,7 +71,7 @@ sub getName($)
 {
   my $prefix = shift(@_);
 
-  my $name = $prefix."$id";
+  my $name = "bar_".$prefix."$id";
   $id++;
 
   return $name;

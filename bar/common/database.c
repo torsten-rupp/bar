@@ -800,45 +800,6 @@ LOCAL void getTime(struct timespec *timespec)
 }
 #endif /* PLATFORM_... */
 
-/***********************************************************************\
-* Name   : freeDatabaseNode
-* Purpose: free database node
-* Input  : databaseNode - database node
-*          userData     - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
-{
-  assert(databaseNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  DEBUG_REMOVE_RESOURCE_TRACE(databaseNode,DatabaseNode);
-
-  Semaphore_done(&databaseNode->progressHandlerList.lock);
-  List_done(&databaseNode->progressHandlerList,CALLBACK_(NULL,NULL));
-  Semaphore_done(&databaseNode->busyHandlerList.lock);
-  List_done(&databaseNode->busyHandlerList,CALLBACK_(NULL,NULL));
-  pthread_cond_destroy(&databaseNode->readWriteTrigger);
-  #ifdef DATABASE_LOCK_PER_INSTANCE
-     pthread_mutex_destroy(&databaseNode->lock);
-  #endif /* DATABASE_LOCK_PER_INSTANCE */
-  switch (databaseNode->type)
-  {
-    case DATABASE_TYPE_SQLITE3:
-      String_delete(databaseNode->sqlite.fileName);
-      break;
-    case DATABASE_TYPE_MYSQL:
-      String_delete(databaseNode->mysql.userName);
-      String_delete(databaseNode->mysql.serverName);
-      break;
-  }
-
-}
-
 #ifndef NDEBUG
 
 //TODO: debug function for logging?
@@ -1146,7 +1107,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
   {
     pthread_mutex_lock(&debugConsoleLock);
     {
-      fprintf(stderr,"Database lock info '%s':\n",String_cString(databaseNode->sqlite.fileName));
+      fprintf(stderr,"Database lock info '%s':\n",String_cString(databaseNode->databaseSpecifier.sqlite.fileName));
       fprintf(stderr,
               "  lock state summary: pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
               databaseNode->pendingReadCount,
@@ -1222,6 +1183,904 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
 }
 
 #endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : freeDatabaseNode
+* Purpose: free database node
+* Input  : databaseNode - database node
+*          userData     - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
+{
+  assert(databaseNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(databaseNode,DatabaseNode);
+
+  Semaphore_done(&databaseNode->progressHandlerList.lock);
+  List_done(&databaseNode->progressHandlerList,CALLBACK_(NULL,NULL));
+  Semaphore_done(&databaseNode->busyHandlerList.lock);
+  List_done(&databaseNode->busyHandlerList,CALLBACK_(NULL,NULL));
+  pthread_cond_destroy(&databaseNode->readWriteTrigger);
+  #ifdef DATABASE_LOCK_PER_INSTANCE
+     pthread_mutex_destroy(&databaseNode->lock);
+  #endif /* DATABASE_LOCK_PER_INSTANCE */
+  Database_doneSpecifier(&databaseNode->databaseSpecifier);
+}
+
+/***********************************************************************\
+* Name   : progressHandler
+* Purpose: SQLite3 progress handler callback
+* Input  : userData - user data
+*          n        - number of calls
+* Output : -
+* Return : 0 for abort
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int progressHandler(void *userData)
+{
+  DatabaseHandle                    *databaseHandle = (DatabaseHandle*)userData;
+  bool                              interruptFlag;
+  const DatabaseProgressHandlerNode *progressHandlerNode;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+
+  // execute registered progress handlers
+  interruptFlag = FALSE;
+  SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  {
+    LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
+    {
+      interruptFlag = !progressHandlerNode->function(progressHandlerNode->userData);
+    }
+  }
+
+  return interruptFlag ? 1 : 0;
+}
+
+/***********************************************************************\
+* Name   : sqlite3UnixTimestamp
+* Purpose: callback for UNIX_TIMESTAMP function to convert date/time to
+*          Unix timestamp (Unix epoch, UTC)
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : UNIX_TIMESTAMP(text[,format])
+\***********************************************************************/
+
+LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  const char *text,*format;
+  const char *s;
+  uint64     timestamp;
+  #ifdef HAVE_GETDATE_R
+    struct tm tmBuffer;
+  #endif /* HAVE_GETDATE_R */
+  struct tm  *tm;
+
+  assert(context != NULL);
+  assert(argc >= 1);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  // get text to convert, optional date/time format
+  text   = (const char*)sqlite3_value_text(argv[0]);
+  format = (argc >= 2) ? (const char *)argv[1] : NULL;
+
+  // convert to Unix timestamp
+  if (text != NULL)
+  {
+    // try convert number value
+    if (stringToUInt64(text,&timestamp))
+    {
+      // done
+    }
+    else
+    {
+      // try convert string value
+      #if   defined(HAVE_GETDATE_R)
+        tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
+      #elif defined(HAVE_GETDATE)
+        tm = getdate(text);
+      #else
+#ifndef WERROR
+#warning implement strptime
+#endif
+//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+        tm = NULL;
+      #endif /* HAVE_GETDATE... */
+      if (tm != NULL)
+      {
+        #ifdef HAVE_TIMEGM
+          timestamp = (uint64)timegm(tm);
+        #else
+#ifndef WERROR
+#warning implement timegm
+#endif
+        #endif
+      }
+      else
+      {
+        #ifdef HAVE_STRPTIME
+          s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
+        #else
+UNUSED_VARIABLE(format);
+#ifndef WERROR
+#warning implement strptime
+#endif
+//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+          s = NULL;
+        #endif
+        if ((s != NULL) && stringIsEmpty(s))
+        {
+          #ifdef HAVE_TIMEGM
+            timestamp = (uint64)timegm(&tmBuffer);
+          #else
+#ifndef WERROR
+#warning implement timegm
+#endif
+          #endif
+        }
+        else
+        {
+          timestamp = 0LL;
+        }
+      }
+    }
+  }
+  else
+  {
+    timestamp = 0LL;
+  }
+
+  sqlite3_result_int64(context,(int64)timestamp);
+}
+
+/***********************************************************************\
+* Name   : sqlite3FromUnixTime
+* Purpose: callback for FROM_UNIXTIME function to convert Unix timestamp
+*          (Unix epoch, UTC) to date/time
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : FROM_UNIXTIME(timestamp[,format])
+\***********************************************************************/
+
+LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  uint64     timestamp;
+  const char *format;
+  char       text[64];
+
+  assert(context != NULL);
+  assert(argc >= 1);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  // get text to convert, optional date/time format
+  timestamp = (uint64)sqlite3_value_int64(argv[0]);
+  format    = (argc >= 2) ? (const char *)argv[1] : NULL;
+
+  // convert to Unix timestamp
+  Misc_formatDateTimeCString(text,sizeof(text),timestamp,format);
+
+  sqlite3_result_text(context,text,stringLength(text),NULL);
+}
+
+/***********************************************************************\
+* Name   : sqlite3RegexpDelete
+* Purpose: callback for deleting REGEXP data
+* Input  : data - data to delete
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sqlite3RegexpDelete(void *data)
+{
+  assert(data != NULL);
+
+  regfree((regex_t*)data);
+  free(data);
+}
+
+/***********************************************************************\
+* Name   : sqlite3RegexpMatch
+* Purpose: callback for REGEXP function
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sqlite3RegexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  const char *text;
+  bool       caseSensitive;
+  const char *patternText;
+  int        flags;
+  regex_t    *regex;
+  int        result;
+
+  assert(context != NULL);
+  assert(argc == 3);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  // get text to match
+  text = (const char*)sqlite3_value_text(argv[2]);
+
+  // check if pattern already exists, create pattern
+  regex = (regex_t*)sqlite3_get_auxdata(context,0);
+  if (regex == NULL)
+  {
+    // get pattern, case-sensitive flag
+    patternText   = (const char*)sqlite3_value_text(argv[0]);
+    caseSensitive = atoi((const char*)sqlite3_value_text(argv[1])) != 0;
+
+    // allocate pattern
+    regex = (regex_t*)malloc(sizeof(regex_t));
+    if (regex == NULL)
+    {
+      sqlite3_result_int(context,0);
+      return;
+    }
+
+    // compile pattern
+    flags = REG_NOSUB;
+    if (!caseSensitive) flags |= REG_ICASE;
+    if (regcomp(regex,patternText,flags) != 0)
+    {
+      sqlite3_result_int(context,0);
+      return;
+    }
+
+    // store for next usage
+    sqlite3_set_auxdata(context,0,regex,sqlite3RegexpDelete);
+  }
+
+  // match pattern
+  result = (regexec(regex,text,0,NULL,0) == 0) ? 1 : 0;
+
+  sqlite3_result_int(context,result);
+}
+
+/***********************************************************************\
+* Name   : sqlite3Dirname
+* Purpose: callback for DIRNAME function
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  const char *string;
+  String     directoryName;
+
+  assert(context != NULL);
+  assert(argc == 1);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  // get string
+  string = (const char*)sqlite3_value_text(argv[0]);
+
+  // get directory
+  directoryName = File_getDirectoryNameCString(String_new(),string);
+
+  // store result
+  sqlite3_result_text(context,String_cString(directoryName),-1,SQLITE_TRANSIENT);
+
+  // free resources
+  String_delete(directoryName);
+}
+
+/***********************************************************************\
+* Name   : openDatabase
+* Purpose: open database
+* Input  : databaseHandle    - database handle variable
+*          databaseSpecifier - database specifier
+*          databaseName      - database name or NULL for database name in
+*                              database specifider
+*          openDatabaseMode  - open mode; see DatabaseOpenModes
+*          timeout           - timeout [ms] or WAIT_FOREVER
+* Output : databaseHandle - database handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  LOCAL Errors openDatabase(DatabaseHandle          *databaseHandle,
+                            const DatabaseSpecifier *databaseSpecifier,
+                            ConstString             databaseName,
+                            DatabaseOpenModes       openDatabaseMode,
+                            long                    timeout
+                          )
+#else /* not NDEBUG */
+  LOCAL Errors openDatabase(const char              *__fileName__,
+                            ulong                   __lineNb__,
+                            DatabaseHandle          *databaseHandle,
+                            const DatabaseSpecifier *databaseSpecifier,
+                            ConstString             databaseName,
+                            DatabaseOpenModes       openDatabaseMode,
+                            long                    timeout
+                          )
+#endif /* NDEBUG */
+{
+  String        directoryName;
+  Errors        error;
+  DatabaseNode  *databaseNode;
+  #ifndef NDEBUG
+    uint          i;
+  #endif /* NDEBUG */
+
+  assert(databaseHandle != NULL);
+  assert(databaseSpecifier != NULL);
+
+  // init variables
+  databaseHandle->readLockCount           = 0;
+  databaseHandle->readWriteLockCount      = 0;
+  databaseHandle->sqlite.handle           = NULL;
+  databaseHandle->mysql.handle            = NULL;
+  databaseHandle->timeout                 = timeout;
+  databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
+  if (sem_init(&databaseHandle->wakeUp,0,0) != 0)
+  {
+    return ERRORX_(DATABASE,0,"init locking");
+  }
+
+  // get database type and open/connect data
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      {
+        ConstString fileName;
+        String      sqliteName;
+        int         sqliteMode;
+        int         sqliteResult;
+
+        // get filename
+        if (!String_isEmpty(databaseName))
+        {
+          fileName = databaseName;
+        }
+        else
+        {
+          fileName = databaseSpecifier->sqlite.fileName;
+        }
+
+        // create directory if needed
+        if (!String_isEmpty(fileName))
+        {
+          directoryName = File_getDirectoryName(String_new(),fileName);
+          if (   !String_isEmpty(directoryName)
+              && !File_isDirectory(directoryName)
+             )
+          {
+            error = File_makeDirectory(directoryName,
+                                       FILE_DEFAULT_USER_ID,
+                                       FILE_DEFAULT_GROUP_ID,
+                                       FILE_DEFAULT_PERMISSION
+                                      );
+            if (error != ERROR_NONE)
+            {
+              File_deleteFileName(directoryName);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
+          }
+          String_delete(directoryName);
+        }
+
+        // create database
+        if (   !String_isEmpty(fileName)
+            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
+           )
+        {
+          // delete existing file
+          (void)File_delete(fileName,FALSE);
+        }
+
+        // check if exists
+        if (   !String_isEmpty(fileName)
+            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_CREATE)
+           )
+        {
+          if (File_exists(fileName))
+          {
+            return ERROR_DATABASE_EXISTS;
+          }
+        }
+
+        // get sqlite database name
+        if (!String_isEmpty(fileName))
+        {
+          // open file
+          sqliteName = String_format(String_new(),"file:%S",fileName);
+        }
+        else
+        {
+          // open memory
+          sqliteName = String_format(String_new(),"file::memory:");
+        }
+
+        // get mode
+        sqliteMode = SQLITE_OPEN_URI;
+        switch (openDatabaseMode & DATABASE_OPEN_MASK_MODE)
+        {
+          case DATABASE_OPENMODE_READ:
+            sqliteMode |= SQLITE_OPEN_READONLY;
+            String_appendCString(sqliteName,"?immutable=1");
+            break;
+          case DATABASE_OPENMODE_CREATE:
+          case DATABASE_OPENMODE_FORCE_CREATE:
+          case DATABASE_OPENMODE_READWRITE:
+            sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
+            break;
+          default:
+            break;
+        }
+        if ((openDatabaseMode & DATABASE_OPEN_MASK_FLAGS) != 0)
+        {
+          if ((openDatabaseMode & DATABASE_OPENMODE_MEMORY) == DATABASE_OPENMODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(sqliteName,"mode=memory");
+          if ((openDatabaseMode & DATABASE_OPENMODE_SHARED) == DATABASE_OPENMODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(sqliteName,"cache=shared");
+        }
+  //sqliteMode |= SQLITE_OPEN_NOMUTEX;
+
+        // open database
+        sqliteResult = sqlite3_open_v2(String_cString(sqliteName),&databaseHandle->sqlite.handle,sqliteMode,NULL);
+        if (sqliteResult != SQLITE_OK)
+        {
+          error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseHandle->sqlite.handle));
+          String_delete(sqliteName);
+          sem_destroy(&databaseHandle->wakeUp);
+          return error;
+        }
+
+        // attach aux database
+        if ((openDatabaseMode & DATABASE_OPENMODE_AUX) == DATABASE_OPENMODE_AUX)
+        {
+          sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
+                                      "ATTACH DATABASE ':memory:' AS " DATABASE_AUX,
+                                      CALLBACK_(NULL,NULL),
+                                      NULL
+                                     );
+          if (sqliteResult != SQLITE_OK)
+          {
+            error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseHandle->sqlite.handle));
+            sqlite3_close(databaseHandle->sqlite.handle);
+            String_delete(sqliteName);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+        }
+
+        // free resources
+        String_delete(sqliteName);
+      }
+      break;
+    case DATABASE_TYPE_MYSQL:
+      {
+        int mysqlResult;
+
+        // open database
+        databaseHandle->mysql.handle = mysql_real_connect(&mysql,
+                                                          String_cString(databaseSpecifier->mysql.serverName),
+                                                          String_cString(databaseSpecifier->mysql.userName),
+                                                          databaseSpecifier->mysql.password.data,
+                                                          !String_isEmpty(databaseName)
+                                                            ? String_cString(databaseName)
+                                                            : String_cString(databaseSpecifier->mysql.databaseName),
+                                                          0,
+                                                          0,
+                                                          0
+                                                         );
+        if (databaseHandle->mysql.handle == NULL)
+        {
+          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s",mysql_error(&mysql));
+          sem_destroy(&databaseHandle->wakeUp);
+          return error;
+        }
+
+        // enable UTF8
+        mysqlResult = mysql_query(&mysql,
+                                  "SET NAMES 'UTF8'"
+                                 );
+        if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+        {
+          HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&mysql));
+        }
+        else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+        {
+          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),"SET NAMES 'UTF8'");
+          sem_destroy(&databaseHandle->wakeUp);
+          return error;
+        }
+        else if (mysqlResult != 0)
+        {
+          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),"SET NAMES 'UTF8'");
+          sem_destroy(&databaseHandle->wakeUp);
+          return error;
+        }
+      }
+      break;
+  }
+
+  // get database node
+  SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    databaseNode = LIST_FIND(&databaseList,
+                             databaseNode,
+                             Database_equalSpecifiers(&databaseNode->databaseSpecifier,databaseSpecifier)
+                            );
+    if (databaseNode != NULL)
+    {
+      databaseNode->openCount++;
+    }
+    else
+    {
+      databaseNode = LIST_NEW_NODE(DatabaseNode);
+      if (databaseNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      Database_copySpecifier(&databaseNode->databaseSpecifier,databaseSpecifier);
+      databaseNode->openCount               = 1;
+      #ifdef DATABASE_LOCK_PER_INSTANCE
+        if (pthread_mutexattr_init(&databaseNode->lockAttribute) != 0)
+        {
+          Database_doneSpecifier(&databaseNode->databaseSpecifier);
+          LIST_DELETE_NODE(databaseNode);
+          switch (databaseType)
+          {
+            case DATABASE_TYPE_SQLITE3:
+              sqlite3_close(databaseHandle->sqlite.handle);
+              break;
+            case DATABASE_TYPE_MYSQL:
+              mysql_close(databaseHandle->mysql.handle);
+              break;
+          }
+          sem_destroy(&databaseHandle->wakeUp);
+          return ERRORX_(DATABASE,0,"init locking");
+        }
+        pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
+        if (pthread_mutex_init(&databaseNode->lock,&databaseNode->lockAttribute) != 0)
+        {
+          pthread_mutexattr_destroy(&databaseNode->lockAttribute);
+          Database_doneSpecifier(&databaseNode->databaseSpecifier);
+          LIST_DELETE_NODE(databaseNode);
+          switch (databaseType)
+          {
+            case DATABASE_TYPE_SQLITE3:
+              sqlite3_close(databaseHandle->sqlite.handle);
+              break;
+            case DATABASE_TYPE_MYSQL:
+              mysql_close(databaseHandle->mysql.handle);
+              break;
+          }
+          sem_destroy(&databaseHandle->wakeUp);
+          return ERRORX_(DATABASE,0,"init locking");
+        }
+      #endif /* DATABASE_LOCK_PER_INSTANCE */
+      databaseNode->lockType                = DATABASE_LOCK_TYPE_NONE;
+
+      databaseNode->pendingReadCount        = 0;
+      databaseNode->readCount               = 0;
+      pthread_cond_init(&databaseNode->readTrigger,NULL);
+
+      databaseNode->pendingReadWriteCount   = 0;
+      databaseNode->readWriteCount          = 0;
+      pthread_cond_init(&databaseNode->readWriteTrigger,NULL);
+
+      databaseNode->pendingTransactionCount = 0;
+      databaseNode->transactionCount        = 0;
+      pthread_cond_init(&databaseNode->transactionTrigger,NULL);
+
+      List_init(&databaseNode->busyHandlerList);
+      Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
+
+      List_init(&databaseNode->progressHandlerList);
+      Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
+
+      #ifdef DATABASE_DEBUG_LOCK
+        memClear(databaseNode->readLPWIds,sizeof(databaseNode->readLPWIds));
+        memClear(databaseNode->readWriteLPWIds,sizeof(databaseNode->readWriteLPWIds));
+        databaseNode->transactionLPWId = 0;
+      #endif /* DATABASE_DEBUG_LOCK */
+
+      #ifndef NDEBUG
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
+        databaseNode->debug.readWriteLockedBy               = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
+        databaseNode->debug.lastTrigger.threadInfo.threadId = THREAD_ID_NONE;
+        databaseNode->debug.transaction.threadId            = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
+        databaseNode->debug.historyIndex                    = 0;
+      #endif /* not NDEBUG */
+
+      List_append(&databaseList,databaseNode);
+
+      #ifdef NDEBUG
+        DEBUG_ADD_RESOURCE_TRACE(databaseNode,DatabaseNode);
+      #else /* not NDEBUG */
+        DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseNode,DatabaseNode);
+      #endif /* NDEBUG */
+    }
+
+    databaseHandle->databaseNode = databaseNode;
+  }
+
+  // set handlers
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      #if !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG)
+        fprintf(stderr,"WARNING: datatbase logging is enabled!\n");
+        switch (databaseNode->type)
+        {
+          case DATABASE_TYPE_SQLITE3:
+            sqlite3_trace_v2(databaseHandle->sqlite.handle,DATABASE_DEBUG_LOG,logTraceCommandHandler,NULL);
+            break;
+          case DATABASE_TYPE_MYSQL:
+            break;
+        }
+      #endif /* DATABASE_DEBUG_LOG */
+#if 0
+      // set busy handler
+      sqliteResult = sqlite3_busy_handler(databaseHandle->sqlite.handle,busyHandler,databaseHandle);
+      assert(sqliteResult == SQLITE_OK);
+#endif /* 0 */
+      // set progress handler
+      sqlite3_progress_handler(databaseHandle->sqlite.handle,50000,progressHandler,databaseHandle);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
+
+  // register special functions
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      {
+        int sqliteResult;
+
+        sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
+                                               "unix_timestamp",
+                                               1,
+                                               SQLITE_ANY,
+                                               NULL,
+                                               sqlite3UnixTimestamp,
+                                               NULL,
+                                               NULL
+                                              );
+        assert(sqliteResult == SQLITE_OK);
+        sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
+                                               "from_unixtime",
+                                               1,
+                                               SQLITE_ANY,
+                                               NULL,
+                                               sqlite3FromUnixTime,
+                                               NULL,
+                                               NULL
+                                              );
+        assert(sqliteResult == SQLITE_OK);
+        sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
+                                               "regexp",
+                                               3,
+                                               SQLITE_ANY,
+                                               NULL,
+                                               sqlite3RegexpMatch,
+                                               NULL,
+                                               NULL
+                                              );
+        assert(sqliteResult == SQLITE_OK);
+        sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
+                                               "dirname",
+                                               1,
+                                               SQLITE_ANY,
+                                               NULL,
+                                               sqlite3Dirname,
+                                               NULL,
+                                               NULL
+                                              );
+        assert(sqliteResult == SQLITE_OK);
+//TODO: debug function for logging?
+#if 0
+        sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
+                                               "debugPrint",
+                                               1,
+                                               SQLITE_ANY,
+                                               NULL,
+                                               debugPrint,
+                                               NULL,
+                                               NULL
+                                              );
+        assert(sqliteResult == SQLITE_OK);
+#endif
+      }
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
+
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      {
+        int sqliteResult;
+        // enable recursive triggers
+        sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
+                                    "PRAGMA recursive_triggers=ON",
+                                    CALLBACK_(NULL,NULL),
+                                    NULL
+                                   );
+        assert(sqliteResult == SQLITE_OK);
+      }
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
+
+  #ifdef DATABASE_DEBUG
+    fprintf(stderr,"Database debug: open '%s'\n",fileName);
+  #endif
+
+  #ifndef NDEBUG
+    pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
+
+    pthread_mutex_lock(&debugDatabaseLock);
+    {
+      // init database handle
+      databaseHandle->debug.threadId           = Thread_getCurrentId();
+      databaseHandle->debug.fileName           = __fileName__;
+      databaseHandle->debug.lineNb             = __lineNb__;
+      #ifdef HAVE_BACKTRACE
+        BACKTRACE(databaseHandle->debug.stackTrace,databaseHandle->debug.stackTraceSize);
+      #endif /* HAVE_BACKTRACE */
+
+      databaseHandle->debug.locked.threadId   = THREAD_ID_NONE;
+      databaseHandle->debug.locked.lineNb     = 0;
+      databaseHandle->debug.locked.t0         = 0ULL;
+      databaseHandle->debug.locked.t1         = 0ULL;
+      databaseHandle->debug.current.sqlString = String_new();
+      #ifdef HAVE_BACKTRACE
+        databaseHandle->debug.current.stackTraceSize = 0;
+      #endif /* HAVE_BACKTRACE */
+
+      // add to handle-list
+      List_append(&debugDatabaseHandleList,databaseHandle);
+    }
+    pthread_mutex_unlock(&debugDatabaseLock);
+  #endif /* not NDEBUG */
+
+  // free resources
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : closeDatabase
+* Purpose: close database
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  LOCAL void closeDatabase(DatabaseHandle *databaseHandle)
+#else /* not NDEBUG */
+  LOCAL void closeDatabase(const char     *__fileName__,
+                           ulong          __lineNb__,
+                           DatabaseHandle *databaseHandle
+                          )
+#endif /* NDEBUG */
+{
+  #ifndef NDEBUG
+    DatabaseHandle *debugDatabaseHandle;
+  #endif /* not NDEBUG */
+
+  assert(databaseHandle != NULL);
+  assert(databaseHandle->readWriteLockCount == 0);
+  assert(databaseHandle->readLockCount == 0);
+  assert(checkDatabaseInitialized(databaseHandle));
+
+  #ifdef DATABASE_DEBUG
+    fprintf(stderr,"Database debug: close '%s'\n",databaseHandle->name);
+  #endif
+
+  #ifndef NDEBUG
+    pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
+
+    pthread_mutex_lock(&debugDatabaseLock);
+    {
+      // check if database opened
+      if (!LIST_CONTAINS(&debugDatabaseHandleList,
+                         debugDatabaseHandle,
+                         debugDatabaseHandle == databaseHandle
+                        )
+         )
+      {
+        #ifdef HAVE_BACKTRACE
+          debugDumpStackTrace(stderr,
+                              0,
+                              DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
+                              databaseHandle->debug.stackTrace,
+                              databaseHandle->debug.stackTraceSize,
+                              0
+                             );
+        #endif /* HAVE_BACKTRACE */
+        HALT_INTERNAL_ERROR_AT(__fileName__,
+                               __lineNb__,
+                               "Database %p is not opened",
+                               databaseHandle
+                              );
+      }
+
+      // remove from handle-list
+      List_remove(&debugDatabaseHandleList,databaseHandle);
+
+      // free resources
+      String_delete(databaseHandle->debug.current.sqlString);
+    }
+    pthread_mutex_unlock(&debugDatabaseLock);
+  #endif /* not NDEBUG */
+
+  switch (databaseHandle->databaseNode->databaseSpecifier.type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      // clear progress handler
+      sqlite3_progress_handler(databaseHandle->sqlite.handle,0,NULL,NULL);
+
+      // clear busy timeout handler
+      sqlite3_busy_handler(databaseHandle->sqlite.handle,NULL,NULL);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
+  }
+
+  // close database
+  switch (databaseHandle->databaseNode->databaseSpecifier.type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      sqlite3_close(databaseHandle->sqlite.handle);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      mysql_close(databaseHandle->mysql.handle);
+      break;
+  }
+
+//// TODO: free database node
+//  Database_doneSpecifier(&databaseNode->databaseSpecifier);
+
+  // free resources
+//TODO: remove?
+  sem_destroy(&databaseHandle->wakeUp);
+}
 
 /***********************************************************************\
 * Name   : isReadLock
@@ -2480,224 +3339,6 @@ LOCAL String formatSQLString(String     sqlString,
 }
 
 /***********************************************************************\
-* Name   : unixTimestamp
-* Purpose: callback for UNIXTIMESTAMP function (Unix epoch, UTC)
-* Input  : context - SQLite3 context
-*          argc    - number of arguments
-*          argv    - argument array
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv[])
-{
-  const char    *text,*format;
-  long long int n;
-  uint64        timestamp;
-  char          *s;
-  #ifdef HAVE_GETDATE_R
-    struct tm tmBuffer;
-  #endif /* HAVE_GETDATE_R */
-  struct tm  *tm;
-
-  assert(context != NULL);
-  assert(argc >= 1);
-  assert(argv != NULL);
-
-  UNUSED_VARIABLE(argc);
-
-  // get text to convert, optional date/time format
-  text   = (const char*)sqlite3_value_text(argv[0]);
-  format = (argc >= 2) ? (const char *)argv[1] : NULL;
-
-  // convert to Unix timestamp
-  if (text != NULL)
-  {
-    // try convert number value
-    n = strtoll(text,&s,10);
-    if (stringIsEmpty(s))
-    {
-      timestamp = (uint64)n;
-    }
-    else
-    {
-      // try convert string value
-      #if   defined(HAVE_GETDATE_R)
-        tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
-      #elif defined(HAVE_GETDATE)
-        tm = getdate(text);
-      #else
-#ifndef WERROR
-#warning implement strptime
-#endif
-//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
-        tm = NULL;
-      #endif /* HAVE_GETDATE... */
-      if (tm != NULL)
-      {
-        #ifdef HAVE_TIMEGM
-          timestamp = (uint64)timegm(tm);
-        #else
-#ifndef WERROR
-#warning implement timegm
-#endif
-        #endif
-      }
-      else
-      {
-        #ifdef HAVE_STRPTIME
-          s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
-        #else
-UNUSED_VARIABLE(format);
-#ifndef WERROR
-#warning implement strptime
-#endif
-//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
-          s = NULL;
-        #endif
-        if ((s != NULL) && stringIsEmpty(s))
-        {
-          #ifdef HAVE_TIMEGM
-            timestamp = (uint64)timegm(&tmBuffer);
-          #else
-#ifndef WERROR
-#warning implement timegm
-#endif
-          #endif
-        }
-        else
-        {
-          timestamp = 0LL;
-        }
-      }
-    }
-  }
-  else
-  {
-    timestamp = 0LL;
-  }
-
-  sqlite3_result_int64(context,(int64)timestamp);
-}
-
-/***********************************************************************\
-* Name   : regexpDelete
-* Purpose: callback for deleting REGEXP data
-* Input  : data - data to delete
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void regexpDelete(void *data)
-{
-  assert(data != NULL);
-
-  regfree((regex_t*)data);
-  free(data);
-}
-
-/***********************************************************************\
-* Name   : regexpMatch
-* Purpose: callback for REGEXP function
-* Input  : context - SQLite3 context
-*          argc    - number of arguments
-*          argv    - argument array
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void regexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[])
-{
-  const char *text;
-  bool       caseSensitive;
-  const char *patternText;
-  int        flags;
-  regex_t    *regex;
-  int        result;
-
-  assert(context != NULL);
-  assert(argc == 3);
-  assert(argv != NULL);
-
-  UNUSED_VARIABLE(argc);
-
-  // get text to match
-  text = (const char*)sqlite3_value_text(argv[2]);
-
-  // check if pattern already exists, create pattern
-  regex = (regex_t*)sqlite3_get_auxdata(context,0);
-  if (regex == NULL)
-  {
-    // get pattern, case-sensitive flag
-    patternText   = (const char*)sqlite3_value_text(argv[0]);
-    caseSensitive = atoi((const char*)sqlite3_value_text(argv[1])) != 0;
-
-    // allocate pattern
-    regex = (regex_t*)malloc(sizeof(regex_t));
-    if (regex == NULL)
-    {
-      sqlite3_result_int(context,0);
-      return;
-    }
-
-    // compile pattern
-    flags = REG_NOSUB;
-    if (!caseSensitive) flags |= REG_ICASE;
-    if (regcomp(regex,patternText,flags) != 0)
-    {
-      sqlite3_result_int(context,0);
-      return;
-    }
-
-    // store for next usage
-    sqlite3_set_auxdata(context,0,regex,regexpDelete);
-  }
-
-  // match pattern
-  result = (regexec(regex,text,0,NULL,0) == 0) ? 1 : 0;
-
-  sqlite3_result_int(context,result);
-}
-
-/***********************************************************************\
-* Name   : dirname
-* Purpose: callback for DIRNAME function
-* Input  : context - SQLite3 context
-*          argc    - number of arguments
-*          argv    - argument array
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void dirname(sqlite3_context *context, int argc, sqlite3_value *argv[])
-{
-  const char *string;
-  String     directoryName;
-
-  assert(context != NULL);
-  assert(argc == 1);
-  assert(argv != NULL);
-
-  UNUSED_VARIABLE(argc);
-
-  // get string
-  string = (const char*)sqlite3_value_text(argv[0]);
-
-  // get directory
-  directoryName = File_getDirectoryNameCString(String_new(),string);
-
-  // store result
-  sqlite3_result_text(context,String_cString(directoryName),-1,SQLITE_TRANSIENT);
-
-  // free resources
-  String_delete(directoryName);
-}
-
-/***********************************************************************\
 * Name   : executeCheckpoint
 * Purpose: force execute a checkpoint if timeout expired
 * Input  : databaseHandle - database handle
@@ -2762,39 +3403,6 @@ LOCAL int busyHandler(void *userData, int n)
   #undef SLEEP_TIME
 }
 #endif /* 0 */
-
-/***********************************************************************\
-* Name   : progressHandler
-* Purpose: SQLite3 progress handler callback
-* Input  : userData - user data
-*          n        - number of calls
-* Output : -
-* Return : 0 for abort
-* Notes  : -
-\***********************************************************************/
-
-LOCAL int progressHandler(void *userData)
-{
-  DatabaseHandle                    *databaseHandle = (DatabaseHandle*)userData;
-  bool                              interruptFlag;
-  const DatabaseProgressHandlerNode *progressHandlerNode;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(databaseHandle->databaseNode != NULL);
-
-  // execute registered progress handlers
-  interruptFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
-  {
-    LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
-    {
-      interruptFlag = !progressHandlerNode->function(progressHandlerNode->userData);
-    }
-  }
-
-  return interruptFlag ? 1 : 0;
-}
 
 /***********************************************************************\
 * Name   : unlockNotifyCallback
@@ -3360,7 +3968,7 @@ fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(databaseStatemen
 
 LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
                          const DatabaseDataTypes columnTypes[],
-                         uint columnCount
+                         uint                    columnTypeCount
                         )
 {
   DatabaseValue *databaseValue;
@@ -3377,7 +3985,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
         // allocate value data
         databaseStatementHandle->valueCount = sqlite3_column_count(databaseStatementHandle->sqlite.statementHandle);
-        assert(databaseStatementHandle->valueCount == columnCount);
+        assertx(databaseStatementHandle->valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",databaseStatementHandle->valueCount,columnTypeCount);
 
         databaseStatementHandle->values = (DatabaseValue*)malloc(databaseStatementHandle->valueCount*sizeof(DatabaseValue));
         if (databaseStatementHandle->values == NULL)
@@ -3385,7 +3993,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
           HALT_INSUFFICIENT_MEMORY();
         }
 
-        for (i = 0; i < columnCount; i++)
+        for (i = 0; i < columnTypeCount; i++)
         {
           databaseValue = &databaseStatementHandle->values[i];
           databaseValue->type = columnTypes[i];
@@ -3429,7 +4037,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
         // allocate value data
         databaseStatementHandle->valueCount = mysql_stmt_field_count(databaseStatementHandle->mysql.statementHandle);
-        assert(databaseStatementHandle->valueCount == columnCount);
+        assertx(databaseStatementHandle->valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",databaseStatementHandle->valueCount,columnTypeCount);
 
         databaseStatementHandle->mysql.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->valueCount, sizeof(MYSQL_BIND));
         if (databaseStatementHandle->mysql.bind == NULL)
@@ -3449,7 +4057,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
           HALT_INSUFFICIENT_MEMORY();
         }
 
-        for (i = 0; i < columnCount; i++)
+        for (i = 0; i < columnTypeCount; i++)
         {
           databaseValue = &databaseStatementHandle->values[i];
           databaseValue->type = columnTypes[i];
@@ -3729,6 +4337,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
       {
         int  mysqlResult;
         uint i;
+        uint year,month,day,hour,minute,second;
 
         mysqlResult = mysql_stmt_fetch(databaseStatementHandle->mysql.statementHandle);
         if (mysqlResult == 0)
@@ -3752,16 +4361,37 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
               case DATABASE_DATATYPE_DOUBLE:
                 break;
               case DATABASE_DATATYPE_DATETIME:
+// TODO: remove
+#if 0
+fprintf(stderr,"%s:%d: %d %d %d %d %d %d\n",__FILE__,__LINE__,
+databaseStatementHandle->mysql.dateTime[i].year,
+databaseStatementHandle->mysql.dateTime[i].month,
+databaseStatementHandle->mysql.dateTime[i].day,
+databaseStatementHandle->mysql.dateTime[i].hour,
+databaseStatementHandle->mysql.dateTime[i].minute,
+databaseStatementHandle->mysql.dateTime[i].second
+);
+#endif
+                year   = (databaseStatementHandle->mysql.dateTime[i].year >= 1970)
+                           ? databaseStatementHandle->mysql.dateTime[i].year
+                           : 1970;
+                month  = (databaseStatementHandle->mysql.dateTime[i].month >= 1)
+                           ? databaseStatementHandle->mysql.dateTime[i].month
+                           : 1;
+                day    = (databaseStatementHandle->mysql.dateTime[i].day >= 1)
+                           ? databaseStatementHandle->mysql.dateTime[i].day
+                           : 1;
+                hour   = databaseStatementHandle->mysql.dateTime[i].hour;
+                minute = databaseStatementHandle->mysql.dateTime[i].minute;
+                second = databaseStatementHandle->mysql.dateTime[i].second;
+//fprintf(stderr,"%s:%d: %d %d %d %d %d %d\n",__FILE__,__LINE__,year,month,day,hour,minute,second);
+
                 // TODO: day-light-saving?
-                databaseStatementHandle->values[i].dateTime = Misc_makeDateTime(databaseStatementHandle->mysql.dateTime[i].year,
-                                                                                databaseStatementHandle->mysql.dateTime[i].month,
-                                                                                databaseStatementHandle->mysql.dateTime[i].day,
-                                                                                databaseStatementHandle->mysql.dateTime[i].hour,
-                                                                                databaseStatementHandle->mysql.dateTime[i].minute,
-                                                                                databaseStatementHandle->mysql.dateTime[i].second,
+                databaseStatementHandle->values[i].dateTime = Misc_makeDateTime(year,month,day,
+                                                                                hour,minute,second,
                                                                                 FALSE
                                                                                );
-//fprintf(stderr,"%s:%d: %llu <- %d %d %d %d %d %d\n",__FILE__,__LINE__,databaseStatementHandle->values[i].dateTime,databaseStatementHandle->mysql.dateTime[i].year,databaseStatementHandle->mysql.dateTime[i].month,databaseStatementHandle->mysql.dateTime[i].day,databaseStatementHandle->mysql.dateTime[i].hour,databaseStatementHandle->mysql.dateTime[i].minute,databaseStatementHandle->mysql.dateTime[i].second);
+//fprintf(stderr,"%s:%d: %lld\n",__FILE__,__LINE__,databaseStatementHandle->values[i].dateTime);
                 break;
               case DATABASE_DATATYPE_TEXT:
                 databaseStatementHandle->values[i].text.data = databaseStatementHandle->mysql.bind[i].buffer;
@@ -4023,7 +4653,6 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 * Purpose: execute single database statement with prepared statement or
 *          query
 * Input  : databaseHandle      - database handle
-*          sqlCommand          - SQL command string
 *          databaseRowFunction - row call-back function (can be NULL)
 *          databaseRowUserData - user data for row call-back
 *          changedRowCount     - number of changed rows (can be NULL)
@@ -4040,15 +4669,15 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 \***********************************************************************/
 
 LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
-                              DatabaseRowFunction     databaseRowFunction,
-                              void                    *databaseRowUserData,
-                              ulong                   *changedRowCount,
-                              long                    timeout,
-                              const DatabaseDataTypes *columnTypes,
-                              uint                    columnTypeCount,
-                              const char              *command,
-                              va_list                 arguments
-                             )
+                               DatabaseRowFunction     databaseRowFunction,
+                               void                    *databaseRowUserData,
+                               ulong                   *changedRowCount,
+                               long                    timeout,
+                               const DatabaseDataTypes *columnTypes,
+                               uint                    columnTypeCount,
+                               const char              *command,
+                               va_list                 arguments
+                              )
 {
   #define SLEEP_TIME 500L  // [ms]
 
@@ -4091,7 +4720,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
       String_set(databaseHandle->debug.current.sqlString,sqlString);
     #endif /* not NDEBUG */
 
-    switch (databaseHandle->databaseNode->type)
+    switch (databaseHandle->databaseNode->databaseSpecifier.type)
     {
       case DATABASE_TYPE_SQLITE3:
         {
@@ -4126,7 +4755,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
 
             // allocate call-back data
             valueCount = sqlite3_column_count(statementHandle);
-            assert(valueCount >= columnTypeCount);
+            assertx(valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
 
             values = (DatabaseValue*)malloc(valueCount*sizeof(DatabaseValue));
             if (values == NULL)
@@ -4307,7 +4936,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
 
             // allocate call-back data
             valueCount = mysql_stmt_field_count(statementHandle);
-            assertx(valueCount == columnTypeCount,"valueCount == columnTypeCount fail: %d != %d",valueCount,columnTypeCount);
+            assertx(valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
 
             bind = (MYSQL_BIND*)calloc(valueCount, sizeof(MYSQL_BIND));
             if (bind == NULL)
@@ -4402,10 +5031,13 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             }
 
 // TODO:
-            if (mysql_stmt_bind_result(statementHandle, bind) != 0)
+            if (valueCount > 0)
             {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+              if (mysql_stmt_bind_result(statementHandle, bind) != 0)
+              {
+fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,mysql_stmt_errno(statementHandle),mysql_stmt_error(statementHandle));
 abort();
+              }
             }
 
             // step and process rows
@@ -4563,6 +5195,7 @@ abort();
             }
             else if (mysqlResult != 0)
             {
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
               error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
               break;
             }
@@ -4688,82 +5321,6 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
   va_end(arguments);
 
   return error;
-}
-
-/***********************************************************************\
-* Name   : getTableList
-* Purpose: get table list
-* Input  : tableList      - table list variable
-*          databaseHandle - database handle
-* Output : tableList - table list
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors getTableList(StringList     *tableList,
-                          DatabaseHandle *databaseHandle
-                         )
-{
-  Errors error;
-
-  assert(tableList != NULL);
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-
-  StringList_init(tableList);
-
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ,
-               WAIT_FOREVER,
-  {
-    switch (Database_getType(databaseHandle))
-    {
-      case DATABASE_TYPE_SQLITE3:
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 1);
-
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
-
-                                   StringList_appendCString(tableList,values[0].text.data);
-
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(TEXT),
-                                 "SELECT name FROM sqlite_master where type='table'"
-                                );
-        break;
-      case DATABASE_TYPE_MYSQL:
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 1);
-
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
-
-                                   StringList_appendCString(tableList,values[0].text.data);
-
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(TEXT),
-                                 "SHOW TABLES"
-                                );
-        break;
-    }
-
-    return error;
-  });
-
-  return ERROR_NONE;
 }
 
 // TODO: remove
@@ -5174,6 +5731,7 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
                      DATABASE_LOCK_TYPE_READ,
                      WAIT_FOREVER,
         {
+// TODO: use Database_execute()
           error = Database_prepare(&databaseStatementHandle,
                                    databaseHandle,
                                    DATABASE_COLUMN_TYPES(INT,TEXT,TEXT,INT,INT,BOOL),
@@ -5187,7 +5745,7 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
           while (Database_getNextRow(&databaseStatementHandle,
                                      "%d %p %p %d %d %b",
                                      NULL,  // id
-                                     &name,  // name,
+                                     &name,
                                      &type,
                                      NULL,  // canBeNULL
                                      NULL,  // defaultValue
@@ -5234,8 +5792,10 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
               }
               else
               {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-abort();
+                // default datatype is TEXT
+                stringSet(columnNames[i],sizeof(columnNames[i]),"TEXT");
+                columnTypes[i] = DATABASE_DATATYPE_TEXT;
+                i++;
               }
             }
           }
@@ -5326,6 +5886,10 @@ abort();
                                         stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
                                         columnTypes[i] = DATABASE_DATATYPE_BLOB;
                                         i++;
+                                      }
+                                      else
+                                      {
+                                        HALT_INTERNAL_ERROR("unknown database type '%s'",values[0].text.data);
                                       }
                                     }
 
@@ -5430,61 +5994,18 @@ void Database_doneAll(void)
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 }
 
-#ifdef NDEBUG
-  Errors Database_open(DatabaseHandle    *databaseHandle,
-                       const char        *uri,
-                       DatabaseOpenModes databaseOpenMode,
-                       long              timeout
-                      )
-#else /* not NDEBUG */
-  Errors __Database_open(const char        *__fileName__,
-                         ulong             __lineNb__,
-                         DatabaseHandle    *databaseHandle,
-                         const char        *uri,
-                         DatabaseOpenModes databaseOpenMode,
-                         long              timeout
-                        )
-#endif /* NDEBUG */
+void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
+                             const char        *uriString
+                            )
 {
-  String        directoryName;
-  Errors        error;
-  DatabaseTypes type;
-  String        fileName;
-  String        serverName;
-  String        userName;
-  String        password;
-  char          *s1,*s2,*s3;
-  size_t        n1,n2,n3;
-  String        databaseName;
-  int           sqliteMode;
-  int           sqliteResult;
-  DatabaseNode  *databaseNode;
-  #ifndef NDEBUG
-    uint          i;
-  #endif /* NDEBUG */
+  const char *s1,*s2,*s3,*s4;
+  size_t     n1,n2,n3,n4;
 
-  assert(databaseHandle != NULL);
-
-  // init variables
-  databaseHandle->readLockCount           = 0;
-  databaseHandle->readWriteLockCount      = 0;
-  databaseHandle->sqlite.handle           = NULL;
-  databaseHandle->mysql.handle            = NULL;
-  databaseHandle->timeout                 = timeout;
-  databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
-  if (sem_init(&databaseHandle->wakeUp,0,0) != 0)
-  {
-    return ERRORX_(DATABASE,0,"init locking");
-  }
-  fileName     = String_new();
-  serverName   = String_new();
-  userName     = String_new();
-  password     = String_new();
-  databaseName = String_new();
+  assert(databaseSpecifier != NULL);
 
   // get database type and open/connect data
-  if      (   (uri != NULL)
-           && stringMatch(uri,
+  if      (   (uriString != NULL)
+           && stringMatch(uriString,
                           "^(sqlite|sqlite3):(.*)",
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
@@ -5495,11 +6016,31 @@ void Database_doneAll(void)
                          )
           )
   {
-    type = DATABASE_TYPE_SQLITE3;
-    String_setBuffer(fileName,s1,n1);
+    databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+    databaseSpecifier->sqlite.fileName = String_setBuffer(String_new(),s1,n1);
   }
-  else if (   (uri != NULL)
-           && stringMatch(uri,
+  else if (   (uriString != NULL)
+           && stringMatch(uriString,
+                          "^mysql:([^:]+):([^:]+):([^:]*):(.*)",
+                          STRING_NO_ASSIGN,
+                          STRING_NO_ASSIGN,
+                          &s1,&n1,
+                          &s2,&n2,
+                          &s3,&n3,
+                          &s4,&n4,
+                          NULL
+                         )
+          )
+  {
+    databaseSpecifier->type              = DATABASE_TYPE_MYSQL;
+    databaseSpecifier->mysql.serverName  = String_setBuffer(String_new(),s1,n1);
+    databaseSpecifier->mysql.userName    = String_setBuffer(String_new(),s2,n2);
+    Password_init(&databaseSpecifier->mysql.password);
+    Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
+    databaseSpecifier->mysql.databaseName = String_setBuffer(String_new(),s4,n4);
+  }
+  else if (   (uriString != NULL)
+           && stringMatch(uriString,
                           "^mysql:([^:]+):([^:]+):(.*)",
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
@@ -5510,368 +6051,281 @@ void Database_doneAll(void)
                          )
           )
   {
-    type = DATABASE_TYPE_MYSQL;
-    String_setBuffer(serverName,s1,n1);
-    String_setBuffer(userName,s2,n2);
-    String_setBuffer(password,s3,n3);
+    databaseSpecifier->type               = DATABASE_TYPE_MYSQL;
+    databaseSpecifier->mysql.serverName   = String_setBuffer(String_new(),s1,n1);
+    databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
+    Password_init(&databaseSpecifier->mysql.password);
+    Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
+    databaseSpecifier->mysql.databaseName = String_new();
   }
   else
   {
-    type = DATABASE_TYPE_SQLITE3;
-    String_setCString(fileName,uri);
+    databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
+    databaseSpecifier->sqlite.fileName = String_setCString(String_new(),uriString);
   }
+}
 
-  switch (type)
+void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
+                            const DatabaseSpecifier *fromDatabaseSpecifier
+                           )
+{
+  assert(databaseSpecifier != NULL);
+  assert(fromDatabaseSpecifier != NULL);
+
+  databaseSpecifier->type = fromDatabaseSpecifier->type;
+  switch (fromDatabaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
-      // create directory if needed
-      if (!String_isEmpty(fileName))
+      databaseSpecifier->sqlite.fileName = String_duplicate(fromDatabaseSpecifier->sqlite.fileName);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      databaseSpecifier->mysql.serverName   = String_duplicate(fromDatabaseSpecifier->mysql.serverName);
+      databaseSpecifier->mysql.userName     = String_duplicate(fromDatabaseSpecifier->mysql.userName);
+      Password_initDuplicate(&databaseSpecifier->mysql.password,&fromDatabaseSpecifier->mysql.password);
+      databaseSpecifier->mysql.databaseName = String_duplicate(fromDatabaseSpecifier->mysql.databaseName);
+      break;
+  }
+}
+
+void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier)
+{
+  assert(databaseSpecifier != NULL);
+
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      String_delete(databaseSpecifier->sqlite.fileName);
+      break;
+    case DATABASE_TYPE_MYSQL:
+      String_delete(databaseSpecifier->mysql.databaseName);
+      Password_done(&databaseSpecifier->mysql.password);
+      String_delete(databaseSpecifier->mysql.userName);
+      String_delete(databaseSpecifier->mysql.serverName);
+      break;
+  }
+}
+
+DatabaseSpecifier *Database_newSpecifier(const char *uriString)
+{
+  DatabaseSpecifier *databaseSpecifier;
+
+  databaseSpecifier = (DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
+  if (databaseSpecifier == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+
+  Database_parseSpecifier(databaseSpecifier,uriString);
+
+  return databaseSpecifier;
+}
+
+DatabaseSpecifier *Database_duplicateSpecifier(const DatabaseSpecifier *databaseSpecifier)
+{
+  DatabaseSpecifier *newDatabaseSpecifier;
+
+  newDatabaseSpecifier =(DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
+  if (newDatabaseSpecifier == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  Database_copySpecifier(newDatabaseSpecifier,databaseSpecifier);
+
+  return newDatabaseSpecifier;
+}
+
+void Database_deleteSpecifier(DatabaseSpecifier *databaseSpecifier)
+{
+  assert(databaseSpecifier != NULL);
+
+  Database_doneSpecifier(databaseSpecifier);
+  free(databaseSpecifier);
+}
+
+bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
+                     ConstString             databaseName
+                    )
+{
+  Errors         error;
+  DatabaseHandle databaseHandle;
+  bool           existsFlag;
+
+  #ifdef NDEBUG
+    error = openDatabase(&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPENMODE_READ,NO_WAIT);
+  #else /* not NDEBUG */
+    error = openDatabase(__FILE__,__LINE__,&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPENMODE_READ,NO_WAIT);
+  #endif /* NDEBUG */
+  if (error == ERROR_NONE)
+  {
+    existsFlag = TRUE;
+    #ifdef NDEBUG
+      closeDatabase(&databaseHandle);
+    #else /* not NDEBUG */
+      closeDatabase(__FILE__,__LINE__,&databaseHandle);
+    #endif /* NDEBUG */
+  }
+  else
+  {
+    existsFlag = FALSE;
+  }
+
+  return existsFlag;
+}
+
+bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const DatabaseSpecifier *databaseSpecifier1)
+{
+  assert(databaseSpecifier0 != NULL);
+  assert(databaseSpecifier0 != NULL);
+
+  return     (databaseSpecifier0->type == databaseSpecifier1->type)
+          && (   (   (databaseSpecifier0->type == DATABASE_TYPE_SQLITE3)
+                  && String_equals(databaseSpecifier0->sqlite.fileName,databaseSpecifier1->sqlite.fileName)
+                 )
+              || (   (databaseSpecifier0->type == DATABASE_TYPE_MYSQL)
+                  && String_equals(databaseSpecifier0->mysql.serverName,databaseSpecifier1->mysql.serverName)
+                  && String_equals(databaseSpecifier0->mysql.userName,databaseSpecifier1->mysql.userName)
+                  && String_equals(databaseSpecifier0->mysql.databaseName,databaseSpecifier1->mysql.databaseName)
+                 )
+             );
+}
+
+Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
+                       ConstString       newDatabaseName
+                      )
+{
+  Errors         error;
+  DatabaseHandle databaseHandle;
+
+  assert(databaseSpecifier != NULL);
+  assert(newDatabaseName != NULL);
+
+  // init variables
+
+  error = ERROR_UNKNOWN;
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      error = File_rename(databaseSpecifier->sqlite.fileName,
+                          newDatabaseName,
+                          NULL
+                         );
+      String_set(databaseSpecifier->sqlite.fileName,newDatabaseName);
+      break;
+    case DATABASE_TYPE_MYSQL:
       {
-        directoryName = File_getDirectoryName(String_new(),fileName);
-        if (   !String_isEmpty(directoryName)
-            && !File_isDirectory(directoryName)
-           )
+        DatabaseHandle     databaseHandle;
+        StringList         nameList;
+        StringListIterator iterator;
+        String             name;
+
+        StringList_init(&nameList);
+
+        // open database
+        error = Database_open(&databaseHandle,databaseSpecifier,DATABASE_OPENMODE_READ,NO_WAIT);
+        if (error != ERROR_NONE)
         {
-          error = File_makeDirectory(directoryName,
-                                     FILE_DEFAULT_USER_ID,
-                                     FILE_DEFAULT_GROUP_ID,
-                                     FILE_DEFAULT_PERMISSION
-                                    );
-          if (error != ERROR_NONE)
-          {
-            File_deleteFileName(directoryName);
-            sem_destroy(&databaseHandle->wakeUp);
-            return error;
-          }
-        }
-        String_delete(directoryName);
-      }
-
-      // create database
-      if ((databaseOpenMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
-      {
-        // delete existing file
-        (void)File_delete(fileName,FALSE);
-      }
-
-      // check if exists
-      if ((databaseOpenMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_CREATE)
-      {
-        if (File_exists(fileName))
-        {
-          return ERROR_DATABASE_EXISTS;
-        }
-      }
-
-      // get sqlite database name
-      if (!String_isEmpty(fileName))
-      {
-        // open file
-        String_format(databaseName,"file:%S",fileName);
-      }
-      else
-      {
-        // open memory
-        String_format(databaseName,"file::memory:");
-      }
-
-      // get mode
-      sqliteMode = SQLITE_OPEN_URI;
-      switch (databaseOpenMode & DATABASE_OPEN_MASK_MODE)
-      {
-        case DATABASE_OPENMODE_READ:
-          sqliteMode |= SQLITE_OPEN_READONLY;
-          String_appendCString(databaseName,"?immutable=1");
-          break;
-        case DATABASE_OPENMODE_CREATE:
-        case DATABASE_OPENMODE_FORCE_CREATE:
-        case DATABASE_OPENMODE_READWRITE:
-          sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
-          break;
-        default:
-          break;
-      }
-      if ((databaseOpenMode & DATABASE_OPEN_MASK_FLAGS) != 0)
-      {
-        if ((databaseOpenMode & DATABASE_OPENMODE_MEMORY) == DATABASE_OPENMODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(databaseName,"mode=memory");
-        if ((databaseOpenMode & DATABASE_OPENMODE_SHARED) == DATABASE_OPENMODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(databaseName,"cache=shared");
-      }
-//sqliteMode |= SQLITE_OPEN_NOMUTEX;
-
-      // open database
-      sqliteResult = sqlite3_open_v2(String_cString(databaseName),&databaseHandle->sqlite.handle,sqliteMode,NULL);
-      if (sqliteResult != SQLITE_OK)
-      {
-        error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseHandle->sqlite.handle));
-        String_delete(databaseName);
-        String_delete(password);
-        String_delete(userName);
-        String_delete(serverName);
-        String_delete(fileName);
-        sem_destroy(&databaseHandle->wakeUp);
-        return error;
-      }
-
-      // attach aux database
-      if ((databaseOpenMode & DATABASE_OPENMODE_AUX) == DATABASE_OPENMODE_AUX)
-      {
-        sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                    "ATTACH DATABASE ':memory:' AS " DATABASE_AUX,
-                                    CALLBACK_(NULL,NULL),
-                                    NULL
-                                   );
-        if (sqliteResult != SQLITE_OK)
-        {
-          error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseHandle->sqlite.handle));
-          sqlite3_close(databaseHandle->sqlite.handle);
-          String_delete(databaseName);
-          String_delete(password);
-          String_delete(userName);
-          String_delete(serverName);
-          String_delete(fileName);
-          sem_destroy(&databaseHandle->wakeUp);
+          StringList_done(&nameList);
           return error;
         }
-      }
-      break;
-    case DATABASE_TYPE_MYSQL:
-      String_format(databaseName,"%S:%S",serverName,userName);
 
-      // open database
-      databaseHandle->mysql.handle = mysql_real_connect(&mysql,
-                                                        String_cString(serverName),
-                                                        String_cString(userName),
-                                                        String_cString(password),
-                                                        "bar",
-                                                        0,
-                                                        0,
-                                                        0
-                                                       );
-      if (databaseHandle->mysql.handle == NULL)
-      {
-        error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s",mysql_error(&mysql));
-        String_delete(databaseName);
-        String_delete(password);
-        String_delete(userName);
-        String_delete(serverName);
-        String_delete(fileName);
-        sem_destroy(&databaseHandle->wakeUp);
-        return error;
-      }
-      break;
-  }
-
-  // get database node
-  SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    databaseNode = LIST_FIND(&databaseList,
-                             databaseNode,
-                                (databaseNode->type == type)
-                             && String_equals(databaseNode->sqlite.fileName,databaseName)
-                            );
-    if (databaseNode != NULL)
-    {
-      databaseNode->openCount++;
-    }
-    else
-    {
-      databaseNode = LIST_NEW_NODE(DatabaseNode);
-      if (databaseNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      databaseNode->type                    = type;
-      switch (type)
-      {
-        case DATABASE_TYPE_SQLITE3:
-          databaseNode->sqlite.fileName         = String_duplicate(fileName);
-          break;
-        case DATABASE_TYPE_MYSQL:
-          databaseNode->mysql.serverName        = String_duplicate(serverName);
-          databaseNode->mysql.userName          = String_duplicate(userName);
-          break;
-      }
-      databaseNode->openCount               = 1;
-      #ifdef DATABASE_LOCK_PER_INSTANCE
-        if (pthread_mutexattr_init(&databaseNode->lockAttribute) != 0)
+        // create new database
+        error = Database_execute(&databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
+                                 "CREATE DATABASE %s CHARACTER SET 'UTF8'",
+                                 String_cString(newDatabaseName)
+                                );
+        if (error != ERROR_NONE)
         {
-          sqlite3_close(databaseHandle->sqlite.handle);
-          String_delete(databaseName);
-          String_delete(password);
-          String_delete(userName);
-          String_delete(serverName);
-          String_delete(fileName);
-          sem_destroy(&databaseHandle->wakeUp);
-          return ERRORX_(DATABASE,0,"init locking");
+          StringList_done(&nameList);
+          return error;
         }
-        pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
-        if (pthread_mutex_init(&databaseNode->lock,&databaseNode->lockAttribute) != 0)
+
+        // rename tables
+        error = Database_getTableList(&nameList,&databaseHandle);
+        STRINGLIST_ITERATEX(&nameList,iterator,name,error == ERROR_NONE)
         {
-          pthread_mutexattr_destroy(&databaseNode->lockAttribute);
-          switch (type)
-          {
-            case DATABASE_TYPE_SQLITE3:
-              sqlite3_close(databaseHandle->sqlite.handle);
-              break;
-            case DATABASE_TYPE_MYSQL:
-              mysql_close(databaseHandle->mysql.handle);
-              break;
-          }
-          String_delete(databaseName);
-          String_delete(password);
-          String_delete(userName);
-          String_delete(serverName);
-          String_delete(fileName);
-          sem_destroy(&databaseHandle->wakeUp);
-          return ERRORX_(DATABASE,0,"init locking");
+          error = Database_execute(&databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
+                                   "RENAME TABLE %s TO %s.%s",
+                                   String_cString(name),
+                                   String_cString(newDatabaseName),
+                                   String_cString(name)
+                                  );
         }
-      #endif /* DATABASE_LOCK_PER_INSTANCE */
-      databaseNode->lockType                = DATABASE_LOCK_TYPE_NONE;
-
-      databaseNode->pendingReadCount        = 0;
-      databaseNode->readCount               = 0;
-      pthread_cond_init(&databaseNode->readTrigger,NULL);
-
-      databaseNode->pendingReadWriteCount   = 0;
-      databaseNode->readWriteCount          = 0;
-      pthread_cond_init(&databaseNode->readWriteTrigger,NULL);
-
-      databaseNode->pendingTransactionCount = 0;
-      databaseNode->transactionCount        = 0;
-      pthread_cond_init(&databaseNode->transactionTrigger,NULL);
-
-      List_init(&databaseNode->busyHandlerList);
-      Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
-
-      List_init(&databaseNode->progressHandlerList);
-      Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
-
-      #ifdef DATABASE_DEBUG_LOCK
-        memClear(databaseNode->readLPWIds,sizeof(databaseNode->readLPWIds));
-        memClear(databaseNode->readWriteLPWIds,sizeof(databaseNode->readWriteLPWIds));
-        databaseNode->transactionLPWId = 0;
-      #endif /* DATABASE_DEBUG_LOCK */
-
-      #ifndef NDEBUG
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
-        databaseNode->debug.readWriteLockedBy               = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
-        databaseNode->debug.lastTrigger.threadInfo.threadId = THREAD_ID_NONE;
-        databaseNode->debug.transaction.threadId            = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
-        databaseNode->debug.historyIndex                    = 0;
-      #endif /* not NDEBUG */
-
-      List_append(&databaseList,databaseNode);
-
-      #ifdef NDEBUG
-        DEBUG_ADD_RESOURCE_TRACE(databaseNode,DatabaseNode);
-      #else /* not NDEBUG */
-        DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseNode,DatabaseNode);
-      #endif /* NDEBUG */
-    }
-
-    databaseHandle->databaseNode = databaseNode;
-  }
-
-  // set handlers
-  switch (type)
-  {
-    case DATABASE_TYPE_SQLITE3:
-      #if !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG)
-        fprintf(stderr,"WARNING: datatbase logging is enabled!\n");
-        switch (databaseNode->type)
+        if (error != ERROR_NONE)
         {
-          case DATABASE_TYPE_SQLITE3:
-            sqlite3_trace_v2(databaseHandle->sqlite.handle,DATABASE_DEBUG_LOG,logTraceCommandHandler,NULL);
-            break;
-          case DATABASE_TYPE_MYSQL:
-            break;
+          Database_close(&databaseHandle);
+          StringList_done(&nameList);
+          return error;
         }
-      #endif /* DATABASE_DEBUG_LOG */
-#if 0
-      // set busy handler
-      sqliteResult = sqlite3_busy_handler(databaseHandle->sqlite.handle,busyHandler,databaseHandle);
-      assert(sqliteResult == SQLITE_OK);
-#endif /* 0 */
-      // set progress handler
-      sqlite3_progress_handler(databaseHandle->sqlite.handle,50000,progressHandler,databaseHandle);
-      break;
-    case DATABASE_TYPE_MYSQL:
+
+        // close database
+        Database_close(&databaseHandle);
+
+        // free resources
+        StringList_done(&nameList);
+
+        String_set(databaseSpecifier->mysql.databaseName,newDatabaseName);
+      }
       break;
   }
 
-  // register special functions
-  switch (type)
-  {
-    case DATABASE_TYPE_SQLITE3:
-      sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
-                                             "unixtimestamp",
-                                             1,
-                                             SQLITE_ANY,
-                                             NULL,
-                                             unixTimestamp,
-                                             NULL,
-                                             NULL
-                                            );
-      assert(sqliteResult == SQLITE_OK);
-      sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
-                                             "regexp",
-                                             3,
-                                             SQLITE_ANY,
-                                             NULL,
-                                             regexpMatch,
-                                             NULL,
-                                             NULL
-                                            );
-      assert(sqliteResult == SQLITE_OK);
-      sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
-                                             "dirname",
-                                             1,
-                                             SQLITE_ANY,
-                                             NULL,
-                                             dirname,
-                                             NULL,
-                                             NULL
-                                            );
-      assert(sqliteResult == SQLITE_OK);
-//TODO: debug function for logging?
-#if 0
-      sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
-                                             "debugPrint",
-                                             1,
-                                             SQLITE_ANY,
-                                             NULL,
-                                             debugPrint,
-                                             NULL,
-                                             NULL
-                                            );
-      assert(sqliteResult == SQLITE_OK);
-#endif
-      break;
-    case DATABASE_TYPE_MYSQL:
-      break;
-  }
+  return ERROR_NONE;
+}
 
-  switch (type)
+#ifdef NDEBUG
+  Errors Database_open(DatabaseHandle          *databaseHandle,
+                       const DatabaseSpecifier *databaseSpecifier,
+                       DatabaseOpenModes       openDatabaseMode,
+                       long                    timeout
+                      )
+#else /* not NDEBUG */
+  Errors __Database_open(const char              *__fileName__,
+                         ulong                   __lineNb__,
+                         DatabaseHandle          *databaseHandle,
+                         const DatabaseSpecifier *databaseSpecifier,
+                         DatabaseOpenModes       openDatabaseMode,
+                         long                    timeout
+                        )
+#endif /* NDEBUG */
+{
+  Errors error;
+
+  assert(databaseHandle != NULL);
+  assert(databaseSpecifier != NULL);
+
+  #ifdef NDEBUG
+    error = openDatabase(databaseHandle,databaseSpecifier,NULL,openDatabaseMode,timeout);
+  #else /* not NDEBUG */
+    error = openDatabase(__fileName__,__lineNb__,databaseHandle,databaseSpecifier,NULL,openDatabaseMode,timeout);
+  #endif /* NDEBUG */
+  if (error != ERROR_NONE)
   {
-    case DATABASE_TYPE_SQLITE3:
-      // enable recursive triggers
-      sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                  "PRAGMA recursive_triggers=ON",
-                                  CALLBACK_(NULL,NULL),
-                                  NULL
-                                 );
-      assert(sqliteResult == SQLITE_OK);
-      break;
-    case DATABASE_TYPE_MYSQL:
-      break;
+    return error;
   }
 
   #ifdef DATABASE_DEBUG
-    fprintf(stderr,"Database debug: open '%s'\n",fileName);
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        fprintf(stderr,
+                "Database debug: open 'sqlite:%s'\n",
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
+               );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        fprintf(stderr,
+                "Database debug: open 'mysql:%s:%s:*:%s'\n",
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName)
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.databaseName)
+               );
+        break;
+    }
   #endif
 
   #ifdef NDEBUG
@@ -5879,41 +6333,6 @@ void Database_doneAll(void)
   #else /* not NDEBUG */
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseHandle,DatabaseHandle);
   #endif /* NDEBUG */
-
-  #ifndef NDEBUG
-    pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
-
-    pthread_mutex_lock(&debugDatabaseLock);
-    {
-      // init database handle
-      databaseHandle->debug.threadId           = Thread_getCurrentId();
-      databaseHandle->debug.fileName           = __fileName__;
-      databaseHandle->debug.lineNb             = __lineNb__;
-      #ifdef HAVE_BACKTRACE
-        BACKTRACE(databaseHandle->debug.stackTrace,databaseHandle->debug.stackTraceSize);
-      #endif /* HAVE_BACKTRACE */
-
-      databaseHandle->debug.locked.threadId   = THREAD_ID_NONE;
-      databaseHandle->debug.locked.lineNb     = 0;
-      databaseHandle->debug.locked.t0         = 0ULL;
-      databaseHandle->debug.locked.t1         = 0ULL;
-      databaseHandle->debug.current.sqlString = String_new();
-      #ifdef HAVE_BACKTRACE
-        databaseHandle->debug.current.stackTraceSize = 0;
-      #endif /* HAVE_BACKTRACE */
-
-      // add to handle-list
-      List_append(&debugDatabaseHandleList,databaseHandle);
-    }
-    pthread_mutex_unlock(&debugDatabaseLock);
-  #endif /* not NDEBUG */
-
-  // free resources
-  String_delete(databaseName);
-  String_delete(password);
-  String_delete(userName);
-  String_delete(serverName);
-  String_delete(fileName);
 
   return ERROR_NONE;
 }
@@ -5937,6 +6356,16 @@ void Database_doneAll(void)
   assert(databaseHandle->readLockCount == 0);
   assert(checkDatabaseInitialized(databaseHandle));
 
+// TODO: remove
+#if 0
+  (void)Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
+                           "COMMIT"
+                          );
+#endif
+
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(databaseHandle,DatabaseHandle);
   #else /* not NDEBUG */
@@ -5944,73 +6373,30 @@ void Database_doneAll(void)
   #endif /* NDEBUG */
 
   #ifdef DATABASE_DEBUG
-    fprintf(stderr,"Database debug: close '%s'\n",databaseHandle->name);
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        fprintf(stderr,
+                "Database debug: close 'sqlite:%s'\n",
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
+               );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        fprintf(stderr,
+                "Database debug: close 'mysql:%s:%s:*:%s'\n",
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName)
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
+                String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.databaseName)
+               );
+        break;
+    }
   #endif
 
-  #ifndef NDEBUG
-    pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
-
-    pthread_mutex_lock(&debugDatabaseLock);
-    {
-      // check if database opened
-      if (!LIST_CONTAINS(&debugDatabaseHandleList,
-                         debugDatabaseHandle,
-                         debugDatabaseHandle == databaseHandle
-                        )
-         )
-      {
-        #ifdef HAVE_BACKTRACE
-          debugDumpStackTrace(stderr,
-                              0,
-                              DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                              databaseHandle->debug.stackTrace,
-                              databaseHandle->debug.stackTraceSize,
-                              0
-                             );
-        #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR_AT(__fileName__,
-                               __lineNb__,
-                               "Database %p is not opened",
-                               databaseHandle
-                              );
-      }
-
-      // remove from handle-list
-      List_remove(&debugDatabaseHandleList,databaseHandle);
-
-      // free resources
-      String_delete(databaseHandle->debug.current.sqlString);
-    }
-    pthread_mutex_unlock(&debugDatabaseLock);
-  #endif /* not NDEBUG */
-
-  switch (databaseHandle->databaseNode->type)
-  {
-    case DATABASE_TYPE_SQLITE3:
-      // clear progress handler
-      sqlite3_progress_handler(databaseHandle->sqlite.handle,0,NULL,NULL);
-
-      // clear busy timeout handler
-      sqlite3_busy_handler(databaseHandle->sqlite.handle,NULL,NULL);
-      break;
-    case DATABASE_TYPE_MYSQL:
-      break;
-  }
-
-  // close database
-  switch (databaseHandle->databaseNode->type)
-  {
-    case DATABASE_TYPE_SQLITE3:
-      sqlite3_close(databaseHandle->sqlite.handle);
-      break;
-    case DATABASE_TYPE_MYSQL:
-      mysql_close(databaseHandle->mysql.handle);
-      break;
-  }
-
-  // free resources
-//TODO: remove?
-  sem_destroy(&databaseHandle->wakeUp);
+  #ifdef NDEBUG
+    closeDatabase(databaseHandle);
+  #else /* not NDEBUG */
+    closeDatabase(__fileName__,__lineNb__,databaseHandle);
+  #endif /* NDEBUG */
 }
 
 void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
@@ -6164,6 +6550,258 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
         break;
     }
   #endif /* DATABASE_SUPPORT_INTERRUPT */
+}
+
+Errors Database_getTableList(StringList     *tableList,
+                             DatabaseHandle *databaseHandle
+                            )
+{
+  Errors error;
+
+  assert(tableList != NULL);
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  StringList_init(tableList);
+
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ,
+               WAIT_FOREVER,
+  {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
+
+                                   UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+
+                                   StringList_appendCString(tableList,values[0].text.data);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(TEXT),
+                                 "SELECT name FROM sqlite_master where type='table'"
+                                );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
+
+                                   UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+
+                                   StringList_appendCString(tableList,values[0].text.data);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(TEXT),
+                                 "SHOW TABLES"
+                                );
+        break;
+    }
+
+    return error;
+  });
+
+  return ERROR_NONE;
+}
+
+Errors Database_getIndexList(StringList     *indexList,
+                             DatabaseHandle *databaseHandle,
+                             const char     *tableName
+                            )
+{
+  Errors error;
+
+  assert(indexList != NULL);
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  StringList_init(indexList);
+
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ,
+               WAIT_FOREVER,
+  {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
+
+                                   UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+
+                                   StringList_appendCString(indexList,values[0].text.data);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(TEXT),
+                                 "SELECT name FROM sqlite_master where type='index'"
+                                );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        if (tableName != NULL)
+        {
+           return Database_execute(databaseHandle,
+                                   CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                   {
+                                     assert(values != NULL);
+                                     assert(valueCount >= 3);
+
+                                     UNUSED_VARIABLE(valueCount);
+                                     UNUSED_VARIABLE(userData);
+
+                                     StringList_appendCString(indexList,values[2].text.data);
+
+                                     return ERROR_NONE;
+                                   },NULL),
+                                   NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(TEXT,TEXT,TEXT,TEXT,TEXT),
+                                   "SHOW INDEXES FROM %s",
+                                   tableName
+                                  );
+        }
+        else
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                   {
+                                     const char *tableName;
+
+                                     assert(values != NULL);
+                                     assert(valueCount >= 1);
+
+                                     UNUSED_VARIABLE(valueCount);
+                                     UNUSED_VARIABLE(userData);
+
+                                     tableName = values[0].text.data;
+                                     return Database_execute(databaseHandle,
+                                                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                             {
+                                                               String indexName;
+
+                                                               assert(values != NULL);
+                                                               assert(valueCount >= 5);
+
+                                                               UNUSED_VARIABLE(valueCount);
+                                                               UNUSED_VARIABLE(userData);
+
+                                                               indexName = String_format(String_new(),
+                                                                                         "%s:%s",
+                                                                                         values[0].text.data,
+                                                                                         values[2].text.data
+                                                                                        );
+                                                               if (!StringList_contains(indexList,indexName))
+                                                               {
+                                                                 StringList_append(indexList,indexName);
+                                                               }
+                                                               String_delete(indexName);
+
+                                                               return ERROR_NONE;
+                                                             },NULL),
+                                                             NULL,  // changedRowCount
+                                                             DATABASE_COLUMN_TYPES(TEXT,TEXT,TEXT,TEXT,TEXT),
+                                                             "SHOW INDEXES FROM %s",
+                                                             tableName
+                                                            );
+                                   },NULL),
+                                   NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(TEXT),
+                                   "SHOW TABLES"
+                                  );
+        }
+        break;
+    }
+
+    return error;
+  });
+
+  return ERROR_NONE;
+}
+
+Errors Database_getTriggerList(StringList     *triggerList,
+                               DatabaseHandle *databaseHandle
+                              )
+{
+  Errors error;
+
+  assert(triggerList != NULL);
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  StringList_init(triggerList);
+
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ,
+               WAIT_FOREVER,
+  {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
+
+                                   UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+
+                                   StringList_appendCString(triggerList,values[0].text.data);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(TEXT),
+                                 "SELECT name FROM sqlite_master where type='trigger'"
+                                );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount >= 1);
+
+                                   UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+
+                                   StringList_appendCString(triggerList,values[0].text.data);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(TEXT),
+                                 "SHOW TRIGGERS"
+                                );
+        break;
+    }
+
+    return error;
+  });
+
+  return ERROR_NONE;
 }
 
 #ifdef NDEBUG
@@ -6790,7 +7428,7 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
   assert(databaseHandle->databaseNode != NULL);
 
   error = ERROR_NONE;
-  switch (databaseHandle->databaseNode->type)
+  switch (databaseHandle->databaseNode->databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
       error = Database_execute(databaseHandle,
@@ -6826,7 +7464,7 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
   assert(databaseHandle->databaseNode != NULL);
 
   error = ERROR_NONE;
-  switch (databaseHandle->databaseNode->type)
+  switch (databaseHandle->databaseNode->databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
       error = Database_execute(databaseHandle,
@@ -6883,6 +7521,131 @@ Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
                          );
 }
 
+Errors Database_dropTables(DatabaseHandle *databaseHandle)
+{
+  StringList         tableNameList;
+  Errors             error;
+  StringListIterator iteratorTableName;
+  String             tableName;
+
+  assert(databaseHandle != NULL);
+
+  StringList_init(&tableNameList);
+  error = Database_getTableList(&tableNameList,databaseHandle);
+  STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "DROP TABLE %s",
+                             String_cString(tableName)
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&tableNameList);
+    return error;
+  }
+  StringList_done(&tableNameList);
+
+  return ERROR_NONE;
+}
+
+Errors Database_dropIndices(DatabaseHandle *databaseHandle)
+{
+  Errors error;
+
+  assert(databaseHandle != NULL);
+
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      {
+        StringList         indexNameList;
+        StringListIterator iteratorIndexName;
+        String             indexName;
+
+        StringList_init(&indexNameList);
+        error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
+        STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
+                                   "DROP INDEX %s",
+                                   String_cString(indexName)
+                                  );
+        }
+        StringList_done(&indexNameList);
+      }
+      break;
+    case DATABASE_TYPE_MYSQL:
+      {
+        StringList         tableNameList,indexNameList;
+        StringListIterator iteratorTableName,iteratorIndexName;
+        String             tableName,indexName;
+
+        StringList_init(&tableNameList);
+        StringList_init(&indexNameList);
+        error = Database_getTableList(&tableNameList,databaseHandle);
+        STRINGLIST_ITERATEX(&indexNameList,iteratorTableName,tableName,error == ERROR_NONE)
+        {
+          error = Database_getIndexList(&indexNameList,databaseHandle,tableName);
+          STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
+          {
+        fprintf(stderr,"%s:%d: drop %s\n",__FILE__,__LINE__,String_cString(indexName));
+            error = Database_execute(databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     "DROP INDEXES %s FROM %s",
+                                     String_cString(indexName),
+                                     String_cString(tableName)
+                                    );
+          }
+        }
+        StringList_done(&indexNameList);
+        StringList_done(&tableNameList);
+      }
+      break;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
+{
+  StringList         triggerNameList;
+  Errors             error;
+  StringListIterator iteratorTriggerName;
+  String             triggerName;
+
+  assert(databaseHandle != NULL);
+
+  StringList_init(&triggerNameList);
+  error = Database_getTriggerList(&triggerNameList,databaseHandle);
+  STRINGLIST_ITERATEX(&triggerNameList,iteratorTriggerName,triggerName,error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "DROP TRIGGER %s",
+                             String_cString(triggerName)
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&triggerNameList);
+    return error;
+  }
+  StringList_done(&triggerNameList);
+
+  return ERROR_NONE;
+}
+
 Errors Database_compare(DatabaseHandle *referenceDatabaseHandle,
                         DatabaseHandle *databaseHandle
                        )
@@ -6906,12 +7669,12 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   assert(checkDatabaseInitialized(databaseHandle));
 
   // get table lists
-  error = getTableList(&referenceTableList,referenceDatabaseHandle);
+  error = Database_getTableList(&referenceTableList,referenceDatabaseHandle);
   if (error != ERROR_NONE)
   {
     return error;
   }
-  error = getTableList(&tableList,databaseHandle);
+  error = Database_getTableList(&tableList,databaseHandle);
   if (error != ERROR_NONE)
   {
     StringList_done(&referenceTableList);
@@ -9131,7 +9894,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
       }
       break;
     case DATABASE_TYPE_MYSQL:
-      if (mysql_stmt_fetch(databaseStatementHandle->mysql.statementHandle) == 0)
+      if (getNextRow(databaseStatementHandle,0))
       {
         // get data
         va_start(arguments,format);
@@ -9426,12 +10189,12 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   #endif /* not NDEBUG */
 }
 
-bool Database_exists(DatabaseHandle *databaseHandle,
-                     const char     *tableName,
-                     const char     *columnName,
-                     const char     *additional,
-                     ...
-                    )
+bool Database_existsValue(DatabaseHandle *databaseHandle,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         )
 {
   bool    existsFlag;
   String  sqlString;
@@ -10594,13 +11357,13 @@ void Database_debugPrintSimpleLockInfo(void)
   // Note: debug only, no locking
   LIST_ITERATE(&databaseList,databaseNode)
   {
-    switch (databaseNode->type)
+    switch (databaseNode->databaseSpecifier.type)
     {
       case DATABASE_TYPE_SQLITE3:
-        printf("Database: 'sqlite:%s'\n",String_cString(databaseNode->sqlite.fileName));
+        printf("Database: 'sqlite:%s'\n",String_cString(databaseNode->databaseSpecifier.sqlite.fileName));
         break;
       case DATABASE_TYPE_MYSQL:
-        printf("Database: 'mysql:%s:%s'\n",String_cString(databaseNode->mysql.serverName),String_cString(databaseNode->mysql.userName));
+        printf("Database: 'mysql:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mysql.serverName),String_cString(databaseNode->databaseSpecifier.mysql.userName));
         break;
     }
 
@@ -10693,15 +11456,15 @@ void Database_debugPrintInfo(void)
           case DATABASE_TYPE_SQLITE3:
             fprintf(stderr,
                     "  opened 'sqlite:%s': %u\n",
-                    String_cString(databaseNode->sqlite.fileName),
+                    String_cString(databaseNode->databaseSpecifier.sqlite.fileName),
                     databaseNode->openCount
                    );
             break;
           case DATABASE_TYPE_MYSQL:
             fprintf(stderr,
                     "  opened 'mysql:%s:%s': %u\n",
-                    String_cString(databaseNode->mysql.serverName),
-                    String_cString(databaseNode->mysql.userName),
+                    String_cString(databaseNode->databaseSpecifier.mysql.serverName),
+                    String_cString(databaseNode->databaseSpecifier.mysql.userName),
                     databaseNode->openCount
                    );
             break;
@@ -10954,14 +11717,14 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
         case DATABASE_TYPE_SQLITE3:
           fprintf(stderr,
                   "Database lock info 'sqlite:%s':\n",
-                  String_cString(databaseHandle->databaseNode->sqlite.fileName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                  );
           break;
         case DATABASE_TYPE_MYSQL:
           fprintf(stderr,
                   "Database lock info 'mysql:%s:%s':\n",
-                  String_cString(databaseHandle->databaseNode->mysql.serverName),
-                  String_cString(databaseHandle->databaseNode->mysql.userName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName),
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
                  );
           break;
       }
@@ -11045,7 +11808,7 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
       fprintf(stderr,
               "DEBUG database %s, %lu: 'sqlite:%s': %s\n",
               __fileName__,__lineNb__,
-              String_cString(databaseStatementHandle->databaseHandle->databaseNode->sqlite.fileName),
+              String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName),
               String_cString(databaseStatementHandle->sqlString)
              );
       break;
@@ -11053,8 +11816,8 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
       fprintf(stderr,
               "DEBUG database %s, %lu: 'mysql:%s:%s': %s\n",
               __fileName__,__lineNb__,
-              String_cString(databaseStatementHandle->databaseHandle->databaseNode->mysql.serverName),
-              String_cString(databaseStatementHandle->databaseHandle->databaseNode->mysql.userName),
+              String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mysql.serverName),
+              String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mysql.userName),
               String_cString(databaseStatementHandle->sqlString)
              );
       break;

@@ -607,6 +607,7 @@ BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/files.c \
                               common/devices.c \
                               common/database.c \
+                              common/passwords.c \
                               common/threads.c \
                               common/misc.c \
                               common/arrays.c \

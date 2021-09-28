@@ -45,6 +45,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define DEFAULT_DATABASE_NAME "bar"
+
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
 #define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
 
@@ -498,27 +500,38 @@ LOCAL void clearPercentage(void)
 /***********************************************************************\
 * Name   : openDatabase
 * Purpose: open database
-* Input  : databaseFileName - database file name
-*          createFlag       - TRUE to create database if it does not
-*                             exists
+* Input  : uriString  - database URI string
+*          createFlag - TRUE to create database if it does not exists
 * Output : databaseHandle   - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFileName, bool createFlag)
+LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString, bool createFlag)
 {
+  DatabaseSpecifier databaseSpecifier;
   DatabaseOpenModes openMode;
   Errors            error;
 
+  // parse URI and fill int default values
+  Database_parseSpecifier(&databaseSpecifier,uriString);
+  switch (databaseSpecifier.type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      break;
+    case DATABASE_TYPE_MYSQL:
+      if (String_isEmpty(databaseSpecifier.mysql.databaseName)) String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+      break;
+  }
+
   // open database
-  printInfo("Open database '%s'...",databaseFileName);
+  printInfo("Open database '%s'...",uriString);
   openMode = (forceFlag)
                ? DATABASE_OPENMODE_FORCE_CREATE
                : DATABASE_OPENMODE_READWRITE;
   openMode |= DATABASE_OPENMODE_AUX;
   error = Database_open(databaseHandle,
-                        databaseFileName,
+                        &databaseSpecifier,
                         openMode,
                         WAIT_FOREVER
                        );
@@ -527,7 +540,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFi
     if (createFlag)
     {
       error = Database_open(databaseHandle,
-                            databaseFileName,
+                            &databaseSpecifier,
                             DATABASE_OPENMODE_CREATE|DATABASE_OPENMODE_AUX,
                             WAIT_FOREVER
                            );
@@ -536,10 +549,14 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFi
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("cannot open database '%s' (error: %s)!",databaseFileName,Error_getText(error));
+    printError("cannot open database '%s' (error: %s)!",uriString,Error_getText(error));
+    Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
   printInfo("OK  \n");
+
+  // free resources
+  Database_doneSpecifier(&databaseSpecifier);
 
   return ERROR_NONE;
 }
@@ -561,6 +578,128 @@ LOCAL void closeDatabase(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
+* Name   : dropTables
+* Purpose: drop all tables
+* Input  : databaseHandle - database handle
+*          quietFlag      - TRUE to suppress output
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void dropTables(DatabaseHandle *databaseHandle, bool quietFlag)
+{
+  Errors error;
+
+  if (!quietFlag) printInfo("Drop tables...");
+  error = Database_dropTables(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    if (!quietFlag)
+    {
+      printInfo("FAIL\n");
+    }
+    return;
+  }
+  if (!quietFlag) printInfo("OK\n");
+}
+
+/***********************************************************************\
+* Name   : dropIndices
+* Purpose: drop all indices
+* Input  : databaseHandle - database handle
+*          quietFlag      - TRUE to suppress output
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
+{
+  Errors error;
+  char   name[1024];
+
+  if (!quietFlag) printInfo("Drop indizes...");
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    // drop indices
+    error = Database_dropIndices(databaseHandle);
+    if (error != ERROR_NONE)
+    {
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
+    }
+
+    // drop FTS indizes
+    if (error == ERROR_NONE)
+    {
+      if (!quietFlag) printInfo("  drop FTS_storages...");
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "DROP TABLE IF EXISTS FTS_storages"
+                              );
+      if (!quietFlag) printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    }
+    if (error == ERROR_NONE)
+    {
+      if (!quietFlag) printInfo("  drop FTS_entries...");
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "DROP TABLE IF EXISTS FTS_entries"
+                              );
+      if (!quietFlag) printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    }
+    if (error != ERROR_NONE)
+    {
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    if (!quietFlag)
+    {
+      printInfo("FAIL\n");
+      printError("drop indizes fail (error: %s)!",Error_getText(error));
+      exit(EXITCODE_FAIL);
+    }
+  }
+  (void)Database_flush(databaseHandle);
+  if (!quietFlag) printInfo("OK\n");
+}
+
+/***********************************************************************\
+* Name   : dropTriggers
+* Purpose: drop all triggers
+* Input  : databaseHandle - database handle
+*          quietFlag      - TRUE to suppress output
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void dropTriggers(DatabaseHandle *databaseHandle, bool quietFlag)
+{
+  Errors error;
+
+  if (!quietFlag) printInfo("Drop triggers...");
+  error = Database_dropTriggers(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    if (!quietFlag)
+    {
+      printInfo("FAIL\n");
+    }
+    return;
+  }
+  if (!quietFlag) printInfo("OK\n");
+}
+
+/***********************************************************************\
 * Name   : createTablesIndicesTriggers
 * Purpose: create database with tables/indices/triggers
 * Input  : databaseFileName - database file name
@@ -575,6 +714,14 @@ LOCAL Errors createTablesIndicesTriggers(DatabaseHandle *databaseHandle)
   const char *indexDefinition;
 
   // create tables, triggers
+  if (forceFlag)
+  {
+    // drop tables/incides/triggers
+    dropTriggers(databaseHandle,TRUE);
+    dropIndices(databaseHandle,TRUE);
+    dropTables(databaseHandle,TRUE);
+  }
+
   printInfo("Create tables/indices/triggers...");
   error = ERROR_NONE;
   INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITIONS[Database_getType(databaseHandle)],
@@ -836,22 +983,36 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uri)
+LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriString)
 {
-  Errors         error;
-  DatabaseHandle oldDatabaseHandle;
+  DatabaseSpecifier databaseSpecifier;
+  Errors            error;
+  DatabaseHandle    oldDatabaseHandle;
+
+  // parse URI and fill int default values
+  Database_parseSpecifier(&databaseSpecifier,uriString);
+  switch (databaseSpecifier.type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      break;
+    case DATABASE_TYPE_MYSQL:
+      if (String_isEmpty(databaseSpecifier.mysql.databaseName)) String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+      break;
+  }
 
   error = Database_open(&oldDatabaseHandle,
-                        uri,
+                        &databaseSpecifier,
                         DATABASE_OPENMODE_READ,
                         WAIT_FOREVER
                        );
   if (error == ERROR_NONE)
   {
     error = importIndexVersion7XXX(&oldDatabaseHandle, databaseHandle);
-
     Database_close(&oldDatabaseHandle);
   }
+
+  // free resources
+  Database_doneSpecifier(&databaseSpecifier);
 
   return error;
 }
@@ -1485,7 +1646,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   }
 
   // create new triggeres
-  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS_SQLITE, indexDefinition, error == ERROR_NONE)
+  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -1515,35 +1676,22 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
 
 LOCAL void printTableNames(DatabaseHandle *databaseHandle)
 {
-  const char *name;
-  INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TABLE_NAMES[Database_getType(databaseHandle)],name)
+  Errors             error;
+  StringList         tableNameList;
+  StringListIterator stringListIterator;
+  ConstString        tableName;
+
+  error = Database_getTableList(&tableNameList,databaseHandle);
+  if (error != ERROR_NONE)
   {
-    printf("%s\n",name);
+    printError("cannot get table names (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
   }
-  INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_FTS_TABLE_NAMES[Database_getType(databaseHandle)],name)
+  STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName)
   {
-    printf("%s\n",name);
+    printf("%s\n",String_cString(tableName));
   }
-// TODO: remove/move to database.c
-#if 0
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 1);
-
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
-
-                           printf("%s\n",values[0].text.data);
-
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(TEXT),
-                         "SELECT name FROM sqlite_master WHERE type='table'"
-                        );
-#endif
+  StringList_done(&tableNameList);
 }
 
 /***********************************************************************\
@@ -1557,31 +1705,22 @@ LOCAL void printTableNames(DatabaseHandle *databaseHandle)
 
 LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
 {
-  const char *name;
-  INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_INDEX_NAMES[Database_getType(databaseHandle)],name)
+  Errors             error;
+  StringList         indexNameList;
+  StringListIterator stringListIterator;
+  ConstString        indexName;
+
+  error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
+  if (error != ERROR_NONE)
   {
-    printf("%s\n",name);
+    printError("cannot get index names (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
   }
-// TODO: remove/move to database.c
-#if 0
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 1);
-
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
-
-                           printf("%s\n",values[0].text.data);
-
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(TEXT),
-                         "SELECT name FROM sqlite_master WHERE type='index'"
-                        );
-#endif
+  STRINGLIST_ITERATE(&indexNameList,stringListIterator,indexName)
+  {
+    printf("%s\n",String_cString(indexName));
+  }
+  StringList_done(&indexNameList);
 }
 
 /***********************************************************************\
@@ -1595,133 +1734,22 @@ LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
 
 LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
 {
-  const char *name;
-  INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TRIGGER_NAMES[Database_getType(databaseHandle)],name)
+  Errors             error;
+  StringList         triggerNameList;
+  StringListIterator stringListIterator;
+  ConstString        triggerName;
+
+  error = Database_getTriggerList(&triggerNameList,databaseHandle);
+  if (error != ERROR_NONE)
   {
-    printf("%s\n",name);
+    printError("cannot get trigger names (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
   }
-// TODO: remove/move to database.c
-#if 0
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 1);
-
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
-
-                           printf("%s\n",values[0].text.data);
-
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(TEXT),
-                         "SELECT name FROM sqlite_master WHERE type='trigger'"
-                        );
-#endif
-}
-/***********************************************************************\
-* Name   : dropTables
-* Purpose: drop all tables
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void dropTables(DatabaseHandle *databaseHandle)
-{
-  Errors     error;
-  const char *tableName;
-  uint       failCount;
-
-  // delete all existing triggers
-  printInfo("Drop tables...");
-  failCount = 0;
-  INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TABLE_NAMES[Database_getType(databaseHandle)], tableName)
+  STRINGLIST_ITERATE(&triggerNameList,stringListIterator,triggerName)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DROP TABLE %s",
-                             tableName
-                            );
-    if (error != ERROR_NONE)
-    {
-      if (failCount == 0) printInfo("FAIL\n");
-      printWarning("drop table '%s' fail (error: %s)!", tableName, Error_getText(error));
-      failCount++;
-    }
+    printf("%s\n",String_cString(triggerName));
   }
-  if (failCount == 0)
-  {
-    printInfo("OK\n");
-  }
-}
-
-/***********************************************************************\
-* Name   : dropTriggers
-* Purpose: drop all triggers
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void dropTriggers(DatabaseHandle *databaseHandle)
-{
-  Errors error;
-  char   name[1024];
-  uint   failCount;
-
-  // delete all existing triggers
-  printInfo("Drop triggers...");
-  failCount = 0;
-  do
-  {
-    stringClear(name);
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
-
-                               stringSet(name,sizeof(name),values[0].text.data);
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(TEXT),
-                             "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trigger%%'"
-                            );
-
-    if ((error == ERROR_NONE) && !stringIsEmpty(name))
-    {
-      error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "DROP TRIGGER %s",
-                               name
-                              );
-      if (error != ERROR_NONE)
-      {
-        if (failCount == 0) printInfo("FAIL\n");
-        printWarning("drop triggers fail (error: %s)!",Error_getText(error));
-        failCount++;
-      }
-    }
-  }
-  while (!stringIsEmpty(name));
-  if (failCount == 0)
-  {
-    printInfo("OK\n");
-  }
+  StringList_done(&triggerNameList);
 }
 
 /***********************************************************************\
@@ -1908,103 +1936,6 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : dropIndizes
-* Purpose: drop all indizes
-* Input  : databaseHandle - database handle
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void dropIndizes(DatabaseHandle *databaseHandle)
-{
-  Errors error;
-  char   name[1024];
-
-  printInfo("Drop indizes...");
-
-  error = ERROR_NONE;
-
-  // delete all existing indizes
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-  {
-    // drop all indizes
-    if (error == ERROR_NONE)
-    {
-      do
-      {
-        stringClear(name);
-// TODO: replace by Database_getCString()
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 1);
-
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
-
-                                   stringSet(name,sizeof(name),values[0].text.data);
-
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(TEXT),
-                                 "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
-                                );
-        if ((error == ERROR_NONE) && !stringIsEmpty(name))
-        {
-          printInfo("  drop %s...",name);
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "DROP INDEX IF EXISTS %s",
-                                   name
-                                  );
-          printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
-        }
-      }
-      while ((error == ERROR_NONE) && !stringIsEmpty(name));
-      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-    }
-
-    // drop FTS indizes
-    if (error == ERROR_NONE)
-    {
-      printInfo("  drop FTS_storages...");
-      error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "DROP TABLE IF EXISTS FTS_storages"
-                              );
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
-    }
-    if (error == ERROR_NONE)
-    {
-      printInfo("  drop FTS_entries...");
-      error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "DROP TABLE IF EXISTS FTS_entries"
-                              );
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
-    }
-  }
-  if (error != ERROR_NONE)
-  {
-    printInfo("FAIL\n");
-    printError("drop indizes fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  (void)Database_flush(databaseHandle);
-
-  printInfo("OK\n");
-}
-
-/***********************************************************************\
 * Name   : reindex
 * Purpose: re-create existing indizes
 * Input  : databaseHandle - database handle
@@ -2152,7 +2083,7 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
                                            entries.entityId, \
                                            entries.type, \
                                            entries.name, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2165,7 +2096,7 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
                                            entries.entityId, \
                                            entries.type, \
                                            entries.name, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2178,7 +2109,7 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
                                            entries.entityId, \
                                            entries.type, \
                                            entries.name, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2191,7 +2122,7 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
                                            entries.entityId, \
                                            entries.type, \
                                            entries.name, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2234,28 +2165,28 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
                              NULL,  // changedRowCount
                              DATABASE_COLUMN_TYPES(KEY,DATETIME),
                              "      SELECT entriesNewest.id, \
-                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                     FROM entryFragments \
                                       LEFT JOIN storages ON storages.id=entryFragments.storageId \
                                       LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
                                     WHERE     storages.deletedFlag!=1 \
                                           AND entriesNewest.name=%'S \
                               UNION SELECT entriesNewest.id, \
-                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                     FROM directoryEntries \
                                       LEFT JOIN storages ON storages.id=directoryEntries.storageId \
                                       LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
                                     WHERE     storages.deletedFlag!=1 \
                                           AND entriesNewest.name=%'S \
                               UNION SELECT entriesNewest.id, \
-                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                     FROM linkEntries \
                                       LEFT JOIN storages ON storages.id=linkEntries.storageId \
                                       LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
                                     WHERE     storages.deletedFlag!=1 \
                                           AND entriesNewest.name=%'S \
                               UNION SELECT entriesNewest.id, \
-                                           UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                     FROM specialEntries \
                                       LEFT JOIN storages ON storages.id=specialEntries.storageId \
                                       LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
@@ -2511,7 +2442,7 @@ LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId 
                                            entries.uuidId, \
                                            entries.entityId, \
                                            entries.type, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2525,7 +2456,7 @@ LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId 
                                            entries.uuidId, \
                                            entries.entityId, \
                                            entries.type, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2539,7 +2470,7 @@ LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId 
                                            entries.uuidId, \
                                            entries.entityId, \
                                            entries.type, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2553,7 +2484,7 @@ LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId 
                                            entries.uuidId, \
                                            entries.entityId, \
                                            entries.type, \
-                                           UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                            entries.userId, \
                                            entries.groupId, \
                                            entries.permission, \
@@ -2683,14 +2614,12 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                             &storageIds,
                             "storages",
                             "id",
-                            "WHERE deletedFlag!=1 \
-                             ORDER BY created DESC \
-                            "
+                            "WHERE deletedFlag!=1"
                            );
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
-      printError("create newest fail (error: %s)!",Error_getText(error));
+      printError("collect newest fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
     printPercentage(1,2);
@@ -2718,7 +2647,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
-      printError("create newest fail (error: %s)!",Error_getText(error));
+      printError("collect newest fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
     printPercentage(2,2);
@@ -5088,7 +5017,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           printPercentage(0*Array_length(&entryIds),2*Array_length(&entryIds));
           ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
           {
-            if (!Database_exists(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
+            if (!Database_existsValue(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
             {
               error = Database_execute(databaseHandle,
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -5180,7 +5109,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
           ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
           {
-            if (!Database_exists(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
+            if (!Database_existsValue(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
             {
               error = Database_execute(databaseHandle,
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -5238,65 +5167,73 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
   Errors     error;
   FileHandle handle;
 
-  printInfo("Vacuum...");
-
-  if (toFileName != NULL)
+  switch (Database_getType(databaseHandle))
   {
-    // check if file exists
-    if (!forceFlag && File_existsCString(toFileName))
-    {
-      printInfo("FAIL!\n");
-      printError("vacuum fail: file '%s' already exists!",toFileName);
-      exit(EXITCODE_FAIL);
-    }
+    case DATABASE_TYPE_SQLITE3:
+      printInfo("Vacuum...");
 
-    // create empty file
-    error = File_openCString(&handle,toFileName,FILE_OPEN_CREATE);
-    if (error == ERROR_NONE)
-    {
-      (void)File_close(&handle);
-    }
-    else
-    {
-      printInfo("FAIL!\n");
-      printError("vacuum fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
-    }
+      if (toFileName != NULL)
+      {
+        // check if file exists
+        if (!forceFlag && File_existsCString(toFileName))
+        {
+          printInfo("FAIL!\n");
+          printError("vacuum fail: file '%s' already exists!",toFileName);
+          exit(EXITCODE_FAIL);
+        }
 
-    // vacuum into file
-// TODO: move to databaes.c
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "VACUUM INTO '%s'",
-                             toFileName
-                            );
-    if (error != ERROR_NONE)
-    {
-      printInfo("FAIL!\n");
-      printError("vacuum fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
-    }
+        // create empty file
+        error = File_openCString(&handle,toFileName,FILE_OPEN_CREATE);
+        if (error == ERROR_NONE)
+        {
+          (void)File_close(&handle);
+        }
+        else
+        {
+          printInfo("FAIL!\n");
+          printError("vacuum fail (error: %s)!",Error_getText(error));
+          exit(EXITCODE_FAIL);
+        }
+
+        // vacuum into file
+    // TODO: move to databaes.c
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
+                                 "VACUUM INTO '%s'",
+                                 toFileName
+                                );
+        if (error != ERROR_NONE)
+        {
+          printInfo("FAIL!\n");
+          printError("vacuum fail (error: %s)!",Error_getText(error));
+          exit(EXITCODE_FAIL);
+        }
+      }
+      else
+      {
+        // vacuum
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
+                                 "VACUUM"
+                                );
+        if (error != ERROR_NONE)
+        {
+          printInfo("FAIL!\n");
+          printError("vacuum fail (error: %s)!",Error_getText(error));
+          exit(EXITCODE_FAIL);
+        }
+      }
+
+      printInfo("OK\n");
+      break;
+    case DATABASE_TYPE_MYSQL:
+      // nothing to do
+      break;
   }
-  else
-  {
-    // vacuum
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "VACUUM"
-                            );
-    if (error != ERROR_NONE)
-    {
-      printInfo("FAIL!\n");
-      printError("vacuum fail (error: %s)!",Error_getText(error));
-      exit(EXITCODE_FAIL);
-    }
-  }
-
-  printInfo("OK\n");
 }
 
 /***********************************************************************\
@@ -8079,19 +8016,19 @@ else if (stringEquals(argv[i],"--xxx"))
   // drop tables
   if (dropTablesFlag)
   {
-    dropTables(&databaseHandle);
+    dropTables(&databaseHandle,FALSE);
   }
 
   // drop triggeres
   if (dropTriggersFlag)
   {
-    dropTriggers(&databaseHandle);
+    dropTriggers(&databaseHandle,FALSE);
   }
 
   // drop indizes
   if (dropIndizesFlag)
   {
-    dropIndizes(&databaseHandle);
+    dropIndices(&databaseHandle,FALSE);
   }
 
   // create tables/indices/triggers
@@ -8404,7 +8341,18 @@ if (xxxId != DATABASE_ID_NONE)
 
       s = String_duplicate(command);
       String_replaceAllCString(s,STRING_BEGIN,"%","%%");
-      if (explainQueryPlanFlag) String_insertCString(s,STRING_BEGIN,"EXPLAIN QUERY PLAN ");
+      if (explainQueryPlanFlag)
+      {
+        switch (Database_getType(&databaseHandle))
+        {
+          case DATABASE_TYPE_SQLITE3:
+            String_insertCString(s,STRING_BEGIN,"EXPLAIN QUERY PLAN ");
+            break;
+          case DATABASE_TYPE_MYSQL:
+            String_insertCString(s,STRING_BEGIN,"EXPLAIN  ");
+            break;
+        }
+      }
 
       printTableData.showHeaderFlag    = showHeaderFlag;
       printTableData.headerPrintedFlag = FALSE;

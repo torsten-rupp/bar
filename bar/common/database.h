@@ -21,10 +21,12 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
+#include "common/passwords.h"
+#include "common/strings.h"
+#include "common/stringlists.h"
 #include "common/arrays.h"
 #include "common/threads.h"
-#include "semaphores.h"
+#include "common/semaphores.h"
 #include "errors.h"
 
 #include "sqlite3.h"
@@ -50,6 +52,25 @@ typedef enum
   DATABASE_TYPE_MYSQL   = 1
 } DatabaseTypes;
 
+// database specifier
+typedef struct
+{
+  DatabaseTypes type;
+  union
+  {
+    struct
+    {
+      String fileName;
+    } sqlite;
+    struct
+    {
+      String   serverName;
+      String   userName;
+      Password password;
+      String   databaseName;
+    } mysql;
+  };
+} DatabaseSpecifier;
 
 // database open mask
 #define DATABASE_OPEN_MASK_MODE  0x0000000F
@@ -248,19 +269,7 @@ typedef struct DatabaseNode
   #ifdef DATABASE_LOCK_PER_INSTANCE
     pthread_mutex_t           lock;
   #endif /* DATABASE_LOCK_PER_INSTANCE */
-  DatabaseTypes               type;
-  union
-  {
-    struct
-    {
-      String                  fileName;
-    } sqlite;
-    struct
-    {
-      String                  serverName;
-      String                  userName;
-    } mysql;
-  };
+  DatabaseSpecifier           databaseSpecifier;
   uint                        openCount;
 
   DatabaseLockTypes           lockType;
@@ -621,13 +630,134 @@ Errors Database_initAll(void);
 void Database_doneAll(void);
 
 /***********************************************************************\
+* Name   : Database_parseSpecifier
+* Purpose: init and parse datatabase URI into database specifier
+* Input  : databaseSpecifier - database specifier variable
+*          uriString         - database URI string:
+*                                - [(sqlite|sqlite3):]file name, NULL for
+*                                  sqlite3 "in memory",
+*                                - mysql:<server>:<user>:<database>
+* Output : databaseSpecifier - database specifier
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
+                             const char        *uriString
+                            );
+
+/***********************************************************************\
+* Name   : Database_copySpecifier
+* Purpose: copy database specifier
+* Input  : databaseSpecifier     - database specifier variable
+*          fromDatabaseSpecifier - from database specifier variable
+*          newDatabaseName       - new database name (can be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
+                            const DatabaseSpecifier *fromDatabaseSpecifier
+                           );
+
+/***********************************************************************\
+* Name   : Database_doneSpecifier
+* Purpose: done database specifier
+* Input  : databaseSpecifier - database specifier
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier);
+
+/***********************************************************************\
+* Name   : Database_newSpecifier
+* Purpose: allocate and parse datatabase URI
+* Input  : uriString - database URI string:
+*                        - [(sqlite|sqlite3):]file name, NULL for
+*                          sqlite3 "in memory",
+*                        - mysql:<server>:<user>:<database>
+* Output : -
+* Return : database specifier or NULL
+* Notes  : -
+\***********************************************************************/
+
+DatabaseSpecifier *Database_newSpecifier(const char *uriString);
+
+/***********************************************************************\
+* Name   : Database_duplicateSpecifier
+* Purpose: duplicate database specifier
+* Input  : databaseSpecifier - database specifier
+* Output : -
+* Return : duplicate database specifier
+* Notes  : -
+\***********************************************************************/
+
+DatabaseSpecifier *Database_duplicateSpecifier(const DatabaseSpecifier *databaseSpecifier);
+
+/***********************************************************************\
+* Name   : Database_doneSpecifier
+* Purpose: done database specifier
+* Input  : databaseSpecifier - database specifier
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Database_deleteSpecifier(DatabaseSpecifier *databaseSpecifier);
+
+/***********************************************************************\
+* Name   : Database_equalSpecifiers
+* Purpose: compare database specifiers if equals
+* Input  : databaseSpecifier0,databaseSpecifier1 - database specifiers
+* Output : -
+* Return : TRUE iff equals (except passwords)
+* Notes  : -
+\***********************************************************************/
+
+bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const DatabaseSpecifier *databaseSpecifier1);
+
+/***********************************************************************\
+* Name   : Database_exists
+* Purpose: check if database exists
+* Input  : databaseSpecifier - database specifier
+*          databaseName      - database name or NULL for database name in
+*                              specifier
+* Output : -
+* Return : TRUE iff exists
+* Notes  : -
+\***********************************************************************/
+
+bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
+                     ConstString             databaseName
+                    );
+
+/***********************************************************************\
+* Name   : Database_rename
+* Purpose: rename database
+* Input  : databaseSpecifier - database specifier
+*          newDatabaseName   - new database name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
+                       ConstString       newDatabaseName
+                      );
+
+//Database_delete(indexDatabaseSpecifier,databaseName);
+
+/***********************************************************************\
 * Name   : Database_open
 * Purpose: open database
 * Input  : databaseHandle   - database handle variable
 *          uri              - database URI:
-*                               file name, NULL for "in memory",
-*                               sqlite3:<filename>
-*                               mysql:<server>:<user>
+*                               - [(sqlite|sqlite3):]file name, NULL for
+*                                 sqlite3 "in memory",
+*                               - mysql:<server>:<user>[:<database>]
 *          databaseOpenMode - open mode; see DatabaseOpenModes
 *          timeout          - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle
@@ -636,18 +766,18 @@ void Database_doneAll(void);
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Database_open(DatabaseHandle    *databaseHandle,
-                       const char        *uri,
-                       DatabaseOpenModes databaseOpenMode,
-                       long              timeout
+  Errors Database_open(DatabaseHandle          *databaseHandle,
+                       const DatabaseSpecifier *databaseSpecifier,
+                       DatabaseOpenModes       databaseOpenMode,
+                       long                    timeout
                       );
 #else /* not NDEBUG */
-  Errors __Database_open(const char        *__fileName__,
-                         ulong             __lineNb__,
-                         DatabaseHandle    *databaseHandle,
-                         const char        *uri,
-                         DatabaseOpenModes databaseOpenMode,
-                         long              timeout
+  Errors __Database_open(const char              *__fileName__,
+                         ulong                   __lineNb__,
+                         DatabaseHandle          *databaseHandle,
+                         const DatabaseSpecifier *databaseSpecifier,
+                         DatabaseOpenModes       databaseOpenMode,
+                         long                    timeout
                         );
 #endif /* NDEBUG */
 
@@ -685,7 +815,7 @@ INLINE DatabaseTypes Database_getType(const DatabaseHandle *databaseHandle)
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
 
-  return databaseHandle->databaseNode->type;
+  return databaseHandle->databaseNode->databaseSpecifier.type;
 }
 #endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
@@ -765,6 +895,50 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
 \***********************************************************************/
 
 void Database_interrupt(DatabaseHandle *databaseHandle);
+
+/***********************************************************************\
+* Name   : Database_getTableList
+* Purpose: get table list
+* Input  : tableList      - table list variable
+*          databaseHandle - database handle
+* Output : tableList - table list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getTableList(StringList     *tableList,
+                             DatabaseHandle *databaseHandle
+                            );
+
+/***********************************************************************\
+* Name   : Database_getIndexList
+* Purpose: get index list
+* Input  : tableList      - index list variable
+*          databaseHandle - database handle
+*          tableName      - table name (can be NULL)
+* Output : tableList - table list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getIndexList(StringList     *indexList,
+                             DatabaseHandle *databaseHandle,
+                             const char     *tableName
+                            );
+
+/***********************************************************************\
+* Name   : Database_getTriggerList
+* Purpose: get trigger list
+* Input  : tableList      - trigger list variable
+*          databaseHandle - database handle
+* Output : tableList - table list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getTriggerList(StringList     *triggerList,
+                               DatabaseHandle *databaseHandle
+                              );
 
 //TODO: remove
 #if 0
@@ -982,6 +1156,39 @@ Errors Database_createTemporaryTable(DatabaseHandle            *databaseHandle,
 Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
                                    DatabaseTemporaryTableIds id
                                   );
+
+/***********************************************************************\
+* Name   : Database_dropTables
+* Purpose: drop tables
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_dropTables(DatabaseHandle *databaseHandle);
+
+/***********************************************************************\
+* Name   : Database_dropIndices
+* Purpose: drop indices
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_dropIndices(DatabaseHandle *databaseHandle);
+
+/***********************************************************************\
+* Name   : Database_dropTriggers
+* Purpose: drop triggers
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_dropTriggers(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_compare
@@ -1337,12 +1544,12 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Database_exists(DatabaseHandle *databaseHandle,
-                     const char     *tableName,
-                     const char     *columnName,
-                     const char     *additional,
-                     ...
-                    );
+bool Database_existsValue(DatabaseHandle *databaseHandle,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          ...
+                         );
 
 /***********************************************************************\
 * Name   : Database_getId, Database_vgetId

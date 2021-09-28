@@ -57,6 +57,19 @@
 #endif
 
 /***************************** Constants *******************************/
+#define DEFAULT_DATABASE_NAME "bar"
+
+const char *DATABASE_SAVE_EXTENSIONS[] =
+{
+  ".old%03d",
+  "_old%03d"
+};
+const char *DATABASE_SAVE_PATTERNS[] =
+{
+  ".*\\.old\\d\\d\\d$",
+  ".*\\_old\\d\\d\\d$"
+};
+
 //TODO: use type safe type
 #ifndef __INDEX_ID_TYPE_SAFE
 #else
@@ -260,7 +273,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 //TODO
-LOCAL const char                 *indexDatabaseFileName = NULL;
+LOCAL DatabaseSpecifier                *indexDatabaseSpecifier = NULL;
 LOCAL IndexIsMaintenanceTime     indexIsMaintenanceTimeFunction;
 LOCAL void                       *indexIsMaintenanceTimeUserData;
 LOCAL bool                       indexInitializedFlag = FALSE;
@@ -445,7 +458,6 @@ LOCAL ProgressInfo               importProgressInfo;
   while (0)
 
 #ifndef NDEBUG
-  #define createIndex(...) __createIndex(__FILE__,__LINE__, ## __VA_ARGS__)
   #define openIndex(...)   __openIndex  (__FILE__,__LINE__, ## __VA_ARGS__)
   #define closeIndex(...)  __closeIndex (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
@@ -618,32 +630,21 @@ LOCAL void indexThreadInterrupt(void)
   }
 }
 
-/***********************************************************************\
-* Name   : openIndex
-* Purpose: open index database
-* Input  : databaseFileName - database file name NULL for "in memory"
-*          indexOpenModes   - open modes; see INDEX_OPEN_MODE_...
-*          timeout          - timeout [ms]
-* Output : indexHandle - index handle
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
 #ifdef NDEBUG
-  LOCAL Errors openIndex(IndexHandle    *indexHandle,
-                         const char     *databaseFileName,
-                         ServerIO       *masterIO,
-                         IndexOpenModes indexOpenMode,
-                         long           timeout
+  LOCAL Errors openIndex(IndexHandle             *indexHandle,
+                         const DatabaseSpecifier *databaseSpecifier,
+                         ServerIO                *masterIO,
+                         IndexOpenModes          indexOpenMode,
+                         long                    timeout
                         )
 #else /* not NDEBUG */
-  LOCAL Errors __openIndex(const char     *__fileName__,
-                           ulong          __lineNb__,
-                           IndexHandle    *indexHandle,
-                           const char     *databaseFileName,
-                           ServerIO       *masterIO,
-                           IndexOpenModes indexOpenMode,
-                           long           timeout
+  LOCAL Errors __openIndex(const char              *__fileName__,
+                           ulong                   __lineNb__,
+                           IndexHandle             *indexHandle,
+                           const DatabaseSpecifier *databaseSpecifier,
+                           ServerIO                *masterIO,
+                           IndexOpenModes          indexOpenMode,
+                           long                    timeout
                           )
 #endif /* NDEBUG */
 {
@@ -651,10 +652,12 @@ LOCAL void indexThreadInterrupt(void)
   const char *indexDefinition;
 
   assert(indexHandle != NULL);
+  assert(databaseSpecifier != NULL);
 
   // init variables
   indexHandle->masterIO            = masterIO;
-  indexHandle->databaseFileName    = databaseFileName;
+// TODO:
+  indexHandle->uriString           = NULL;
   indexHandle->busyHandlerFunction = NULL;
   indexHandle->busyHandlerUserData = NULL;
   indexHandle->upgradeError        = ERROR_NONE;
@@ -662,30 +665,36 @@ LOCAL void indexThreadInterrupt(void)
     indexHandle->threadId = pthread_self();
   #endif /* NDEBUG */
 
+  // check and complete database specifier
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      break;
+    case DATABASE_TYPE_MYSQL:
+      if (String_isEmpty(databaseSpecifier->mysql.databaseName)) String_setCString(databaseSpecifier->mysql.databaseName,DEFAULT_DATABASE_NAME);
+      break;
+  }
+
   // open index database
   if ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_CREATE)
   {
-    // delete old file
-    if (databaseFileName != NULL)
-    {
-      (void)File_deleteCString(databaseFileName,FALSE);
-    }
-
+// TODO:
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
     // open database
     INDEX_DOX(error,
               indexHandle,
     {
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,
-                             databaseFileName,
-                             DATABASE_OPENMODE_READWRITE,
+                             databaseSpecifier,
+                             DATABASE_OPENMODE_FORCE_CREATE|DATABASE_OPENMODE_AUX,
                              DATABASE_TIMEOUT
                             );
       #else /* not NDEBUG */
         return __Database_open(__fileName__,__lineNb__,
                                &indexHandle->databaseHandle,
-                               databaseFileName,
-                               DATABASE_OPENMODE_READWRITE,
+                               databaseSpecifier,
+                               DATABASE_OPENMODE_FORCE_CREATE|DATABASE_OPENMODE_AUX,
                                DATABASE_TIMEOUT
                               );
       #endif /* NDEBUG */
@@ -695,7 +704,7 @@ LOCAL void indexThreadInterrupt(void)
       return error;
     }
 
-    // create tables
+    // create tables/indicees/triggers
     INDEX_DOX(error,
               indexHandle,
     {
@@ -711,6 +720,7 @@ LOCAL void indexThreadInterrupt(void)
                                  indexDefinition
                                 );
       }
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
       return error;
     });
@@ -735,17 +745,18 @@ LOCAL void indexThreadInterrupt(void)
     {
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,
-                             databaseFileName,
+                             databaseSpecifier,
                              (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
                                ? DATABASE_OPENMODE_READWRITE
                                : DATABASE_OPENMODE_READ
                              )|DATABASE_OPENMODE_AUX,
+                             INDEX_DATABASE_NAME,
                              timeout
                             );
       #else /* not NDEBUG */
         return __Database_open(__fileName__,__lineNb__,
                                &indexHandle->databaseHandle,
-                               databaseFileName,
+                               databaseSpecifier,
                                (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
                                  ? DATABASE_OPENMODE_READWRITE
                                  : DATABASE_OPENMODE_READ
@@ -779,6 +790,8 @@ LOCAL void indexThreadInterrupt(void)
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
     }
   });
+
+  // free resources
 
   return ERROR_NONE;
 }
@@ -814,6 +827,76 @@ LOCAL void indexThreadInterrupt(void)
       __Database_close(__fileName__,__lineNb__,&indexHandle->databaseHandle);
     #endif /* NDEBUG */
   });
+
+  return ERROR_NONE;
+}
+
+LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDatabaseName)
+{
+  DatabaseSpecifier  renameToDatabaseSpecifier;
+  Errors             error;
+  DatabaseHandle     databaseHandle;
+  StringListIterator iterator;
+  String             name;
+  IndexDefinition    indexDefinition;
+
+  // drop triggers (required for some databases before rename)
+  error = Database_open(&databaseHandle,
+                         databaseSpecifier,
+                         DATABASE_OPENMODE_READWRITE,
+                         NO_WAIT
+                        );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_dropTriggers(&databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    Database_close(&databaseHandle);
+    return error;
+  }
+  Database_close(&databaseHandle);
+
+  // rename
+  Database_copySpecifier(&renameToDatabaseSpecifier,databaseSpecifier);
+  error = Database_rename(&renameToDatabaseSpecifier,newDatabaseName);
+  if (error != ERROR_NONE)
+  {
+    Database_doneSpecifier(&renameToDatabaseSpecifier);
+    return error;
+  }
+
+  // re-create triggers
+  error = Database_open(&databaseHandle,
+                         &renameToDatabaseSpecifier,
+                         DATABASE_OPENMODE_READWRITE,
+                         NO_WAIT
+                        );
+  if (error != ERROR_NONE)
+  {
+    Database_doneSpecifier(&renameToDatabaseSpecifier);
+    return error;
+  }
+  INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(&databaseHandle)], indexDefinition, error == ERROR_NONE)
+  {
+    error = Database_execute(&databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             indexDefinition
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    Database_close(&databaseHandle);
+    Database_doneSpecifier(&renameToDatabaseSpecifier);
+    return error;
+  }
+  Database_close(&databaseHandle);
+
+  // free resources
+  Database_doneSpecifier(&renameToDatabaseSpecifier);
 
   return ERROR_NONE;
 }
@@ -862,19 +945,19 @@ LOCAL_INLINE DatabaseCopyPauseCallbackFunction getCopyPauseCallback(void)
 /***********************************************************************\
 * Name   : getIndexVersion
 * Purpose: get index version
-* Input  : databaseFileName - database file name
+* Input  : databaseSpecifier - database specifier
 * Output : indexVersion - index version
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getIndexVersion(const char *databaseFileName, int64 *indexVersion)
+LOCAL Errors getIndexVersion(int64 *indexVersion, const DatabaseSpecifier *databaseSpecifier)
 {
   Errors      error;
   IndexHandle indexHandle;
 
   // open index database
-  error = openIndex(&indexHandle,databaseFileName,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
+  error = openIndex(&indexHandle,databaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
   if (error != ERROR_NONE)
   {
     return error;
@@ -1981,7 +2064,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                              DATABASE_COLUMN_TYPES(TEXT,TEXT,DATETIME),
                              "SELECT uuid, \
                                      name, \
-                                     UNIXTIMESTAMP(created) \
+                                     UNIX_TIMESTAMP(created) \
                               FROM storages \
                               WHERE entityId=0 \
                               ORDER BY id,created ASC \
@@ -2291,7 +2374,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                              DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME),
                              "SELECT id, \
                                      name, \
-                                     UNIXTIMESTAMP(created) \
+                                     UNIX_TIMESTAMP(created) \
                               FROM storages \
                               WHERE entityId=0 \
                               ORDER BY name ASC \
@@ -2918,7 +3001,7 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
                            &indexHandle->databaseHandle,
                            DATABASE_COLUMN_TYPES(INT,INT64),
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entriesNewest \
                               LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
                             WHERE     entriesNewest.type=%u \
@@ -2950,7 +3033,7 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
                            &indexHandle->databaseHandle,
                            DATABASE_COLUMN_TYPES(INT,INT64),
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entriesNewest \
                               LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
                             WHERE     entriesNewest.type=%u \
@@ -3037,7 +3120,7 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
                            DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entriesNewest.size?
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entriesNewest \
                               LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
                             WHERE     entriesNewest.type=%u \
@@ -3170,7 +3253,7 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
                            DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entries.size?
                            "SELECT COUNT(DISTINCT entries.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entryFragments \
                               LEFT JOIN entries ON entries.id=entryFragments.entryId \
                             WHERE     entryFragments.storageId=%lld \
@@ -3203,7 +3286,7 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
                            DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entries.size?
                            "SELECT COUNT(DISTINCT entries.id), \
-                                   TOTAL(entryFragments.size) \
+                                   SUM(entryFragments.size) \
                             FROM entryFragments \
                               LEFT JOIN entries ON entries.id=entryFragments.entryId \
                             WHERE     entryFragments.storageId=%lld \
@@ -3786,14 +3869,14 @@ LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   return    (uuidId != DATABASE_ID_NONE)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entities",
-                             "entities.id",
-                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE uuids.id=%lld \
-                             ",
-                             uuidId
-                            );
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "entities",
+                                  "entities.id",
+                                  "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                   WHERE uuids.id=%lld \
+                                  ",
+                                  uuidId
+                                 );
 }
 
 /***********************************************************************\
@@ -3919,24 +4002,24 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "storages",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entries",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entriesNewest",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            );
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "storages",
+                                  "id",
+                                  "WHERE entityId=%lld",
+                                  entityId
+                                 )
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "entries",
+                                  "id",
+                                  "WHERE entityId=%lld",
+                                  entityId
+                                 )
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "entriesNewest",
+                                  "id",
+                                  "WHERE entityId=%lld",
+                                  entityId
+                                 );
 }
 
 /***********************************************************************\
@@ -3997,7 +4080,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
                                DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME,INT),
                                "SELECT uuids.id, \
                                        entities.jobUUID, \
-                                       UNIXTIMESTAMP(entities.created), \
+                                       UNIX_TIMESTAMP(entities.created), \
                                        entities.type \
                                 FROM entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -4431,7 +4514,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                            &indexHandle->databaseHandle,
                            DATABASE_COLUMN_TYPES(INT,DATETIME,TEXT),
                            "SELECT state, \
-                                   UNIXTIMESTAMP(lastChecked), \
+                                   UNIX_TIMESTAMP(lastChecked), \
                                    errorMessage \
                             FROM storages \
                             WHERE id=%lld \
@@ -4477,30 +4560,30 @@ LOCAL bool isEmptyStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   return    (storageId != DATABASE_ID_NONE)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entryFragments",
-                              "id",
-                              "WHERE storageId=%lld",
-                              storageId
-                             )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "directoryEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "linkEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "specialEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            );
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "entryFragments",
+                                   "id",
+                                   "WHERE storageId=%lld",
+                                   storageId
+                                  )
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "directoryEntries",
+                                  "id",
+                                  "WHERE storageId=%lld",
+                                  storageId
+                                 )
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "linkEntries",
+                                  "id",
+                                  "WHERE storageId=%lld",
+                                  storageId
+                                 )
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "specialEntries",
+                                  "id",
+                                  "WHERE storageId=%lld",
+                                  storageId
+                                 );
 }
 
 /***********************************************************************\
@@ -4601,7 +4684,7 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
                                              entries.entityId, \
                                              entries.type, \
                                              entries.name, \
-                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                              entries.userId, \
                                              entries.groupId, \
                                              entries.permission, \
@@ -4614,7 +4697,7 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
                                              entries.entityId, \
                                              entries.type, \
                                              entries.name, \
-                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                              entries.userId, \
                                              entries.groupId, \
                                              entries.permission, \
@@ -4627,7 +4710,7 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
                                              entries.entityId, \
                                              entries.type, \
                                              entries.name, \
-                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                              entries.userId, \
                                              entries.groupId, \
                                              entries.permission, \
@@ -4640,7 +4723,7 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
                                              entries.entityId, \
                                              entries.type, \
                                              entries.name, \
-                                             UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                              entries.userId, \
                                              entries.groupId, \
                                              entries.permission, \
@@ -4734,28 +4817,28 @@ LOCAL Errors addStorageToNewest(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               DATABASE_COLUMN_TYPES(KEY,DATETIME),
                               "      SELECT entriesNewest.id, \
-                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                            UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                      FROM entryFragments \
                                        LEFT JOIN storages ON storages.id=entryFragments.storageId \
                                        LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
                                      WHERE     storages.deletedFlag!=1 \
                                            AND entriesNewest.name=%'S \
                                UNION SELECT entriesNewest.id, \
-                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                            UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                      FROM directoryEntries \
                                        LEFT JOIN storages ON storages.id=directoryEntries.storageId \
                                        LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
                                      WHERE     storages.deletedFlag!=1 \
                                            AND entriesNewest.name=%'S \
                                UNION SELECT entriesNewest.id, \
-                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                            UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                      FROM linkEntries \
                                        LEFT JOIN storages ON storages.id=linkEntries.storageId \
                                        LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
                                      WHERE     storages.deletedFlag!=1 \
                                            AND entriesNewest.name=%'S \
                                UNION SELECT entriesNewest.id, \
-                                            UNIXTIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
+                                            UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
                                      FROM specialEntries \
                                        LEFT JOIN storages ON storages.id=specialEntries.storageId \
                                        LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
@@ -5049,7 +5132,7 @@ LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
                                               entries.uuidId, \
                                               entries.entityId, \
                                               entries.type, \
-                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                               entries.userId, \
                                               entries.groupId, \
                                               entries.permission, \
@@ -5063,7 +5146,7 @@ LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
                                               entries.uuidId, \
                                               entries.entityId, \
                                               entries.type, \
-                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                               entries.userId, \
                                               entries.groupId, \
                                               entries.permission, \
@@ -5077,7 +5160,7 @@ LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
                                               entries.uuidId, \
                                               entries.entityId, \
                                               entries.type, \
-                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                               entries.userId, \
                                               entries.groupId, \
                                               entries.permission, \
@@ -5091,7 +5174,7 @@ LOCAL Errors removeStorageFromNewest(IndexHandle  *indexHandle,
                                               entries.uuidId, \
                                               entries.entityId, \
                                               entries.type, \
-                                              UNIXTIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
+                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
                                               entries.userId, \
                                               entries.groupId, \
                                               entries.permission, \
@@ -6449,7 +6532,7 @@ LOCAL Errors purgeStorage(IndexHandle  *indexHandle,
                            &indexHandle->databaseHandle,
                            DATABASE_COLUMN_TYPES(TEXT,DATETIME),
                            "SELECT storages.name, \
-                                   UNIXTIMESTAMP(entities.created) \
+                                   UNIX_TIMESTAMP(entities.created) \
                             FROM storages \
                               LEFT JOIN entities ON entities.id=storages.entityId \
                             WHERE storages.id=%lld \
@@ -7295,7 +7378,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                &indexHandle->databaseHandle,
                                DATABASE_COLUMN_TYPES(KEY,DATETIME),
                                "SELECT id, \
-                                       UNIXTIMESTAMP(timeLastChanged) \
+                                       UNIX_TIMESTAMP(timeLastChanged) \
                                 FROM entriesNewest\
                                 WHERE name=%'S \
                                ",
@@ -7516,12 +7599,12 @@ LOCAL void indexThreadCode(void)
   String              storageName;
   uint                sleepTime;
 
-  assert(indexDatabaseFileName != NULL);
+  assert(indexDatabaseSpecifier != NULL);
 
   // open index
   do
   {
-    error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_PURGE_TIMEOUT);
+    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_PURGE_TIMEOUT);
     if ((error != ERROR_NONE) && !quitFlag)
     {
       Misc_mdelay(1*MS_PER_SECOND);
@@ -7539,7 +7622,7 @@ LOCAL void indexThreadCode(void)
                 LOG_TYPE_ERROR,
                 "INDEX",
                 "Cannot open index database '%s' fail: %s",
-                indexDatabaseFileName,
+                indexDatabaseSpecifier,
                 Error_getText(error)
                );
     return;
@@ -7550,7 +7633,8 @@ LOCAL void indexThreadCode(void)
 
   #ifdef INDEX_IMPORT_OLD_DATABASE
     // get absolute database file name
-    absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexDatabaseFileName);
+// TODO:
+    absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexDatabaseSpecifier);
 
     // open directory where database is located
     directoryName = File_getDirectoryName(String_new(),absoluteFileName);
@@ -7563,7 +7647,7 @@ LOCAL void indexThreadCode(void)
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Import index database '%s' fail: %s",
-                  indexDatabaseFileName,
+                  indexDatabaseSpecifier,
                   Error_getText(error)
                  );
       return;
@@ -7582,7 +7666,7 @@ LOCAL void indexThreadCode(void)
           )
     {
       if (   String_startsWith(oldDatabaseFileName,absoluteFileName)\
-          && String_matchCString(oldDatabaseFileName,STRING_BEGIN,".*\\.old\\d\\d\\d$",NULL,NULL)
+          && String_matchCString(oldDatabaseFileName,STRING_BEGIN,DATABASE_SAVE_PATTERNS[indexDatabaseSpecifier->type],NULL,NULL)
          )
       {
         if (i == 0)
@@ -7593,7 +7677,7 @@ LOCAL void indexThreadCode(void)
                       "Started import old index databases"
                      );
         }
-        DIMPORT("import %s -> %s",String_cString(oldDatabaseFileName),indexDatabaseFileName);
+        DIMPORT("import %s -> %s",String_cString(oldDatabaseFileName),indexDatabaseSpecifier);
         error = importIndex(&indexHandle,oldDatabaseFileName);
         if (error == ERROR_NONE)
         {
@@ -7603,6 +7687,7 @@ LOCAL void indexThreadCode(void)
         else
         {
           failFileName = String_appendCString(String_duplicate(oldDatabaseFileName),".fail");
+// TODO:
           (void)File_rename(oldDatabaseFileName,failFileName,NULL);
           String_delete(failFileName);
         }
@@ -8893,7 +8978,7 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
   }
 }
 
-Errors Index_init(const char             *fileName,
+Errors Index_init(const char             *uriString,
                   IndexIsMaintenanceTime isMaintenanceTimeFunction,
                   void                   *isMaintenanceTimeUserData
                  )
@@ -8901,21 +8986,23 @@ Errors Index_init(const char             *fileName,
   bool         createFlag;
   Errors       error;
   int64        indexVersion;
-  String       oldDatabaseFileName;
+  String       saveDatabaseName;
   uint         n;
+  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {NULL} };
   IndexHandle  indexHandleReference,indexHandle;
   ProgressInfo progressInfo;
 
-  assert(fileName != NULL);
+  assert(uriString != NULL);
 
   // init variables
   indexIsMaintenanceTimeFunction = isMaintenanceTimeFunction;
   indexIsMaintenanceTimeUserData = isMaintenanceTimeUserData;
   quitFlag                       = FALSE;
 
-  // get database file name
-  indexDatabaseFileName = stringDuplicate(fileName);
-  if (indexDatabaseFileName == NULL)
+  // get database specifier
+  assert(indexDatabaseSpecifier == NULL);
+  indexDatabaseSpecifier = Database_newSpecifier(uriString);
+  if (indexDatabaseSpecifier == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -8925,39 +9012,46 @@ Errors Index_init(const char             *fileName,
   // check if index exists, check version
   if (!createFlag)
   {
-    if (File_existsCString(indexDatabaseFileName))
+    if (Database_exists(indexDatabaseSpecifier,NULL))
     {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       // check index version
-      error = getIndexVersion(indexDatabaseFileName,&indexVersion);
+      error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+fprintf(stderr,"%s:%d: indexVersion=%lld\n",__FILE__,__LINE__,indexVersion);
       if (error == ERROR_NONE)
       {
         if (indexVersion < INDEX_VERSION)
         {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           // rename existing index for upgrade
-          oldDatabaseFileName = String_new();
+          saveDatabaseName = String_new();
           n = 0;
           do
           {
-            oldDatabaseFileName = String_newCString(indexDatabaseFileName);
-            String_appendCString(oldDatabaseFileName,".old");
-            String_appendFormat(oldDatabaseFileName,"%03d",n);
+            String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+            String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
             n++;
           }
-          while (File_exists(oldDatabaseFileName));
-          (void)File_renameCString(indexDatabaseFileName,
-                                   String_cString(oldDatabaseFileName),
-                                   NULL
-                                  );
-          String_delete(oldDatabaseFileName);
+          while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+          error = renameIndex(indexDatabaseSpecifier,saveDatabaseName);
+          if (error != ERROR_NONE)
+          {
+            String_delete(saveDatabaseName);
+            Database_deleteSpecifier(indexDatabaseSpecifier);
+            return error;
+          }
+          String_delete(saveDatabaseName);
 
           // upgrade version -> create new
           createFlag = TRUE;
+fprintf(stderr,"%s:%d: upgare_\n",__FILE__,__LINE__);
           plogMessage(NULL,  // logHandle
                       LOG_TYPE_ERROR,
                       "INDEX",
                       "Old index database version %d in '%s' - create new",
                       indexVersion,
-                      indexDatabaseFileName
+                      indexDatabaseSpecifier
                      );
         }
       }
@@ -8965,11 +9059,12 @@ Errors Index_init(const char             *fileName,
       {
         // unknown version -> create new
         createFlag = TRUE;
+fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
                     "Unknown index database version in '%s' - create new",
-                    indexDatabaseFileName
+                    indexDatabaseSpecifier
                    );
       }
     }
@@ -8977,18 +9072,20 @@ Errors Index_init(const char             *fileName,
     {
       // does not exists -> create new
       createFlag = TRUE;
+fprintf(stderr,"%s:%d: not exi_\n",__FILE__,__LINE__);
     }
   }
 
   if (!createFlag)
   {
     // check if database is outdated or corrupt
-    if (File_existsCString(indexDatabaseFileName))
+    if (Database_exists(indexDatabaseSpecifier,NULL))
     {
-      error = openIndex(&indexHandleReference,NULL,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
+fprintf(stderr,"%s:%d: create reference\n",__FILE__,__LINE__);
+      error = openIndex(&indexHandleReference,&databaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
-        error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
+        error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
         if (error == ERROR_NONE)
         {
           error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
@@ -8999,21 +9096,23 @@ Errors Index_init(const char             *fileName,
       if (error != ERROR_NONE)
       {
         // rename existing index for upgrade
-        oldDatabaseFileName = String_new();
+        saveDatabaseName = String_new();
         n = 0;
         do
         {
-          String_setCString(oldDatabaseFileName,indexDatabaseFileName);
-          String_appendCString(oldDatabaseFileName,".old");
-          String_appendFormat(oldDatabaseFileName,"%03d",n);
+          String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+          String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
           n++;
         }
-        while (File_exists(oldDatabaseFileName));
-        (void)File_renameCString(indexDatabaseFileName,
-                                 String_cString(oldDatabaseFileName),
-                                 NULL
-                                );
-        String_delete(oldDatabaseFileName);
+        while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+        error = renameIndex(indexDatabaseSpecifier,saveDatabaseName);
+        if (error != ERROR_NONE)
+        {
+          String_delete(saveDatabaseName);
+          Database_deleteSpecifier(indexDatabaseSpecifier);
+          return error;
+        }
+        String_delete(saveDatabaseName);
 
         // outdated or corrupt -> create new
         createFlag = TRUE;
@@ -9021,53 +9120,57 @@ Errors Index_init(const char             *fileName,
                     LOG_TYPE_ERROR,
                     "INDEX",
                     "Outdated or corrupt index database '%s' (error: %s) - create new",
-                    indexDatabaseFileName,
+                    indexDatabaseSpecifier,
                     Error_getText(error)
                    );
       }
     }
   }
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   if (createFlag)
   {
     // create new index database
-    error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
+    error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Create new index database '%s' fail: %s",
-                  indexDatabaseFileName,
+                  indexDatabaseSpecifier,
                   Error_getText(error)
                  );
-      free((char*)indexDatabaseFileName);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+      Database_deleteSpecifier(indexDatabaseSpecifier);
       return error;
     }
     closeIndex(&indexHandle);
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Created new index database '%s' (version %d)",
-                indexDatabaseFileName,
+                indexDatabaseSpecifier,
                 INDEX_VERSION
                );
   }
   else
   {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     // get database index version
-    error = getIndexVersion(indexDatabaseFileName,&indexVersion);
+    error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
     if (error != ERROR_NONE)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
                   "Cannot get index database version from '%s': %s",
-                  indexDatabaseFileName,
+                  indexDatabaseSpecifier,
                   Error_getText(error)
                  );
-      free((char*)indexDatabaseFileName);
+      Database_deleteSpecifier(indexDatabaseSpecifier);
       return error;
     }
 
@@ -9075,23 +9178,24 @@ Errors Index_init(const char             *fileName,
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Opened index database '%s' (version %d)",
-                indexDatabaseFileName,
+                indexDatabaseSpecifier,
                 indexVersion
                );
   }
 
   // initial clean-up
-  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
+  error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
                 "Cannot get index database version from '%s': %s",
-                indexDatabaseFileName,
+                indexDatabaseSpecifier,
                 Error_getText(error)
                );
-    free((char*)indexDatabaseFileName);
+    Database_deleteSpecifier(indexDatabaseSpecifier);
+    indexDatabaseSpecifier = NULL;
     return error;
   }
   plogMessage(NULL,  // logHandle
@@ -9148,12 +9252,13 @@ void Index_done(void)
   #ifdef INDEX_INTIIAL_CLEANUP
     Thread_done(&indexThread);
   #endif /* INDEX_INTIIAL_CLEANUP */
-  free((char*)indexDatabaseFileName);
+  Database_deleteSpecifier(indexDatabaseSpecifier);
+  indexDatabaseSpecifier = NULL;
 }
 
 bool Index_isAvailable(void)
 {
-  return indexDatabaseFileName != NULL;
+  return indexDatabaseSpecifier != NULL;
 }
 
 bool Index_isInitialized(void)
@@ -9206,6 +9311,8 @@ IndexHandle *__Index_open(const char *__fileName__,
 
   if (Index_isAvailable())
   {
+    assert(indexDatabaseSpecifier != NULL);
+
     indexHandle = (IndexHandle*)malloc(sizeof(IndexHandle));
     if (indexHandle == NULL)
     {
@@ -9214,7 +9321,7 @@ IndexHandle *__Index_open(const char *__fileName__,
 
     #ifdef NDEBUG
       error = openIndex(indexHandle,
-                        indexDatabaseFileName,
+                        indexDatabaseSpecifier,
                         masterIO,
                         INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,
                         timeout
@@ -9223,7 +9330,7 @@ IndexHandle *__Index_open(const char *__fileName__,
       error = __openIndex(__fileName__,
                           __lineNb__,
                           indexHandle,
-                          indexDatabaseFileName,
+                          indexDatabaseSpecifier,
                           masterIO,
                           INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,
                           timeout
@@ -9408,9 +9515,9 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                        (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%u), \
                                        COUNT(entities.id), \
                                        COUNT(storages.id), \
-                                       TOTAL(storages.size), \
-                                       TOTAL(storages.totalEntryCount) , \
-                                       TOTAL(storages.totalEntrySize) \
+                                       SUM(storages.size), \
+                                       SUM(storages.totalEntryCount) , \
+                                       SUM(storages.totalEntrySize) \
                                 FROM uuids \
                                   LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                   LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
@@ -9574,11 +9681,11 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
                                      entities.scheduleUUID, \
-                                     UNIXTIMESTAMP(entities.created), \
+                                     UNIX_TIMESTAMP(entities.created), \
                                      entities.type, \
                                      (SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1), \
-                                     TOTAL(storages.totalEntryCount), \
-                                     TOTAL(storages.totalEntrySize) \
+                                     SUM(storages.totalEntryCount), \
+                                     SUM(storages.totalEntrySize) \
                               FROM entities \
                                 LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
                                 LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
@@ -9668,11 +9775,11 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                                      IFNULL(entities.id,0), \
                                      entities.scheduleUUID, \
                                      storages.name, \
-                                     UNIXTIMESTAMP(storages.created), \
+                                     UNIX_TIMESTAMP(storages.created), \
                                      storages.size, \
                                      storages.state, \
                                      storages.mode, \
-                                     UNIXTIMESTAMP(storages.lastChecked), \
+                                     UNIX_TIMESTAMP(storages.lastChecked), \
                                      storages.errorMessage, \
                                      storages.totalEntryCount, \
                                      storages.totalEntrySize \
@@ -9773,11 +9880,11 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                                      storages.id, \
                                      entities.scheduleUUID, \
                                      storages.name, \
-                                     UNIXTIMESTAMP(storages.created), \
+                                     UNIX_TIMESTAMP(storages.created), \
                                      storages.size, \
                                      storages.state, \
                                      storages.mode, \
-                                     UNIXTIMESTAMP(storages.lastChecked), \
+                                     UNIX_TIMESTAMP(storages.lastChecked), \
                                      storages.errorMessage, \
                                      storages.totalEntryCount, \
                                      storages.totalEntrySize \
@@ -9892,10 +9999,10 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                                      storages.id, \
                                      entities.scheduleUUID, \
                                      storages.name, \
-                                     UNIXTIMESTAMP(storages.created), \
+                                     UNIX_TIMESTAMP(storages.created), \
                                      storages.size, \
                                      storages.mode, \
-                                     UNIXTIMESTAMP(storages.lastChecked), \
+                                     UNIX_TIMESTAMP(storages.lastChecked), \
                                      storages.errorMessage, \
                                      storages.totalEntryCount, \
                                      storages.totalEntrySize \
@@ -10552,7 +10659,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                                     history.hostName, \
                                     history.userName, \
                                     history.type, \
-                                    UNIXTIMESTAMP(history.created), \
+                                    UNIX_TIMESTAMP(history.created), \
                                     history.errorMessage, \
                                     history.duration, \
                                     history.totalEntryCount, \
@@ -10882,7 +10989,7 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
                              DATABASE_COLUMN_TYPES(DATETIME,INT,INT,INT64),
-                             "SELECT MAX(UNIXTIMESTAMP(entities.created)), \
+                             "SELECT MAX(UNIX_TIMESTAMP(entities.created)), \
                                      COUNT(entities.id), \
                                      SUM(storages.totalEntryCount), \
                                      SUM(storages.totalEntrySize) \
@@ -10996,7 +11103,7 @@ UNUSED_VARIABLE(uuidId);
                                DATABASE_COLUMN_TYPES(INT,INT64),
 //TODO: use entries.size?
                                "SELECT COUNT(DISTINCT entries.id), \
-                                       TOTAL(entryFragments.size) \
+                                       SUM(entryFragments.size) \
                                 FROM entries \
                                   LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                                   LEFT JOIN entities ON entities.id=entries.entityId \
@@ -11428,7 +11535,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                             DATABASE_COLUMN_TYPES(KEY,TEXT,DATETIME,TEXT,INT64,INT,INT64),
                             "SELECT uuids.id, \
                                     uuids.jobUUID, \
-                                    (SELECT MAX(UNIXTIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID), \
+                                    (SELECT MAX(UNIX_TIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID), \
                                     (SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1), \
                                     SUM(storages.size), \
                                     SUM(storages.totalEntryCount), \
@@ -11822,7 +11929,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                                     entities.jobUUID, \
                                     entities.id, \
                                     entities.scheduleUUID, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entities.type, \
                                     (SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
                                     SUM(storages.size), \
@@ -12374,12 +12481,12 @@ bool Index_isDeletedEntity(IndexHandle *indexHandle,
     INDEX_DOX(deletedFlag,
               indexHandle,
     {
-      return !Database_exists(&indexHandle->databaseHandle,
-                              "entities",
-                              "id",
-                              "WHERE id=%lld AND deletedFlag!=1",
-                              Index_getDatabaseId(entityId)
-                             );
+      return !Database_existsValue(&indexHandle->databaseHandle,
+                                   "entities",
+                                   "id",
+                                   "WHERE id=%lld AND deletedFlag!=1",
+                                   Index_getDatabaseId(entityId)
+                                  );
     });
   }
   else
@@ -12599,7 +12706,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                  &indexHandle->databaseHandle,
                                  DATABASE_COLUMN_TYPES(INT),
 //TODO newest
-                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                 "SELECT SUM(directoryEntries.totalEntrySize) \
                                   FROM storages \
                                     LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
                                     LEFT JOIN entities         ON entities.id=storages.entityId \
@@ -12835,15 +12942,15 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                                     storages.hostName, \
                                     storages.userName, \
                                     storages.comment, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entities.type, \
                                     storages.id, \
                                     storages.name, \
-                                    UNIXTIMESTAMP(storages.created), \
+                                    UNIX_TIMESTAMP(storages.created), \
                                     storages.size, \
                                     storages.state, \
                                     storages.mode, \
-                                    UNIXTIMESTAMP(storages.lastChecked), \
+                                    UNIX_TIMESTAMP(storages.lastChecked), \
                                     storages.errorMessage, \
                                     storages.totalEntryCount, \
                                     storages.totalEntrySize \
@@ -12997,6 +13104,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       Misc_getUUID(s);
 
       // insert storage
+fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
@@ -13021,13 +13129,17 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                    %'S, \
                                    %'S, \
                                    %'S, \
-                                   DATETIME(%llu,'unixepoch'), \
+unix_timestamp(%llu) \
                                    %llu, \
                                    %d, \
                                    %d, \
                                    DATETIME('now') \
                                   ) \
                                ",
+
+//                                   DATETIME(%llu,'unixepoch'), \
+
+
                                Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
                                hostName,
@@ -13609,12 +13721,12 @@ bool Index_isDeletedStorage(IndexHandle *indexHandle,
     INDEX_DOX(deletedFlag,
               indexHandle,
     {
-      return !Database_exists(&indexHandle->databaseHandle,
-                              "storages",
-                              "id",
-                              "WHERE id=%lld AND deletedFlag!=1",
-                              Index_getDatabaseId(storageId)
-                             );
+      return !Database_existsValue(&indexHandle->databaseHandle,
+                                   "storages",
+                                   "id",
+                                   "WHERE id=%lld AND deletedFlag!=1",
+                                   Index_getDatabaseId(storageId)
+                                  );
     });
   }
   else
@@ -13697,11 +13809,11 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                                      entities.scheduleUUID, \
                                      entities.type, \
                                      storages.name, \
-                                     UNIXTIMESTAMP(storages.created), \
+                                     UNIX_TIMESTAMP(storages.created), \
                                      storages.size, \
                                      storages.state, \
                                      storages.mode, \
-                                     UNIXTIMESTAMP(storages.lastChecked), \
+                                     UNIX_TIMESTAMP(storages.lastChecked), \
                                      storages.errorMessage, \
                                      storages.totalEntryCount, \
                                      storages.totalEntrySize \
@@ -14189,7 +14301,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           error = Database_prepare(&databaseStatementHandle,
                                    &indexHandle->databaseHandle,
                                    DATABASE_COLUMN_TYPES(INT),
-                                   "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                   "SELECT SUM(directoryEntries.totalEntrySize) \
                                     FROM entriesNewest \
                                       LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
                                       LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
@@ -14211,7 +14323,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
             error = Database_prepare(&databaseStatementHandle,
                                      &indexHandle->databaseHandle,
                                      DATABASE_COLUMN_TYPES(INT),
-                                     "SELECT TOTAL(entities.totalEntrySize) \
+                                     "SELECT SUM(entities.totalEntrySize) \
                                       FROM entities \
                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                       WHERE     entities.deletedFlag!=1 \
@@ -14226,7 +14338,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
             error = Database_prepare(&databaseStatementHandle,
                                      &indexHandle->databaseHandle,
                                      DATABASE_COLUMN_TYPES(INT64),
-                                     "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                     "SELECT SUM(directoryEntries.totalEntrySize) \
                                       FROM entries \
                                         LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
                                         LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
@@ -14384,7 +14496,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           error = Database_prepare(&databaseStatementHandle,
                                    &indexHandle->databaseHandle,
                                    DATABASE_COLUMN_TYPES(INT64),
-                                   "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                   "SELECT SUM(directoryEntries.totalEntrySize) \
                                     FROM FTS_entries \
                                       LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
                                       LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
@@ -14403,7 +14515,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           error = Database_prepare(&databaseStatementHandle,
                                    &indexHandle->databaseHandle,
                                    DATABASE_COLUMN_TYPES(INT64),
-                                   "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                   "SELECT SUM(directoryEntries.totalEntrySize) \
                                     FROM FTS_entries \
                                       LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
                                       LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
@@ -15089,7 +15201,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                             "SELECT entryFragments.id, \
                                     storages.id, \
                                     storages.name, \
-                                    UNIXTIMESTAMP(storages.created), \
+                                    UNIX_TIMESTAMP(storages.created), \
                                     entryFragments.offset, \
                                     entryFragments.size \
                              FROM entryFragments \
@@ -15376,7 +15488,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                             &indexHandle->databaseHandle,
                             DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,INT64,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entries.name, \
                                     entries.size, \
                                     entries.timeModified, \
@@ -15521,7 +15633,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             &indexHandle->databaseHandle,
                             DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,INT,INT,INT64),
                             "SELECT entries.id, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entries.name, \
                                     imageEntries.fileSystemType, \
                                     imageEntries.blockSize, \
@@ -15675,7 +15787,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                             &indexHandle->databaseHandle,
                             DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entries.name, \
                                     entries.timeModified, \
                                     entries.userId, \
@@ -15819,7 +15931,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                             &indexHandle->databaseHandle,
                             DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,TEXT,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entries.name, \
                                     linkEntries.destinationName, \
                                     entries.timeModified, \
@@ -15964,7 +16076,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                             &indexHandle->databaseHandle,
                             DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,INT64,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entries.name, \
                                     entries.size, \
                                     entries.timeModified, \
@@ -16109,7 +16221,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                             &indexHandle->databaseHandle,
                             DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,DATETIME,INT,INT,INT),
                             "SELECT entries.id, \
-                                    UNIXTIMESTAMP(entities.created), \
+                                    UNIX_TIMESTAMP(entities.created), \
                                     entries.name, \
                                     entries.timeModified, \
                                     entries.userId, \

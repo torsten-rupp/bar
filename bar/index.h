@@ -150,7 +150,7 @@ typedef void(*IndexBusyHandlerFunction)(void *userData);
 typedef struct
 {
   ServerIO                 *masterIO;
-  const char               *databaseFileName;
+  const char               *uriString;
   DatabaseHandle           databaseHandle;
   IndexBusyHandlerFunction busyHandlerFunction;
   void                     *busyHandlerUserData;
@@ -497,7 +497,7 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
 /***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
-* Input  : fileName                  - database file name
+* Input  : uri                       - database URI
 *          isMaintenanceTimeFunction - check if maintenance time
 *                                      function or NULL
 *          isMaintenanceTimeUserData - user data for check if
@@ -507,7 +507,7 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_init(const char             *fileName,
+Errors Index_init(const char             *uri,
                   IndexIsMaintenanceTime isMaintenanceTimeFunction,
                   void                   *isMaintenanceTimeUserData
                  );
