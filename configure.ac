@@ -833,6 +833,8 @@ AC_SUBST(XGETTEXT)                          dnl xgettext command
 AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
+AC_SUBST(MYSQL)                             dnl mysql command
+
 AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
 AC_SUBST(JAVAC_FLAGS)                       dnl java compiler flags
@@ -1265,6 +1267,11 @@ fi
 AC_PATH_PROGS(MSGFMT,msgfmt)
 if test -z "$MSGFMT"; then
   AC_MSG_ERROR([Cannot find a 'msgfmt' in PATH. Please check your PATH environment variable.])
+fi
+
+AC_PATH_PROGS(MYSQL,mysql)
+if test -z "$MYSQL"; then
+  AC_MSG_WARN([Cannot find a 'mysql' in PATH. Please check your PATH environment variable.])
 fi
 
 AC_PROG_INSTALL
