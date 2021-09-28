@@ -20194,19 +20194,19 @@ Errors Server_socket(void)
   }
 
   // init index database
-  if (!stringIsEmpty(globalOptions.indexDatabaseFileName))
+  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier))
   {
-    error = Index_init(globalOptions.indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
+    error = Index_init(globalOptions.indexDatabaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
       printError("Cannot init index database '%s' (error: %s)!",
-                 globalOptions.indexDatabaseFileName,
+                 globalOptions.indexDatabaseSpecifier,
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseFileName,{ Index_done(); });
+    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseSpecifier,{ Index_done(); });
   }
 
   // open index
@@ -20956,7 +20956,7 @@ Errors Server_socket(void)
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
-  if (!stringIsEmpty(globalOptions.indexDatabaseFileName)) Index_done();
+  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier)) Index_done();
   List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
@@ -21012,21 +21012,21 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   // init index database
-  if (!stringIsEmpty(globalOptions.indexDatabaseFileName))
+  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier))
   {
-    error = Index_init(globalOptions.indexDatabaseFileName,CALLBACK_(isMaintenanceTime,NULL));
+    error = Index_init(globalOptions.indexDatabaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
       printError("Cannot init index database '%s' (error: %s)!",
-                 globalOptions.indexDatabaseFileName,
+                 globalOptions.indexDatabaseSpecifier,
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
     printInfo(1,"OK\n");
-    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseFileName,{ Index_done(); });
+    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseSpecifier,{ Index_done(); });
   }
 
   // open index
@@ -21185,7 +21185,7 @@ processCommand(&clientInfo,commandString);
 
   // free resources
   doneClient(&clientInfo);
-  if (!stringIsEmpty(globalOptions.indexDatabaseFileName)) Index_done();
+  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier)) Index_done();
   Semaphore_done(&serverStateLock);
   List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
