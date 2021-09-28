@@ -3438,7 +3438,7 @@ static inline bool stringToInt(const char *string, int *i)
 }
 
 /***********************************************************************\
-* Name   : stringToInt
+* Name   : stringToUInt
 * Purpose: convert string to uint-value
 * Input  : string - string
 *          i      - value variable
@@ -3469,7 +3469,7 @@ static inline bool stringToUInt(const char *string, uint *i)
 }
 
 /***********************************************************************\
-* Name   : stringToInt
+* Name   : stringToInt64
 * Purpose: convert string to int64-value
 * Input  : string - string
 *          l      - value variable
