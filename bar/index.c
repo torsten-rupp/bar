@@ -750,7 +750,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                                ? DATABASE_OPENMODE_READWRITE
                                : DATABASE_OPENMODE_READ
                              )|DATABASE_OPENMODE_AUX,
-                             INDEX_DATABASE_NAME,
                              timeout
                             );
       #else /* not NDEBUG */
