@@ -47,13 +47,13 @@ def build()
       docker.image(dockerImageName).inside
       {
 //TODO
-        sh "make test1"
-        sh "make test2"
-        sh "make test3"
-        sh "make test4"
-        sh "make test5"
-        sh "make test6"
-        sh "make test7"
+        sh "make test1-debug"
+        sh "make test2-debug"
+        sh "make test3-debug"
+        sh "make test4-debug"
+        sh "make test5-debug"
+        sh "make test6-debug"
+        sh "make test7-debug"
       }
     }
   }
