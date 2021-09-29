@@ -166,10 +166,6 @@ LOCAL DatabaseList databaseList;
   } databaseLockBy;
 #endif /* DATABASE_LOCK_PER_INSTANCE */
 
-#ifdef HAVE_MYSQL
-  LOCAL MYSQL mysql;
-#endif /* HAVE_MYSQL */
-
 #ifndef NDEBUG
   LOCAL uint                databaseDebugCounter = 0;
 
@@ -1551,6 +1547,122 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
     return ERRORX_(DATABASE,0,"init locking");
   }
 
+  // get database node
+  SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    databaseNode = LIST_FIND(&databaseList,
+                             databaseNode,
+                             Database_equalSpecifiers(&databaseNode->databaseSpecifier,databaseSpecifier)
+                            );
+    if (databaseNode != NULL)
+    {
+      databaseNode->openCount++;
+    }
+    else
+    {
+      databaseNode = LIST_NEW_NODE(DatabaseNode);
+      if (databaseNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      Database_copySpecifier(&databaseNode->databaseSpecifier,databaseSpecifier);
+      databaseNode->openCount               = 1;
+      #ifdef DATABASE_LOCK_PER_INSTANCE
+        if (pthread_mutexattr_init(&databaseNode->lockAttribute) != 0)
+        {
+          Database_doneSpecifier(&databaseNode->databaseSpecifier);
+          LIST_DELETE_NODE(databaseNode);
+          switch (databaseType)
+          {
+            case DATABASE_TYPE_SQLITE3:
+              sqlite3_close(databaseHandle->sqlite.handle);
+              break;
+            case DATABASE_TYPE_MYSQL:
+              mysql_close(databaseHandle->mysql.handle);
+              break;
+          }
+          sem_destroy(&databaseHandle->wakeUp);
+          return ERRORX_(DATABASE,0,"init locking");
+        }
+        pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
+        if (pthread_mutex_init(&databaseNode->lock,&databaseNode->lockAttribute) != 0)
+        {
+          pthread_mutexattr_destroy(&databaseNode->lockAttribute);
+          Database_doneSpecifier(&databaseNode->databaseSpecifier);
+          LIST_DELETE_NODE(databaseNode);
+          switch (databaseType)
+          {
+            case DATABASE_TYPE_SQLITE3:
+              sqlite3_close(databaseHandle->sqlite.handle);
+              break;
+            case DATABASE_TYPE_MYSQL:
+              mysql_close(databaseHandle->mysql.handle);
+              break;
+          }
+          sem_destroy(&databaseHandle->wakeUp);
+          return ERRORX_(DATABASE,0,"init locking");
+        }
+      #endif /* DATABASE_LOCK_PER_INSTANCE */
+      databaseNode->lockType                = DATABASE_LOCK_TYPE_NONE;
+
+      databaseNode->pendingReadCount        = 0;
+      databaseNode->readCount               = 0;
+      pthread_cond_init(&databaseNode->readTrigger,NULL);
+
+      databaseNode->pendingReadWriteCount   = 0;
+      databaseNode->readWriteCount          = 0;
+      pthread_cond_init(&databaseNode->readWriteTrigger,NULL);
+
+      databaseNode->pendingTransactionCount = 0;
+      databaseNode->transactionCount        = 0;
+      pthread_cond_init(&databaseNode->transactionTrigger,NULL);
+
+      List_init(&databaseNode->busyHandlerList);
+      Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
+
+      List_init(&databaseNode->progressHandlerList);
+      Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
+
+      switch (databaseSpecifier->type)
+      {
+        case DATABASE_TYPE_SQLITE3:
+          break;
+        case DATABASE_TYPE_MYSQL:
+          mysql_init(&databaseNode->mysql);
+          break;
+      }
+
+      #ifdef DATABASE_DEBUG_LOCK
+        memClear(databaseNode->readLPWIds,sizeof(databaseNode->readLPWIds));
+        memClear(databaseNode->readWriteLPWIds,sizeof(databaseNode->readWriteLPWIds));
+        databaseNode->transactionLPWId = 0;
+      #endif /* DATABASE_DEBUG_LOCK */
+
+      #ifndef NDEBUG
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
+        databaseNode->debug.readWriteLockedBy               = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
+        databaseNode->debug.lastTrigger.threadInfo.threadId = THREAD_ID_NONE;
+        databaseNode->debug.transaction.threadId            = THREAD_ID_NONE;
+        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
+        databaseNode->debug.historyIndex                    = 0;
+      #endif /* not NDEBUG */
+
+      List_append(&databaseList,databaseNode);
+
+      #ifdef NDEBUG
+        DEBUG_ADD_RESOURCE_TRACE(databaseNode,DatabaseNode);
+      #else /* not NDEBUG */
+        DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseNode,DatabaseNode);
+      #endif /* NDEBUG */
+    }
+
+    databaseHandle->databaseNode = databaseNode;
+  }
+  assert(databaseHandle->databaseNode != NULL);
+
   // get database type and open/connect data
   switch (databaseSpecifier->type)
   {
@@ -1648,7 +1760,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           if ((openDatabaseMode & DATABASE_OPENMODE_MEMORY) == DATABASE_OPENMODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(sqliteName,"mode=memory");
           if ((openDatabaseMode & DATABASE_OPENMODE_SHARED) == DATABASE_OPENMODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(sqliteName,"cache=shared");
         }
-  //sqliteMode |= SQLITE_OPEN_NOMUTEX;
+//sqliteMode |= SQLITE_OPEN_NOMUTEX;
 
         // open database
         sqliteResult = sqlite3_open_v2(String_cString(sqliteName),&databaseHandle->sqlite.handle,sqliteMode,NULL);
@@ -1687,7 +1799,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
         int mysqlResult;
 
         // open database
-        databaseHandle->mysql.handle = mysql_real_connect(&mysql,
+        databaseHandle->mysql.handle = mysql_real_connect(&databaseHandle->databaseNode->mysql,
                                                           String_cString(databaseSpecifier->mysql.serverName),
                                                           String_cString(databaseSpecifier->mysql.userName),
                                                           databaseSpecifier->mysql.password.data,
@@ -1700,139 +1812,33 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                                                          );
         if (databaseHandle->mysql.handle == NULL)
         {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s",mysql_error(&mysql));
+          error = ERRORX_(DATABASE,mysql_errno(&databaseHandle->databaseNode->mysql),"%s",mysql_error(&databaseHandle->databaseNode->mysql));
           sem_destroy(&databaseHandle->wakeUp);
           return error;
         }
 
         // enable UTF8
-        mysqlResult = mysql_query(&mysql,
+        mysqlResult = mysql_query(&databaseHandle->databaseNode->mysql,
                                   "SET NAMES 'UTF8'"
                                  );
         if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
         {
-          HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&mysql));
+          HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&databaseHandle->databaseNode->mysql));
         }
         else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
         {
-          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),"SET NAMES 'UTF8'");
+          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_error(&databaseHandle->databaseNode->mysql),"SET NAMES 'UTF8'");
           sem_destroy(&databaseHandle->wakeUp);
           return error;
         }
         else if (mysqlResult != 0)
         {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),"SET NAMES 'UTF8'");
+          error = ERRORX_(DATABASE,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_error(&databaseHandle->databaseNode->mysql),"SET NAMES 'UTF8'");
           sem_destroy(&databaseHandle->wakeUp);
           return error;
         }
       }
       break;
-  }
-
-  // get database node
-  SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    databaseNode = LIST_FIND(&databaseList,
-                             databaseNode,
-                             Database_equalSpecifiers(&databaseNode->databaseSpecifier,databaseSpecifier)
-                            );
-    if (databaseNode != NULL)
-    {
-      databaseNode->openCount++;
-    }
-    else
-    {
-      databaseNode = LIST_NEW_NODE(DatabaseNode);
-      if (databaseNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-      Database_copySpecifier(&databaseNode->databaseSpecifier,databaseSpecifier);
-      databaseNode->openCount               = 1;
-      #ifdef DATABASE_LOCK_PER_INSTANCE
-        if (pthread_mutexattr_init(&databaseNode->lockAttribute) != 0)
-        {
-          Database_doneSpecifier(&databaseNode->databaseSpecifier);
-          LIST_DELETE_NODE(databaseNode);
-          switch (databaseType)
-          {
-            case DATABASE_TYPE_SQLITE3:
-              sqlite3_close(databaseHandle->sqlite.handle);
-              break;
-            case DATABASE_TYPE_MYSQL:
-              mysql_close(databaseHandle->mysql.handle);
-              break;
-          }
-          sem_destroy(&databaseHandle->wakeUp);
-          return ERRORX_(DATABASE,0,"init locking");
-        }
-        pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
-        if (pthread_mutex_init(&databaseNode->lock,&databaseNode->lockAttribute) != 0)
-        {
-          pthread_mutexattr_destroy(&databaseNode->lockAttribute);
-          Database_doneSpecifier(&databaseNode->databaseSpecifier);
-          LIST_DELETE_NODE(databaseNode);
-          switch (databaseType)
-          {
-            case DATABASE_TYPE_SQLITE3:
-              sqlite3_close(databaseHandle->sqlite.handle);
-              break;
-            case DATABASE_TYPE_MYSQL:
-              mysql_close(databaseHandle->mysql.handle);
-              break;
-          }
-          sem_destroy(&databaseHandle->wakeUp);
-          return ERRORX_(DATABASE,0,"init locking");
-        }
-      #endif /* DATABASE_LOCK_PER_INSTANCE */
-      databaseNode->lockType                = DATABASE_LOCK_TYPE_NONE;
-
-      databaseNode->pendingReadCount        = 0;
-      databaseNode->readCount               = 0;
-      pthread_cond_init(&databaseNode->readTrigger,NULL);
-
-      databaseNode->pendingReadWriteCount   = 0;
-      databaseNode->readWriteCount          = 0;
-      pthread_cond_init(&databaseNode->readWriteTrigger,NULL);
-
-      databaseNode->pendingTransactionCount = 0;
-      databaseNode->transactionCount        = 0;
-      pthread_cond_init(&databaseNode->transactionTrigger,NULL);
-
-      List_init(&databaseNode->busyHandlerList);
-      Semaphore_init(&databaseNode->busyHandlerList.lock,SEMAPHORE_TYPE_BINARY);
-
-      List_init(&databaseNode->progressHandlerList);
-      Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
-
-      #ifdef DATABASE_DEBUG_LOCK
-        memClear(databaseNode->readLPWIds,sizeof(databaseNode->readLPWIds));
-        memClear(databaseNode->readWriteLPWIds,sizeof(databaseNode->readWriteLPWIds));
-        databaseNode->transactionLPWId = 0;
-      #endif /* DATABASE_DEBUG_LOCK */
-
-      #ifndef NDEBUG
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
-        databaseNode->debug.readWriteLockedBy               = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
-        databaseNode->debug.lastTrigger.threadInfo.threadId = THREAD_ID_NONE;
-        databaseNode->debug.transaction.threadId            = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
-        databaseNode->debug.historyIndex                    = 0;
-      #endif /* not NDEBUG */
-
-      List_append(&databaseList,databaseNode);
-
-      #ifdef NDEBUG
-        DEBUG_ADD_RESOURCE_TRACE(databaseNode,DatabaseNode);
-      #else /* not NDEBUG */
-        DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,databaseNode,DatabaseNode);
-      #endif /* NDEBUG */
-    }
-
-    databaseHandle->databaseNode = databaseNode;
   }
 
   // set handlers
@@ -2071,6 +2077,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
       sqlite3_close(databaseHandle->sqlite.handle);
       break;
     case DATABASE_TYPE_MYSQL:
+fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
       mysql_close(databaseHandle->mysql.handle);
       break;
   }
@@ -3646,7 +3653,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
           #ifndef NDEBUG
             if (databaseStatementHandle->mysql.statementHandle == NULL)
             {
-              fprintf(stderr,"%s, %d: MySQL prepare fail %d: %s\n%s\n",__FILE__,__LINE__,mysql_errno(&mysql),mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+              fprintf(stderr,"%s, %d: MySQL prepare fail %d: %s\n%s\n",__FILE__,__LINE__,mysql_errno(&databaseHandle->databaseNode->mysql),mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
               abort();
             }
           #endif /* not NDEBUG */
@@ -3664,7 +3671,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
         }
         else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
         {
-          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
           mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
@@ -3675,7 +3682,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
         }
         else if (mysqlResult != 0)
         {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+          error = ERRORX_(DATABASE,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
           mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
@@ -4599,11 +4606,11 @@ else
         }
         else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
         {
-          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
+          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&databaseStatementHandle->databaseHandle->databaseNode->mysql),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
         }
         else if (mysqlResult != 0)
         {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
+          error = ERRORX_(DATABASE,mysql_errno(&databaseStatementHandle->databaseHandle->databaseNode->mysql),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
         }
 // TODO: remove
 if (error != ERROR_NONE)
@@ -4925,13 +4932,13 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
             {
               mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
               break;
             }
             else if (mysqlResult != 0)
             {
               mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
               break;
             }
 
@@ -5181,23 +5188,23 @@ abort();
           else
           {
             // query SQL statement
-            mysqlResult = mysql_real_query(&mysql,
+            mysqlResult = mysql_real_query(&databaseHandle->databaseNode->mysql,
                                            String_cString(sqlString),
                                            String_length(sqlString)
                                           );
             if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&mysql));
+              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&databaseHandle->databaseNode->mysql));
             }
             else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
             {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_error(&databaseHandle->databaseNode->mysql),String_cString(sqlString));
               break;
             }
             else if (mysqlResult != 0)
             {
 //fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-              error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              error = ERRORX_(DATABASE,mysql_errno(&databaseHandle->databaseNode->mysql),"%s: %s",mysql_error(&databaseHandle->databaseNode->mysql),String_cString(sqlString));
               break;
             }
           }
@@ -5977,13 +5984,19 @@ Errors Database_initAll(void)
   }
 
   // init MySQL
-  mysql_init(&mysql);
+  #ifdef HAVE_MYSQL
+    mysql_library_init(0,NULL,NULL);
+  #endif /* HAVE_MYSQL */
 
   return ERROR_NONE;
 }
 
 void Database_doneAll(void)
 {
+  #ifdef HAVE_MYSQL
+    mysql_library_end();
+  #endif /* HAVE_MYSQL */
+
   // done database list
   Semaphore_done(&databaseList.lock);
   List_done(&databaseList,CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
