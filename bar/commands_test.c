@@ -1130,7 +1130,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   assert(testInfo != NULL);
   assert(testInfo->jobOptions != NULL);
 
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   // init variables
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
