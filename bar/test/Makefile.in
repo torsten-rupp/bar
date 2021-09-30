@@ -230,7 +230,7 @@ ifeq (@HAVE_GCRYPT@,1)
 endif
 
 # additional options
-OPTIONS ?=
+OPTIONS ?= $(O)
 
 # ext block sizes
 EXT_BLOCK_SIZES ?= default 1024 2048 4096
@@ -888,7 +888,7 @@ TEST_KEYS = $(TEST_KEY_CRYPT_PUBLIC) \
             $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) \
             $(TEST_KEY_SIGNATURE_OTHER_PRIVATE)
 
-# default test options (Note: limit max. number of threads on 32bit due to memory limirations)
+# default test options (Note: limit max. number of threads on 32bit due to memory limitations)
 TEST_OPTIONS = --no-default-config
 ifeq ($(CPU),i686)
   TEST_OPTIONS += --max-threads=4
