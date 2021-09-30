@@ -1025,9 +1025,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    if (isComplete)
+    if (!restoreInfo->storageFlags.dryRun)
     {
-      if (!restoreInfo->storageFlags.dryRun)
+      if (isComplete)
       {
         // set file time, file permission
         error = File_setInfo(&fileInfo,destinationFileName);
@@ -2697,9 +2697,9 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
         }
 
-        if (isComplete)
+        if (!restoreInfo->storageFlags.dryRun)
         {
-          if (!restoreInfo->storageFlags.dryRun)
+          if (isComplete)
           {
             // set file time, file permissions
             error = File_setInfo(&fileInfo,destinationFileName);
