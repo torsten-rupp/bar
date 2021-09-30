@@ -2859,16 +2859,16 @@ test_file_operations_destroyed: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 2>/dev/null $(LOG))
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0 >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/test*.bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:128:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	$(LS) intermediate/*.bar|while read fileName; do echo $$fileName; $(TEST_DESTROYER) $$fileName m:16:FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0 >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/test*.bar_destroyed $(BAR_OPTIONS)) $(LOG))
+	$(LS) intermediate/*.bar|while read fileName; do echo $$fileName; $(TEST_DESTROYER) $$fileName m:20:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS)) $(LOG))
+	$(LS) intermediate/*.bar|while read fileName; do echo $$fileName; $(TEST_DESTROYER) $$fileName m:128:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS)) $(LOG))
 #TODO: detect wrong data
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1024:10 >$${fileName}_destroyed; done
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
+	$(LS) intermediate/*.bar|while read fileName; do echo $$fileName; $(TEST_DESTROYER) $$fileName d:1024:10 >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS)) $(LOG))
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
