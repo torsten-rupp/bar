@@ -643,11 +643,11 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   long                      index;
   String                    prefixFileName,postfixFileName;
   uint                      n;
-  FragmentNode              *fragmentNode;
 //            FileInfo                      localFileInfo;
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
+  bool                      isComplete;
   char                      sizeString[32];
   char                      fragmentString[256];
 
@@ -786,6 +786,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       // check if fragment already exist -> get/create file fragment node
       SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
+        FragmentNode *fragmentNode;
+
         fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
         if (fragmentNode != NULL)
         {
@@ -999,23 +1001,31 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
     }
 
-    // update status
-    if ((fragmentNode == NULL) || FragmentList_isComplete(fragmentNode))
+    // add fragment to file fragment list
+    isComplete = FALSE;
+    SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-//TODO
-//      restoreInfo->statusInfo.done.count++;
-//      restoreInfo->statusInfo.done.size += (uint64)fileInfo.size;
-//      updateStatusInfo(restoreInfo,TRUE);
+      FragmentNode *fragmentNode;
+
+      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
+      if (fragmentNode != NULL)
+      {
+        FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
+//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
+
+        if (FragmentList_isComplete(fragmentNode))
+        {
+          FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+          isComplete = TRUE;
+        }
+      }
+      else
+      {
+        isComplete = TRUE;
+      }
     }
 
-    // update fragment
-    if (fragmentNode != NULL)
-    {
-      // add fragment to file fragment list
-      FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
-//FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
-    }
-    if ((fragmentNode == NULL) || FragmentList_isComplete(fragmentNode))
+    if (isComplete)
     {
       if (!restoreInfo->storageFlags.dryRun)
       {
@@ -1095,18 +1105,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                          Error_getText(error)
                         );
           }
-        }
-      }
-    }
-    SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
-      if (fragmentNode != NULL)
-      {
-        if (FragmentList_isComplete(fragmentNode))
-        {
-          // discard fragment list
-          FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
         }
       }
     }
@@ -1213,7 +1211,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   long             index;
   String           prefixFileName,postfixFileName;
   uint             n;
-  FragmentNode     *fragmentNode;
   enum
   {
     DEVICE,
@@ -1224,6 +1221,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   FileHandle       fileHandle;
   uint64           block;
   ulong            bufferBlockCount;
+  bool             isComplete;
   char             sizeString[32];
   char             fragmentString[256];
 
@@ -1294,6 +1292,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       // check if image fragment already exists
       SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
+        FragmentNode *fragmentNode;
+
         fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
         if (fragmentNode != NULL)
         {
@@ -1579,12 +1579,14 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
     }
 
+    // add fragment to file fragment list
     SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
+      FragmentNode *fragmentNode;
+
       fragmentNode = FragmentList_find(&restoreInfo->fragmentList,deviceName);
       if (fragmentNode != NULL)
       {
-        // add fragment to file fragment list
         FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,blockCount*(uint64)deviceInfo.blockSize);
   //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
 
@@ -2300,13 +2302,13 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   long                      index;
   String                    prefixFileName,postfixFileName;
   uint                      n;
-  FragmentNode              *fragmentNode;
   const StringNode          *stringNode;
   String                    fileName;
               FileInfo                  localFileInfo;
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
+  bool                      isComplete;
   char                      sizeString[32];
   char                      fragmentString[256];
 
@@ -2473,6 +2475,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           // check if fragment already exist -> get/create file fragment node
           SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
+            FragmentNode *fragmentNode;
+
             fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
             if (fragmentNode != NULL)
             {
@@ -2669,14 +2673,31 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
         }
 
-        if (fragmentNode != NULL)
+        // add fragment to file fragment list
+        isComplete = FALSE;
+        SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          // add fragment to file fragment list
-          FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
+          FragmentNode *fragmentNode;
+
+          fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
+          if (fragmentNode != NULL)
+          {
+            FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
+
+            if (FragmentList_isComplete(fragmentNode))
+            {
+              FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
+              isComplete = TRUE;
+            }
+          }
+          else
+          {
+            isComplete = TRUE;
+          }
         }
 
-        if ((fragmentNode == NULL) || FragmentList_isComplete(fragmentNode))
+        if (isComplete)
         {
           if (!restoreInfo->storageFlags.dryRun)
           {
@@ -2756,19 +2777,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                              Error_getText(error)
                             );
               }
-            }
-          }
-        }
-
-        SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          fragmentNode = FragmentList_find(&restoreInfo->fragmentList,fileName);
-          if (fragmentNode != NULL)
-          {
-            // discard fragment list if file is complete
-            if (FragmentList_isComplete(fragmentNode))
-            {
-              FragmentList_discard(&restoreInfo->fragmentList,fragmentNode);
             }
           }
         }
