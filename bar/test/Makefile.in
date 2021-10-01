@@ -593,7 +593,7 @@ functionDoneTestFiles = \
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
-  $3 2>/dev/null; if test $$? -lt $1 -o $$? -gt $2; then false; fi
+  $3; if test $$? -lt $1 -o $$? -gt $2; then false; fi
 
 # helper functions for slave tests
 functionSlaveExecute = \
