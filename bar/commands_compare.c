@@ -2325,9 +2325,9 @@ NULL,  //               requestedAbortFlag,
       if (!FragmentList_isComplete(fragmentNode))
       {
         printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
-        if (isPrintInfo(2))
+        if (isPrintInfo(1))
         {
-          printInfo(2,"  Fragments:\n");
+          printInfo(1,"  Fragments:\n");
           FragmentList_print(stdout,4,fragmentNode,TRUE);
         }
         if (failError == ERROR_NONE)
