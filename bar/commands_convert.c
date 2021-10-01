@@ -54,7 +54,7 @@ typedef struct
   ConstString             newJobUUID;
   ConstString             newScheduleUUID;
   uint64                  newCreatedDateTime;
-  const JobOptions        *jobOptions;
+  const JobOptions        *newJobOptions;
   GetNamePasswordFunction getNamePasswordFunction;
   void                    *getNamePasswordUserData;
   LogHandle               *logHandle;                         // log handle
@@ -145,7 +145,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *          newJobUUID              - new job UUID or NULL
 *          newScheduleUUID         - new schedule UUID or NULL
 *          newCreatedDateTime      - new created date/time or 0
-*          jobOptions              - job options
+*          newJobOptions           - new job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password call back
 *          logHandle               - log handle (can be NULL)
@@ -158,19 +158,20 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
                            ConstString             newJobUUID,
                            ConstString             newScheduleUUID,
                            uint64                  newCreatedDateTime,
-                           const JobOptions        *jobOptions,
+                           const JobOptions        *newJobOptions,
                            GetNamePasswordFunction getNamePasswordFunction,
                            void                    *getNamePasswordUserData,
                            LogHandle               *logHandle
                           )
 {
   assert(convertInfo != NULL);
+  assert(newJobOptions != NULL);
 
   // init variables
   convertInfo->newJobUUID              = newJobUUID;
   convertInfo->newScheduleUUID         = newScheduleUUID;
   convertInfo->newCreatedDateTime      = newCreatedDateTime;
-  convertInfo->jobOptions              = jobOptions;
+  convertInfo->newJobOptions           = newJobOptions;
   convertInfo->getNamePasswordFunction = getNamePasswordFunction;
   convertInfo->getNamePasswordUserData = getNamePasswordUserData;
   convertInfo->logHandle               = logHandle;
@@ -349,7 +350,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   ulong            bufferLength;
 
   assert(convertInfo != NULL);
-  assert(convertInfo->jobOptions != NULL);
+  assert(convertInfo->newJobOptions != NULL);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -447,8 +448,10 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     }
 
     // create storage file
-    if (!String_isEmpty(convertInfo->jobOptions->destination))
+    if (!String_isEmpty(convertInfo->newJobOptions->destination))
     {
+// TODO: create correct destination name
+
 //TODO: remove?
       assert(convertInfo->destinationArchiveHandle.mode == ARCHIVE_MODE_CREATE);
 
@@ -689,7 +692,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 * Purpose: convert a file entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          jobOptions               - job options
+*          newJobOptions            - new job options
 *          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
 * Output : -
@@ -699,7 +702,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
 LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
-                              const JobOptions *jobOptions,
+                              const JobOptions *newJobOptions,
                               byte             *buffer,
                               uint             bufferSize
                              )
@@ -770,15 +773,15 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert file      '%s' (%s bytes%s)...",String_cString(fileName),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
   // check if file data should be byte compressed
   if (   (fileInfo.size > globalOptions.compressMinFileSize)
 //TODO
-//      && !PatternList_match(jobOptions->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+//      && !PatternList_match(newJobOptions->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
      archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
@@ -904,7 +907,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a image entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          jobOptions               - job options
+*          newJobOptions            - new job options
 *          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
 * Output : -
@@ -914,7 +917,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                ArchiveHandle    *destinationArchiveHandle,
-                               const JobOptions *jobOptions,
+                               const JobOptions *newJobOptions,
                                byte             *buffer,
                                uint             bufferSize
                               )
@@ -994,8 +997,8 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert image     '%s' (%s bytes%s)...",String_cString(deviceName),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1123,7 +1126,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a directory entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          jobOptions               - job options
+*          newJobOptions            - new job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1131,7 +1134,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                    ArchiveHandle    *destinationArchiveHandle,
-                                   const JobOptions *jobOptions
+                                   const JobOptions *newJobOptions
                                   )
 {
   String                    directoryName;
@@ -1142,8 +1145,6 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   CryptAlgorithms           cryptAlgorithm;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
-
-  UNUSED_VARIABLE(jobOptions);
 
   // read source directory entry
   directoryName = String_new();
@@ -1171,7 +1172,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert directory '%s'...",String_cString(directoryName));
 
   // set new crypt settings
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
 
   // create new directory entry
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
@@ -1234,7 +1235,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a link entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          jobOptions               - job options
+*          newJobOptions            - new job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1242,7 +1243,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
-                              const JobOptions *jobOptions
+                              const JobOptions *newJobOptions
                              )
 {
   String                    linkName;
@@ -1254,8 +1255,6 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
-
-  UNUSED_VARIABLE(jobOptions);
 
   // read source link entry
   linkName = String_new();
@@ -1286,7 +1285,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert link      '%s'...",String_cString(linkName));
 
   // set new crypt settings
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
 
   // create new link entry
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
@@ -1352,7 +1351,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a hard link entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          jobOptions               - job options
+*          newJobOptions            - new job options
 *          buffer                   - buffer for temporary data
 *          bufferSize               - size of data buffer
 * Output : -
@@ -1362,7 +1361,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                   ArchiveHandle    *destinationArchiveHandle,
-                                  const JobOptions *jobOptions,
+                                  const JobOptions *newJobOptions,
                                   byte             *buffer,
                                   uint             bufferSize
                                  )
@@ -1429,8 +1428,8 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert hard link '%s' (%s bytes%s)...",String_cString(StringList_first(&fileNameList,NULL)),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
 
   archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -1552,7 +1551,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a special entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          jobOptions               - job options
+*          newJobOptions            - new job options
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1560,7 +1559,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                  ArchiveHandle    *destinationArchiveHandle,
-                                 const JobOptions *jobOptions
+                                 const JobOptions *newJobOptions
                                 )
 {
   String                    fileName;
@@ -1571,8 +1570,6 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   CryptAlgorithms           cryptAlgorithm;
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
-
-  UNUSED_VARIABLE(jobOptions);
 
   // read source special entry
   fileName = String_new();
@@ -1600,7 +1597,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert special   '%s'...",String_cString(fileName));
 
   // set new crypt settings
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
+  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
 
   // create new special entry
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
@@ -1869,7 +1866,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
       case ARCHIVE_ENTRY_TYPE_FILE:
         error = convertFileEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
-                                 convertInfo->jobOptions,
+                                 convertInfo->newJobOptions,
                                  buffer,
                                  BUFFER_SIZE
                                 );
@@ -1877,7 +1874,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         error = convertImageEntry(&sourceArchiveHandle,
                                   &convertInfo->destinationArchiveHandle,
-                                  convertInfo->jobOptions,
+                                  convertInfo->newJobOptions,
                                   buffer,
                                   BUFFER_SIZE
                                  );
@@ -1885,19 +1882,19 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         error = convertDirectoryEntry(&sourceArchiveHandle,
                                       &convertInfo->destinationArchiveHandle,
-                                      convertInfo->jobOptions
+                                      convertInfo->newJobOptions
                                      );
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         error = convertLinkEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
-                                 convertInfo->jobOptions
+                                 convertInfo->newJobOptions
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         error = convertHardLinkEntry(&sourceArchiveHandle,
                                      &convertInfo->destinationArchiveHandle,
-                                     convertInfo->jobOptions,
+                                     convertInfo->newJobOptions,
                                      buffer,
                                      BUFFER_SIZE
                                     );
@@ -1905,7 +1902,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         error = convertSpecialEntry(&sourceArchiveHandle,
                                     &convertInfo->destinationArchiveHandle,
-                                    convertInfo->jobOptions
+                                    convertInfo->newJobOptions
                                    );
         break;
       case ARCHIVE_ENTRY_TYPE_META:
@@ -1914,7 +1911,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
                                  convertInfo->newJobUUID,
                                  convertInfo->newScheduleUUID,
                                  convertInfo->newCreatedDateTime,
-                                 convertInfo->jobOptions
+                                 convertInfo->newJobOptions
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
@@ -1928,7 +1925,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
     }
     if (error != ERROR_NONE)
     {
-      if (!convertInfo->jobOptions->noStopOnErrorFlag)
+      if (!convertInfo->newJobOptions->noStopOnErrorFlag)
       {
         if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
       }
@@ -1947,15 +1944,9 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 /***********************************************************************\
 * Name   : convertArchive
 * Purpose: convert archive
-* Input  : storageSpecifier        - storage specifier
-*          archiveName             - archive name (can be NULL)
-*          jobUUID                 - job UUID
-*          scheduleUUID            - schedule UUID
-*          createdDateTime         - created date/time
-*          jobOptions              - job options
-*          getNamePasswordFunction - get password call back
-*          getNamePasswordUserData - user data for get password
-*          logHandle               - log handle (can be NULL)
+* Input  : convertInfo      - convert info
+*          storageSpecifier - storage specifier
+*          archiveName      - archive name (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
@@ -1982,6 +1973,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   EntryMsg               entryMsg;
 
   assert(convertInfo != NULL);
+  assert(convertInfo->newJobOptions != NULL);
   assert(storageSpecifier != NULL);
 
   // init variables
@@ -1990,12 +1982,12 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // Note: still not supported
-  if (convertInfo->jobOptions->archivePartSize > 0LL)
+  if (convertInfo->newJobOptions->archivePartSize > 0LL)
   {
     printWarning(_("Archive part size not supported for convert - ignored"));
   }
 //TODO
-//  convertInfo->jobOptions->archivePartSize = 0LL;
+//  convertInfo->newJobOptions->archivePartSize = 0LL;
 
   // set printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
@@ -2004,7 +1996,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   error = Storage_init(&convertInfo->storageInfo,
                        NULL,  // masterIO
                        storageSpecifier,
-                       convertInfo->jobOptions,
+                       convertInfo->newJobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
@@ -2058,14 +2050,14 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle); });
 
   // check signatures
-  if (!convertInfo->jobOptions->skipVerifySignaturesFlag)
+  if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&sourceArchiveHandle,
                                      &allCryptSignatureState
                                     );
     if (error != ERROR_NONE)
     {
-      if (!convertInfo->jobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
+      if (!convertInfo->newJobOptions->forceVerifySignaturesFlag && (Error_getCode(error) == ERROR_CODE_NO_PUBLIC_SIGNATURE_KEY))
       {
         allCryptSignatureState = CRYPT_SIGNATURE_STATE_SKIPPED;
       }
@@ -2078,7 +2070,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
     }
     if (!Crypt_isValidSignatureState(allCryptSignatureState))
     {
-      if (convertInfo->jobOptions->forceVerifySignaturesFlag)
+      if (convertInfo->newJobOptions->forceVerifySignaturesFlag)
       {
         // signature error
         printError("Invalid signature in '%s'!",
@@ -2099,9 +2091,9 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
   // create destination archive name
   baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
-  if (!String_isEmpty(convertInfo->jobOptions->destination))
+  if (!String_isEmpty(convertInfo->newJobOptions->destination))
   {
-    File_setFileName(convertInfo->archiveName,convertInfo->jobOptions->destination);
+    File_setFileName(convertInfo->archiveName,convertInfo->newJobOptions->destination);
     File_appendFileName(convertInfo->archiveName,baseName);
   }
   else
@@ -2130,7 +2122,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
 CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&convertInfo),
-                         CALLBACK_(archiveStore,&convertInfo),
+                         CALLBACK_(archiveStore,convertInfo),
                          CALLBACK_(convertInfo->getNamePasswordFunction,convertInfo->getNamePasswordUserData),
                          convertInfo->logHandle
                         );
@@ -2148,7 +2140,7 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
 
 //TODO: really required? If convert is done for each archive storage can be done as the final step without a separated thread
   // start storage thread
-  if (!Thread_init(&storageThread,"BAR storage",globalOptions.niceLevel,storageThreadCode,&convertInfo))
+  if (!Thread_init(&storageThread,"BAR storage",globalOptions.niceLevel,storageThreadCode,convertInfo))
   {
     HALT_FATAL_ERROR("Cannot initialize storage thread!");
   }
