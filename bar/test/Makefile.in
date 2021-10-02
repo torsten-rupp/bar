@@ -456,6 +456,7 @@ help_output:
 	@$(ECHO) "  test_config[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_misc[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_all[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test_smoke[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_data"
 	@$(ECHO) "  test_hugedata"
 	@$(ECHO) "  test_data_clean"
@@ -557,6 +558,7 @@ $(BAR_DIR)/destroyer@EXEEXT@:
 # ----------------------------------------------------------------------------
 
 COLUMNS := $(shell tput cols)
+COLUMNS ?= 80
 
 # log redirection
 LOG = $(if $(QUIET),</dev/null 1>/dev/null)
@@ -929,6 +931,7 @@ TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foregroun
 .PHONY: $(call functionTestNames,test_config)
 .PHONY: $(call functionTestNames,test_misc)
 .PHONY: $(call functionTestNames,test_all)
+.PHONY: $(call functionTestNames,test_smoke)
 .PHONY: test_keys test_keys_clean test_keys_distclean
 .PHONY: test_data test_data_clean test_data_distclean
 test:
@@ -1924,7 +1927,8 @@ test_combined-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_combined
 
 test_all:
-	@$(MAKE) QUIET=1 --no-print-directory -s \
+	@$(MAKE) --no-print-directory -s \
+	  QUIET=1 \
           test_basic \
           test_compress \
           test_crypt \
@@ -1935,6 +1939,18 @@ test_all:
           test_hugefiles \
           test_optical \
           test_combined \
+          test_arguments \
+          test_config \
+          test_misc
+
+test_smoke:
+	@$(MAKE) --no-print-directory -s \
+	  QUIET=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+          test_basic \
+          test_compress \
+          test_crypt \
+          test_asymmetric_crypt \
+          test_split \
           test_arguments \
           test_config \
           test_misc
