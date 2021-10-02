@@ -1521,7 +1521,32 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 # ----------------------------------------------------------------------------
 
 # tests
-.PHONY: test test_min test_clean test_distclean
+.PHONY: test_min* test* test_clean* test_distclean*
+test_min: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+test_min-debug: \
+  bar-debug@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-debug TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+test_min-gcov: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-gcov TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+test_min-gprof: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-gprof TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+test_min-valgrind: \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-valgrind TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+
 test: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1531,15 +1556,6 @@ test: \
   bar-keygen@SHELLEXT@
 	@$(RMF) bar-test.log
 	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
-test_min: \
-  bar@EXEEXT@ \
-  bar-debug@EXEEXT@ \
-  bar-gcov@EXEEXT@ \
-  bar-gprof@EXEEXT@ \
-  bar-valgrind@EXEEXT@ \
-  bar-keygen@SHELLEXT@
-	@$(RMF) bar-test.log
-	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 CRYPT_NAMES=$(MIN_CRYPT_NAMES) COMPRESS_NAMES=$(MIN_COMPRESS_NAMES) IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
 test%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1552,17 +1568,14 @@ test%-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
