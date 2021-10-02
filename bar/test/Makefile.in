@@ -557,7 +557,7 @@ $(BAR_DIR)/destroyer@EXEEXT@:
 
 # ----------------------------------------------------------------------------
 
-COLUMNS := $(shell tput cols)
+COLUMNS = $(shell tput cols)
 COLUMNS ?= 80
 
 # log redirection
