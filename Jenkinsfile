@@ -45,25 +45,25 @@ def build()
     stage("Tests")
     {
 //TODO
-      docker.image(dockerImageName).inside
-      {
-        sh "make test_min-debug O='--verbose=1'"
-      }
+//      docker.image(dockerImageName).inside
+//      {
+//        sh "make test_min-debug O='--verbose=1'"
+//      }
 
       script
       {
         switch (params.BINARY_TYPE)
         {
-          case DEBUG:
+          case "DEBUG":
             binaryExtension="-debug";
             break;
-          case VALGRIND:
+          case "VALGRIND":
             binaryExtension="-valgrind";
             break;
-          case GCOV:
+          case "GCOV":
             binaryExtension="-gcov";
             break;
-          case GPROF:
+          case "GPROF":
             binaryExtension="-gprof";
             break;
           default:
@@ -73,13 +73,13 @@ def build()
 
         switch (params.TEST_TYPE)
         {
-          case SMOKE:
+          case "SMOKE":
             docker.image(dockerImageName).inside
             {
-              sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
+              sh "echo XXXXmake test_smoke-"+binaryExtension+" O='--verbose=1'"
             }
             break;
-          case FULL:
+          case "FULL":
             docker.image(dockerImageName).inside
             {
               sh "make test1-debug O='--verbose=1'"
