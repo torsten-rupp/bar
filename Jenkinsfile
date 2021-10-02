@@ -101,14 +101,14 @@ def build()
         {
           docker.image(dockerImageName).inside
           {
-            sh "make gcov_clean"
-            sh "make gcov1"
-            sh "make gcov2"
-            sh "make gcov3"
-            sh "make gcov4"
-            sh "make gcov5"
-            sh "make gcov6"
-            sh "make gcov7"
+            sh "make -C bar gcov_clean"
+            sh "make -C bar gcov1"
+            sh "make -C bar gcov2"
+            sh "make -C bar gcov3"
+            sh "make -C bar gcov4"
+            sh "make -C bar gcov5"
+            sh "make -C bar gcov6"
+            sh "make -C bar gcov7"
           }
         }
       }
@@ -124,13 +124,13 @@ def build()
         {
           docker.image(dockerImageName).inside
           {
-            sh "make gprof1"
-            sh "make gprof2"
-            sh "make gprof3"
-            sh "make gprof4"
-            sh "make gprof5"
-            sh "make gprof6"
-            sh "make gprof7"
+            sh "make -C bar gprof1"
+            sh "make -C bar gprof2"
+            sh "make -C bar gprof3"
+            sh "make -C bar gprof4"
+            sh "make -C bar gprof5"
+            sh "make -C bar gprof6"
+            sh "make -C bar gprof7"
           }
         }
       }
