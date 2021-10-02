@@ -76,7 +76,7 @@ def build()
           case SMOKE:
             docker.image(dockerImageName).inside
             {
-              sh "make test_min-"+binaryExtension+" O='--verbose=1'"
+              sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
             }
             break;
           case FULL:
