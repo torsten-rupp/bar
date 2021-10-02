@@ -44,69 +44,84 @@ def build()
 
     stage("Tests")
     {
-//TODO
-//      docker.image(dockerImageName).inside
-//      {
-//        sh "make test_min-debug O='--verbose=1'"
-//      }
-
       script
       {
-        switch (params.BINARY_TYPE)
+        if (params.TESTS)
         {
-          case "DEBUG":
-            binaryExtension="-debug";
-            break;
-          case "VALGRIND":
-            binaryExtension="-valgrind";
-            break;
-          case "GCOV":
-            binaryExtension="-gcov";
-            break;
-          case "GPROF":
-            binaryExtension="-gprof";
-            break;
-          default:
-            binaryExtension="";
-            break;
+          switch (params.BINARY_TYPE)
+          {
+            case "DEBUG":
+              binaryExtension="-debug";
+              break;
+            case "VALGRIND":
+              binaryExtension="-valgrind";
+              break;
+            case "GCOV":
+              binaryExtension="-gcov";
+              break;
+            case "GPROF":
+              binaryExtension="-gprof";
+              break;
+            default:
+              binaryExtension="";
+              break;
+          }
+          sh "echo binaryExtension="+binaryExtension
+          switch (params.TEST_TYPE)
+          {
+            case "SMOKE":
+            default:
+              docker.image(dockerImageName).inside
+              {
+                sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
+              }
+              break;
+            case "FULL":
+              docker.image(dockerImageName).inside
+              {
+                sh "make test1"+binaryExtension+" O='--verbose=1'"
+                sh "make test2"+binaryExtension+" O='--verbose=1'"
+                sh "make test3"+binaryExtension+" O='--verbose=1'"
+                sh "make test4"+binaryExtension+" O='--verbose=1'"
+                sh "make test5"+binaryExtension+" O='--verbose=1'"
+                sh "make test6"+binaryExtension+" O='--verbose=1'"
+                sh "make test7"+binaryExtension+" O='--verbose=1'"
+              }
+              break;
+          }
         }
-        sh "echo binaryExtension="+binaryExtension
+      }
+    }
 
-        switch (params.TEST_TYPE)
-        {
-          case "SMOKE":
-          default:
-            docker.image(dockerImageName).inside
-            {
-              sh "echo XXXXmake test_smoke-"+binaryExtension+" O='--verbose=1'"
-            }
-            break;
-          case "FULL":
-            docker.image(dockerImageName).inside
-            {
-              sh "echo XXXX2 make test1-debug O='--verbose=1'"
-              sh "echo XXXX2 make test2-debug O='--verbose=1'"
-              sh "echo XXXX2 make test3-debug O='--verbose=1'"
-              sh "echo XXXX2 make test4-debug O='--verbose=1'"
-              sh "echo XXXX2 make test5-debug O='--verbose=1'"
-              sh "echo XXXX2 make test6-debug O='--verbose=1'"
-              sh "echo XXXX2 make test7-debug O='--verbose=1'"
-            }
-            break;
-        }
-        if (params.FULL_TEST)
+    stage("Code coverage")
+    {
+      script
+      {
+        if (params.CODE_COVERAGE)
         {
           docker.image(dockerImageName).inside
           {
-            sh "make test1-debug O='--verbose=1'"
-            sh "make test2-debug O='--verbose=1'"
-            sh "make test3-debug O='--verbose=1'"
-            sh "make test4-debug O='--verbose=1'"
-            sh "make test5-debug O='--verbose=1'"
-            sh "make test6-debug O='--verbose=1'"
-            sh "make test7-debug O='--verbose=1'"
-//            sh "make test1-valgrind O='--verbose=1'"
-//            sh "make test2-valgrind O='--verbose=1'"
+            sh "make gcov_clean"
+            sh "make gcov1"
+            sh "make gcov2"
+            sh "make gcov3"
+            sh "make gcov4"
+            sh "make gcov5"
+            sh "make gcov6"
+            sh "make gcov7"
+          }
+        }
+      }
+    }
+
+    stage("Profiling")
+    {
+      script
+      {
+        if (params.PROFILING)
+        {
+          docker.image(dockerImageName).inside
+          {
           }
         }
       }
@@ -114,7 +129,7 @@ def build()
   }
   finally
   {
-    archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.zip', allowEmptyArchive: 'true'
+    archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.zip coverage/*', allowEmptyArchive: 'true'
     cleanWs notFailBuild: true
   }
 }
