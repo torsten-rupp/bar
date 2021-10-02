@@ -45,6 +45,8 @@ def build()
     stage("Tests")
     {
 //TODO
+      docker.image(dockerImageName).inside
+      {
         sh "make test1-debug O='--verbose=1'"
       }
 
@@ -66,6 +68,7 @@ def build()
           }
         }
       }
+    }
   }
   finally
   {
