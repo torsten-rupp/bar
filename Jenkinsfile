@@ -52,6 +52,46 @@ def build()
 
       script
       {
+        switch (params.BINARY_TYPE)
+        {
+          case DEBUG:
+            binaryExtension="-debug";
+            break;
+          case VALGRIND:
+            binaryExtension="-valgrind";
+            break;
+          case GCOV:
+            binaryExtension="-gcov";
+            break;
+          case GPROF:
+            binaryExtension="-gprof";
+            break;
+          default:
+            binaryExtension="";
+            break;
+        }
+
+        switch (params.TEST_TYPE)
+        {
+          case SMOKE:
+            docker.image(dockerImageName).inside
+            {
+              sh "make test_min-"+binaryExtension+" O='--verbose=1'"
+            }
+            break;
+          case FULL:
+            docker.image(dockerImageName).inside
+            {
+              sh "make test1-debug O='--verbose=1'"
+              sh "make test2-debug O='--verbose=1'"
+              sh "make test3-debug O='--verbose=1'"
+              sh "make test4-debug O='--verbose=1'"
+              sh "make test5-debug O='--verbose=1'"
+              sh "make test6-debug O='--verbose=1'"
+              sh "make test7-debug O='--verbose=1'"
+            }
+            break;
+        }
         if (params.FULL_TEST)
         {
           docker.image(dockerImageName).inside
