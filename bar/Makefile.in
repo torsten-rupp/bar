@@ -1795,6 +1795,11 @@ else
 	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
 endif
 
+gprof%: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BASE_DIR)/bar-gprof@EXEEXT@
+
 # ----------------------------------------------------------------------------
 
 # valgrind checks

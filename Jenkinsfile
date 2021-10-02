@@ -122,6 +122,13 @@ def build()
         {
           docker.image(dockerImageName).inside
           {
+            sh "make gprof1"
+            sh "make gprof2"
+            sh "make gprof3"
+            sh "make gprof4"
+            sh "make gprof5"
+            sh "make gprof6"
+            sh "make gprof7"
           }
         }
       }
