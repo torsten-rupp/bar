@@ -70,10 +70,12 @@ def build()
             binaryExtension="";
             break;
         }
+        sh "echo binaryExtension="+binaryExtension
 
         switch (params.TEST_TYPE)
         {
           case "SMOKE":
+          default:
             docker.image(dockerImageName).inside
             {
               sh "echo XXXXmake test_smoke-"+binaryExtension+" O='--verbose=1'"
