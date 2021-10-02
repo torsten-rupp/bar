@@ -746,6 +746,8 @@ help:
 	@$(ECHO) "  gcov<1|2|3|4|5|6|7|8>"
 	@$(ECHO) "  gcov_html                                 re-generate gcov HTML report"
 	@$(ECHO) ""
+	@$(ECHO) "  gprof<1|2|3|4|5|6|7|8>"
+	@$(ECHO) ""
 	@$(ECHO) "  memcheck [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
 	@$(ECHO) "  memcheck_extended [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
 	@$(ECHO) "  memcheck<1|2|2a|2b|2c|2d|2e|3|4|5|6|7>"
@@ -1554,23 +1556,23 @@ test_min: \
   bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C test -j1 test TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 test_min-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-debug TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C test -j1 test-debug TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 test_min-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-gcov TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C test -j1 test-gcov TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 test_min-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-gprof TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C test -j1 test-gprof TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 test_min-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-valgrind TEST_EMULATION=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C test -j1 test-valgrind TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 
 test: \
   bar@EXEEXT@ \
@@ -1773,7 +1775,7 @@ endif
 gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
+	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 #	$(MAKE) gcov_html
 
@@ -1798,7 +1800,7 @@ endif
 gprof%: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BASE_DIR)/bar-gprof@EXEEXT@
+	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BASE_DIR)/bar-gprof@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 # ----------------------------------------------------------------------------
 
