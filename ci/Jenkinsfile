@@ -128,8 +128,8 @@ def build()
                        keepAll:               true,
                        reportDir:             'bar/coverage',
                        reportFiles:           'index.html',
-                       reportName:            'HTML Report',
-                       reportTitles:          'Coverage Title'
+                       reportName:            'Code Coverage Report',
+                       reportTitles:          'BAR Code Coverage'
                       ]
                      )
         }
