@@ -109,6 +109,7 @@ def build()
             sh "make -C bar gcov5"
             sh "make -C bar gcov6"
             sh "make -C bar gcov7"
+            sh "make -C bar gcov_html"
           }
 
           publishHTML([allowMissing:          false,
