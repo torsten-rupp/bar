@@ -219,21 +219,21 @@ endif
 # supported min. compress algorithms
 ifeq ($(MIN_COMPRESS_NAMES),)
   MIN_COMPRESS_NAMES = none
-  MIN_COMPRESS_NAMES += zip9
+  MIN_COMPRESS_NAMES += zip1
   ifeq (@HAVE_BZ2@,1)
-    MIN_COMPRESS_NAMES += bzip9
+    MIN_COMPRESS_NAMES += bzip1
   endif
   ifeq (@HAVE_LZMA@,1)
-    MIN_COMPRESS_NAMES += lzma9
+    MIN_COMPRESS_NAMES += lzma1
   endif
   ifeq (@HAVE_LZO@,1)
-    MIN_COMPRESS_NAMES += lzo5
+    MIN_COMPRESS_NAMES += lzo1
   endif
   ifeq (@HAVE_LZ4@,1)
-    MIN_COMPRESS_NAMES += lz4-9
+    MIN_COMPRESS_NAMES += lz4-1
   endif
   ifeq (@HAVE_ZSTD@,1)
-    MIN_COMPRESS_NAMES += zstd19
+    MIN_COMPRESS_NAMES += zstd1
   endif
 endif
 
