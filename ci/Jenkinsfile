@@ -36,7 +36,6 @@ def build()
           {
             sh "make -C bar bar-gprof"
           }
-          sh "echo xxxxxx 1"
           sh "make dist"
         }
       }
@@ -58,7 +57,6 @@ def build()
     {
       script
       {
-          sh "echo xxxxxx 2"
         if (params.TESTS)
         {
           switch (params.BINARY_TYPE)
@@ -110,7 +108,6 @@ def build()
     {
       script
       {
-          sh "echo xxxxxx 3"
         if (params.CODE_COVERAGE)
         {
           docker.image(dockerImageName).inside
@@ -128,9 +125,9 @@ def build()
 
           publishHTML([allowMissing:          false,
                        alwaysLinkToLastBuild: false,
-                       keepAll:               false,
+                       keepAll:               true,
                        reportDir:             'bar/coverage',
-                       reportFiles:           'bar/index.html',
+                       reportFiles:           'index.html',
                        reportName:            'HTML Report',
                        reportTitles:          'Coverage Title'
                       ]
@@ -145,7 +142,6 @@ def build()
     {
       script
       {
-          sh "echo xxxxxx 9"
         if (params.PROFILING)
         {
           docker.image(dockerImageName).inside
@@ -164,7 +160,7 @@ def build()
   }
   finally
   {
-    archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.zip coverage/*', allowEmptyArchive: 'true'
+    archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.zip bar/coverage/*', allowEmptyArchive: 'true'
     cleanWs notFailBuild: true
   }
 }
