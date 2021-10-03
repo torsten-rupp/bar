@@ -12,7 +12,7 @@ def build()
     stage("Docker image")
     {
       checkout scm
-      sh "(cd docker; docker build -t ${dockerImageName} .)"
+      sh "(cd ci; docker build -t ${dockerImageName} .)"
     }
 
 
@@ -21,15 +21,26 @@ def build()
       docker.image(dockerImageName).inside
       {
         checkout scm
-        sh "./download-third-party-packages.sh"
-        sh "./configure"
+        script
+        {
+          sh "./download-third-party-packages.sh"
+          sh "./configure"
 //TODO
-//        sh "make -j`nproc --ignore=1`"
-        sh "make"
-        sh "make dist"
+//          sh "make -j`nproc --ignore=1`"
+          sh "make"
+          if (params.CODE_COVERAGE)
+          {
+            sh "make -C bar gcov"
+          }
+          if (params.PROFILING)
+          {
+            sh "make -C bar gprof"
+          }
+          sh "make dist"
+        }
       }
     }
-
+   
     stage("Packages")
     {
       docker.image(dockerImageName).inside
@@ -111,7 +122,7 @@ def build()
             sh "make -C bar gcov7"
             sh "make -C bar gcov_html"
           }
-
+          
           publishHTML([allowMissing:          false,
                        alwaysLinkToLastBuild: false,
                        keepAll:               false,
@@ -123,7 +134,7 @@ def build()
                      )
         }
       }
-
+      
 //      cobertura coberturaReportFile: 'coverage.xml', enableNewApi: true, lineCoverageTargets: '80, 60, 70'
     }
 

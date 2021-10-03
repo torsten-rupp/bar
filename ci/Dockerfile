@@ -51,6 +51,8 @@ RUN apt-get -y install \
   unoconv \
   txt2man \
   valgrind \
+  lcov \
+  binutils \
   ;
 
 RUN mkdir /.cache;
