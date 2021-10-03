@@ -111,7 +111,15 @@ def build()
             sh "make -C bar gcov7"
           }
 
-          publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'coverage', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: 'Coverage Title'])
+          publishHTML([allowMissing:          false,
+                       alwaysLinkToLastBuild: false,
+                       keepAll:               false,
+                       reportDir:             'bar/coverage',
+                       reportFiles:           'bar/index.html',
+                       reportName:            'HTML Report',
+                       reportTitles:          'Coverage Title'
+                      ]
+                     )
         }
       }
 
