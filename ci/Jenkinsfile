@@ -30,11 +30,11 @@ def build()
           sh "make"
           if (params.CODE_COVERAGE)
           {
-            sh "make -C bar gcov"
+            sh "make -C bar bar-gcov"
           }
           if (params.PROFILING)
           {
-            sh "make -C bar gprof"
+            sh "make -C bar bar-gprof"
           }
           sh "echo xxxxxx 1"
           sh "make dist"
