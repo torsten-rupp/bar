@@ -1775,7 +1775,8 @@ endif
 gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
+	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="none"
+	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="none" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 #	$(MAKE) gcov_html
 
