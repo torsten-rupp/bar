@@ -115,7 +115,7 @@ def build()
         }
       }
 
-      cobertura coberturaReportFile: 'coverage.xml', enableNewApi: true, lineCoverageTargets: '80, 60, 70'
+//      cobertura coberturaReportFile: 'coverage.xml', enableNewApi: true, lineCoverageTargets: '80, 60, 70'
     }
 
     stage("Profiling")
