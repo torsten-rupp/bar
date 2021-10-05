@@ -150,13 +150,17 @@ def build()
         {
           docker.image(dockerImageName).inside
           {
-            sh "make -C bar gprof1"
-            sh "make -C bar gprof2"
-            sh "make -C bar gprof3"
-            sh "make -C bar gprof4"
-            sh "make -C bar gprof5"
-            sh "make -C bar gprof6"
-            sh "make -C bar gprof7"
+            sh "make -C bar gprof_clean"
+            sh "make -C bar gprof_basic"
+            sh "make -C bar gprof_compress"
+            sh "make -C bar gprof_delta_compress"
+            sh "make -C bar gprof_crypt"
+            sh "make -C bar gprof_asymmetric_crypt"
+            sh "make -C bar gprof_signatures"
+            sh "make -C bar gprof_split"
+            sh "make -C bar gprof_convert"
+            sh "make -C bar gprof_parameters"
+            sh "make -C bar gprof_misc"
           }
         }
       }
@@ -164,7 +168,17 @@ def build()
   }
   finally
   {
-    archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.zip bar/coverage/*', allowEmptyArchive: 'true'
+    script
+    {
+      if (params.TESTS || params.CODE_COVERAGE || params.PROFILING)
+      {
+        archiveArtifacts artifacts: 'bar/coverage/*, bar/bar-test.log', allowEmptyArchive: 'true'
+      }
+      else
+      {
+        archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb', allowEmptyArchive: 'true'
+      }
+    }
     cleanWs notFailBuild: true
   }
 }
