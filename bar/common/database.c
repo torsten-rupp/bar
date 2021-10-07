@@ -7888,7 +7888,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       toColumnMapCount++;
     }
   }
-//fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (int i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",toColumnMap[i],i,toColumnMapNames[i],toColumnMapTypes[i]); } fprintf(stderr,"\n");
+fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (int i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d, ",toColumnMap[i],i); } fprintf(stderr,"\n");
   parameterMapCount = 0;
   for (i = 0; i < toColumnCount; i++)
   {
