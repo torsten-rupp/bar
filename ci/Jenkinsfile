@@ -170,13 +170,18 @@ def build()
   {
     script
     {
-      if (params.TESTS || params.CODE_COVERAGE || params.PROFILING)
+      archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb', allowEmptyArchive: true
+      if (params.TESTS)
       {
-        archiveArtifacts artifacts: 'bar/coverage/*, bar/bar-test.log', allowEmptyArchive: 'true'
+        archiveArtifacts artifacts: 'bar/bar-test.log', allowEmptyArchive: true
       }
-      else
+      if (params.CODE_COVERAGE)
       {
-        archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb', allowEmptyArchive: 'true'
+        archiveArtifacts artifacts: 'bar/coverage/*, allowEmptyArchive: true
+      }
+      if (params.PROFILING)
+      {
+//        archiveArtifacts artifacts: '', allowEmptyArchive: true
       }
     }
     cleanWs notFailBuild: true
