@@ -177,7 +177,7 @@ def build()
       }
       if (params.CODE_COVERAGE)
       {
-        archiveArtifacts artifacts: 'bar/coverage/*, allowEmptyArchive: true
+        archiveArtifacts artifacts: 'bar/coverage/*', allowEmptyArchive: true
       }
       if (params.PROFILING)
       {
