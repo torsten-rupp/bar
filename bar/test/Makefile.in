@@ -599,7 +599,10 @@ functionDoneTestFiles = \
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
-  $3; if test $$? -lt $1 -o $$? -gt $2; then false; fi
+  $3; if test $$? -lt $1 -o $$? -gt $2; then \
+    $(ECHO) >&2 "ERROR: wrong exit code. Expected $1, got $2"; \
+    false; \
+  fi
 
 # helper functions for slave tests
 functionSlaveExecute = \
@@ -2352,7 +2355,7 @@ test_misc:
 	@#
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
 	  $(call functionTestCheckExitcode,134,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files $(LOG))); \
-        fi
+  fi
 	@#
 	$(INSTALL) -d intermediate
 	@$(call functionTestDeviceReset)
