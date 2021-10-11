@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-08-28 15:12+0200\n"
-"PO-Revision-Date: 2021-08-28 15:13+0200\n"
+"POT-Creation-Date: 2021-10-11 11:12+0200\n"
+"PO-Revision-Date: 2021-10-11 11:18+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -28,30 +28,30 @@ msgstr "Gerät"
 
 #: src/BARControl.java:858 src/TabJobs.java:6031 src/TabJobs.java:15481
 #: src/TabJobs.java:16041 src/TabRestore.java:6105 src/TabRestore.java:7714
-#: src/TabStatus.java:910 src/TabStatus.java:3231
+#: src/TabStatus.java:910 src/TabStatus.java:3232
 msgid "normal"
 msgstr "normal"
 
 #: src/BARControl.java:859 src/TabJobs.java:6063 src/TabJobs.java:15486
 #: src/TabJobs.java:16046 src/TabRestore.java:6121 src/TabRestore.java:7725
-#: src/TabStatus.java:940 src/TabStatus.java:3232
+#: src/TabStatus.java:940 src/TabStatus.java:3233
 msgid "full"
 msgstr "voll"
 
 #: src/BARControl.java:860 src/TabJobs.java:6095 src/TabJobs.java:15491
 #: src/TabJobs.java:16051 src/TabRestore.java:6137 src/TabRestore.java:7736
-#: src/TabStatus.java:970 src/TabStatus.java:3233
+#: src/TabStatus.java:970 src/TabStatus.java:3234
 msgid "incremental"
 msgstr "inkrementell"
 
 #: src/BARControl.java:861 src/TabJobs.java:6127 src/TabJobs.java:15496
 #: src/TabJobs.java:16056 src/TabRestore.java:6153 src/TabRestore.java:7748
-#: src/TabStatus.java:1000 src/TabStatus.java:3234
+#: src/TabStatus.java:1000 src/TabStatus.java:3235
 msgid "differential"
 msgstr "differentiell"
 
 #: src/BARControl.java:862 src/TabJobs.java:15501 src/TabJobs.java:16061
-#: src/TabRestore.java:6169 src/TabRestore.java:7759 src/TabStatus.java:3235
+#: src/TabRestore.java:6169 src/TabRestore.java:7759 src/TabStatus.java:3236
 msgid "continuous"
 msgstr "fortlaufend"
 
@@ -238,8 +238,8 @@ msgid "Start"
 msgstr "Start"
 
 #: src/BARControl.java:2919 src/BARServer.java:1238 src/TabRestore.java:9243
-#: src/TabStatus.java:1091 src/TabStatus.java:1868 src/TabStatus.java:2879
-#: src/TabStatus.java:3011
+#: src/TabStatus.java:1091 src/TabStatus.java:1868 src/TabStatus.java:2880
+#: src/TabStatus.java:3012
 msgid "Abort"
 msgstr "Abbrechen"
 
@@ -350,7 +350,7 @@ msgstr "Neu versuchen"
 #: src/TabJobs.java:11052 src/TabJobs.java:12231 src/TabJobs.java:12648
 #: src/TabJobs.java:13129 src/TabJobs.java:13744 src/TabJobs.java:15083
 #: src/TabJobs.java:15571 src/TabJobs.java:16152 src/TabRestore.java:8577
-#: src/TabRestore.java:9831 src/TabStatus.java:2843 src/TabStatus.java:3012
+#: src/TabRestore.java:9831 src/TabStatus.java:2843 src/TabStatus.java:3013
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -399,7 +399,7 @@ msgstr "Kopplung neue Hauptinstanz"
 msgid "Wait for pairing"
 msgstr "Warte auf Kopplung"
 
-#: src/BARControl.java:4255 src/TabStatus.java:3009
+#: src/BARControl.java:4255 src/TabStatus.java:3010
 msgid "OK"
 msgstr "OK"
 
@@ -564,9 +564,8 @@ msgid "host not found"
 msgstr "Rechner nicht gefunden"
 
 #: src/BARException.java:339
-#, fuzzy
 msgid "bind fail"
-msgstr "Dateisystem einhängen fehlgeschlagen"
+msgstr "Netzwerkverbindung fehlgeschlagen"
 
 #: src/BARException.java:346
 msgid "connect fail"
@@ -1975,7 +1974,7 @@ msgstr "Server für Speicherung"
 #: src/ServerSettings.java:1418 src/TabJobs.java:12169 src/TabJobs.java:15475
 #: src/TabJobs.java:16035 src/TabRestore.java:5010 src/TabRestore.java:5054
 #: src/TabRestore.java:6694 src/TabRestore.java:9647 src/TabStatus.java:684
-#: src/TabStatus.java:761 src/TabStatus.java:3228
+#: src/TabStatus.java:761 src/TabStatus.java:3229
 msgid "Type"
 msgstr "Typ"
 
@@ -2710,7 +2709,7 @@ msgstr "Aktivieren, um eine SSL-Verbindung zu erzwingen."
 
 #: src/TabJobs.java:2677 src/TabJobs.java:3843 src/TabRestore.java:4764
 #: src/TabRestore.java:6635 src/TabRestore.java:9632 src/TabRestore.java:9642
-#: src/TabStatus.java:3193
+#: src/TabStatus.java:3194
 msgid "Entries"
 msgstr "Dateien"
 
@@ -4672,8 +4671,8 @@ msgid "{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})"
 msgstr "{0} ({1} {1,choice,0#Bytes|1#Byte|1<Bytes})"
 
 #: src/TabJobs.java:16472 src/TabRestore.java:4414 src/TabRestore.java:4569
-#: src/TabRestore.java:4768 src/TabStatus.java:3171 src/TabStatus.java:3181
-#: src/TabStatus.java:3197
+#: src/TabRestore.java:4768 src/TabStatus.java:3172 src/TabStatus.java:3182
+#: src/TabStatus.java:3198
 #, java-format
 msgid "{0}"
 msgstr "{0}"
@@ -4747,7 +4746,7 @@ msgid "Job UUID"
 msgstr "Auftrag UUID"
 
 #: src/TabRestore.java:4380 src/TabStatus.java:696 src/TabStatus.java:825
-#: src/TabStatus.java:3209
+#: src/TabStatus.java:3210
 msgid "Last executed"
 msgstr "Letzte Ausführung"
 
@@ -4767,7 +4766,7 @@ msgstr "Warnungen"
 msgid "no job info"
 msgstr "keine Auftragsinformationen"
 
-#: src/TabRestore.java:4688 src/TabRestore.java:5000 src/TabStatus.java:3157
+#: src/TabRestore.java:4688 src/TabRestore.java:5000 src/TabStatus.java:3158
 msgid "Job"
 msgstr "Auftrag"
 
@@ -5457,7 +5456,7 @@ msgstr "Archive wiederherstellen in: {0}"
 msgid "Restore entries to: {0}"
 msgstr "Einträge wiederherstellen in: {0}"
 
-#: src/TabRestore.java:10210 src/TabStatus.java:3177
+#: src/TabRestore.java:10210 src/TabStatus.java:3178
 msgid "Storages"
 msgstr "Sicherungen"
 
@@ -5785,10 +5784,14 @@ msgid "Store all files."
 msgstr "Alle Dateien speichern."
 
 #: src/TabStatus.java:2846
+msgid "Store all files as a full backup."
+msgstr "Alle Dateien als Vollsicherung speichern."
+
+#: src/TabStatus.java:2847
 msgid "Store all files and create incremental data file."
 msgstr "Alle Dateien speichern und Inkrementdaten erzeugen."
 
-#: src/TabStatus.java:2847
+#: src/TabStatus.java:2848
 msgid ""
 "Store changed files since last incremental or full storage and update "
 "incremental data file."
@@ -5796,34 +5799,34 @@ msgstr ""
 "Speichern von veränderten Dateien seit dem letzten inkrementellen oder "
 "vollständigen Speichern und aktuallisieren der Inkrementdaten."
 
-#: src/TabStatus.java:2848
+#: src/TabStatus.java:2849
 msgid "Store changed files since last full storage."
 msgstr ""
 "Speichern von veränderten Dateien seit dem letzten vollständigen Speichern."
 
-#: src/TabStatus.java:2849
+#: src/TabStatus.java:2850
 msgid "Collect all files and create incremental info data (bid-files) only."
 msgstr "Alle Dateien ermitteln und nur Inkrementdatei erzeugen."
 
-#: src/TabStatus.java:2850
+#: src/TabStatus.java:2851
 msgid "Collect and process all files, but do not create archives."
 msgstr "Dateien suchen und verarbeiten, aber keine Archive erzeugen."
 
-#: src/TabStatus.java:2876
+#: src/TabStatus.java:2877
 #, java-format
 msgid "Abort running job ''{0}''?"
 msgstr "Laufenden Auftrag ''{0}'' abbrechen?"
 
-#: src/TabStatus.java:2882
+#: src/TabStatus.java:2883
 msgid "Abort job"
 msgstr "Auftrag abbrechen"
 
-#: src/TabStatus.java:2912
+#: src/TabStatus.java:2913
 #, java-format
 msgid "Cannot abort job (error: {0})"
 msgstr "Auftrag kann nicht abgebrochen werden (Fehler: {0})"
 
-#: src/TabStatus.java:2923
+#: src/TabStatus.java:2924
 #, java-format
 msgid ""
 "Communication error while abort job\n"
@@ -5834,7 +5837,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabStatus.java:2934
+#: src/TabStatus.java:2935
 #, java-format
 msgid ""
 "Connection error while abort job\n"
@@ -5845,59 +5848,67 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabStatus.java:2973
+#: src/TabStatus.java:2974
 #, java-format
 msgid "Cannot pause job (error: {0})"
 msgstr "Auftrag kann nicht pausiert werden (Fehler: {0})"
 
-#: src/TabStatus.java:2993
+#: src/TabStatus.java:2994
 #, java-format
 msgid "Cannot suspend job (error: {0})"
 msgstr "Auftrag kann nicht angehalten werden (Fehler: {0})"
 
-#: src/TabStatus.java:3007
+#: src/TabStatus.java:3008
 msgid "Volume request"
 msgstr "Medium anfordern"
 
-#: src/TabStatus.java:3008
+#: src/TabStatus.java:3009
 #, java-format
 msgid "Load volume number {0}."
 msgstr "Medium Nummer {0} laden."
 
-#: src/TabStatus.java:3010
+#: src/TabStatus.java:3011
 msgid "Unload tray"
 msgstr "Schublade öffnen"
 
-#: src/TabStatus.java:3046
+#: src/TabStatus.java:3047
 #, java-format
 msgid "Cannot change volume (error: {0})"
 msgstr "Name des Auftrags kann nicht geändert werden (Fehler: {0})"
 
-#: src/TabStatus.java:3060
+#: src/TabStatus.java:3061
 #, java-format
 msgid "Cannot reset job (error: {0})"
 msgstr "Auftrag kann nicht zurückgesetzt werden (Fehler: {0})"
 
-#: src/TabStatus.java:3167
+#: src/TabStatus.java:3168
 msgid "Entities"
 msgstr "Datensätze"
 
-#: src/TabStatus.java:3187 src/TabStatus.java:3203
+#: src/TabStatus.java:3188 src/TabStatus.java:3204
 #, java-format
 msgid "{0} ({1} bytes)"
 msgstr "{0} ({1} bytes)"
 
-#: src/TabStatus.java:3219
+#: src/TabStatus.java:3220
 msgid "Statistics"
 msgstr "Statistik"
 
-#: src/TabStatus.java:3229
+#: src/TabStatus.java:3230
 msgid "Count"
 msgstr "Anzahl"
 
-#: src/TabStatus.java:3230
+#: src/TabStatus.java:3231
 msgid "Average time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#, fuzzy
+#~ msgid "datbase connection lost"
+#~ msgstr "Verbindung verloren"
+
+#, fuzzy
+#~ msgid "database busy"
+#~ msgstr "Datenbank"
 
 #~ msgid "differental"
 #~ msgstr "differentiell"
