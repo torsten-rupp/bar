@@ -599,8 +599,8 @@ functionDoneTestFiles = \
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
-  $3; if test $$? -lt $1 -o $$? -gt $2; then \
-    $(ECHO) >&2 "ERROR: wrong exit code. Expected $1, got $2"; \
+  $3; rc=$$?; if test $$rc -lt $1 -o $$? -gt $2; then \
+    $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
     false; \
   fi
 
