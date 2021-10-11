@@ -663,6 +663,7 @@ HAVE_SUDO_COMMAND_CHMOD
 HAVE_SUDO_COMMAND_LOSETUP
 HAVE_SUDO_COMMAND_MOUNT_UMOUNT
 HAVE_SUDO_COMMAND_CHATTR
+HAVE_SUDO_COMMANDS
 EPM_VERSION_4
 EPM_VERSION_3
 EPM
@@ -2680,17 +2681,18 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
-HAVE_SUDO_COMMAND_CHATTR=1
-          HAVE_SUDO_COMMAND_MOUNT_UMOUNT=1
-    HAVE_SUDO_COMMAND_LOSETUP=1
-         HAVE_SUDO_COMMAND_CHMOD=1
-           HAVE_SUDO_COMMAND_DD=1
-              HAVE_SUDO_COMMAND_MKFS=1
-            HAVE_SUDO_COMMAND_CP=1
-              HAVE_SUDO_COMMAND_DIFF=1
+HAVE_SUDO_COMMANDS=1
+              HAVE_SUDO_COMMAND_CHATTR=1
+        HAVE_SUDO_COMMAND_MOUNT_UMOUNT=1
+  HAVE_SUDO_COMMAND_LOSETUP=1
+       HAVE_SUDO_COMMAND_CHMOD=1
+         HAVE_SUDO_COMMAND_DD=1
+            HAVE_SUDO_COMMAND_MKFS=1
+          HAVE_SUDO_COMMAND_CP=1
+            HAVE_SUDO_COMMAND_DIFF=1
 
 HAVE_SUDO_COMMAND_CHATTR_I=1
-        HAVE_SUDO_COMMAND_CHATTR_A=1
+      HAVE_SUDO_COMMAND_CHATTR_A=1
 
 
 
@@ -7775,7 +7777,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_CHATTR=0
+  HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -7814,7 +7816,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_CHATTR=0
+  HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -7853,7 +7855,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0
+  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -7892,7 +7894,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0
+  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -7931,7 +7933,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_LOSETUP=0
+  HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -7970,7 +7972,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_LOSETUP=0
+  HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8009,7 +8011,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_LOSETUP=0
+  HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8048,7 +8050,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_CHMOD=0
+  HAVE_SUDO_COMMAND_CHMOD=0;        HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8087,7 +8089,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_DD=0
+  HAVE_SUDO_COMMAND_DD=0;           HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8126,7 +8128,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_MKFS=0
+  HAVE_SUDO_COMMAND_MKFS=0;         HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8165,7 +8167,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_CP=0
+  HAVE_SUDO_COMMAND_CP=0;           HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8204,7 +8206,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_DIFF=0
+  HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8243,7 +8245,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_CHATTR_I=0
+  HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0
 fi
 
 
@@ -8282,7 +8284,7 @@ fi
   if test "$ac_result" != no; then :
 
 elif :; then :
-  HAVE_SUDO_COMMAND_CHATTR_A=0
+  HAVE_SUDO_COMMAND_CHATTR_A=0;     HAVE_SUDO_COMMANDS=0
 fi
 
 

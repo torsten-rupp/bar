@@ -2356,6 +2356,7 @@ test_misc:
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
 	  $(call functionTestCheckExitcode,127,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files $(LOG))); \
   fi
+ifneq ($(HAVE_SUDO_COMMANDS),)
 	@#
 	$(INSTALL) -d intermediate
 	@$(call functionTestDeviceReset)
@@ -2375,6 +2376,7 @@ test_misc:
 	$(call functionTestDeviceDelete,$(LOOP0))
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
+endif
 	@$(call functionInfoEnd,OK)
 
 test_misc-debug: \
