@@ -2843,6 +2843,7 @@ public class TabStatus
                                           BARControl.tr("Cancel")
                                          },
                              new String[]{BARControl.tr("Store all files."),
+                                          BARControl.tr("Store all files as a full backup."),
                                           BARControl.tr("Store all files and create incremental data file."),
                                           BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
                                           BARControl.tr("Store changed files since last full storage."),
