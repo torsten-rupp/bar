@@ -98,7 +98,7 @@ def build()
                 sh "make test_signatures"      +binaryExtension+" O='--verbose=1'"
                 sh "make test_split"           +binaryExtension+" O='--verbose=1'"
                 sh "make test_convert"         +binaryExtension+" O='--verbose=1'"
-                sh "make test_parameters"      +binaryExtension+" O='--verbose=1'"
+                sh "make test_arguments"       +binaryExtension+" O='--verbose=1'"
                 sh "make test_misc"            +binaryExtension+" O='--verbose=1'"
               }
               break;
