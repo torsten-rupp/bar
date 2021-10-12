@@ -1777,8 +1777,6 @@ gcov%: \
   bar-keygen@SHELLEXT@
 	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
-#	$(MAKE) gcov_html
-
 gcov_clean:
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
 	$(RMRF) coverage
@@ -1796,6 +1794,9 @@ ifneq ($(GENHTML),)
 else
 	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
 endif
+
+.PHONY: gprof_clean
+gprof_clean:
 
 gprof%: \
   bar-gprof@EXEEXT@ \
