@@ -124,7 +124,7 @@ def build()
             sh "make -C bar gcov_signatures"
             sh "make -C bar gcov_split"
             sh "make -C bar gcov_convert"
-            sh "make -C bar gcov_parameters"
+            sh "make -C bar gcov_arguments"
             sh "make -C bar gcov_misc"
             sh "make -C bar gcov_html"
           }
@@ -159,7 +159,7 @@ def build()
             sh "make -C bar gprof_signatures"
             sh "make -C bar gprof_split"
             sh "make -C bar gprof_convert"
-            sh "make -C bar gprof_parameters"
+            sh "make -C bar gprof_arguments"
             sh "make -C bar gprof_misc"
           }
         }
