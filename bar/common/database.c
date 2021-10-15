@@ -6097,11 +6097,11 @@ LOCAL Errors executeQuery(DatabaseStatementHandle *databaseStatementHandle,
             }
             else if (sqliteResult == SQLITE_INTERRUPT)
             {
-              error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),String_cString(databaseStatementHandle->sqlString));
+              error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle));
             }
             else if (sqliteResult != SQLITE_OK)
             {
-              error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),String_cString(databaseStatementHandle->sqlString));
+              error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle));
             }
           }
         }
@@ -6198,7 +6198,7 @@ fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,values[i].type,values[i].name)
           {
             free(dateTime);
             free(bind);
-            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(databaseStatementHandle->sqlString));
+            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
             break;
           }
 
@@ -6212,14 +6212,14 @@ fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,values[i].type,values[i].name)
           {
             free(dateTime);
             free(bind);
-            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s: %s",mysql_stmt_error(databaseStatementHandle),String_cString(databaseStatementHandle->sqlString));
+            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s",mysql_stmt_error(databaseStatementHandle));
             break;
           }
           else if (mysqlResult != 0)
           {
             free(dateTime);
             free(bind);
-            error = ERRORX_(DATABASE,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s: %s",mysql_stmt_error(databaseStatementHandle),String_cString(databaseStatementHandle->sqlString));
+            error = ERRORX_(DATABASE,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s",mysql_stmt_error(databaseStatementHandle));
             break;
           }
           if (changedRowCount != NULL)
@@ -6267,7 +6267,7 @@ fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,values[i].type,values[i].name)
     {
       // report interrupt
 // TODO: mysql
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),String_cString(databaseStatementHandle->sqlString));
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle));
     }
   }
   while (   !done
