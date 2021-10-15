@@ -166,10 +166,6 @@ LOCAL DatabaseList databaseList;
   } databaseLockBy;
 #endif /* DATABASE_LOCK_PER_INSTANCE */
 
-#ifdef HAVE_MYSQL
-  LOCAL MYSQL mysql;
-#endif /* HAVE_MYSQL */
-
 #ifndef NDEBUG
   LOCAL uint                databaseDebugCounter = 0;
 
@@ -576,6 +572,7 @@ LOCAL DatabaseList databaseList;
   #define triggerUnlockReadWrite(...)     __triggerUnlockReadWrite    (__FILE__,__LINE__, ## __VA_ARGS__)
   #define triggerUnlockTransaction(...)   __triggerUnlockTransaction  (__FILE__,__LINE__, ## __VA_ARGS__)
 
+  #define vprepareStatement(...)          __vprepareStatement         (__FILE__,__LINE__, ## __VA_ARGS__)
   #define prepareStatement(...)           __prepareStatement          (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
@@ -1382,6 +1379,35 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
 }
 
 /***********************************************************************\
+* Name   : sqlite3FromUnixTime
+* Purpose: callback for FROM_UNIXTIME function to convert Unix timestamp
+*          (Unix epoch, UTC) to date/time
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : FROM_UNIXTIME(timestamp[,format])
+\***********************************************************************/
+
+LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  char text[64];
+
+  assert(context != NULL);
+  assert(argc == 0);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  // convert to Unix timestamp
+  Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),DATE_TIME_FORMAT_DEFAULT);
+fprintf(stderr,"%s:%d: text\n",__FILE__,__LINE__);
+
+  sqlite3_result_text(context,text,stringLength(text),NULL);
+}
+
+/***********************************************************************\
 * Name   : sqlite3RegexpDelete
 * Purpose: callback for deleting REGEXP data
 * Input  : data - data to delete
@@ -1686,43 +1712,60 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
         int mysqlResult;
 
         // open database
-        databaseHandle->mysql.handle = mysql_real_connect(&mysql,
-                                                          String_cString(databaseSpecifier->mysql.serverName),
-                                                          String_cString(databaseSpecifier->mysql.userName),
-                                                          databaseSpecifier->mysql.password.data,
-                                                          !String_isEmpty(databaseName)
-                                                            ? String_cString(databaseName)
-                                                            : String_cString(databaseSpecifier->mysql.databaseName),
-                                                          0,
-                                                          0,
-                                                          0
-                                                         );
-        if (databaseHandle->mysql.handle == NULL)
+        SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s",mysql_error(&mysql));
-          sem_destroy(&databaseHandle->wakeUp);
-          return error;
-        }
+          databaseHandle->mysql.handle = mysql_init(NULL);
+          if (databaseHandle->mysql.handle == NULL)
+          {
+            error = ERROR_DATABASE;
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+          if (mysql_real_connect(databaseHandle->mysql.handle,
+                                 String_cString(databaseSpecifier->mysql.serverName),
+                                 String_cString(databaseSpecifier->mysql.userName),
+                                 databaseSpecifier->mysql.password.data,
+                                 !String_isEmpty(databaseName)
+                                   ? String_cString(databaseName)
+                                   : String_cString(databaseSpecifier->mysql.databaseName),
+                                 0,
+                                 0,
+                                 0
+                                ) == NULL
+             )
+          {
+            error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s",mysql_error(databaseHandle->mysql.handle));
+            mysql_close(databaseHandle->mysql.handle);
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
 
-        // enable UTF8
-        mysqlResult = mysql_query(&mysql,
-                                  "SET NAMES 'UTF8'"
-                                 );
-        if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-        {
-          HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&mysql));
-        }
-        else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-        {
-          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),"SET NAMES 'UTF8'");
-          sem_destroy(&databaseHandle->wakeUp);
-          return error;
-        }
-        else if (mysqlResult != 0)
-        {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),"SET NAMES 'UTF8'");
-          sem_destroy(&databaseHandle->wakeUp);
-          return error;
+          // enable UTF8
+          mysqlResult = mysql_query(databaseHandle->mysql.handle,
+                                    "SET NAMES 'UTF8'"
+                                   );
+          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+          {
+            HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
+          }
+          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+          {
+            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            mysql_close(databaseHandle->mysql.handle);
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+          else if (mysqlResult != 0)
+          {
+            error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            mysql_close(databaseHandle->mysql.handle);
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
         }
       }
       break;
@@ -1884,6 +1927,16 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                                                SQLITE_ANY,
                                                NULL,
                                                sqlite3FromUnixTime,
+                                               NULL,
+                                               NULL
+                                              );
+        assert(sqliteResult == SQLITE_OK);
+        sqliteResult = sqlite3_create_function(databaseHandle->sqlite.handle,
+                                               "now",
+                                               0,
+                                               SQLITE_ANY,
+                                               NULL,
+                                               sqlite3Now,
                                                NULL,
                                                NULL
                                               );
@@ -2076,6 +2129,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
 
 //// TODO: free database node
 //  Database_doneSpecifier(&databaseNode->databaseSpecifier);
+//mysql_close(databaseHandle->mysql.handle);
 
   // free resources
 //TODO: remove?
@@ -3513,9 +3567,9 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 * Name   : vprepareStatement
 * Purpose: prepare SQL statement
 * Input  : databaseStatementHandle - database query handle variable
-*          databaseHandle      - database handle
-*          command             - SQL command
-*          arguments           - arguments for SQL command
+*          databaseHandle          - database handle
+*          command                 - SQL command
+*          arguments               - arguments for SQL command
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3528,13 +3582,13 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
                                  va_list                 arguments
                                 )
 #else /* not NDEBUG */
-  LOCAL Errors vprepareStatement(const char              *__fileName__,
-                                 ulong                   __lineNb__,
-                                 DatabaseStatementHandle *databaseStatementHandle,
-                                 DatabaseHandle          *databaseHandle,
-                                 const char              *command,
-                                 va_list                 arguments
-                                )
+  LOCAL Errors __vprepareStatement(const char              *__fileName__,
+                                   ulong                   __lineNb__,
+                                   DatabaseStatementHandle *databaseStatementHandle,
+                                   DatabaseHandle          *databaseHandle,
+                                   const char              *command,
+                                   va_list                 arguments
+                                  )
 #endif /* NDEBUG */
 {
   String sqlString;
@@ -3645,7 +3699,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
           #ifndef NDEBUG
             if (databaseStatementHandle->mysql.statementHandle == NULL)
             {
-              fprintf(stderr,"%s, %d: MySQL prepare fail %d: %s\n%s\n",__FILE__,__LINE__,mysql_errno(&mysql),mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+              fprintf(stderr,"%s, %d: MySQL prepare fail %d: %s\n%s\n",__FILE__,__LINE__,mysql_errno(databaseHandle->mysql.handle),mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
               abort();
             }
           #endif /* not NDEBUG */
@@ -3663,7 +3717,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
         }
         else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
         {
-          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
           mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
@@ -3674,7 +3728,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
         }
         else if (mysqlResult != 0)
         {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
+          error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(sqlString));
           mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
@@ -3727,9 +3781,9 @@ fprintf(stderr,"%s:%d: %d: %s=%s\n",__FILE__,__LINE__,i,DATABASE_DATATYPE_NAMES[
 * Name   : prepareStatement
 * Purpose: prepare SQL statement
 * Input  : databaseStatementHandle - database query handle variable
-*          databaseHandle      - database handle
-*          command             - SQL command
-*          ...                 - optional arguments for SQL command
+*          databaseHandle          - database handle
+*          command                 - SQL command
+*          ...                     - optional arguments for SQL command
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -3737,16 +3791,16 @@ fprintf(stderr,"%s:%d: %d: %s=%s\n",__FILE__,__LINE__,i,DATABASE_DATATYPE_NAMES[
 
 #ifdef NDEBUG
 LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
-                              DatabaseHandle      *databaseHandle,
-                              const char          *command,
+                              DatabaseHandle          *databaseHandle,
+                              const char              *command,
                               ...
                               )
 #else /* not NDEBUG */
-LOCAL  Errors __prepareStatement(const char          *__fileName__,
-                                 ulong               __lineNb__,
+LOCAL  Errors __prepareStatement(const char              *__fileName__,
+                                 ulong                   __lineNb__,
                                  DatabaseStatementHandle *databaseStatementHandle,
-                                 DatabaseHandle      *databaseHandle,
-                                 const char          *command,
+                                 DatabaseHandle          *databaseHandle,
+                                 const char              *command,
                                  ...
                                  )
 #endif /* NDEBUG */
@@ -3763,7 +3817,7 @@ LOCAL  Errors __prepareStatement(const char          *__fileName__,
   #ifdef NDEBUG
     error = vprepareStatement(databaseStatementHandle,databaseHandle,command,arguments);
   #else /* not NDEBUG */
-    error = vprepareStatement(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
+    error = __vprepareStatement(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
   #endif /* NDEBUG */
   va_end(arguments);
 
@@ -4598,11 +4652,11 @@ else
         }
         else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
         {
-          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
+          error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseStatementHandle->databaseHandle->mysql.handle),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
         }
         else if (mysqlResult != 0)
         {
-          error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
+          error = ERRORX_(DATABASE,mysql_errno(databaseStatementHandle->databaseHandle->mysql.handle),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
         }
 // TODO: remove
 if (error != ERROR_NONE)
@@ -4679,6 +4733,15 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                                va_list                 arguments
                               )
 {
+  /* data flow:
+
+     application    ->    values -> database internal     -> values   ->    application
+
+                 insert             sqlite:                          select
+                 update             MySQL: bind, dataTime
+                 delete             Postgres: ?
+
+   */
   #define SLEEP_TIME 500L  // [ms]
 
   String                        sqlString;
@@ -4924,13 +4987,13 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
             {
               mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
               break;
             }
             else if (mysqlResult != 0)
             {
               mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
               break;
             }
 
@@ -5180,23 +5243,23 @@ abort();
           else
           {
             // query SQL statement
-            mysqlResult = mysql_real_query(&mysql,
+            mysqlResult = mysql_real_query(databaseHandle->mysql.handle,
                                            String_cString(sqlString),
                                            String_length(sqlString)
                                           );
             if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(&mysql));
+              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
             }
             else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
             {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),String_cString(sqlString));
               break;
             }
             else if (mysqlResult != 0)
             {
 //fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-              error = ERRORX_(DATABASE,mysql_errno(&mysql),"%s: %s",mysql_error(&mysql),String_cString(sqlString));
+              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),String_cString(sqlString));
               break;
             }
           }
@@ -5266,7 +5329,7 @@ abort();
 }
 
 /***********************************************************************\
-* Name   : databaseExecute
+* Name   : executeStatement
 * Purpose: execute single database statement with prepared statement or
 *          query
 * Input  : databaseHandle      - database handle
@@ -5321,6 +5384,911 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
   va_end(arguments);
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : executeStatement2
+* Purpose: execute single database statement with prepared statement or
+*          query
+* Input  : databaseHandle      - database handle
+*          databaseRowFunction - row call-back function (can be NULL)
+*          databaseRowUserData - user data for row call-back
+*          changedRowCount     - number of changed rows (can be NULL)
+*          timeout             - timeout [ms]
+*          columnTypes         - result column types; use macro
+*                                DATABASE_COLUMN_TYPES()
+*          columnTypeCount     - number of result columns
+*          command             - SQL command string with %[l]d, %[']S,
+*                                %[']s
+*          arguments           - arguments for SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors executeStatement2(DatabaseHandle         *databaseHandle,
+                               DatabaseRowFunction     databaseRowFunction,
+                               void                    *databaseRowUserData,
+                               ulong                   *changedRowCount,
+                               long                    timeout,
+                               const DatabaseDataTypes *columnTypes,
+                               uint                    columnTypeCount,
+                               const char              *command,
+                               va_list                 arguments
+                              )
+{
+  /* data flow:
+
+     application    ->    values -> database internal     -> values   ->    application
+
+                 insert             sqlite:                          select
+                 update             MySQL: bind, dataTime
+                 delete             Postgres: ?
+
+   */
+  #define SLEEP_TIME 500L  // [ms]
+
+  String                        sqlString;
+  bool                          done;
+  Errors                        error;
+  uint                          maxRetryCount;
+  uint                          retryCount;
+  DatabaseValue                 *values;
+  uint                          valueCount;
+  uint                          i;
+  const DatabaseBusyHandlerNode *busyHandlerNode;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->databaseNode != NULL);
+  assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
+  assert(databaseHandle->sqlite.handle != NULL);
+  assert(command != NULL);
+
+  // format SQL command string
+  sqlString = vformatSQLString(String_new(),
+                               command,
+                               arguments
+                              );
+
+  done          = FALSE;
+  error         = ERROR_NONE;
+  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
+  retryCount    = 0;
+  do
+  {
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+// TODO: reactivate when each thread has his own index handle
+#if 0
+    assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
+#endif
+
+    #ifndef NDEBUG
+      String_set(databaseHandle->debug.current.sqlString,sqlString);
+    #endif /* not NDEBUG */
+
+    switch (databaseHandle->databaseNode->databaseSpecifier.type)
+    {
+      case DATABASE_TYPE_SQLITE3:
+        {
+          int          sqliteResult;
+          sqlite3_stmt *statementHandle;
+
+//fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,String_cString(sqlCommand));
+          if (databaseRowFunction != NULL)
+          {
+            // prepare SQL statement
+            sqliteResult = sqlite3_prepare_v2(databaseHandle->sqlite.handle,
+                                              String_cString(sqlString),
+                                              -1,
+                                              &statementHandle,
+                                              NULL  // nextSqlCommand
+                                             );
+            if      (sqliteResult == SQLITE_MISUSE)
+            {
+              HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
+            }
+            else if (sqliteResult == SQLITE_INTERRUPT)
+            {
+              error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              break;
+            }
+            else if (sqliteResult != SQLITE_OK)
+            {
+              error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              break;
+            }
+            assert(statementHandle != NULL);
+
+            // allocate call-back data
+            valueCount = sqlite3_column_count(statementHandle);
+            assertx(valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
+
+            values = (DatabaseValue*)malloc(valueCount*sizeof(DatabaseValue));
+            if (values == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+
+            // step and process rows
+            do
+            {
+              // step
+              do
+              {
+                sqliteResult = sqlite3_step(statementHandle);
+                if      (sqliteResult == SQLITE_LOCKED)
+                {
+                  waitUnlockNotify(databaseHandle->sqlite.handle);
+                  sqlite3_reset(statementHandle);
+                }
+                else if (sqliteResult == SQLITE_MISUSE)
+                {
+                  HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
+                }
+              }
+              while (sqliteResult == SQLITE_LOCKED);
+
+              // process row
+              if      (sqliteResult == SQLITE_ROW)
+              {
+                for (i = 0; i < valueCount; i++)
+                {
+                  switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+                  {
+                    case DATABASE_DATATYPE_NONE:
+                      break;
+                    case DATABASE_DATATYPE_PRIMARY_KEY:
+                    case DATABASE_DATATYPE_KEY:
+                      values[i].id = sqlite3_column_int64(statementHandle,i);
+                      break;
+                    case DATABASE_DATATYPE_BOOL:
+                      values[i].b = (sqlite3_column_int(statementHandle,i) == 1);
+                      break;
+                    case DATABASE_DATATYPE_INT:
+                      values[i].i = sqlite3_column_int64(statementHandle,i);
+                      break;
+                    case DATABASE_DATATYPE_INT64:
+                      values[i].i = sqlite3_column_int64(statementHandle,i);
+                      break;
+                    case DATABASE_DATATYPE_DOUBLE:
+                      values[i].d = sqlite3_column_double(statementHandle,i);
+                      break;
+                    case DATABASE_DATATYPE_DATETIME:
+                      values[i].dateTime = sqlite3_column_int64(statementHandle,i);
+                      break;
+                    case DATABASE_DATATYPE_TEXT:
+                      values[i].text.data   = (char*)sqlite3_column_text(statementHandle,i);
+                      values[i].text.length = stringLength(values[i].text.data);
+                      break;
+                    case DATABASE_DATATYPE_BLOB:
+                      HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                      break;
+                    #ifndef NDEBUG
+                      default:
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                        break;
+                    #endif /* NDEBUG */
+                  }
+                }
+                error = databaseRowFunction(values,valueCount,databaseRowUserData);
+              }
+            }
+            while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
+
+            // free call-back data
+            for (i = 0; i < valueCount; i++)
+            {
+              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+              {
+                case DATABASE_DATATYPE_NONE:
+                  break;
+                case DATABASE_DATATYPE_PRIMARY_KEY:
+                case DATABASE_DATATYPE_KEY:
+                  break;
+                case DATABASE_DATATYPE_BOOL:
+                  break;
+                case DATABASE_DATATYPE_INT:
+                  break;
+                case DATABASE_DATATYPE_INT64:
+                  break;
+                case DATABASE_DATATYPE_DOUBLE:
+                  break;
+                case DATABASE_DATATYPE_DATETIME:
+                  break;
+                case DATABASE_DATATYPE_TEXT:
+                  break;
+                case DATABASE_DATATYPE_BLOB:
+                  break;
+                #ifndef NDEBUG
+                  default:
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    break;
+                #endif /* NDEBUG */
+              }
+            }
+            free(values);
+
+            // get number of changes
+            if (changedRowCount != NULL)
+            {
+              (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->sqlite.handle);
+            }
+
+            // done SQL statement
+            sqlite3_finalize(statementHandle);
+          }
+          else
+          {
+            // query SQL statement
+            if (error == ERROR_NONE)
+            {
+              sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
+                                          String_cString(sqlString),
+                                          NULL,  // callback
+                                          NULL,  // userData
+                                          NULL  // errorMsg
+                                         ); \
+              if      (sqliteResult == SQLITE_MISUSE)
+              {
+                HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle));
+              }
+              else if (sqliteResult == SQLITE_INTERRUPT)
+              {
+                error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              }
+              else if (sqliteResult != SQLITE_OK)
+              {
+                error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+              }
+            }
+          }
+        }
+        break;
+      case DATABASE_TYPE_MYSQL:
+        {
+          const uint MAX_TEXT_LENGTH = 4096;
+
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+          MYSQL_STMT    *statementHandle;
+          int           mysqlResult;
+          MYSQL_BIND    *bind;
+          MYSQL_TIME    *dateTime;
+
+          if (databaseRowFunction != NULL)
+          {
+            // prepare SQL statement
+            statementHandle = mysql_stmt_init(databaseHandle->mysql.handle);
+            assert(statementHandle != NULL);
+            mysqlResult = mysql_stmt_prepare(statementHandle,
+                                             String_cString(sqlString),
+                                             String_length(sqlString)
+                                            );
+            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            {
+              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_stmt_error(statementHandle));
+            }
+            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+            {
+              mysql_stmt_close(statementHandle);
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
+            }
+            else if (mysqlResult != 0)
+            {
+              mysql_stmt_close(statementHandle);
+              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
+            }
+
+            // allocate call-back data
+            valueCount = mysql_stmt_field_count(statementHandle);
+            assertx(valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
+
+            bind = (MYSQL_BIND*)calloc(valueCount, sizeof(MYSQL_BIND));
+            if (bind == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+
+            dateTime = (MYSQL_TIME*)calloc(valueCount, sizeof(MYSQL_TIME));
+            if (dateTime == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+
+            values = (DatabaseValue*)malloc(valueCount*sizeof(DatabaseValue));
+            if (values == NULL)
+            {
+              HALT_INSUFFICIENT_MEMORY();
+            }
+
+            // bind results
+            for (i = 0; i < valueCount; i++)
+            {
+              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+              {
+                case DATABASE_DATATYPE_NONE:
+                  break;
+                case DATABASE_DATATYPE_PRIMARY_KEY:
+                case DATABASE_DATATYPE_KEY:
+                  values[i].id = DATABASE_ID_NONE;
+                  bind[i].buffer_type   = MYSQL_TYPE_LONG;
+                  bind[i].buffer        = (char *)&values[i].id;
+                  bind[i].is_null       = NULL;
+                  bind[i].length        = NULL;
+                  break;
+                case DATABASE_DATATYPE_BOOL:
+                  values[i].b = FALSE;
+                  bind[i].buffer_type   = MYSQL_TYPE_TINY;
+                  bind[i].buffer        = (char *)&values[i].b;
+                  bind[i].is_null       = NULL;
+                  bind[i].length        = NULL;
+                  break;
+                case DATABASE_DATATYPE_INT:
+                  values[i].i = 0LL;
+                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
+                  bind[i].buffer        = (char *)&values[i].i;
+                  bind[i].is_null       = NULL;
+                  bind[i].length        = NULL;
+                  bind[i].error         = NULL;
+                  break;
+                case DATABASE_DATATYPE_INT64:
+                  values[i].i = 0LL;
+                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
+                  bind[i].buffer        = (char *)&values[i].i;
+                  bind[i].is_null       = NULL;
+                  bind[i].length        = NULL;
+                  bind[i].error         = NULL;
+                  break;
+                case DATABASE_DATATYPE_DOUBLE:
+                  values[i].d = 0.0;
+                  bind[i].buffer_type   = MYSQL_TYPE_DOUBLE;
+                  bind[i].buffer        = (char *)&values[i].d;
+                  bind[i].is_null       = NULL;
+                  bind[i].length        = NULL;
+                  break;
+                case DATABASE_DATATYPE_DATETIME:
+                  values[i].dateTime = 0LL;
+                  bind[i].buffer_type   = MYSQL_TYPE_DATETIME;
+                  bind[i].buffer        = (char *)&dateTime[i];
+                  bind[i].is_null       = NULL;
+                  bind[i].length        = NULL;
+                  break;
+                case DATABASE_DATATYPE_TEXT:
+                  values[i].text.data   = NULL;
+                  values[i].text.length = 0;
+                  bind[i].buffer_type   = MYSQL_TYPE_STRING;
+                  bind[i].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
+                  bind[i].buffer_length = MAX_TEXT_LENGTH;
+                  bind[i].is_null       = NULL;
+                  bind[i].length        = &values[i].text.length;
+                  break;
+                case DATABASE_DATATYPE_BLOB:
+                  values[i].blob.data   = NULL;
+                  values[i].blob.length = 0;
+                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                  break;
+                #ifndef NDEBUG
+                  default:
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    break;
+                #endif /* NDEBUG */
+              }
+            }
+
+// TODO:
+            if (valueCount > 0)
+            {
+              if (mysql_stmt_bind_result(statementHandle, bind) != 0)
+              {
+fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,mysql_stmt_errno(statementHandle),mysql_stmt_error(statementHandle));
+abort();
+              }
+            }
+
+            // step and process rows
+            mysqlResult = mysql_stmt_execute(statementHandle);
+            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            {
+              HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",mysqlResult,mysql_stmt_error(statementHandle));
+            }
+            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+            {
+              free(values);
+              free(dateTime);
+              free(bind);
+              mysql_stmt_close(statementHandle);
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
+            }
+            else if (mysqlResult != 0)
+            {
+              free(values);
+              free(dateTime);
+              free(bind);
+              mysql_stmt_close(statementHandle);
+              error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              break;
+            }
+
+#if 1
+if (mysql_stmt_store_result(statementHandle) != 0)
+{
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle));
+abort();
+}
+#endif
+
+//fprintf(stderr,"%s:%d: mysql_stmt_num_rows(statementHandle)=%d\n",__FILE__,__LINE__,mysql_stmt_num_rows(statementHandle));
+//            if (mysql_stmt_num_rows(statementHandle) > 0)
+            {
+              do
+              {
+                // step
+                mysqlResult = mysql_stmt_fetch(statementHandle);
+
+                // process row
+                if      (mysqlResult == 0)
+                {
+                  for (i = 0; i < valueCount; i++)
+                  {
+                    switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+                    {
+                      case DATABASE_DATATYPE_NONE:
+                        break;
+                      case DATABASE_DATATYPE_PRIMARY_KEY:
+                      case DATABASE_DATATYPE_KEY:
+                        break;
+                      case DATABASE_DATATYPE_BOOL:
+                        break;
+                      case DATABASE_DATATYPE_INT:
+                        break;
+                      case DATABASE_DATATYPE_INT64:
+                        break;
+                      case DATABASE_DATATYPE_DOUBLE:
+                        break;
+                      case DATABASE_DATATYPE_DATETIME:
+                        break;
+                      case DATABASE_DATATYPE_TEXT:
+                        values[i].text.data = bind[i].buffer;
+                        break;
+                      case DATABASE_DATATYPE_BLOB:
+                        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                        break;
+                      #ifndef NDEBUG
+                        default:
+                          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                          break;
+                      #endif /* NDEBUG */
+                    }
+                  }
+                  error = databaseRowFunction(values,valueCount,databaseRowUserData);
+                }
+                else if (mysqlResult == 1)
+                {
+                  error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+                }
+                else if (mysqlResult == MYSQL_DATA_TRUNCATED)
+                {
+                  error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+                }
+              }
+              while (   (mysqlResult == 0)
+                     && (error == ERROR_NONE)
+                    );
+            }
+
+            // free call-back data
+            for (i = 0; i < valueCount; i++)
+            {
+              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+              {
+                case DATABASE_DATATYPE_NONE:
+                  break;
+                case DATABASE_DATATYPE_PRIMARY_KEY:
+                case DATABASE_DATATYPE_KEY:
+                  break;
+                case DATABASE_DATATYPE_BOOL:
+                  break;
+                case DATABASE_DATATYPE_INT:
+                  break;
+                case DATABASE_DATATYPE_INT64:
+                  break;
+                case DATABASE_DATATYPE_DOUBLE:
+                  break;
+                case DATABASE_DATATYPE_DATETIME:
+                  break;
+                case DATABASE_DATATYPE_TEXT:
+                  free(bind[i].buffer);
+                  break;
+                case DATABASE_DATATYPE_BLOB:
+                  break;
+                #ifndef NDEBUG
+                  default:
+                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    break;
+                #endif /* NDEBUG */
+              }
+            }
+            free(values);
+            free(dateTime);
+            free(bind);
+
+            // get number of changes
+            if (changedRowCount != NULL)
+            {
+              (*changedRowCount) += (ulong)mysql_stmt_affected_rows(statementHandle);
+            }
+
+            // done SQL statement
+            mysql_stmt_close(statementHandle);
+          }
+          else
+          {
+            // query SQL statement
+            mysqlResult = mysql_real_query(databaseHandle->mysql.handle,
+                                           String_cString(sqlString),
+                                           String_length(sqlString)
+                                          );
+            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            {
+              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
+            }
+            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+            {
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),String_cString(sqlString));
+              break;
+            }
+            else if (mysqlResult != 0)
+            {
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),String_cString(sqlString));
+              break;
+            }
+          }
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+      #endif
+    }
+
+    #ifndef NDEBUG
+      // clear SQL command, backtrace
+      String_clear(databaseHandle->debug.current.sqlString);
+    #endif /* not NDEBUG */
+
+    // check result
+    if      (error == ERROR_NONE)
+    {
+      done = TRUE;
+    }
+    else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+    {
+//fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
+//Database_debugPrintLockInfo(databaseHandle);
+      // execute registered busy handlers
+//TODO: lock list?
+      LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
+      {
+        assert(busyHandlerNode->function != NULL);
+        busyHandlerNode->function(busyHandlerNode->userData);
+      }
+
+      Misc_mdelay(SLEEP_TIME);
+
+      // next retry
+      retryCount++;
+
+      error = ERROR_NONE;
+    }
+    else if (Error_getCode(error) == ERROR_CODE_DATABASE_INTERRUPTED)
+    {
+      // report interrupt
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+    }
+  }
+  while (   !done
+         && (error == ERROR_NONE)
+         && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
+        );
+
+  if      (error != ERROR_NONE)
+  {
+    return error;
+  }
+  else if (retryCount > maxRetryCount)
+  {
+    return ERRORX_(DATABASE_TIMEOUT,0,"");
+  }
+  else
+  {
+    return ERROR_NONE;
+  }
+
+  #undef SLEEP_TIME
+}
+
+/***********************************************************************\
+* Name   : executeQuery
+* Purpose: execute single database statement with prepared statement or
+*          query
+* Input  : databaseHandle      - database handle
+*          databaseRowFunction - row call-back function (can be NULL)
+*          databaseRowUserData - user data for row call-back
+*          changedRowCount     - number of changed rows (can be NULL)
+*          timeout             - timeout [ms]
+*          columnTypes         - result column types; use macro
+*                                DATABASE_COLUMN_TYPES()
+*          columnTypeCount     - number of result columns
+*          command             - SQL command string with %[l]d, %[']S,
+*                                %[']s
+*          arguments           - arguments for SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors executeQuery(DatabaseStatementHandle *databaseStatementHandle,
+                          ulong                   *changedRowCount,
+                          long                    timeout,
+                          const DatabaseValue     values[],
+                          uint                    valueCount
+                         )
+{
+  /* data flow:
+
+     application    ->    values -> database internal     -> values   ->    application
+
+                 insert             sqlite:                          select
+                 update             MySQL: bind, dataTime
+                 delete             Postgres: ?
+
+   */
+  #define SLEEP_TIME 500L  // [ms]
+
+  bool                          done;
+  Errors                        error;
+  uint                          maxRetryCount;
+  uint                          retryCount;
+  uint                          i;
+  const DatabaseBusyHandlerNode *busyHandlerNode;
+
+  assert(databaseStatementHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
+  assert(values != NULL);
+
+  done          = FALSE;
+  error         = ERROR_NONE;
+  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
+  retryCount    = 0;
+  do
+  {
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+// TODO: reactivate when each thread has his own index handle
+#if 0
+    assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
+#endif
+
+    switch (Database_getType(databaseStatementHandle->databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        {
+          int          sqliteResult;
+          sqlite3_stmt *statementHandle;
+
+          // bind values
+
+          // do query
+          if (error == ERROR_NONE)
+          {
+            sqliteResult = sqlite3_exec(databaseStatementHandle->databaseHandle->sqlite.handle,
+"",//                                        String_cString(sqlString),
+                                        NULL,  // callback
+                                        NULL,  // userData
+                                        NULL  // errorMsg
+                                       ); \
+            if      (sqliteResult == SQLITE_MISUSE)
+            {
+              HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle));
+            }
+            else if (sqliteResult == SQLITE_INTERRUPT)
+            {
+              error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),String_cString(databaseStatementHandle->sqlString));
+            }
+            else if (sqliteResult != SQLITE_OK)
+            {
+              error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),String_cString(databaseStatementHandle->sqlString));
+            }
+          }
+        }
+        break;
+      case DATABASE_TYPE_MYSQL:
+        {
+          const uint MAX_TEXT_LENGTH = 4096;
+
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+          int           mysqlResult;
+          MYSQL_BIND    *bind;
+          MYSQL_TIME    *dateTime;
+
+          // allocate bind data
+          assertx(mysql_stmt_param_count(databaseStatementHandle->mysql.statementHandle) >= valueCount,"valueCount mismatch: expected %d, got %d",mysql_stmt_field_count(databaseStatementHandle->mysql.statementHandle),valueCount);
+
+          bind = (MYSQL_BIND*)calloc(valueCount, sizeof(MYSQL_BIND));
+          if (bind == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+
+          dateTime = (MYSQL_TIME*)calloc(valueCount, sizeof(MYSQL_TIME));
+          if (dateTime == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+
+          // bind values
+fprintf(stderr,"%s:%d: %d %s\n",__FILE__,__LINE__,values[i].type,values[i].name);
+          for (i = 0; i < valueCount; i++)
+          {
+            switch (values[i].type)
+            {
+              case DATABASE_DATATYPE_NONE:
+                break;
+              case DATABASE_DATATYPE_PRIMARY_KEY:
+              case DATABASE_DATATYPE_KEY:
+                bind[i].buffer_type   = MYSQL_TYPE_LONG;
+                bind[i].buffer        = (char *)&values[i].id;
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                break;
+              case DATABASE_DATATYPE_BOOL:
+                bind[i].buffer_type   = MYSQL_TYPE_TINY;
+                bind[i].buffer        = (char *)&values[i].b;
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                break;
+              case DATABASE_DATATYPE_INT:
+                bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
+                bind[i].buffer        = (char *)&values[i].i;
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                bind[i].error         = NULL;
+                break;
+              case DATABASE_DATATYPE_INT64:
+                bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
+                bind[i].buffer        = (char *)&values[i].i;
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                bind[i].error         = NULL;
+                break;
+              case DATABASE_DATATYPE_DOUBLE:
+                bind[i].buffer_type   = MYSQL_TYPE_DOUBLE;
+                bind[i].buffer        = (char *)&values[i].d;
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                break;
+              case DATABASE_DATATYPE_DATETIME:
+                bind[i].buffer_type   = MYSQL_TYPE_DATETIME;
+                bind[i].buffer        = (char *)&dateTime[i];
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                break;
+              case DATABASE_DATATYPE_TEXT:
+                bind[i].buffer_type   = MYSQL_TYPE_STRING;
+                bind[i].buffer        = values[i].s;
+                bind[i].buffer_length = stringLength(values[i].s);
+                bind[i].is_null       = NULL;
+                bind[i].length        = 0;
+                break;
+              case DATABASE_DATATYPE_BLOB:
+                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                break;
+              #ifndef NDEBUG
+                default:
+                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                  break;
+              #endif /* NDEBUG */
+            }
+          }
+          if (mysql_stmt_bind_param(databaseStatementHandle->mysql.statementHandle,bind) != 0)
+          {
+            free(dateTime);
+            free(bind);
+            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s: %s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),String_cString(databaseStatementHandle->sqlString));
+            break;
+          }
+
+          // do query
+          mysqlResult = mysql_stmt_execute(databaseStatementHandle->mysql.statementHandle);
+          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+          {
+            HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",mysqlResult,mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
+          }
+          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+          {
+            free(dateTime);
+            free(bind);
+            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s: %s",mysql_stmt_error(databaseStatementHandle),String_cString(databaseStatementHandle->sqlString));
+            break;
+          }
+          else if (mysqlResult != 0)
+          {
+            free(dateTime);
+            free(bind);
+            error = ERRORX_(DATABASE,mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),"%s: %s",mysql_stmt_error(databaseStatementHandle),String_cString(databaseStatementHandle->sqlString));
+            break;
+          }
+          if (changedRowCount != NULL)
+          {
+            (*changedRowCount) = mysql_affected_rows(databaseStatementHandle->mysql.statementHandle);
+          }
+
+          // free resources
+          free(dateTime);
+          free(bind);
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break;
+      #endif
+    }
+
+    // check result
+    if      (error == ERROR_NONE)
+    {
+      done = TRUE;
+    }
+    else if (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+    {
+//fprintf(stderr,"%s, %d: database busy %ld < %ld\n",__FILE__,__LINE__,retryCount*SLEEP_TIME,timeout);
+//Database_debugPrintLockInfo(databaseHandle);
+      // execute registered busy handlers
+//TODO: lock list?
+      LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
+      {
+        assert(busyHandlerNode->function != NULL);
+        busyHandlerNode->function(busyHandlerNode->userData);
+      }
+
+      Misc_mdelay(SLEEP_TIME);
+
+      // next retry
+      retryCount++;
+
+      error = ERROR_NONE;
+    }
+    else if (Error_getCode(error) == ERROR_CODE_DATABASE_INTERRUPTED)
+    {
+      // report interrupt
+// TODO: mysql
+      error = ERRORX_(DATABASE,sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle),String_cString(databaseStatementHandle->sqlString));
+    }
+  }
+  while (   !done
+         && (error == ERROR_NONE)
+         && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
+        );
+
+  if      (error != ERROR_NONE)
+  {
+    return error;
+  }
+  else if (retryCount > maxRetryCount)
+  {
+    return ERRORX_(DATABASE_TIMEOUT,0,"");
+  }
+  else
+  {
+    return ERROR_NONE;
+  }
+
+  #undef SLEEP_TIME
 }
 
 // TODO: remove
@@ -5975,14 +6943,21 @@ Errors Database_initAll(void)
     return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
   }
 
-  // init MySQL
-  mysql_init(&mysql);
+  #ifdef HAVE_MYSQL
+    // init MySQL
+    mysql_library_init(0,NULL,NULL);
+  #endif
 
   return ERROR_NONE;
 }
 
 void Database_doneAll(void)
 {
+  #ifdef HAVE_MYSQL
+    // done MySQL
+    mysql_library_end();
+  #endif
+
   // done database list
   Semaphore_done(&databaseList.lock);
   List_done(&databaseList,CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
@@ -7592,7 +8567,7 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
         error = Database_getTableList(&tableNameList,databaseHandle);
         STRINGLIST_ITERATEX(&indexNameList,iteratorTableName,tableName,error == ERROR_NONE)
         {
-          error = Database_getIndexList(&indexNameList,databaseHandle,tableName);
+          error = Database_getIndexList(&indexNameList,databaseHandle,String_cString(tableName));
           STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
           {
         fprintf(stderr,"%s:%d: drop %s\n",__FILE__,__LINE__,String_cString(indexName));
@@ -7888,7 +8863,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       toColumnMapCount++;
     }
   }
-fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (int i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d, ",toColumnMap[i],i); } fprintf(stderr,"\n");
+//fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (int i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d, ",toColumnMap[i],i); } fprintf(stderr,"\n");
   parameterMapCount = 0;
   for (i = 0; i < toColumnCount; i++)
   {
@@ -9569,6 +10544,75 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
   return error;
 }
 
+Errors Database_insert(DatabaseHandle  *databaseHandle,
+                       ulong           *changedRowCount,
+                       const char      *tableName,
+                       uint            flags,
+                       DatabaseValue   values[],
+                       uint            valueCount
+                      )
+{
+  String                  sqlString;
+  DatabaseStatementHandle databaseStatementHandle;
+  Errors                  error;
+
+  // create SQL string
+  sqlString = String_newCString("INSERT ");
+  if (IS_SET(flags,DATABASE_FLAG_IGNORE))
+  {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        String_appendCString(sqlString," OR IGNORE ");
+        break;
+      case DATABASE_TYPE_MYSQL:
+        String_appendCString(sqlString," IGNORE ");
+        break;
+    }
+  }
+
+  String_formatAppend(sqlString,"%s (",tableName);
+  for (uint i = 0; i < valueCount; i++)
+  {
+    if (i > 0) String_appendChar(sqlString,',');
+    String_appendCString(sqlString,values[i].name);
+  }
+  String_appendCString(sqlString,") VALUES (");
+  for (uint i = 0; i < valueCount; i++)
+  {
+    if (i > 0) String_appendChar(sqlString,',');
+    String_appendChar(sqlString,'?');
+  }
+  String_appendChar(sqlString,')');
+
+  // prepare statement
+  error = prepareStatement(&databaseStatementHandle,
+                           databaseHandle,
+                           String_cString(sqlString)
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  // execute statement
+  error = executeQuery(&databaseStatementHandle,
+                       databaseHandle,
+                       WAIT_FOREVER,
+                       values,
+                       valueCount
+                      );
+
+  // finalize statementHandle
+  finalizeStatement(&databaseStatementHandle);
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
@@ -9602,7 +10646,7 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
   #ifdef NDEBUG
     error = vprepareStatement(databaseStatementHandle,databaseHandle,command,arguments);
   #else /* not NDEBUG */
-    error = vprepareStatement(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
+    error = __vprepareStatement(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
   #endif /* NDEBUG */
   va_end(arguments);
 
@@ -9616,7 +10660,7 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
 }
 
 bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                         const char          *format,
+                         const char              *format,
                          ...
                         )
 {

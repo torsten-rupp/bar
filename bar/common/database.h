@@ -413,6 +413,7 @@ typedef char DatabaseColumnName[DATABASE_MAX_COLUMN_NAME_LENGTH+1];
 // database value
 typedef struct
 {
+const char *name;
   DatabaseDataTypes type;
   union
   {
@@ -422,6 +423,7 @@ typedef struct
     uint64 u;
     double d;
     uint64 dateTime;
+    char   *s;
 // TODO: use String?
     struct
     {
@@ -441,6 +443,14 @@ typedef struct
     } data;
   };
 } DatabaseValue;
+
+#define DATABASE_VALUES(...) \
+  (DatabaseValue[]){ __VA_ARGS__ }, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
+
+
+#define DATABASE_FLAG_NONE   0
+#define DATABASE_FLAG_IGNORE (1 << 0)
 
 // database statement handle
 typedef struct
@@ -1455,6 +1465,27 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
                          const char              *command,
                          va_list                 arguments
                        );
+
+/***********************************************************************\
+* Name   : Database_insert
+* Purpose: insert row into database table
+* Input  : databaseHandle  - database handle
+*          changedRowCount - row count variable (can be NULL)
+*          flags           - insert flags; see DATABASE_FLAGS_...
+*          values          - values to insert
+*          valueCount      - value count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_insert(DatabaseHandle *databaseHandle,
+                       ulong          *changedRowCount,
+                       const char     *tableName,
+                       uint           flags,
+                       DatabaseValue  values[],
+                       uint           valueCount
+                      );
 
 /***********************************************************************\
 * Name   : Database_prepare
