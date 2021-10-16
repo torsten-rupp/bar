@@ -12,6 +12,7 @@ bar/debug/
 bar/errors.c
 bar/errors.h
 bar/index_definition.h
+bar/index_definition.c
 bar/po/Makefile
 bar/release/
 bar/test/Makefile
