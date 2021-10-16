@@ -167,7 +167,7 @@ ifneq ($(UNOCONV),)
 	$(INSTALL) -d $(@D)
 	($(UNOCONV) -f pdf --stdout $(SOURCE_DIR)/backup-archiver.odt > $@.new; \
          if test $$? -eq 0; then \
-           $(MV) $@.new $@; \        
+           $(MV) $@.new $@; \
          else \
            $(ECHO) "ERROR: fail to  create PDF manual."; \
            $(RMF) $@.new; \
