@@ -24,6 +24,7 @@ barcontrol/barcontrol-windows.jar
 barcontrol/barcontrol.cmd
 barcontrol/classes/
 barcontrol/src/Config.java
+barcontrol/src/BARException.java
 binutils
 bzip2
 c-ares
