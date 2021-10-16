@@ -460,6 +460,8 @@ typedef struct
     }
     mysql;
   };
+  uint          valueIndex;
+
   DatabaseValue *values;
   uint          valueCount;
   uint          *valueMap;
@@ -1467,11 +1469,13 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
 /***********************************************************************\
 * Name   : Database_insert
 * Purpose: insert row into database table
-* Input  : databaseHandle  - database handle
-*          changedRowCount - row count variable (can be NULL)
-*          flags           - insert flags; see DATABASE_FLAGS_...
-*          values          - values to insert
-*          valueCount      - value count
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAGS_...
+*          filter           - SQL filter expression
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : -
 * Return : -
 * Notes  : -
@@ -1483,6 +1487,54 @@ Errors Database_insert(DatabaseHandle *databaseHandle,
                        uint           flags,
                        DatabaseValue  values[],
                        uint           valueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_insert
+* Purpose: insert row into database table
+* Input  : databaseHandle  - database handle
+*          changedRowCount - row count variable (can be NULL)
+*          flags           - insert flags; see DATABASE_FLAGS_...
+*          values          - values to insert
+*          valueCount      - value count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_update(DatabaseHandle *databaseHandle,
+                       ulong          *changedRowCount,
+                       const char     *tableName,
+                       uint           flags,
+                       DatabaseValue  values[],
+                       uint           valueCount,
+                       const char     *filter,
+                       DatabaseValue  filterValues[],
+                       uint           filterCalueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_delete
+* Purpose: delete rows from database table
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAGS_...
+*          filter           - SQL filter expression
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_delete(DatabaseHandle *databaseHandle,
+                       ulong          *changedRowCount,
+                       const char     *tableName,
+                       uint           flags,
+                       const char     *filter,
+                       DatabaseValue  filterValues[],
+                       uint           filterValueCount
                       );
 
 /***********************************************************************\
