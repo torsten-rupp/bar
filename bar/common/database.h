@@ -120,10 +120,8 @@ typedef enum
   DATABASE_DATATYPE_UNKNOWN
 } DatabaseDataTypes;
 
-#define __DATABASE_COLUMN_TYPE(type) DATABASE_DATATYPE_ ## type,
-#define DATABASE_COLUMN_TYPES(...) \
-  (DatabaseDataTypes[]){_ITERATOR_EVAL(_ITERATOR_MAP(__DATABASE_COLUMN_TYPE, __VA_ARGS__))}, \
-  _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
+#define DATABASE_FLAG_NONE   0
+#define DATABASE_FLAG_IGNORE (1 << 0)
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -407,7 +405,6 @@ typedef struct DatabaseHandle
   #endif /* not NDEBUG */
 } DatabaseHandle;
 
-// TODO:
 typedef char DatabaseColumnName[DATABASE_MAX_COLUMN_NAME_LENGTH+1];
 
 // database value
@@ -443,14 +440,6 @@ const char *name;
     } data;
   };
 } DatabaseValue;
-
-#define DATABASE_VALUES(...) \
-  (DatabaseValue[]){ __VA_ARGS__ }, \
-  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
-
-
-#define DATABASE_FLAG_NONE   0
-#define DATABASE_FLAG_IGNORE (1 << 0)
 
 // database statement handle
 typedef struct
@@ -547,6 +536,15 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+#define __DATABASE_COLUMN_TYPE(type) DATABASE_DATATYPE_ ## type,
+#define DATABASE_COLUMN_TYPES(...) \
+  (DatabaseDataTypes[]){_ITERATOR_EVAL(_ITERATOR_MAP(__DATABASE_COLUMN_TYPE, __VA_ARGS__))}, \
+  _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
+
+#define DATABASE_VALUES(...) \
+  (DatabaseValue[]){ __VA_ARGS__ }, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
 
 /***********************************************************************\
 * Name   : DATABASE_LOCKED_DO
