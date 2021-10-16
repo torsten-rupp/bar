@@ -1122,7 +1122,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
                   databaseNode->debug.reads[i].fileName,
                   databaseNode->debug.reads[i].lineNb
                  );
-//TODO:
+//TODO: reactivate
 #if 0
           fprintf(stderr,
                   "    command: %s\n",
@@ -1152,7 +1152,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
                   databaseNode->debug.readWrites[i].fileName,
                   databaseNode->debug.readWrites[i].lineNb
                  );
-//TODO
+//TODO: reactivate
 #if 0
           fprintf(stderr,
                   "    command: %s\n",
