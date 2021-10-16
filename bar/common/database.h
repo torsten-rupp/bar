@@ -921,10 +921,10 @@ Errors Database_getTableList(StringList     *tableList,
 /***********************************************************************\
 * Name   : Database_getIndexList
 * Purpose: get index list
-* Input  : tableList      - index list variable
+* Input  : indexList      - index list variable
 *          databaseHandle - database handle
 *          tableName      - table name (can be NULL)
-* Output : tableList - table list
+* Output : indexList - index list
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -937,9 +937,9 @@ Errors Database_getIndexList(StringList     *indexList,
 /***********************************************************************\
 * Name   : Database_getTriggerList
 * Purpose: get trigger list
-* Input  : tableList      - trigger list variable
+* Input  : triggerList    - trigger list variable
 *          databaseHandle - database handle
-* Output : tableList - table list
+* Output : triggerList - trigger list
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
