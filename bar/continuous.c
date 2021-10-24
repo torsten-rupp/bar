@@ -1667,8 +1667,6 @@ Errors Continuous_init(const char *uriString)
     {
       return ERROR_DATABASE;
     }
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-
 
     // check if continuous database exists in expected version, create database
     error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);

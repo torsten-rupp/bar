@@ -1866,13 +1866,13 @@ exit(1);
     {
       if (!jobListPendingFlag)
       {
-fprintf(stderr,"%s:%d: sleeeeeeeep\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s:%d: sleeeeeeeep\n",__FILE__,__LINE__);
         // sleep and check quit flag
         delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
       }
       else
       {
-fprintf(stderr,"%s:%d: sleeeeeeeep\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s:%d: sleeeeeeeep\n",__FILE__,__LINE__);
         // short sleep
         delayThread(5,NULL);
       }
@@ -3533,7 +3533,6 @@ LOCAL void updateIndexThreadCode(void)
           }
           Job_doneOptions(&jobOptions);
         }
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
         // free resources
         List_done(&indexCryptPasswordList,(ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL);
@@ -3543,7 +3542,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       // sleep and check quit flag/trigger
       delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
     }
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
     // done index
     if (Index_isAvailable())

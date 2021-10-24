@@ -2675,7 +2675,6 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperati
           configFileNode = configFileNode->next;
         }
 
-
         if (configFileNode != NULL)
         {
           String_formatAppend(line,"%S",configFileNode->fileName);
@@ -5376,7 +5375,6 @@ LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValue
         {
           entryNode = entryNode->next;
         }
-
         if (entryNode != NULL)
         {
           switch (entryNode->pattern.type)
@@ -6160,25 +6158,22 @@ LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueOperat
         const Certificate *certificate = (Certificate*)(*formatUserData);
         String            line         = (String)data;
 
-        if (certificate != NULL)
+        if ((certificate != NULL) && Configuration_isCertificateAvailable(certificate))
         {
-          if (Configuration_isCertificateAvailable(certificate))
+          switch (certificate->type)
           {
-            switch (certificate->type)
-            {
-              case CERTIFICATE_TYPE_FILE:
-                String_appendFormat(line,"%S",certificate->fileName);
-                break;
-              case CERTIFICATE_TYPE_CONFIG:
-                String_appendCString(line,"base64:");
-                Misc_base64Encode(line,certificate->data,certificate->length);
-                break;
-              default:
-                #ifndef NDEBUG
-                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                #endif /* NDEBUG */
-                break;
-            }
+            case CERTIFICATE_TYPE_FILE:
+              String_appendFormat(line,"%S",certificate->fileName);
+              break;
+            case CERTIFICATE_TYPE_CONFIG:
+              String_appendCString(line,"base64:");
+              Misc_base64Encode(line,certificate->data,certificate->length);
+              break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break;
           }
 
           (*formatUserData) = NULL;
@@ -6333,13 +6328,10 @@ LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations ope
         const Key *key = (Key*)(*formatUserData);
         String    line = (String)data;
 
-        if (key != NULL)
+        if ((key != NULL) && Configuration_isKeyAvailable(key))
         {
-          if (Configuration_isKeyAvailable(key))
-          {
-            String_appendCString(line,"base64:");
-            Misc_base64Encode(line,key->data,key->length);
-          }
+          String_appendCString(line,"base64:");
+          Misc_base64Encode(line,key->data,key->length);
 
           (*formatUserData) = NULL;
 
@@ -6634,13 +6626,10 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
         const Hash *hash = (const Hash*)(*formatUserData);
         String     line  = (String)data;
 
-        if (hash != NULL)
+        if ((hash != NULL) && Configuration_isHashAvailable(hash))
         {
-          if (Configuration_isHashAvailable(hash))
-          {
-            String_appendFormat(line,"%s:",Crypt_hashAlgorithmToString(hash->cryptHashAlgorithm,NULL));
-            Misc_base64Encode(line,hash->data,hash->length);
-          }
+          String_appendFormat(line,"%s:",Crypt_hashAlgorithmToString(hash->cryptHashAlgorithm,NULL));
+          Misc_base64Encode(line,hash->data,hash->length);
 
           (*formatUserData) = NULL;
 

@@ -120,10 +120,8 @@ typedef enum
   DATABASE_DATATYPE_UNKNOWN
 } DatabaseDataTypes;
 
-#define __DATABASE_COLUMN_TYPE(type) DATABASE_DATATYPE_ ## type,
-#define DATABASE_COLUMN_TYPES(...) \
-  (DatabaseDataTypes[]){_ITERATOR_EVAL(_ITERATOR_MAP(__DATABASE_COLUMN_TYPE, __VA_ARGS__))}, \
-  _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
+#define DATABASE_FLAG_NONE   0
+#define DATABASE_FLAG_IGNORE (1 << 0)
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -414,12 +412,12 @@ typedef struct DatabaseHandle
   #endif /* not NDEBUG */
 } DatabaseHandle;
 
-// TODO:
 typedef char DatabaseColumnName[DATABASE_MAX_COLUMN_NAME_LENGTH+1];
 
 // database value
 typedef struct
 {
+const char *name;
   DatabaseDataTypes type;
   union
   {
@@ -429,6 +427,7 @@ typedef struct
     uint64 u;
     double d;
     uint64 dateTime;
+    char   *s;
 // TODO: use String?
     struct
     {
@@ -468,6 +467,8 @@ typedef struct
     }
     mysql;
   };
+  uint          valueIndex;
+
   DatabaseValue *values;
   uint          valueCount;
   uint          *valueMap;
@@ -544,6 +545,15 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+#define __DATABASE_COLUMN_TYPE(type) DATABASE_DATATYPE_ ## type,
+#define DATABASE_COLUMN_TYPES(...) \
+  (DatabaseDataTypes[]){_ITERATOR_EVAL(_ITERATOR_MAP(__DATABASE_COLUMN_TYPE, __VA_ARGS__))}, \
+  _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
+
+#define DATABASE_VALUES(...) \
+  (DatabaseValue[]){ __VA_ARGS__ }, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
 
 /***********************************************************************\
 * Name   : DATABASE_LOCKED_DO
@@ -920,10 +930,10 @@ Errors Database_getTableList(StringList     *tableList,
 /***********************************************************************\
 * Name   : Database_getIndexList
 * Purpose: get index list
-* Input  : tableList      - index list variable
+* Input  : indexList      - index list variable
 *          databaseHandle - database handle
 *          tableName      - table name (can be NULL)
-* Output : tableList - table list
+* Output : indexList - index list
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -936,9 +946,9 @@ Errors Database_getIndexList(StringList     *indexList,
 /***********************************************************************\
 * Name   : Database_getTriggerList
 * Purpose: get trigger list
-* Input  : tableList      - trigger list variable
+* Input  : triggerList    - trigger list variable
 *          databaseHandle - database handle
-* Output : tableList - table list
+* Output : triggerList - trigger list
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1462,6 +1472,77 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
                          const char              *command,
                          va_list                 arguments
                        );
+
+/***********************************************************************\
+* Name   : Database_insert
+* Purpose: insert row into database table
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAGS_...
+*          filter           - SQL filter expression
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_insert(DatabaseHandle *databaseHandle,
+                       ulong          *changedRowCount,
+                       const char     *tableName,
+                       uint           flags,
+                       DatabaseValue  values[],
+                       uint           valueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_insert
+* Purpose: insert row into database table
+* Input  : databaseHandle  - database handle
+*          changedRowCount - row count variable (can be NULL)
+*          flags           - insert flags; see DATABASE_FLAGS_...
+*          values          - values to insert
+*          valueCount      - value count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_update(DatabaseHandle *databaseHandle,
+                       ulong          *changedRowCount,
+                       const char     *tableName,
+                       uint           flags,
+                       DatabaseValue  values[],
+                       uint           valueCount,
+                       const char     *filter,
+                       DatabaseValue  filterValues[],
+                       uint           filterCalueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_delete
+* Purpose: delete rows from database table
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAGS_...
+*          filter           - SQL filter expression
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_delete(DatabaseHandle *databaseHandle,
+                       ulong          *changedRowCount,
+                       const char     *tableName,
+                       uint           flags,
+                       const char     *filter,
+                       DatabaseValue  filterValues[],
+                       uint           filterValueCount
+                      );
 
 /***********************************************************************\
 * Name   : Database_prepare

@@ -382,11 +382,11 @@ sub processFile($$)
                  || ($type eq $TYPE_FTS)
                  || ($type eq $TYPE_INDEX)
                 )
-             && ($line =~ /\);\s*$/)
+             && ($line =~ /\)(.*);\s*$/)
             )
       {
         # end table/index
-        $definition = append($definition,")");
+        $definition = append($definition,")".$1);
 
         if    ($type eq $TYPE_TABLE)
         {

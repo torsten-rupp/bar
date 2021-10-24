@@ -345,7 +345,6 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
     DEBUG_TESTCODE() { (void)File_close(&fileHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }

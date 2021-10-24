@@ -49,7 +49,7 @@ typedef struct
   sem_t          lock;
   ThreadPool     *threadPool;
   ThreadPoolNode *threadPoolNode;
-  const char     name[64];
+  char           name[64];
   int            niceLevel;
   sem_t          started;
 //  void       (*entryFunction)(void*);

@@ -203,6 +203,8 @@ LOCAL ProgressInfo importProgressInfo;
   #define DIMPORT(format,...) \
     do \
     { \
+      fprintf(stderr,format, ## __VA_ARGS__); \
+      fprintf(stderr,"\n"); \
     } \
     while (0)
 #else /* not INDEX_DEBUG_IMPORT_OLD_DATABASE */

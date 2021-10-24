@@ -45,13 +45,14 @@
 */
 
 const UUID_LENGTH     = 36
-const MAX_TEXT_LENGTH = 2048
+// how to increase that? limit 3072/4-1
+const MAX_TEXT_LENGTH = 512
 
 // --- meta ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta(
   name  VARCHAR(255) UNIQUE,
   value TEXT
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',NOW());
 
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS uuids(
   jobUUID VARCHAR($UUID_LENGTH) UNIQUE NOT NULL,
 
   INDEX(jobUUID)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
@@ -111,18 +112,20 @@ CREATE TABLE IF NOT EXISTS entities(
   INDEX(jobUUID,created,type),
   INDEX(hostName),
   INDEX(deletedFlag)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // insert default entity
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_DATABASE_ID,'','',0,0,0,0);
 
 // insert/delete/update triggeres
+/*
 CREATE TRIGGER AFTER INSERT ON entities
   FOR EACH ROW
   BEGIN
     INSERT IGNORE INTO uuids
       (jobUUID) VALUES (NEW.jobUUID);
   END;
+*/
 
 // --- storages --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storages(
@@ -181,7 +184,7 @@ CREATE TABLE IF NOT EXISTS storages(
   INDEX(state,name,totalEntryCount,created),
   INDEX(deletedFlag),
   FULLTEXT(name)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
@@ -212,7 +215,7 @@ CREATE TABLE IF NOT EXISTS entries(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type),
   FULLTEXT(name)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // newest entries (updated by triggers)
 CREATE TABLE IF NOT EXISTS entriesNewest(
@@ -241,8 +244,9 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type),
   INDEX(entityId,type,entryId,name,size,timeLastChanged)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
+/*
 CREATE TRIGGER AFTER UPDATE ON entries
   FOR EACH ROW
   BEGIN
@@ -277,6 +281,7 @@ CREATE TRIGGER AFTER UPDATE ON entries
             AND type=NEW.type
             AND NEW.timeLastChanged>timeLastChanged;
   END;
+*/
 
 //TODO
 // --- skipped entries -------------------------------------------------
@@ -291,7 +296,7 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
   INDEX(entityId,type,name),
   INDEX(name),
   INDEX(type,name)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- entry fragments -------------------------------------------------
 CREATE TABLE IF NOT EXISTS entryFragments(
@@ -305,7 +310,7 @@ CREATE TABLE IF NOT EXISTS entryFragments(
 
   INDEX(entryId),
   INDEX(storageId)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
@@ -317,7 +322,7 @@ CREATE TABLE IF NOT EXISTS fileEntries(
   CONSTRAINT fileEntries UNIQUE (entryId),
 
   INDEX(entryId)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
@@ -331,7 +336,7 @@ CREATE TABLE IF NOT EXISTS imageEntries(
   CONSTRAINT imageEntries UNIQUE (entryId),
 
   INDEX(entryId)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
@@ -354,7 +359,7 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   INDEX(entryId),
   INDEX(storageId,name),
   INDEX(name)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
@@ -368,7 +373,7 @@ CREATE TABLE IF NOT EXISTS linkEntries(
 
   INDEX(entryId),
   INDEX(storageId)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
@@ -380,7 +385,7 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
   CONSTRAINT hardlinkEntries UNIQUE (entryId),
 
   INDEX(entryId)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
@@ -396,7 +401,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
 
   INDEX(entryId),
   INDEX(storageId)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
@@ -419,11 +424,11 @@ CREATE TABLE IF NOT EXISTS history(
   INDEX(jobUUID,created,type),
   INDEX(created),
   INDEX(errorMessage)
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // --- debug only ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS log(
   text TEXT
-);
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
