@@ -265,7 +265,7 @@ LOCAL void debugFileInit(void)
 /***********************************************************************\
 * Name   : getLastError
 * Purpose: get last file error
-* Input  : fileHandle - file handle
+* Input  : fileName - file name
 * Output : -
 * Return : ERROR_NONE or last error
 * Notes  : -
@@ -273,13 +273,13 @@ LOCAL void debugFileInit(void)
 
 #ifdef NDEBUG
 LOCAL Errors getLastError(ErrorCodes errorCode,
-                          const char *name
+                          const char *fileName
                          )
 #else /* not NDEBUG */
 LOCAL Errors __getLastError(const char *__fileName__,
                             ulong      __lineNb__,
                             ErrorCodes errorCode,
-                            const char *name
+                            const char *fileName
                            )
 #endif /* NDEBUG */
 {
@@ -296,7 +296,7 @@ LOCAL Errors __getLastError(const char *__fileName__,
 
         s = String_new();
 
-        File_getDeviceNameCString(s,name);
+        File_getDeviceNameCString(s,fileName);
         #ifdef NDEBUG
           error = Errorx_(ERROR_CODE_IO,ENOSPC,"no space left on device '%s'",String_cString(s));
         #else /* not NDEBUG */
@@ -308,9 +308,9 @@ LOCAL Errors __getLastError(const char *__fileName__,
       break;
     default:
       #ifdef NDEBUG
-        error = Errorx_(errorCode,n,"%E",errno);
+        error = Errorx_(errorCode,n,"%E",n);
       #else /* not NDEBUG */
-        error = Errorx_(__fileName__,__lineNb__,errorCode,n,"%E",errno);
+        error = Errorx_(__fileName__,__lineNb__,errorCode,n,"%E",n);
       #endif /* NDEBUG */
       break;
   }
@@ -1149,8 +1149,8 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
 {
   #if   defined(PLATFORM_LINUX)
     FILE *handle;
-    char line[FILE_MAX_PATH_MAX_LENGTH+256];
-    char name[FILE_MAX_PATH_MAX_LENGTH];
+    char line[FILE_MAX_PATH_LENGTH+256];
+    char name[FILE_MAX_PATH_LENGTH];
     uint n0,n1;
   #elif defined(PLATFORM_WINDOWS)
     uint n;
@@ -1939,7 +1939,8 @@ Errors __File_openCString(const char *__fileName__,
         error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION
+                                   FILE_DEFAULT_PERMISSION,
+                                   TRUE
                                   );
         if (error != ERROR_NONE)
         {
@@ -2076,7 +2077,8 @@ Errors __File_openCString(const char *__fileName__,
         error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION
+                                   FILE_DEFAULT_PERMISSION,
+                                   TRUE
                                   );
         if (error != ERROR_NONE)
         {
@@ -2129,7 +2131,8 @@ Errors __File_openCString(const char *__fileName__,
         error = File_makeDirectory(directoryName,
                                    FILE_DEFAULT_USER_ID,
                                    FILE_DEFAULT_GROUP_ID,
-                                   FILE_DEFAULT_PERMISSION
+                                   FILE_DEFAULT_PERMISSION,
+                                   TRUE
                                   );
         if (error != ERROR_NONE)
         {
@@ -4519,7 +4522,8 @@ UNUSED_VARIABLE(groupId);
 Errors File_makeDirectory(ConstString    pathName,
                           uint32         userId,
                           uint32         groupId,
-                          FilePermission permission
+                          FilePermission permission,
+                          bool           ignoreExistingFlag
                          )
 {
   #define PERMISSION_DIRECTORY (FILE_PERMISSION_USER_EXECUTE|FILE_PERMISSION_GROUP_EXECUTE|FILE_PERMISSION_OTHER_EXECUTE)
@@ -4566,19 +4570,25 @@ Errors File_makeDirectory(ConstString    pathName,
       if (mkdir(String_cString(directoryName)) != 0)
       {
         error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
-        File_doneSplitFileName(&pathNameTokenizer);
-        File_deleteFileName(parentDirectoryName);
-        File_deleteFileName(directoryName);
-        return error;
+        if (!ignoreExistingFlag && !File_isDirectory(directoryName))
+        {
+          File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(parentDirectoryName);
+          File_deleteFileName(directoryName);
+          return error;
+        }
       }
     #elif (MKDIR_ARGUMENTS_COUNT == 2)
       if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
       {
         error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
-        File_doneSplitFileName(&pathNameTokenizer);
-        File_deleteFileName(parentDirectoryName);
-        File_deleteFileName(directoryName);
-        return error;
+        if (!ignoreExistingFlag && !File_isDirectory(directoryName))
+        {
+          File_doneSplitFileName(&pathNameTokenizer);
+          File_deleteFileName(parentDirectoryName);
+          File_deleteFileName(directoryName);
+          return error;
+        }
       }
     #endif /* MKDIR_ARGUMENTS_COUNT == ... */
 
@@ -4673,19 +4683,25 @@ Errors File_makeDirectory(ConstString    pathName,
           if (mkdir(String_cString(directoryName)) != 0)
           {
             error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
-            File_doneSplitFileName(&pathNameTokenizer);
-            File_deleteFileName(parentDirectoryName);
-            File_deleteFileName(directoryName);
-            return error;
+            if (!ignoreExistingFlag && !File_isDirectory(directoryName))
+            {
+              File_doneSplitFileName(&pathNameTokenizer);
+              File_deleteFileName(parentDirectoryName);
+              File_deleteFileName(directoryName);
+              return error;
+            }
           }
         #elif (MKDIR_ARGUMENTS_COUNT == 2)
           if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
           {
             error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
-            File_doneSplitFileName(&pathNameTokenizer);
-            File_deleteFileName(parentDirectoryName);
-            File_deleteFileName(directoryName);
-            return error;
+            if (!ignoreExistingFlag && !File_isDirectory(directoryName))
+            {
+              File_doneSplitFileName(&pathNameTokenizer);
+              File_deleteFileName(parentDirectoryName);
+              File_deleteFileName(directoryName);
+              return error;
+            }
           }
         #endif /* MKDIR_ARGUMENTS_COUNT == ... */
 
@@ -4743,9 +4759,9 @@ Errors File_makeDirectory(ConstString    pathName,
       }
     }
   }
+  File_doneSplitFileName(&pathNameTokenizer);
 
   // free resources
-  File_doneSplitFileName(&pathNameTokenizer);
   File_deleteFileName(parentDirectoryName);
   File_deleteFileName(directoryName);
 
@@ -4757,14 +4773,16 @@ Errors File_makeDirectory(ConstString    pathName,
 Errors File_makeDirectoryCString(const char     *pathName,
                                  uint32         userId,
                                  uint32         groupId,
-                                 FilePermission permission
+                                 FilePermission permission,
+                                 bool           ignoreExistingFlag
                                 )
 {
   String string;
   Errors error;
 
+// TODO: move code from File_makeDirectory and call in File_makeDirectory this function
   string = File_setFileNameCString(File_newFileName(),pathName);
-  error = File_makeDirectory(string,userId,groupId,permission);
+  error = File_makeDirectory(string,userId,groupId,permission,ignoreExistingFlag);
   File_deleteFileName(string);
 
   return error;

@@ -731,7 +731,7 @@ typedef struct
   Server                      defaultWebDAVServer;
   Device                      defaultDevice;
 
-  const char                  *indexDatabaseFileName;
+  const char                  *indexDatabaseSpecifier;
   bool                        indexDatabaseUpdateFlag;        // TRUE for update of index database
   bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index database
   BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
@@ -787,6 +787,7 @@ typedef struct
   PatternList                 excludePatternList;             // excluded entry patterns
 
   const char                  *changeToDirectory;
+  const char                  *importFileName;
 
   Commands                    command;
   uint                        generateKeyBits;

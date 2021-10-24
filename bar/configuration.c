@@ -1664,6 +1664,7 @@ LOCAL void initGlobalOptions(void)
   PatternList_init(&globalOptions.excludePatternList);
 
   globalOptions.changeToDirectory                               = NULL;
+  globalOptions.importFileName                                  = NULL;
 
   globalOptions.command                                         = COMMAND_NONE;
 
@@ -6650,18 +6651,20 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
 * Purpose: read configuration section from file
 * Input  : fileName                       - file name
 *          fileHandle                     - file handle
+*          lineNb                         - line number
 *          sectionName                    - section name
 *          firstValueIndex,lastValueIndex - first/last section index
 *          printInfoFlag                  - TRUE for output info, FALSE
 *                                           otherwise
 *          variable                       - variable or NULL
-* Output : -
+* Output : lineNb - updated line number
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors readConfigFileSection(ConstString fileName,
                                    FileHandle  *fileHandle,
+                                   uint        *lineNb,
                                    const char  *sectionName,
                                    uint        firstValueIndex,
                                    uint        lastValueIndex,
@@ -6670,7 +6673,6 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                                   )
 {
   Errors     error;
-  uint       lineNb;
   String     line;
   String     name,value;
   StringList commentList;
@@ -6679,13 +6681,12 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
   // parse section
   error      = ERROR_NONE;
   line       = String_new();
-  lineNb     = 0;
   name       = String_new();
   value      = String_new();
   StringList_init(&commentList);
   while (   (error == ERROR_NONE)
-         && File_getLine(fileHandle,line,&lineNb,NULL)
-         && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+         && File_getLine(fileHandle,line,lineNb,NULL)
+         && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[.*",NULL,NULL,NULL)
         )
   {
     if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
@@ -6742,7 +6743,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                                 UNUSED_VARIABLE(userData);
 
                                 if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),lineNb);
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),*lineNb);
                                 error = ERROR_CONFIG;
                               },NULL),
                               CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
@@ -6750,7 +6751,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                                 UNUSED_VARIABLE(userData);
 
                                 if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),lineNb);
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),*lineNb);
                               },NULL),
                               variable,
                               &commentList
@@ -6763,7 +6764,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
       else
       {
         if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-        printError("Unknown value '%S' in %S, line %ld",name,fileName,lineNb);
+        printError("Unknown value '%S' in %S, line %ld",name,fileName,*lineNb);
         error = ERROR_CONFIG;
       }
     }
@@ -6772,13 +6773,13 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
       if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
       printError(_("Syntax error in '%s', line %ld: '%s'"),
                  String_cString(fileName),
-                 lineNb,
+                 *lineNb,
                  String_cString(line)
                 );
       error = ERROR_CONFIG;
     }
   }
-  File_ungetLine(fileHandle,line,&lineNb);
+  File_ungetLine(fileHandle,line,lineNb);
 
   // free resources
   String_delete(value);
@@ -6901,6 +6902,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // read config section
       error = readConfigFileSection(fileName,
                                     &fileHandle,
+                                    &lineNb,
                                     "file-server",
                                     firstValueIndex,lastValueIndex,
                                     printInfoFlag,
@@ -6952,12 +6954,13 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 
       // read config section
       error = readConfigFileSection(fileName,
-                                &fileHandle,
-                                "ftp-server",
-                                firstValueIndex,lastValueIndex,
-                                printInfoFlag,
-                                serverNode
-                               );
+                                    &fileHandle,
+                                    &lineNb,
+                                    "ftp-server",
+                                    firstValueIndex,lastValueIndex,
+                                    printInfoFlag,
+                                    serverNode
+                                   );
       if (error == ERROR_NONE)
       {
         // add to server list
@@ -7004,6 +7007,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 
       error = readConfigFileSection(fileName,
                                     &fileHandle,
+                                    &lineNb,
                                     "ssh-server",
                                     firstValueIndex,lastValueIndex,
                                     printInfoFlag,
@@ -7056,6 +7060,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // read config section
       error = readConfigFileSection(fileName,
                                     &fileHandle,
+                                    &lineNb,
                                     "webdav-server",
                                     firstValueIndex,lastValueIndex,
                                     printInfoFlag,
@@ -7101,6 +7106,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // read config section
       error = readConfigFileSection(fileName,
                                     &fileHandle,
+                                    &lineNb,
                                     "device",
                                     firstValueIndex,lastValueIndex,
                                     printInfoFlag,
@@ -7135,6 +7141,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // read config section
       error = readConfigFileSection(fileName,
                                     &fileHandle,
+                                    &lineNb,
                                     "master",
                                     firstValueIndex,lastValueIndex,
                                     printInfoFlag,
@@ -7163,6 +7170,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // read config section
       error = readConfigFileSection(fileName,
                                     &fileHandle,
+                                    &lineNb,
                                     "maintenance",
                                     firstValueIndex,lastValueIndex,
                                     printInfoFlag,
@@ -7548,7 +7556,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("jobs-directory",                    0,  1,1,globalOptions.jobsDirectory,                                                                                      "server job directory","path name"                                         ),
   CMD_OPTION_STRING       ("incremental-data-directory",        0,  1,1,globalOptions.incrementalDataDirectory,                                                                           "server incremental data directory","path name"                            ),
 
-  CMD_OPTION_CSTRING      ("index-database",                    0,  1,1,globalOptions.indexDatabaseFileName,                                                                              "index database file name","file name"                                     ),
+  CMD_OPTION_CSTRING      ("index-database",                    0,  1,1,globalOptions.indexDatabaseSpecifier,                                                                                   "index database URI","URI"                                                 ),
   CMD_OPTION_BOOLEAN      ("index-database-update",             0,  1,1,globalOptions.indexDatabaseUpdateFlag,                                                                            "enabled update index database"                                            ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",        0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,                                                                        "enabled automatic update index database"                                  ),
   CMD_OPTION_SPECIAL      ("index-database-max-band-width",     0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,        cmdOptionParseBandWidth,NULL,1,                              "max. band width to use for index updates [bis/s]","number or file name"   ),
@@ -7696,7 +7704,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SEPARATOR("index database"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseFileName,-1,                       "<file name>"),
+  CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseSpecifier,-1,                            "<URI>"),
   CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1,                     "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1,                 "yes|no"),
   CONFIG_VALUE_COMMENT("max. network band width to use for index update"),

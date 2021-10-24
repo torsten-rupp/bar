@@ -1157,7 +1157,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
                           bool            skipEmptyTokens
                          );
 void String_initTokenizerCString(StringTokenizer *stringTokenizer,
-                                 const char      *s,
+                                 const char      *string,
                                  const char      *separatorChars,
                                  const char      *stringQuotes,
                                  bool            skipEmptyTokens
@@ -1230,9 +1230,10 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
 * Output : nextIndex     - index of next character in string not matched
 *                          (can be NULL)
 *          matchedString - string matching regular expression (can be
-*                          NULL)
-*          ...           - optional matching strings of sub-patterns,
-*                          last value have to be NULL!
+*                          STRING_NO_ASSIGN)
+*          ...           - optional matching strings of sub-patterns
+*                          (can be STRING_NO_ASSIGN), last value have to
+*                          be NULL!
 * Return : TRUE if pattern is matching, FALSE otherwise
 * Notes  : -
 \***********************************************************************/

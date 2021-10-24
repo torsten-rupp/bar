@@ -504,10 +504,13 @@ ERROR READ_DIRECTORY                   TR("read directory fail")
 
 // Note: because of name clash with Windows include use FILE_EXISTS_ instead of FILE_EXISTS
 ERROR FILE_EXISTS_
-  stringSet(errorText,sizeof(errorText),TR("file already exists"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),"file '%s' already exists",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("file already exists"));
   }
 
 // Note: because of name clash with Windows include use FILE_NOT_FOUND_ instead of FILE_NOT_FOUND
@@ -883,7 +886,7 @@ ERROR DELTA_SOURCE_ID_NOT_FOUND
     stringSet(errorText,sizeof(errorText),TR("delta source not found"));
   }
 
-// --- index database (SQLite3) -----------------------------------------
+// --- index database ---------------------------------------------------
 ERROR DATABASE
   stringSet(errorText,sizeof(errorText),TR("database"));
   if (!stringIsEmpty(ERROR_DATA))
@@ -891,6 +894,7 @@ ERROR DATABASE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DATABASE_CONNECTION_LOST         TR("datbase connection lost")
 ERROR DATABASE_EXISTS                  TR("database already exists")
 ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version on index")
 ERROR DATABASE_MISSING_TABLE
@@ -920,6 +924,9 @@ ERROR DATABASE_OBSOLETE_COLUMN
   {
     stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
+
+ERROR DATABASE_BUSY                    TR("database busy")
+ERROR DATABASE_INTERRUPTED             TR("database operation interupted")
 
 ERROR DATABASE_TYPE_MISMATCH
   stringSet(errorText,sizeof(errorText),TR("type mismatch"));

@@ -38,7 +38,7 @@
 /***************************** Constants *******************************/
 
 // max. length of a path
-#define FILE_MAX_PATH_MAX_LENGTH PATH_MAX
+#define FILE_MAX_PATH_LENGTH PATH_MAX
 
 // Note: always use '/' and never brain dead '\'
 #define FILE_PATH_SEPARATOR_CHAR   '/'
@@ -260,9 +260,9 @@ typedef struct
   #if   defined(PLATFORM_LINUX)
     StringList fileSystemNames;
     FILE       *mounts;
-    char       line[FILE_MAX_PATH_MAX_LENGTH+256];
+    char       line[FILE_MAX_PATH_LENGTH+256];
     bool       parseFlag;
-    char       name[FILE_MAX_PATH_MAX_LENGTH];
+    char       name[FILE_MAX_PATH_LENGTH];
   #elif defined(PLATFORM_WINDOWS)
     DWORD  logicalDrives;
     uint   i;
@@ -1612,10 +1612,12 @@ Errors File_setOwner(ConstString fileName,
 /***********************************************************************\
 * Name   : File_makeDirectory, File_makeDirectoryCString
 * Purpose: create directory including intermediate directories
-* Input  : pathName   - path name
-*          userId     - user id or FILE_DEFAULT_USER_ID
-*          groupId    - group id or FILE_DEFAULT_GROUP_ID
-*          permission - permission or FILE_DEFAULT_PERMISSION
+* Input  : pathName           - path name
+*          userId             - user id or FILE_DEFAULT_USER_ID
+*          groupId            - group id or FILE_DEFAULT_GROUP_ID
+*          permission         - permission or FILE_DEFAULT_PERMISSION
+*          ignoreExistingFlag - TRUE to ignore error if directory already
+*                               exists
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1624,12 +1626,14 @@ Errors File_setOwner(ConstString fileName,
 Errors File_makeDirectory(ConstString    pathName,
                           uint32         userId,
                           uint32         groupId,
-                          FilePermission permission
+                          FilePermission permission,
+                          bool           ignoreExistingFlag
                          );
 Errors File_makeDirectoryCString(const char     *pathName,
                                  uint32         userId,
                                  uint32         groupId,
-                                 FilePermission permission
+                                 FilePermission permission,
+                                 bool           ignoreExistingFlag
                                 );
 
 /***********************************************************************\

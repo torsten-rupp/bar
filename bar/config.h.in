@@ -325,6 +325,15 @@
 /* mxml installed */
 #undef HAVE_MXML
 
+/* MySQL installed */
+#undef HAVE_MYSQL
+
+/* Define to 1 if you have the <mysql/errmsg.h> header file. */
+#undef HAVE_MYSQL_ERRMSG_H
+
+/* Define to 1 if you have the <mysql/mysql.h> header file. */
+#undef HAVE_MYSQL_MYSQL_H
+
 /* nanosleep() available */
 #undef HAVE_NANOSLEEP
 

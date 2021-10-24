@@ -219,21 +219,21 @@ endif
 # supported min. compress algorithms
 ifeq ($(MIN_COMPRESS_NAMES),)
   MIN_COMPRESS_NAMES = none
-  MIN_COMPRESS_NAMES += zip9
+  MIN_COMPRESS_NAMES += zip1
   ifeq (@HAVE_BZ2@,1)
-    MIN_COMPRESS_NAMES += bzip9
+    MIN_COMPRESS_NAMES += bzip1
   endif
   ifeq (@HAVE_LZMA@,1)
-    MIN_COMPRESS_NAMES += lzma9
+    MIN_COMPRESS_NAMES += lzma1
   endif
   ifeq (@HAVE_LZO@,1)
-    MIN_COMPRESS_NAMES += lzo5
+    MIN_COMPRESS_NAMES += lzo1
   endif
   ifeq (@HAVE_LZ4@,1)
-    MIN_COMPRESS_NAMES += lz4-9
+    MIN_COMPRESS_NAMES += lz4-1
   endif
   ifeq (@HAVE_ZSTD@,1)
-    MIN_COMPRESS_NAMES += zstd19
+    MIN_COMPRESS_NAMES += zstd1
   endif
 endif
 
@@ -458,6 +458,7 @@ BAR_SOURCES_OTHER           = forward.h \
                               index_version5.c \
                               index_version6.c \
                               index_version7.c \
+                              index_current.c \
                               \
                               archive_format.pl \
                               archive_format.def \
@@ -481,6 +482,7 @@ BAR_OBJECTS                 = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOUR
                               $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
                               errors.o \
                               archive_format.o \
+                              index_definition.o \
                               $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                               $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
 
@@ -546,8 +548,6 @@ SQLITE3_HEADERS             = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sql
 SQLITE3_OBJECTS             = $(foreach z,$(filter %.c,  $(notdir $(SQLITE3_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                               $(foreach z,$(filter %.cpp,$(notdir $(SQLITE3_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
 
-SQLITE3_OBJECTS_RELEASE     = $(addprefix release/,$(SQLITE3_OBJECTS))
-
 EXTERN_SOURCES              = $(SQLITE3_SOURCES) \
 
 EXTERN_HEADERS              = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
@@ -593,10 +593,12 @@ BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
                                 release/stackwalk_common.o \
                               )
 
-#TODO
-BAR_SQLITE3_SOURCES         = bar-index.c \
+BAR_INDEX_SOURCES           = bar-index.c \
 
-BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
+BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
+                              index_definition.def \
+
+BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/cmdoptions.c \
                               common/lists.c \
                               common/strings.c \
@@ -605,18 +607,25 @@ BAR_SQLITE3_SOURCES_COMMON  = common/global.c \
                               common/files.c \
                               common/devices.c \
                               common/database.c \
+                              common/passwords.c \
                               common/threads.c \
                               common/misc.c \
                               common/arrays.c \
                               common/semaphores.c \
                               common/stacktraces.c \
 
-BAR_SQLITE3_HEADERS         = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_SQLITE3_SOURCES))) \
+BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
 
-BAR_SQLITE3_OBJECTS         = $(addprefix release/,$(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.c,%.o,$z))) \
-                              release/errors.o \
-                              $(addprefix release/,$(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(BAR_SQLITE3_SOURCES_COMMON))),$(patsubst %.c,  %.o,$z))) \
-                              $(addprefix release/,$(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(BAR_SQLITE3_SOURCES_COMMON))),$(patsubst %.cpp,%.o,$z))) \
+BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
+                              $(SQLITE3_OBJECTS) \
+                              index_definition.o \
+                              errors.o \
+                              $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.c,  %.o,$z)) \
+                              $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(BAR_INDEX_SOURCES_COMMON))),$(patsubst %.cpp,%.o,$z)) \
+
+BAR_INDEX_OBJECTS_RELEASE   = $(addprefix release/,$(BAR_INDEX_OBJECTS))
+
+BAR_INDEX_OBJECTS_DEBUG     = $(addprefix debug/,$(BAR_INDEX_OBJECTS))
 
 SHOWCHUNKS_SOURCES          = showchunks.c \
 
@@ -625,6 +634,7 @@ SHOWCHUNKS_OBJECTS          = $(addprefix release/,$(foreach z,$(SHOWCHUNKS_SOUR
 
 INTERMEDIATE_SOURCES        = errors.c \
                               archive_format.c \
+                              index_definition.c \
 
 INTERMEDIATE_HEADERS        = errors.h \
                               archive_format.h \
@@ -662,7 +672,7 @@ clean: \
 	$(RMF) $(BAR_OBJECTS_GCOV)
 	$(RMF) $(BAR_OBJECTS_GPROF)
 	$(RMF) $(BAR_OBJECTS_VALGRIND)
-	$(RMF) $(BAR_SQLITE3_OBJECTS)
+	$(RMF) $(BAR_INDEX_OBJECTS)
 	$(RMF) $(EXTERN_OBJECTS_RELEASE)
 	$(RMF) $(EXTERN_OBJECTS_DEBUG)
 	$(RMF) $(EXTERN_OBJECTS_GCOV)
@@ -736,6 +746,8 @@ help:
 	@$(ECHO) "  gcov<1|2|3|4|5|6|7|8>"
 	@$(ECHO) "  gcov_html                                 re-generate gcov HTML report"
 	@$(ECHO) ""
+	@$(ECHO) "  gprof<1|2|3|4|5|6|7|8>"
+	@$(ECHO) ""
 	@$(ECHO) "  memcheck [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
 	@$(ECHO) "  memcheck_extended [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
 	@$(ECHO) "  memcheck<1|2|2a|2b|2c|2d|2e|3|4|5|6|7>"
@@ -766,7 +778,7 @@ depend: Makefile.depend
 Makefile.depend: $(SOURCE_DIR)/Makefile $(SOURCE_DIR)/Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(ECHO) >Makefile.depend
-	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
+	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_INDEX_SOURCES); do \
           $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(foreach header,$(INTERMEDIATE_HEADERS),\
               $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
@@ -819,6 +831,9 @@ bar.tags: \
   $(COMMON_SOURCES_OTHER) \
   $(EXTERN_SOURCES) \
   $(DESTROYER_SOURCES) \
+  $(BAR_INDEX_SOURCES) \
+  $(BAR_INDEX_SOURCES_OTHER) \
+  $(BAR_INDEX_SOURCES_COMMON) \
   $(BAR_MINIDUMP_SOURCES) \
   $(BAR_MINIDUMP_SOURCES_COMMON)
 	$(CTAGS) $(CTAGS_FLAGS) -f $@ $^
@@ -1060,8 +1075,22 @@ gprof/archive_format.o: archive_format.c archive_format.h
 valgrind/archive_format.o: archive_format.c archive_format.h
 
 # index database definition
-index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_definition.def
-	$(PERL) $(SOURCE_DIR)/index_definition.pl < $(SOURCE_DIR)/index_definition.def >$@
+index_definition.c index_definition.h: \
+  $(SOURCE_DIR)/index_definition.pl \
+  $(SOURCE_DIR)/index_common.def \
+  $(SOURCE_DIR)/index_sqlite.def \
+  $(SOURCE_DIR)/index_mysql.def
+	$(PERL) $(SOURCE_DIR)/index_definition.pl \
+	  --common $(SOURCE_DIR)/index_common.def \
+	  --sqlite $(SOURCE_DIR)/index_sqlite.def \
+	  --mysql $(SOURCE_DIR)/index_mysql.def \
+	  --source index_definition.c \
+	  --header index_definition.h
+release/index_definition.o: index_definition.c index_definition.h
+debug/index_definition.o: index_definition.c index_definition.h
+gcov/index_definition.o: index_definition.c index_definition.h
+gprof/index_definition.o: index_definition.c index_definition.h
+valgrind/index_definition.o: index_definition.c index_definition.h
 
 # create destroyer (for testing only!)
 destroyer@EXEEXT@: \
@@ -1098,9 +1127,16 @@ showchunks@EXEEXT@: \
 
 # create bar-index
 bar-index@EXEEXT@: \
-  $(BAR_SQLITE3_OBJECTS) \
-  $(SQLITE3_OBJECTS_RELEASE)
+  $(BAR_INDEX_OBJECTS_RELEASE)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+
+bar-index-debug@EXEEXT@: \
+  $(BAR_INDEX_OBJECTS_DEBUG)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
@@ -1109,10 +1145,10 @@ bar-index@EXEEXT@: \
 # ----------------------------------------------------------------------------
 
 /tmp/bar.cfg: bar.cfg
-	$(INSTALL) -m 600 bar.cfg /tmp/bar.cfg
+	$(INSTALL) -m 600 bar.cfg $@
 
 /tmp/bar-slave.cfg: bar.cfg
-	$(INSTALL) -m 600 bar.cfg /tmp/bar-slave.cfg
+	$(INSTALL) -m 600 bar.cfg $@
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
 	$(MAKE) -C .. keys
@@ -1487,7 +1523,57 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 # ----------------------------------------------------------------------------
 
 # tests
-.PHONY: test test_min test_clean test_distclean
+.PHONY: test_smoke* test_min* test* test_clean* test_distclean*
+test_smoke: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-debug: \
+  bar-debug@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-debug TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-gcov: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-gcov TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-gprof: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-gprof TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-valgrind: \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-valgrind TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+
+test_min: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-debug: \
+  bar-debug@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-debug TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-gcov: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-gcov TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-gprof: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-gprof TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-valgrind: \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-valgrind TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+
 test: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1497,15 +1583,6 @@ test: \
   bar-keygen@SHELLEXT@
 	@$(RMF) bar-test.log
 	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
-test_min: \
-  bar@EXEEXT@ \
-  bar-debug@EXEEXT@ \
-  bar-gcov@EXEEXT@ \
-  bar-gprof@EXEEXT@ \
-  bar-valgrind@EXEEXT@ \
-  bar-keygen@SHELLEXT@
-	@$(RMF) bar-test.log
-	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 CRYPT_NAMES=$(MIN_CRYPT_NAMES) COMPRESS_NAMES=$(MIN_COMPRESS_NAMES) IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
 test%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1518,17 +1595,14 @@ test%-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
@@ -1701,9 +1775,7 @@ endif
 gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
-
-#	$(MAKE) gcov_html
+	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 gcov_clean:
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
@@ -1722,6 +1794,14 @@ ifneq ($(GENHTML),)
 else
 	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
 endif
+
+.PHONY: gprof_clean
+gprof_clean:
+
+gprof%: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BASE_DIR)/bar-gprof@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 # ----------------------------------------------------------------------------
 
@@ -2436,8 +2516,9 @@ ifneq ($(DIRECTORY),)
                           $(DESTROYER_SOURCES) \
                           $(BAR_MINIDUMP_SOURCES) \
                           $(BAR_MINIDUMP_HEADERS) \
-                          $(BAR_SQLITE3_SOURCES) \
-                          $(BAR_SQLITE3_HEADERS) \
+                          $(BAR_INDEX_SOURCES) \
+                          $(BAR_INDEX_SOURCES_OTHER) \
+                          $(BAR_INDEX_HEADERS) \
                    )
 	$(INSTALL) -d $(DIRECTORY)/bar/common
 	$(INSTALL) -m 644 \

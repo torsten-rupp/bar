@@ -1,0 +1,829 @@
+// Sqlite pragmas
+PRAGMA foreign_keys = ON;
+PRAGMA auto_vacuum = INCREMENTAL;
+
+// --- meta ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS meta(
+  name  TEXT UNIQUE,
+  value TEXT
+);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+// --- uuids -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS uuids(
+  id      INTEGER PRIMARY KEY,
+  jobUUID TEXT UNIQUE NOT NULL
+);
+CREATE INDEX ON uuids (jobUUID);
+
+// --- entities --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entities(
+  id                        INTEGER PRIMARY KEY,
+  jobUUID                   TEXT NOT NULL,
+  scheduleUUID              TEXT NOT NULL DEFAULT '',
+  hostName                  TEXT,
+//TODO: use
+  userName                  TEXT,
+  created                   INTEGER,
+  type                      INTEGER,
+  parentJobUUID             INTEGER,
+  bidFlag                   INTEGER DEFAULT 0,
+  lockedCount               INTEGER DEFAULT 0,
+  deletedFlag               INTEGER DEFAULT 0,
+
+  // Note: updated via Index_updateEntitiesInfos()
+  totalEntryCount           INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySize            INTEGER DEFAULT 0,  // total size of entries [bytes]
+
+  totalFileCount            INTEGER DEFAULT 0,  // total number of file entries
+  totalFileSize             INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           INTEGER DEFAULT 0,  // total number of image entries
+  totalImageSize            INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       INTEGER DEFAULT 0,  // total number of directory entries
+  totalLinkCount            INTEGER DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        INTEGER DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         INTEGER DEFAULT 0,  // total number of special entries
+
+  totalEntryCountNewest     INTEGER DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      INTEGER DEFAULT 0,  // total size of newest entries [bytes]
+
+  totalFileCountNewest      INTEGER DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     INTEGER DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      INTEGER DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
+
+  // Note: redundancy for faster access
+  uuidId                    INTEGER DEFAULT 0
+);
+CREATE INDEX ON entities (jobUUID,created,type);
+CREATE INDEX ON entities (hostName);
+CREATE INDEX ON entities (deletedFlag);
+
+// insert default entity
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_DATABASE_ID,'','',0,0,0,0);
+
+// insert/delete/update triggeres
+CREATE TRIGGER AFTER INSERT ON entities
+  BEGIN
+    INSERT OR IGNORE INTO uuids
+      (jobUUID) VALUES (NEW.jobUUID);
+  END;
+
+// --- storages --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS storages(
+  id                        INTEGER PRIMARY KEY,
+
+  entityId                  INTEGER REFERENCES entities(id) ON DELETE CASCADE,
+  name                      TEXT NOT NULL,
+  created                   INTEGER,
+  size                      INTEGER DEFAULT 0,
+//TODO: use
+  hostName                  TEXT,
+//TODO: use
+  userName                  TEXT,
+  comment                   TEXT,
+  state                     INTEGER DEFAULT $STATE_CREATE,
+  mode                      INTEGER DEFAULT $MODE_MANUAL,
+  lastChecked               INTEGER DEFAULT 0,
+  errorMessage              TEXT,
+  deletedFlag               INTEGER DEFAULT 0,
+
+  // Note: updated via Index_updateStorageInfos()
+  totalEntryCount           INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySize            INTEGER DEFAULT 0,  // total size of entries [bytes]
+
+  totalFileCount            INTEGER DEFAULT 0,  // total number of file entries
+  totalFileSize             INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           INTEGER DEFAULT 0,  // total number of image entries
+  totalImageSize            INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       INTEGER DEFAULT 0,  // total number of directory entries
+  totalLinkCount            INTEGER DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        INTEGER DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         INTEGER DEFAULT 0,  // total number of special entries
+
+  totalEntryCountNewest     INTEGER DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      INTEGER DEFAULT 0,  // total size of newest entries [bytes]
+
+  totalFileCountNewest      INTEGER DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     INTEGER DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      INTEGER DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
+
+  // Note: redundancy for faster access
+  uuidId                    INTEGER DEFAULT 0
+);
+CREATE INDEX ON storages (uuidId,entityId,name,created,state);
+CREATE INDEX ON storages (entityId,name,created,state);
+//TODO: add?
+//CREATE INDEX ON storages (hostName);
+CREATE INDEX ON storages (name,totalEntryCount,created,state);
+CREATE INDEX ON storages (created,name,totalEntryCount,state);
+CREATE INDEX ON storages (userName);
+CREATE INDEX ON storages (state,name,totalEntryCount,created);
+CREATE INDEX ON storages (deletedFlag);
+
+// full-text-search
+CREATE VIRTUAL TABLE FTS_storages USING FTS5(
+  storageId,
+  name,
+
+//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
+  tokenize=unicode61
+);
+
+// --- entries ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entries(
+  id              INTEGER PRIMARY KEY,
+
+  entityId        INTEGER REFERENCES entities(id) ON DELETE CASCADE,
+  type            INTEGER,
+  name            TEXT NOT NULL,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  deletedFlag     INTEGER DEFAULT 0,
+
+//TODO: still not used
+  archiveOffset   INTEGER,
+
+  // Note: redundancy for faster access
+  uuidId          INTEGER DEFAULT 0,
+  size            INTEGER DEFAULT 0
+);
+CREATE INDEX ON entries (uuidId,entityId,type,name);
+CREATE INDEX ON entries (entityId,type,name);
+CREATE INDEX ON entries (name,size,type,timeLastChanged);
+CREATE INDEX ON entries (type,size,name,timeLastChanged);
+CREATE INDEX ON entries (size,type,name,timeLastChanged);
+CREATE INDEX ON entries (timeLastChanged,name,size,type);
+
+// newest entries (updated by triggers)
+CREATE TABLE IF NOT EXISTS entriesNewest(
+  id              INTEGER PRIMARY KEY,
+
+  entryId         INTEGER REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
+
+  // Note: redundancy for faster access
+  uuidId          INTEGER DEFAULT 0,
+  entityId        INTEGER DEFAULT 0,
+  type            INTEGER DEFAULT 0,
+  name            TEXT NOT NULL,
+  timeLastChanged INTEGER DEFAULT 0,
+  userId          INTEGER DEFAULT 0,
+  groupId         INTEGER DEFAULT 0,
+  permission      INTEGER DEFAULT 0,
+
+  size            INTEGER DEFAULT 0,       // file/image/hardlink size
+
+  CONSTRAINT entriesNewest UNIQUE (name)
+);
+CREATE INDEX ON entriesNewest (entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest (name,size,type,timeLastChanged);
+CREATE INDEX ON entriesNewest (type,entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest (type,size,name,timeLastChanged);
+CREATE INDEX ON entriesNewest (size,type,name,timeLastChanged);
+CREATE INDEX ON entriesNewest (timeLastChanged,name,size,type);
+CREATE INDEX ON entriesNewest (entityId,type,entryId,name,size,timeLastChanged);
+
+// full-text-search
+CREATE VIRTUAL TABLE FTS_entries USING FTS5(
+  entryId,
+  name,
+
+//  tokenize=unicode61 'tokenchars= !"#$%&''()*+,-:;<=>?@[\]^_`{|}~' 'separators=/.' 'remove_diacritics=0'
+  tokenize=unicode61
+);
+
+CREATE TRIGGER AFTER UPDATE OF uuidId ON entries
+  BEGIN
+    // update newest entries
+    UPDATE entriesNewest
+      SET uuidId=NEW.uuidId
+      WHERE entryId=OLD.id;
+  END;
+
+CREATE TRIGGER AFTER UPDATE OF entityId ON entries
+  BEGIN
+    // update newest entries
+    UPDATE entriesNewest
+      SET entityId=NEW.entityId
+      WHERE entryId=OLD.id;
+  END;
+
+CREATE TRIGGER AFTER UPDATE OF name ON entries
+  BEGIN
+    // update FTS
+    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
+    INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
+  END;
+
+CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
+  BEGIN
+// insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
+    // update if entry is newer
+    UPDATE entriesNewest
+      SET entryId        =NEW.id,
+          uuidId         =NEW.uuidId,
+          entityId       =NEW.entityId,
+          type           =NEW.type,
+          timeLastChanged=NEW.timeLastChanged,
+          userId         =NEW.userId,
+          groupId        =NEW.groupId,
+          permission     =NEW.permission,
+          size           =NEW.size
+      WHERE     entryId!=NEW.id
+            AND name=NEW.name
+            AND type=NEW.type
+            AND NEW.timeLastChanged>timeLastChanged;
+  END;
+
+//TODO
+// --- skipped entries -------------------------------------------------
+CREATE TABLE IF NOT EXISTS skippedEntries(
+  id          INTEGER PRIMARY KEY,
+  entityId    INTEGER NOT NULL REFERENCES entities(id),
+  name        TEXT NOT NULL,
+  type        INTEGER,
+
+  deletedFlag INTEGER DEFAULT 0
+);
+CREATE INDEX ON skippedEntries (entityId,type,name);
+CREATE INDEX ON skippedEntries (name);
+CREATE INDEX ON skippedEntries (type,name);
+
+// --- entry fragments -------------------------------------------------
+CREATE TABLE IF NOT EXISTS entryFragments(
+  id        INTEGER PRIMARY KEY,
+  entryId   INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  offset    INTEGER,
+  size      INTEGER,
+
+  CONSTRAINT entryFragments UNIQUE (entryId,offset)
+);
+CREATE INDEX ON entryFragments (entryId);
+CREATE INDEX ON entryFragments (storageId);
+
+// --- files -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fileEntries(
+  id              INTEGER PRIMARY KEY,
+
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size            INTEGER,
+
+  CONSTRAINT fileEntries UNIQUE (entryId)
+);
+CREATE INDEX ON fileEntries (entryId);
+
+// --- images ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS imageEntries(
+  id             INTEGER PRIMARY KEY,
+
+  entryId        INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size           INTEGER,
+  fileSystemType INTEGER,
+  blockSize      INTEGER,                 // size of image block
+
+  CONSTRAINT imageEntries UNIQUE (entryId)
+);
+CREATE INDEX ON imageEntries (entryId);
+
+// --- directories -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS directoryEntries(
+  id                    INTEGER PRIMARY KEY,
+
+  entryId               INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId             INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+
+  // Note: redundancy for faster access
+  name                  TEXT,
+
+  // updated by updateDirectoryContentAggregates()
+  totalEntryCount       INTEGER DEFAULT 0,  // total number of directory entries
+  totalEntrySize        INTEGER DEFAULT 0,  // total size of directory entries [bytes]
+  totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
+  totalEntrySizeNewest  INTEGER DEFAULT 0,  // total size of newest directory entries [bytes]
+
+  CONSTRAINT directoryEntries UNIQUE (entryId)
+);
+CREATE INDEX ON directoryEntries (entryId);
+CREATE INDEX ON directoryEntries (storageId,name);
+CREATE INDEX ON directoryEntries (name);
+
+// --- links -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS linkEntries(
+  id              INTEGER PRIMARY KEY,
+
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId       INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  destinationName TEXT,
+
+  CONSTRAINT linkEntries UNIQUE (entryId)
+);
+CREATE INDEX ON linkEntries (entryId);
+CREATE INDEX ON linkEntries (storageId);
+
+// --- hardlinks -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS hardlinkEntries(
+  id      INTEGER PRIMARY KEY,
+
+  entryId INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size    INTEGER,
+
+  CONSTRAINT hardlinkEntries UNIQUE (entryId)
+);
+CREATE INDEX ON hardlinkEntries (entryId);
+
+// --- special ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS specialEntries(
+  id          INTEGER PRIMARY KEY,
+
+  entryId     INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId   INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  specialType INTEGER,
+  major       INTEGER,
+  minor       INTEGER,
+
+  CONSTRAINT specialEntries UNIQUE (entryId)
+);
+CREATE INDEX ON specialEntries (entryId);
+CREATE INDEX ON specialEntries (storageId);
+
+// --- history ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS history(
+  id                INTEGER PRIMARY KEY,
+  jobUUID           TEXT NOT NULL,
+  scheduleUUID      TEXT,
+  hostName          TEXT,
+  userName          TEXT,
+  type              INTEGER,
+  created           INTEGER,
+  errorMessage      TEXT,
+  duration          INTEGER,
+  totalEntryCount   INTEGER,
+  totalEntrySize    INTEGER,
+  skippedEntryCount INTEGER,
+  skippedEntrySize  INTEGER,
+  errorEntryCount   INTEGER,
+  errorEntrySize    INTEGER
+);
+CREATE INDEX ON history (jobUUID,created,type);
+CREATE INDEX ON history (created);
+CREATE INDEX ON history (errorMessage);
+
+// --- debug only ------------------------------------------------------
+CREATE TABLE IF NOT EXISTS log(
+  text TEXT
+);
+
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+/* old stuff
+
+// ---------------------------------------------------------------------
+
+VERSION = 5;???
+
+VERSION = 4;
+
+PRAGMA foreign_keys = ON;
+PRAGMA auto_vacuum = INCREMENTAL;
+
+CREATE TABLE IF NOT EXISTS meta(
+  name  TEXT UNIQUE,
+  value TEXT
+);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE IF NOT EXISTS entities(
+  id              INTEGER PRIMARY KEY,
+  jobUUID         TEXT NOT NULL,
+  scheduleUUID    TEXT NOT NULL,
+  created         INTEGER,
+  type            INTEGER,
+  parentJobUUID   INTEGER,
+  bidFlag         INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS storage(
+  id              INTEGER PRIMARY KEY,
+  entityId        INTEGER,
+  name            TEXT NOT NULL,
+  created         INTEGER,
+  entries         INTEGER,
+  size            INTEGER,
+  state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
+  errorMessage    TEXT,
+
+  FOREIGN KEY(entityId) REFERENCES entities(id)
+);
+
+CREATE TABLE IF NOT EXISTS files(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
+);
+
+CREATE TABLE IF NOT EXISTS images(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  fileSystemType  INTEGER,
+  size            INTEGER,
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
+);
+CREATE INDEX IF NOT EXISTS imagesIndex ON images (storageId,name);
+
+CREATE TABLE IF NOT EXISTS directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
+);
+
+CREATE TABLE IF NOT EXISTS links(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  destinationName TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
+);
+
+CREATE TABLE IF NOT EXISTS hardlinks(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
+);
+
+CREATE TABLE IF NOT EXISTS special(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  specialType     INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  major           INTEGER,
+  minor           INTEGER,
+
+  FOREIGN KEY(storageId) REFERENCES storage(id)
+);
+
+
+VERSION = 3;
+
+CREATE TABLE meta(
+  name  TEXT,
+  value TEXT
+);
+INSERT INTO meta (name,value) VALUES ('version',3);
+INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE storage(
+  id              INTEGER PRIMARY KEY,
+  name            TEXT,
+  uuid            TEXT,
+  created         INTEGER,
+  size            INTEGER,
+  state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
+  errorMessage    TEXT
+);
+
+CREATE TABLE files(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE images(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  fileSystemType  INTEGER,
+  size            INTEGER,
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER
+);
+
+CREATE TABLE directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE links(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  destinationName TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE hardlinks(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE special(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  specialType     INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  major           INTEGER,
+  minor           INTEGER
+);
+
+// ---------------------------------------------------------------------
+
+VERSION = 2;
+
+CREATE TABLE meta(
+  name  TEXT,
+  value TEXT
+);
+INSERT INTO meta (name,value) VALUES ('version',2);
+INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE storage(
+  id              INTEGER PRIMARY KEY,
+  name            TEXT,
+  created         INTEGER,
+  size            INTEGER,
+  state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
+  errorMessage    TEXT
+);
+
+CREATE TABLE files(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE images(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  fileSystemType  INTEGER,
+  size            INTEGER,
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER
+);
+
+CREATE TABLE directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE links(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  destinationName TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE hardlinks(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE special(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  specialType     INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  major           INTEGER,
+  minor           INTEGER
+);
+
+
+// ---------------------------------------------------------------------
+
+VERSION = 1;
+
+CREATE TABLE meta(
+  name  TEXT,
+  value TEXT
+);
+INSERT INTO meta (name,value) VALUES ('version',1);
+INSERT INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
+
+CREATE TABLE storage(
+  id              INTEGER PRIMARY KEY,
+  name            TEXT,
+  size            INTEGER,
+  created         INTEGER,
+  state           INTEGER,
+  mode            INTEGER,
+  lastChecked     INTEGER,
+  errorMessage    TEXT
+);
+
+CREATE TABLE files(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  size            INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  fragmentOffset  INTEGER,
+  fragmentSize    INTEGER
+);
+
+CREATE TABLE images(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  fileSystemType  INTEGER,
+  size            INTEGER,
+  blockSize       INTEGER,
+  blockOffset     INTEGER,
+  blockCount      INTEGER
+);
+
+CREATE TABLE directories(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE links(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  destinationName TEXT,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER
+);
+
+CREATE TABLE special(
+  id              INTEGER PRIMARY KEY,
+  storageId       INTEGER,
+  name            TEXT,
+  specialType     INTEGER,
+  timeLastAccess  INTEGER,
+  timeModified    INTEGER,
+  timeLastChanged INTEGER,
+  userId          INTEGER,
+  groupId         INTEGER,
+  permission      INTEGER,
+  major           INTEGER,
+  minor           INTEGER
+);
+
+*/

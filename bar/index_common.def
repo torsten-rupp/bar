@@ -1,0 +1,75 @@
+/* BAR index database definitions
+
+ Note: SQLite3 require syntax "CREATE TABLE foo(" in a single line!
+
+ database structure:
+
+   job uuid
+     ^
+     |<- entity
+     |     ^
+     |<====|<----------------------------- storages
+     |     |                                 ^
+     |<====|<- entry                         |
+     |     |     ^                           |
+     |     |     |<- entryNewest             |
+     |     |     |                           |
+     |     |     |<- fileEntry               |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- imageEntry              |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- directoryEntry -------->|
+     |     |     |                           |
+     |     |     |<- linkEntry ------------->|
+     |     |     |                           |
+     |     |     |<- hardlinkEntry           |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- specialEntry -----------|
+     |     |...
+     |     |
+     |     |<- skippedEntry
+     |     |...
+     |...
+
+  Legend:  <--  mandadory information
+           <==  redundant information for faster access
+*/
+
+// index version
+const VERSION = 7
+
+// storage states
+const STATE_OK               = 1
+const STATE_CREATE           = 2
+const STATE_UPDATE_REQUESTED = 3
+const STATE_UPDATE           = 4
+const STATE_ERROR            = 5
+
+// modes
+const MODE_MANUAL = 0
+const MODE_AUTO   = 1
+
+// index types
+const TYPE_UUID      = 1
+const TYPE_ENTITY    = 2
+const TYPE_STORAGE   = 3
+const TYPE_ENTRY     = 4
+const TYPE_FILE      = 5
+const TYPE_IMAGE     = 6
+const TYPE_DIRECTORY = 7
+const TYPE_LINK      = 8
+const TYPE_HARDLINK  = 9
+const TYPE_SPECIAL   = 10
+const TYPE_HISTORY   = 11
+
+// default entity
+const DEFAULT_ENTITY_DATABASE_ID = 0

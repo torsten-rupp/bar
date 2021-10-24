@@ -2481,10 +2481,10 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool matchString(ConstString  string,
-                       ulong        index,
-                       const char   *pattern,
-                       long         *nextIndex
+LOCAL bool matchString(const char *string,
+                       ulong      index,
+                       const char *pattern,
+                       long       *nextIndex
                       )
 {
   bool       matchFlag;
@@ -2494,10 +2494,9 @@ LOCAL bool matchString(ConstString  string,
   #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(string != NULL);
-  assert(string->data != NULL);
   assert(pattern != NULL);
 
-  if (index < string->length)
+  if (index < stringLength(string))
   {
     #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
       // compile pattern
@@ -2508,7 +2507,7 @@ LOCAL bool matchString(ConstString  string,
 
       // match
       matchFlag = (regexec(&regex,
-                           &string->data[index],
+                           &string[index],
                            1,  // subMatchCount
                            subMatches,
                            0  // eflags
@@ -2559,12 +2558,12 @@ LOCAL bool matchString(ConstString  string,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool vmatchString(ConstString  string,
-                        ulong        index,
-                        const char   *pattern,
-                        long         *nextIndex,
-                        String       matchedString,
-                        va_list      matchedSubStrings
+LOCAL bool vmatchString(const char *string,
+                        ulong      index,
+                        const char *pattern,
+                        long       *nextIndex,
+                        String     matchedString,
+                        va_list    matchedSubStrings
                        )
 {
   bool       matchFlag;
@@ -2578,10 +2577,9 @@ LOCAL bool vmatchString(ConstString  string,
   #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(string != NULL);
-  assert(string->data != NULL);
   assert(pattern != NULL);
 
-  if (index < string->length)
+  if (index < stringLength(string))
   {
     #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
       // compile pattern
@@ -2611,7 +2609,7 @@ LOCAL bool vmatchString(ConstString  string,
 
       // match
       matchFlag = (regexec(&regex,
-                           &string->data[index],
+                           &string[index],
                            subMatchCount,
                            subMatches,
                            0  // eflags
@@ -2629,7 +2627,7 @@ LOCAL bool vmatchString(ConstString  string,
 
         if (matchedString != STRING_NO_ASSIGN)
         {
-          String_setBuffer(matchedString,&string->data[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
+          String_setBuffer(matchedString,&string[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
         }
 
         va_copy(arguments,matchedSubStrings);
@@ -2642,7 +2640,7 @@ LOCAL bool vmatchString(ConstString  string,
             if (subMatches[i].rm_so != -1)
             {
               assert(subMatches[i].rm_eo >= subMatches[i].rm_so);
-              String_setBuffer(matchedSubString,&string->data[subMatches[i].rm_so],subMatches[i].rm_eo-subMatches[i].rm_so);
+              String_setBuffer(matchedSubString,&string[subMatches[i].rm_so],subMatches[i].rm_eo-subMatches[i].rm_so);
             }
           }
         }
@@ -5361,6 +5359,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
       s = strchr(stringTokenizer->stringQuotes,stringTokenizer->data[stringTokenizer->index]);
       if (s != NULL)
       {
+        String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
         stringTokenizer->index++;
         while (   (stringTokenizer->index < (long)stringTokenizer->length)
                && (stringTokenizer->data[stringTokenizer->index] != (*s))
@@ -5381,7 +5380,11 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
             stringTokenizer->index++;
           }
         }
-        if (stringTokenizer->index < (long)stringTokenizer->length) stringTokenizer->index++;
+        if (stringTokenizer->index < (long)stringTokenizer->length)
+        {
+          String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
+          stringTokenizer->index++;
+        }
       }
       else
       {
@@ -5491,12 +5494,12 @@ bool String_match(ConstString string, ulong index, ConstString pattern, long *ne
   if (matchedString != NULL)
   {
     va_start(arguments,matchedString);
-    matchFlag = vmatchString(string,index,String_cString(pattern),nextIndex,matchedString,arguments);
+    matchFlag = vmatchString(String_cString(string),index,String_cString(pattern),nextIndex,matchedString,arguments);
     va_end(arguments);
   }
   else
   {
-    matchFlag = matchString(string,index,String_cString(pattern),nextIndex);
+    matchFlag = matchString(String_cString(string),index,String_cString(pattern),nextIndex);
   }
 
   return matchFlag;
@@ -5510,12 +5513,12 @@ bool String_matchCString(ConstString string, ulong index, const char *pattern, l
   if (matchedString != NULL)
   {
     va_start(arguments,matchedString);
-    matchFlag = vmatchString(string,index,pattern,nextIndex,matchedString,arguments);
+    matchFlag = vmatchString(String_cString(string),index,pattern,nextIndex,matchedString,arguments);
     va_end(arguments);
   }
   else
   {
-    matchFlag = matchString(string,index,pattern,nextIndex);
+    matchFlag = matchString(String_cString(string),index,pattern,nextIndex);
   }
 
   return matchFlag;

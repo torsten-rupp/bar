@@ -54,6 +54,8 @@ typedef struct
 
 typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *userData);
 
+typedef StringNode* StringListIterator;
+
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -83,8 +85,8 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            StringNode *iteratorVariable;
-*            String     variable;
+*            StringListIterator stringListIterator;
+*            String             variable;
 *
 *            STRINGLIST_ITERATE(list,iteratorVariable,variable)
 *            {
@@ -109,8 +111,8 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            StringNode *iteratorVariable;
-*            String     variable;
+*            StringListIterator stringListIterator;
+*            String             variable;
 *
 *            STRINGLIST_ITERATEX(list,iteratorVariable,variable,TRUE)
 *            {

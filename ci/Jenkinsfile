@@ -1,0 +1,204 @@
+#!groovy
+
+//TODO: store docker image in registry?
+//dockerImageName="dockerregistry.macio.de:5000/macio_backup_archiver"
+dockerImageName='macio_backup_archiver'
+
+// build
+def build()
+{
+  try
+  {
+    stage("Docker image")
+    {
+      checkout scm
+      sh "(cd ci; docker build -t ${dockerImageName} .)"
+    }
+
+
+    stage("Build")
+    {
+      docker.image(dockerImageName).inside
+      {
+        checkout scm
+        script
+        {
+          sh "./download-third-party-packages.sh"
+          sh "./configure"
+//TODO
+//          sh "make -j`nproc --ignore=1`"
+          sh "make"
+          if (params.CODE_COVERAGE)
+          {
+            sh "make -C bar bar-gcov"
+          }
+          if (params.PROFILING)
+          {
+            sh "make -C bar bar-gprof"
+          }
+          sh "make dist"
+        }
+      }
+    }
+
+    stage("Packages")
+    {
+      docker.image(dockerImageName).inside
+      {
+//TODO: how to run a docker from inside a docker?
+//        sh "make update_docker"
+//        sh "make rpm"
+//        sh "make deb"
+        sh "make gui"
+      }
+    }
+
+    stage("Tests")
+    {
+      script
+      {
+        if (params.TESTS)
+        {
+          switch (params.BINARY_TYPE)
+          {
+            case "DEBUG":
+              binaryExtension="-debug";
+              break;
+            case "VALGRIND":
+              binaryExtension="-valgrind";
+              break;
+            case "GCOV":
+              binaryExtension="-gcov";
+              break;
+            case "GPROF":
+              binaryExtension="-gprof";
+              break;
+            default:
+              binaryExtension="";
+              break;
+          }
+          sh "echo binaryExtension="+binaryExtension
+          switch (params.TEST_TYPE)
+          {
+            case "SMOKE":
+            default:
+              docker.image(dockerImageName).inside
+              {
+                sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
+              }
+              break;
+            case "FULL":
+              docker.image(dockerImageName).inside
+              {
+                sh "make test_basic"           +binaryExtension+" O='--verbose=1'"
+                sh "make test_compress"        +binaryExtension+" O='--verbose=1'"
+                sh "make test_delta_compress"  +binaryExtension+" O='--verbose=1'"
+                sh "make test_crypt"           +binaryExtension+" O='--verbose=1'"
+                sh "make test_asymmetric_crypt"+binaryExtension+" O='--verbose=1'"
+                sh "make test_signatures"      +binaryExtension+" O='--verbose=1'"
+                sh "make test_split"           +binaryExtension+" O='--verbose=1'"
+                sh "make test_convert"         +binaryExtension+" O='--verbose=1'"
+                sh "make test_arguments"       +binaryExtension+" O='--verbose=1'"
+                sh "make test_misc"            +binaryExtension+" O='--verbose=1'"
+              }
+              break;
+          }
+        }
+      }
+    }
+
+    stage("Code coverage")
+    {
+      script
+      {
+        if (params.CODE_COVERAGE)
+        {
+          docker.image(dockerImageName).inside
+          {
+            sh "make -C bar gcov_clean"
+            sh "make -C bar gcov_basic"
+            sh "make -C bar gcov_compress"
+            sh "make -C bar gcov_delta_compress"
+            sh "make -C bar gcov_crypt"
+            sh "make -C bar gcov_asymmetric_crypt"
+            sh "make -C bar gcov_signatures"
+            sh "make -C bar gcov_split"
+            sh "make -C bar gcov_convert"
+            sh "make -C bar gcov_arguments"
+            sh "make -C bar gcov_misc"
+            sh "make -C bar gcov_html"
+          }
+
+          publishHTML([allowMissing:          false,
+                       alwaysLinkToLastBuild: false,
+                       keepAll:               true,
+                       reportDir:             'bar/coverage',
+                       reportFiles:           'index.html',
+                       reportName:            'Code Coverage Report',
+                       reportTitles:          'BAR Code Coverage'
+                      ]
+                     )
+        }
+      }
+    }
+
+    stage("Profiling")
+    {
+      script
+      {
+        if (params.PROFILING)
+        {
+          docker.image(dockerImageName).inside
+          {
+            sh "make -C bar gprof_clean"
+            sh "make -C bar gprof_basic"
+            sh "make -C bar gprof_compress"
+            sh "make -C bar gprof_delta_compress"
+            sh "make -C bar gprof_crypt"
+            sh "make -C bar gprof_asymmetric_crypt"
+            sh "make -C bar gprof_signatures"
+            sh "make -C bar gprof_split"
+            sh "make -C bar gprof_convert"
+            sh "make -C bar gprof_arguments"
+            sh "make -C bar gprof_misc"
+          }
+        }
+      }
+    }
+  }
+  finally
+  {
+    script
+    {
+      archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb', allowEmptyArchive: true
+      if (params.TESTS)
+      {
+        archiveArtifacts artifacts: 'bar/bar-test.log', allowEmptyArchive: true
+      }
+      if (params.CODE_COVERAGE)
+      {
+        archiveArtifacts artifacts: 'bar/coverage/*', allowEmptyArchive: true
+      }
+      if (params.PROFILING)
+      {
+//        archiveArtifacts artifacts: '', allowEmptyArchive: true
+      }
+    }
+    cleanWs notFailBuild: true
+  }
+}
+
+// main
+properties([gitLabConnection('GitLab-DMZ')])
+try
+{
+  node('docker')
+  {
+    build()
+  }
+}
+catch (error)
+{
+  echo "ERROR: ${error.message}"
+  currentBuild.result = 'FAILED'
+}

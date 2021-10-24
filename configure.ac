@@ -776,6 +776,7 @@ AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwi
 AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
 AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
 AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
+AC_SUBST(HAVE_MYSQL)                        dnl "1" for MySQL support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
 AC_SUBST(HAVE_BFD)                          dnl "1" for BFD support, "" otherwise
@@ -832,6 +833,8 @@ AC_SUBST(XGETTEXT)                          dnl xgettext command
 AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
+AC_SUBST(MYSQL)                             dnl mysql command
+
 AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
 AC_SUBST(JAVAC_FLAGS)                       dnl java compiler flags
@@ -877,17 +880,18 @@ AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
 
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)          dnl sudo command chattr +-[ia] *
-AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)    dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)         dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
-AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)           dnl sudo command chmod o+rw /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DD,1)              dnl sudo command dd if=/dev/loop[[01]] of=-
-AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)            dnl sudo command mkfs -t * /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_CP,1)              dnl sudo command cp -r -p data/* test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)            dnl sudo command diff -r test/dev0 test/dev1
+AC_SUBST(HAVE_SUDO_COMMANDS,1)              dnl sudo commands
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)        dnl sudo command chattr +-[ia] *
+AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)  dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)       dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
+AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)         dnl sudo command chmod o+rw /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DD,1)            dnl sudo command dd if=/dev/loop[[01]] of=-
+AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)          dnl sudo command mkfs -t * /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_CP,1)            dnl sudo command cp -r -p data/* test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)          dnl sudo command diff -r test/dev0 test/dev1
 
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)        dnl sudo command chattr +-i
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)        dnl sudo command chattr +-a
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)      dnl sudo command chattr +-i
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)      dnl sudo command chattr +-a
 
 AC_SUBST(HEAPVIEW_DIR)                      dnl heapview directory
 
@@ -926,6 +930,7 @@ ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
 ENABLE_PCRE="yes"
+ENABLE_MYSQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
@@ -1265,6 +1270,11 @@ if test -z "$MSGFMT"; then
   AC_MSG_ERROR([Cannot find a 'msgfmt' in PATH. Please check your PATH environment variable.])
 fi
 
+AC_PATH_PROGS(MYSQL,mysql)
+if test -z "$MYSQL"; then
+  AC_MSG_WARN([Cannot find a 'mysql' in PATH. Please check your PATH environment variable.])
+fi
+
 AC_PROG_INSTALL
 if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
@@ -1531,20 +1541,20 @@ case "$host_os" in
 esac
 
 # sudo tests (Note: keep "," immediately after "]"!)
-AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR=0      )
-AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,HAVE_SUDO_COMMAND_CHATTR=0      )
-AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([umount intermediate/dev[[01]]],                       [umount intermediate/dev[[01]]],                       ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [losetup -d /dev/loop[[01]]],                          ,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,HAVE_SUDO_COMMAND_CHMOD=0       )
-AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                          [dd if=/dev/loop[[01]] of=-],                          ,HAVE_SUDO_COMMAND_DD=0          )
-AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                          [mkfs -t \* /dev/loop[[01]]],                          ,HAVE_SUDO_COMMAND_MKFS=0        )
-AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,HAVE_SUDO_COMMAND_CP=0          )
-AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,HAVE_SUDO_COMMAND_DIFF=0        )
-AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR_I=0    )
-AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR_A=0    )
+AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([umount intermediate/dev[[01]]],                       [umount intermediate/dev[[01]]],                       ,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [losetup -d /dev/loop[[01]]],                          ,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,[HAVE_SUDO_COMMAND_CHMOD=0;        HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                          [dd if=/dev/loop[[01]] of=-],                          ,[HAVE_SUDO_COMMAND_DD=0;           HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                          [mkfs -t \* /dev/loop[[01]]],                          ,[HAVE_SUDO_COMMAND_MKFS=0;         HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,[HAVE_SUDO_COMMAND_CP=0;           HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,[HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_A=0;     HAVE_SUDO_COMMANDS=0])
 
 dnl -------- mandatory headers/functions/definitions/libraries ---------
 
@@ -3628,6 +3638,21 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
+# use MySQL
+if test $ENABLE_MYSQL = "yes"; then
+  dnl search for installed MySQL library
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[MySQL installed])])
+  else
+    if test -z "$HAVE_MYSQL"; then
+      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;CC_DEFINES="$CC_DEFINES MYSQL_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[static MySQL installed])])
+    fi
+    if test -z "$HAVE_MYSQL"; then
+      AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[MySQL installed])])
+    fi
+  fi
+fi
+
 case "$host_os" in
   linux-*)
     ;;
@@ -3947,6 +3972,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_GNU_TLS,,AC_MSG_ERROR([GNU TLS missing]))
    AS_IF(test $HAVE_ISO9660,,AC_MSG_ERROR([ISO9660 missing]))
    AS_IF(test $HAVE_PCRE   ,,AC_MSG_ERROR([PCRE missing]))
+   AS_IF(test $HAVE_MYSQL  ,,AC_MSG_ERROR([MySQL missing]))
   ]
 )
 
@@ -3964,7 +3990,6 @@ AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $LIBRARIES)
 
 # headers
-#TODO: compile+link systemd for sd-id128.h?
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \
@@ -3978,6 +4003,8 @@ AC_CHECK_HEADERS(\
                  linux/fs.h \
                  linux/tcp.h \
                  mntent.h \
+                 mysql/mysql.h \
+                 mysql/errmsg.h \
                  netdb.h \
                  netinet/in.h \
                  pwd.h \
@@ -4409,6 +4436,18 @@ if test $ENABLE_PCRE = "yes"; then
               VERSION_PCRE=unknown
              )
 fi
+if test $ENABLE_MYSQL = "yes"; then
+  AC_TRY_LINK([#include <stdio.h>
+               #include "mysql/mysql.h"
+              ],
+              [MYSQL mysql;
+               mysql_init(&mysql);
+               printf("%s",mysql_get_client_info(mysql));
+              ],
+              VERSION_MYSQL=`./conftest$ac_exeext`,
+              VERSION_MYSQL=unknown
+             )
+fi
 
 dnl ------------ autoheader: top/bottom include for config.h -----------
 
@@ -4496,9 +4535,10 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  MySQL support      : `if test "$HAVE_MYSQL"; then echo "yes ($VERSION_MYSQL)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SWT directory      : $SWT_DIR"
+                    echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
                     echo ""
                     echo "  Debug version      : `if test "$ENABLE_DEBUG" = "yes"; then echo yes; else echo no; fi`";
                     echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
@@ -4556,6 +4596,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
+                   HAVE_MYSQL=$HAVE_MYSQL
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -4592,6 +4633,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
+                   VERSION_MYSQL="$VERSION_MYSQL"
                   )
 
 AC_OUTPUT

@@ -2920,7 +2920,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     {
       if      (!File_exists(directoryName))
       {
-        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
         if (error != ERROR_NONE)
         {
           printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
@@ -3117,7 +3117,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     {
       if      (!File_exists(directoryName))
       {
-        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
         if (error != ERROR_NONE)
         {
           printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
@@ -3787,24 +3787,24 @@ LOCAL Errors runDebug(void)
   indexHandle = NULL;
 
   // init index database
-  if (stringIsEmpty(globalOptions.indexDatabaseFileName))
+  if (stringIsEmpty(globalOptions.indexDatabaseSpecifier))
   {
     printError("No index database!");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_DATABASE;
   }
 
-  error = Index_init(globalOptions.indexDatabaseFileName,CALLBACK_(NULL,NULL));
+  error = Index_init(globalOptions.indexDatabaseSpecifier,CALLBACK_(NULL,NULL));
   if (error != ERROR_NONE)
   {
     printError("Cannot init index database '%s' (error: %s)!",
-               globalOptions.indexDatabaseFileName,
+               globalOptions.indexDatabaseSpecifier,
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseFileName,{ Index_done(); });
+  AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseSpecifier,{ Index_done(); });
 
   // open index
   indexHandle = NULL;

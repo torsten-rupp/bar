@@ -43,6 +43,7 @@
 #elif defined(PLATFORM_WINDOWS)
 #endif /* PLATFORM_... */
 
+#include "strings.h"
 #ifndef NDEBUG
   #include "common/lists.h"
 #endif /* not NDEBUG */
@@ -188,7 +189,7 @@ LOCAL bool vscanString(const char *string,
                        va_list    variables
                       )
 {
-  uint       variableCount;
+  int        variableCount;
   va_list    arguments;
   const void *variable;
 
@@ -227,8 +228,8 @@ LOCAL bool vscanString(const char *string,
 
 LOCAL bool vmatchString(const char *string,
                         const char *pattern,
-                        char       *matchedString,
-                        ulong      matchedStringSize,
+                        const char **matchedString,
+                        ulong      *matchedStringSize,
                         va_list    matchedSubStrings
                        )
 {
@@ -236,8 +237,8 @@ LOCAL bool vmatchString(const char *string,
   #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
     regex_t    regex;
     va_list    arguments;
-    char       *matchedSubString;
-    ulong      matchedSubStringSize;
+    const char **matchedSubString;
+    size_t     *matchedSubStringSize;
     regmatch_t *subMatches;
     uint       subMatchCount;
     uint       i;
@@ -258,8 +259,8 @@ LOCAL bool vmatchString(const char *string,
     subMatchCount = 1;
     do
     {
-      matchedSubString     = va_arg(arguments,void*);
-      matchedSubStringSize = va_arg(arguments,ulong);
+      matchedSubString     = va_arg(arguments,const char**);
+      matchedSubStringSize = va_arg(arguments,size_t*);
       if (matchedSubString != NULL) subMatchCount++;
     }
     while (matchedSubString != NULL);
@@ -287,21 +288,20 @@ LOCAL bool vmatchString(const char *string,
     {
       if (matchedString != NULL)
       {
-        stringSetBuffer(matchedString,matchedStringSize,&string[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
+        if ((matchedString     != STRING_NO_ASSIGN) && (matchedString     != NULL)) (*matchedSubString    ) = &string[subMatches[0].rm_so];
+        if ((matchedStringSize != STRING_NO_ASSIGN) && (matchedStringSize != NULL)) (*matchedSubStringSize) = subMatches[0].rm_eo-subMatches[0].rm_so;
       }
 
       va_copy(arguments,matchedSubStrings);
       for (i = 1; i < subMatchCount; i++)
       {
-        matchedSubString     = va_arg(arguments,char*);
-        matchedSubStringSize = va_arg(arguments,ulong);
-        if (matchedSubString != NULL)
+        matchedSubString     = va_arg(arguments,const char**);
+        matchedSubStringSize = va_arg(arguments,size_t*);
+        if (subMatches[i].rm_so != -1)
         {
-          if (subMatches[i].rm_so != -1)
-          {
-            assert(subMatches[i].rm_eo >= subMatches[i].rm_so);
-            stringSetBuffer(matchedSubString,matchedSubStringSize,&string[subMatches[i].rm_so],subMatches[i].rm_eo-subMatches[i].rm_so);
-          }
+          assert(subMatches[i].rm_eo >= subMatches[i].rm_so);
+          if ((matchedSubString     != STRING_NO_ASSIGN) && (matchedSubString     != NULL)) (*matchedSubString    ) = &string[subMatches[i].rm_so];
+          if ((matchedSubStringSize != STRING_NO_ASSIGN) && (matchedSubStringSize != NULL)) (*matchedSubStringSize) = subMatches[i].rm_eo-subMatches[i].rm_so;
         }
       }
       va_end(arguments);
@@ -510,7 +510,7 @@ bool stringVScan(const char *string, const char *format, va_list arguments)
   return scannedFlag;
 }
 
-bool stringVMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, va_list arguments)
+bool stringVMatch(const char *string, const char *pattern, const char **matchedString, size_t *matchedStringSize, va_list arguments)
 {
   bool matchFlag;
 

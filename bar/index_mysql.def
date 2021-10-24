@@ -1,0 +1,434 @@
+/* BAR index database definitions
+
+ Note: SQLite3 require syntax "CREATE TABLE foo(" in a single line!
+
+ database structure:
+
+   job uuid
+     ^
+     |<- entity
+     |     ^
+     |<====|<----------------------------- storages
+     |     |                                 ^
+     |<====|<- entry                         |
+     |     |     ^                           |
+     |     |     |<- entryNewest             |
+     |     |     |                           |
+     |     |     |<- fileEntry               |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- imageEntry              |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- directoryEntry -------->|
+     |     |     |                           |
+     |     |     |<- linkEntry ------------->|
+     |     |     |                           |
+     |     |     |<- hardlinkEntry           |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- specialEntry -----------|
+     |     |...
+     |     |
+     |     |<- skippedEntry
+     |     |...
+     |...
+
+  Legend:  <--  mandadory information
+           <==  redundant information for faster access
+*/
+
+const UUID_LENGTH     = 36
+// how to increase that? limit 3072/4-1
+const MAX_TEXT_LENGTH = 512
+
+// --- meta ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS meta(
+  name  VARCHAR(255) UNIQUE,
+  value TEXT
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',NOW());
+
+// --- uuids -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS uuids(
+  id      INT AUTO_INCREMENT PRIMARY KEY,
+  jobUUID VARCHAR($UUID_LENGTH) UNIQUE NOT NULL,
+
+  INDEX(jobUUID)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- entities --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entities(
+  id                        INT AUTO_INCREMENT PRIMARY KEY,
+  jobUUID                   VARCHAR($UUID_LENGTH) NOT NULL,
+  scheduleUUID              VARCHAR($UUID_LENGTH) NOT NULL DEFAULT '',
+  hostName                  VARCHAR($MAX_TEXT_LENGTH) DEFAULT '',
+//TODO: use
+  userName                  TEXT,
+  created                   DATETIME,
+  type                      INT,
+  parentJobUUID             INT DEFAULT 0,
+  bidFlag                   BOOL DEFAULT FALSE,
+  lockedCount               INT DEFAULT 0,
+  deletedFlag               INT DEFAULT 0,
+
+  // Note: updated via Index_updateEntitiesInfos()
+  totalEntryCount           BIGINT DEFAULT 0,  // total number of entries
+  totalEntrySize            BIGINT DEFAULT 0,  // total size of entries [bytes]
+
+  totalFileCount            BIGINT DEFAULT 0,  // total number of file entries
+  totalFileSize             BIGINT DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           BIGINT DEFAULT 0,  // total number of image entries
+  totalImageSize            BIGINT DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalLinkCount            BIGINT DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        BIGINT DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         BIGINT DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         BIGINT DEFAULT 0,  // total number of special entries
+
+  totalEntryCountNewest     BIGINT DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      BIGINT DEFAULT 0,  // total size of newest entries [bytes]
+
+  totalFileCountNewest      BIGINT DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       BIGINT DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     BIGINT DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      BIGINT DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      BIGINT DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  BIGINT DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   BIGINT DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   BIGINT DEFAULT 0,  // total number of newest special entries
+
+  // Note: redundancy for faster access
+  uuidId                    INT DEFAULT 0,
+
+  INDEX(jobUUID,created,type),
+  INDEX(hostName),
+  INDEX(deletedFlag)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// insert default entity
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_DATABASE_ID,'','',0,0,0,0);
+
+// insert/delete/update triggeres
+/*
+CREATE TRIGGER AFTER INSERT ON entities
+  FOR EACH ROW
+  BEGIN
+    INSERT IGNORE INTO uuids
+      (jobUUID) VALUES (NEW.jobUUID);
+  END;
+*/
+
+// --- storages --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS storages(
+  id                        INT AUTO_INCREMENT PRIMARY KEY,
+
+  entityId                  INT REFERENCES entities(id) ON DELETE CASCADE,
+  name                      VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  created                   DATETIME,
+  size                      BIGINT DEFAULT 0,
+//TODO: use
+  hostName                  TEXT,
+//TODO: use
+  userName                  VARCHAR(255),
+  comment                   TEXT,
+  state                     INT DEFAULT $STATE_CREATE,
+  mode                      INT DEFAULT $MODE_MANUAL,
+  lastChecked               DATETIME DEFAULT "1970-01-01 00:00:00",
+  errorMessage              TEXT,
+  deletedFlag               BOOL DEFAULT FALSE,
+
+  // Note: updated via Index_updateStorageInfos()
+  totalEntryCount           BIGINT DEFAULT 0,  // total number of entries
+  totalEntrySize            BIGINT DEFAULT 0,  // total size of entries [bytes]
+
+  totalFileCount            BIGINT DEFAULT 0,  // total number of file entries
+  totalFileSize             BIGINT DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           BIGINT DEFAULT 0,  // total number of image entries
+  totalImageSize            BIGINT DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalLinkCount            BIGINT DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        BIGINT DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         BIGINT DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         BIGINT DEFAULT 0,  // total number of special entries
+
+  totalEntryCountNewest     BIGINT DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      BIGINT DEFAULT 0,  // total size of newest entries [bytes]
+
+  totalFileCountNewest      BIGINT DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       BIGINT DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     BIGINT DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      BIGINT DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      BIGINT DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  BIGINT DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   BIGINT DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   BIGINT DEFAULT 0,  // total number of newest special entries
+
+  // Note: redundancy for faster access
+  uuidId                    INT DEFAULT 0,
+
+  INDEX(uuidId,entityId,name,created,state),
+  INDEX(entityId,name,created,state),
+  INDEX(name,totalEntryCount,created,state),
+  INDEX(created,name,totalEntryCount,state),
+  INDEX(userName),
+  INDEX(state,name,totalEntryCount,created),
+  INDEX(deletedFlag),
+  FULLTEXT(name)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- entries ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entries(
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+
+  entityId        INT REFERENCES entities(id) ON DELETE CASCADE,
+  type            INT,
+  name            VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  timeLastAccess  DATETIME,
+  timeModified    DATETIME,
+  timeLastChanged DATETIME,
+  userId          INT,
+  groupId         INT,
+  permission      INT,
+  deletedFlag     BOOL DEFAULT FALSE,
+
+//TODO: still not used
+  archiveOffset   BIGINT,
+
+  // Note: redundancy for faster access
+  uuidId          INT DEFAULT 0,
+  size            BIGINT DEFAULT 0,
+
+  INDEX(uuidId,entityId,type,name),
+  INDEX(entityId,type,name),
+  INDEX(name,size,type,timeLastChanged),
+  INDEX(type,size,name,timeLastChanged),
+  INDEX(size,type,name,timeLastChanged),
+  INDEX(timeLastChanged,name,size,type),
+  FULLTEXT(name)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// newest entries (updated by triggers)
+CREATE TABLE IF NOT EXISTS entriesNewest(
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+
+  entryId         INT REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
+
+  // Note: redundancy for faster access
+  uuidId          INT DEFAULT 0,
+  entityId        INT DEFAULT 0,
+  type            INT DEFAULT 0,
+  name            VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  timeLastChanged DATETIME DEFAULT "1970-01-01 00:00:00",
+  userId          INT DEFAULT 0,
+  groupId         INT DEFAULT 0,
+  permission      INT DEFAULT 0,
+
+  size            BIGINT DEFAULT 0,       // file/image/hardlink size
+
+  CONSTRAINT entriesNewest UNIQUE (name),
+
+  INDEX(entryId,name,size,timeLastChanged),
+  INDEX(name,size,type,timeLastChanged),
+  INDEX(type,entryId,name,size,timeLastChanged),
+  INDEX(type,size,name,timeLastChanged),
+  INDEX(size,type,name,timeLastChanged),
+  INDEX(timeLastChanged,name,size,type),
+  INDEX(entityId,type,entryId,name,size,timeLastChanged)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+/*
+CREATE TRIGGER AFTER UPDATE ON entries
+  FOR EACH ROW
+  BEGIN
+    // update newest entries
+    UPDATE entriesNewest
+      SET uuidId=NEW.uuidId
+      WHERE entryId=OLD.id;
+
+    // update newest entries
+    UPDATE entriesNewest
+      SET entityId=NEW.entityId
+      WHERE entryId=OLD.id;
+
+    // update FTS
+//    DELETE FROM FTS_entries WHERE entryId=OLD.id;
+//    INSERT INTO FTS_entries (id,name) VALUES (NEW.id,NEW.name);
+
+// insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
+    // update if entry is newer
+    UPDATE entriesNewest
+      SET entryId        =NEW.id,
+          uuidId         =NEW.uuidId,
+          entityId       =NEW.entityId,
+          type           =NEW.type,
+          timeLastChanged=NEW.timeLastChanged,
+          userId         =NEW.userId,
+          groupId        =NEW.groupId,
+          permission     =NEW.permission,
+          size           =NEW.size
+      WHERE     entryId!=NEW.id
+            AND name=NEW.name
+            AND type=NEW.type
+            AND NEW.timeLastChanged>timeLastChanged;
+  END;
+*/
+
+//TODO
+// --- skipped entries -------------------------------------------------
+CREATE TABLE IF NOT EXISTS skippedEntries(
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  entityId    INT NOT NULL REFERENCES entities(id),
+  name        VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  type        INT,
+
+  deletedFlag INT DEFAULT 0,
+
+  INDEX(entityId,type,name),
+  INDEX(name),
+  INDEX(type,name)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- entry fragments -------------------------------------------------
+CREATE TABLE IF NOT EXISTS entryFragments(
+  id        INT AUTO_INCREMENT PRIMARY KEY,
+  entryId   INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  offset    BIGINT,
+  size      BIGINT,
+
+  CONSTRAINT entryFragments UNIQUE (entryId,offset),
+
+  INDEX(entryId),
+  INDEX(storageId)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- files -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fileEntries(
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+
+  entryId         INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size            BIGINT,
+
+  CONSTRAINT fileEntries UNIQUE (entryId),
+
+  INDEX(entryId)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- images ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS imageEntries(
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+
+  entryId        INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size           BIGINT,
+  fileSystemType INT,
+  blockSize      INT,                 // size of image block
+
+  CONSTRAINT imageEntries UNIQUE (entryId),
+
+  INDEX(entryId)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- directories -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS directoryEntries(
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
+
+  entryId               INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId             INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+
+  // Note: redundancy for faster access
+  name                  VARCHAR($MAX_TEXT_LENGTH),
+
+  // updated by updateDirectoryContentAggregates()
+  totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalEntrySize        BIGINT DEFAULT 0,  // total size of directory entries [bytes]
+  totalEntryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalEntrySizeNewest  BIGINT DEFAULT 0,  // total size of newest directory entries [bytes]
+
+  CONSTRAINT directoryEntries UNIQUE (entryId),
+
+  INDEX(entryId),
+  INDEX(storageId,name),
+  INDEX(name)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- links -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS linkEntries(
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+
+  entryId         INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId       INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  destinationName TEXT,
+
+  CONSTRAINT linkEntries UNIQUE (entryId),
+
+  INDEX(entryId),
+  INDEX(storageId)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- hardlinks -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS hardlinkEntries(
+  id      INT AUTO_INCREMENT PRIMARY KEY,
+
+  entryId INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size    BIGINT,
+
+  CONSTRAINT hardlinkEntries UNIQUE (entryId),
+
+  INDEX(entryId)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- special ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS specialEntries(
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+
+  entryId     INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId   INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  specialType INT,
+  major       INT,
+  minor       INT,
+
+  CONSTRAINT specialEntries UNIQUE (entryId),
+
+  INDEX(entryId),
+  INDEX(storageId)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- history ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS history(
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  jobUUID           VARCHAR($UUID_LENGTH) NOT NULL,
+  scheduleUUID      TEXT,
+  hostName          TEXT,
+  userName          TEXT,
+  type              INT,
+  created           DATETIME,
+  errorMessage      VARCHAR($MAX_TEXT_LENGTH),
+  duration          BIGINT,
+  totalEntryCount   BIGINT,
+  totalEntrySize    BIGINT,
+  skippedEntryCount BIGINT,
+  skippedEntrySize  BIGINT,
+  errorEntryCount   BIGINT,
+  errorEntrySize    BIGINT,
+
+  INDEX(jobUUID,created,type),
+  INDEX(created),
+  INDEX(errorMessage)
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// --- debug only ------------------------------------------------------
+CREATE TABLE IF NOT EXISTS log(
+  text TEXT
+) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

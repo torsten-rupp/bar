@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-08-28 13:57+0200\n"
+"POT-Creation-Date: 2021-10-16 02:47+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -846,69 +846,81 @@ msgid "database"
 msgstr ""
 
 #: errors.def:894
-msgid "database already exists"
+msgid "datbase connection lost"
 msgstr ""
 
 #: errors.def:895
+msgid "database already exists"
+msgstr ""
+
+#: errors.def:896
 msgid "unknown version on index"
 msgstr ""
 
-#: errors.def:899
+#: errors.def:900
 msgid "missing table"
 msgstr ""
 
-#: errors.def:906
+#: errors.def:907
 msgid "missing column"
 msgstr ""
 
-#: errors.def:913
+#: errors.def:914
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:920
+#: errors.def:921
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:927
-msgid "type mismatch"
+#: errors.def:925
+msgid "database busy"
+msgstr ""
+
+#: errors.def:926
+msgid "database operation interupted"
 msgstr ""
 
 #: errors.def:931
+msgid "type mismatch"
+msgstr ""
+
+#: errors.def:935
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:932
+#: errors.def:936
 msgid "index not found"
 msgstr ""
 
-#: errors.def:933
+#: errors.def:937
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:937
+#: errors.def:941
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:944
+#: errors.def:948
 msgid "parse index id fail"
 msgstr ""
 
-#: errors.def:948
+#: errors.def:952
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:951
+#: errors.def:955
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:952
+#: errors.def:956
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:953
+#: errors.def:957
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:954
+#: errors.def:958
 msgid "instance is not a slave"
 msgstr ""

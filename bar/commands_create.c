@@ -603,7 +603,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   {
     if      (!File_exists(directoryName))
     {
-      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION,FALSE);
       if (error != ERROR_NONE)
       {
         String_delete(directoryName);
@@ -1748,16 +1748,16 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
-    DatabaseQueryHandle databaseQueryHandle;
+    DatabaseStatementHandle databaseStatementHandle;
     DatabaseId          databaseId;
 
     // process entries from continuous database
     if (Continuous_isAvailable())
     {
-      error = Continuous_initList(&databaseQueryHandle,&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID);
+      error = Continuous_initList(&databaseStatementHandle,&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID);
       if (error == ERROR_NONE)
       {
-        while (Continuous_getNext(&databaseQueryHandle,&databaseId,name))
+        while (Continuous_getNext(&databaseStatementHandle,&databaseId,name))
         {
           FileInfo fileInfo;
 
@@ -1929,7 +1929,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
           // free resources
         }
-        Continuous_doneList(&databaseQueryHandle);
+        Continuous_doneList(&databaseStatementHandle);
       }
     }
   }

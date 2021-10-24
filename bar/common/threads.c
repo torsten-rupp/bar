@@ -449,16 +449,18 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                                               (name != NULL) ? name : "<none>",
                                               Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id)
                                              );
-                    debugDumpStackTraceOutput(stderr,0,type,"  not available (terminate fail)\n");
+                    debugDumpStackTraceOutput(stderr,0,type,"  not available (terminate failed)\n");
                   }
                   pthread_mutex_unlock(&debugConsoleLock);
                 }
                 else
                 {
-                  HALT_INTERNAL_ERROR("Process signal QUIT for thread %s ==-- %s fail %d %s",
-                  Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),
-                  Thread_getCurrentIdString(),
-                  errno,strerror(errno));
+                  HALT_INTERNAL_ERROR("Process signal QUIT for thread %s == %s failed (error %d: %s)",
+                                      Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),
+                                      Thread_getCurrentIdString(),
+                                      errno,
+                                      strerror(errno)
+                                     );
                 }
               }
               else
@@ -477,7 +479,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                                             (name != NULL) ? name : "<none>",
                                             Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id)
                                            );
-                  debugDumpStackTraceOutput(stderr,0,type,"  not available (trigger fail)\n");
+                  debugDumpStackTraceOutput(stderr,0,type,"  not available (trigger failed)\n");
                 }
                 pthread_mutex_unlock(&debugConsoleLock);
               }
