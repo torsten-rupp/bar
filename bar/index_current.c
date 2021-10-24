@@ -68,27 +68,33 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
     DatabaseId *id;
   } ValueData;
 
-  Errors              error;
+  Errors                  error;
   DatabaseStatementHandle databaseStatementHandle;
-  int64               size;
-  DatabaseId          fromStorageId;
-  ValueData           valueData;
-  DatabaseId          toStorageId;
-  int64               fragmentOffset;
-  int64               fragmentSize;
+  int64                   size;
+  DatabaseId              fromStorageId;
+  ValueData               valueData;
+  DatabaseId              toStorageId;
+  int64                   fragmentOffset;
+  int64                   fragmentSize;
 
   error = Database_prepare(&databaseStatementHandle,
-                          oldDatabaseHandle,
-                          DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
-                          "SELECT fileEntries.size, \
-                                  entryFragments.storageId, \
-                                  entryFragments.offset AS fragmentOffset, \
-                                  entryFragments.size AS fragmentSize \
-                           FROM fileEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
-                           WHERE fileEntries.entryId=%lld \
-                          ",
-                          fromEntryId
+                           oldDatabaseHandle,
+                           DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
+                           "SELECT fileEntries.size, \
+                                   entryFragments.storageId, \
+                                   entryFragments.offset AS fragmentOffset, \
+                                   entryFragments.size AS fragmentSize \
+                            FROM fileEntries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
+                            WHERE fileEntries.entryId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             KEY (fromEntryId)
+                           )
                          );
   if (error == ERROR_NONE)
   {
@@ -211,9 +217,15 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                    entryFragments.size AS fragmentSize \
                             FROM imageEntries \
                               LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
-                            WHERE imageEntries.entryId=%lld \
+                            WHERE imageEntries.entryId=? \
                            ",
-                           fromEntryId
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             KEY (fromEntryId)
+                           )
                           );
   if (error == ERROR_NONE)
   {
@@ -336,9 +348,15 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                    entryFragments.size AS fragmentSize \
                             FROM hardlinkEntries \
                               LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
-                            WHERE hardlinkEntries.entryId=%lld \
+                            WHERE hardlinkEntries.entryId=? \
                            ",
-                           fromEntryId
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             KEY (fromEntryId)
+                           )
                           );
   if (error == ERROR_NONE)
   {
@@ -747,7 +765,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                assert(fromEntityId != DATABASE_ID_NONE);
                                toEntityId = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                assert(toEntityId != DATABASE_ID_NONE);
-fprintf(stderr,"%s:%d: fromEntityId=%lld toEntityId=%lld\n",__FILE__,__LINE__,fromEntityId,toEntityId);
+fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,fromEntityId,toEntityId);
 
                                // transfer storages of entity
                                t0 = Misc_getTimestamp();
@@ -790,7 +808,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%lld toEntityId=%lld\n",__FILE__,__LINE__,fr
                                                             toStorageId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
-                                                            DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumnList,"name",NULL));
+                                                            DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumns,"name",NULL));
                                                             Dictionary_add(&storageIdDictionary,
                                                                            &fromStorageId,
                                                                            sizeof(DatabaseId),
@@ -810,7 +828,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%lld toEntityId=%lld\n",__FILE__,__LINE__,fr
                                  return error;
                                }
 
-                              // get storage id filter
+                               // get storage id filter
                                String_clear(storageIdsString);
                                Dictionary_initIterator(&dictionaryIterator,&storageIdDictionary);
                                while (Dictionary_getNext(&dictionaryIterator,
@@ -827,7 +845,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%lld toEntityId=%lld\n",__FILE__,__LINE__,fr
                                Dictionary_doneIterator(&dictionaryIterator);
 
                                // transfer entries of entity
-                               DIMPORT("import entity %ld -> %ld: jobUUID=%s, storages=%s",fromEntityId,toEntityId,Database_getTableColumnCString(fromColumnList,"jobUUID",NULL),String_cString(storageIdsString));
+                               DIMPORT("import entity %ld -> %ld: jobUUID=%s, storages=%s",fromEntityId,toEntityId,Database_getTableColumnCString(fromColumns,"jobUUID",NULL),String_cString(storageIdsString));
                                t0 = Misc_getTimestamp();
                                error = Database_copyTable(oldDatabaseHandle,
                                                           newDatabaseHandle,
@@ -847,7 +865,6 @@ fprintf(stderr,"%s:%d: fromEntityId=%lld toEntityId=%lld\n",__FILE__,__LINE__,fr
                                                             UNUSED_VARIABLE(fromColumns);
                                                             UNUSED_VARIABLE(userData);
 
-fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                             (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
@@ -876,7 +893,8 @@ fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnList,"name",NULL));
+                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumns,"name",NULL));
+#if 1
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
@@ -1060,8 +1078,11 @@ fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
+#else
+error = ERROR_NONE;
+#endif
 
-                                                            return ERROR_NONE;
+                                                            return error;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
                                                           CALLBACK_(progressStep,NULL),
@@ -1174,7 +1195,7 @@ fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                           {
                                                             Errors     error;
                                                             DatabaseId fromEntryId;
-                                                            IndexTypes type;
+//                                                            IndexTypes type;
                                                             DatabaseId toEntryId;
 
                                                             assert(fromColumns != NULL);
@@ -1184,13 +1205,15 @@ fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
                                                             fromEntryId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
-                                                            type = Database_getTableColumnId(fromColumns,"type",INDEX_TYPE_NONE);
+//                                                            type = Database_getTableColumnId(fromColumns,"type",INDEX_TYPE_NONE);
                                                             toEntryId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnList,"name",NULL));
+                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumns,"name",NULL));
+// TODO:
+#if 0
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
@@ -1375,7 +1398,9 @@ fprintf(stderr,"%s:%d: xxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
-
+#else
+error = ERROR_NONE;
+#endif
                                                             return error;
                                                           },NULL),
                                                           CALLBACK_(NULL,NULL),  // pause

@@ -404,12 +404,16 @@ LOCAL Errors importIndexVersion1(IndexHandle *oldIndexHandle,
 
                                (void)Index_unlockEntity(newIndexHandle,entityId);
 
-                               return ERROR_NONE;
+                               return error;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
                              CALLBACK_(NULL,NULL),  // progress
                              NULL  // filter
                             );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }

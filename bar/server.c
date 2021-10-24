@@ -1770,6 +1770,7 @@ const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"};
                   month = 12;
                 }
               }
+// TODO: remove
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 if (executeScheduleNodeFull != NULL)
 {

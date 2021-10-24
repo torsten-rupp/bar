@@ -1887,18 +1887,24 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
     // prepare list
     if (Database_prepare(&databaseStatementHandle,
                          databaseHandle,
-                         DATABASE_COLUMN_TYPES(KEY,TEXT),
+                         DATABASE_COLUMN_TYPES(KEY,STRING),
                          "SELECT id,name \
                           FROM names \
                           WHERE     storedFlag=0 \
-                                AND DATETIME('now','-%u seconds')>=dateTime \
-                                AND jobUUID=%'S \
-                                AND scheduleUUID=%'S \
+                                AND DATETIME('now','-? seconds')>=dateTime \
+                                AND jobUUID=? \
+                                AND scheduleUUID=? \
                           LIMIT 0,1 \
                          ",
-                         globalOptions.continuousMinTimeDelta,
-                         jobUUID,
-                         scheduleUUID
+                         DATABASE_VALUES2
+                         (
+                         ),
+                         DATABASE_FILTERS
+                         (
+                           UINT  (globalOptions.continuousMinTimeDelta),
+                           STRING(jobUUID),
+                           STRING(scheduleUUID)
+                         )
                         ) != ERROR_NONE
        )
     {
@@ -1976,17 +1982,23 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
   // prepare list
   error = Database_prepare(databaseStatementHandle,
                            databaseHandle,
-                           DATABASE_COLUMN_TYPES(KEY,TEXT),
+                           DATABASE_COLUMN_TYPES(KEY,STRING),
                            "SELECT id,name \
                             FROM names \
                             WHERE     storedFlag=0 \
-                                  AND DATETIME('now','-%u seconds')>=dateTime \
-                                  AND jobUUID=%'S \
-                                  AND scheduleUUID=%'S \
+                                  AND DATETIME('now','-? seconds')>=dateTime \
+                                  AND jobUUID=? \
+                                  AND scheduleUUID=? \
                            ",
-                           globalOptions.continuousMinTimeDelta,
-                           jobUUID,
-                           scheduleUUID
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT  (globalOptions.continuousMinTimeDelta),
+                             STRING(jobUUID),
+                             STRING(scheduleUUID)
+                           )
                           );
   if (error != ERROR_NONE)
   {
@@ -2035,14 +2047,20 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
   Database_prepare(&databaseStatementHandle,
                          databaseHandle,
-                         DATABASE_COLUMN_TYPES(KEY,DATETIME,TEXT,BOOL),
+                         DATABASE_COLUMN_TYPES(KEY,DATETIME,STRING,BOOL),
                          "SELECT id,UNIX_TIMESTAMP(dateTime),name,storedFlag \
                           FROM names \
-                          WHERE     jobUUID=%'s \
-                                AND scheduleUUID=%'s \
+                          WHERE     jobUUID=? \
+                                AND scheduleUUID=? \
                          ",
-                         jobUUID,
-                         scheduleUUID
+                         DATABASE_VALUES2
+                         (
+                         ),
+                         DATABASE_FILTERS
+                         (
+                           CSTRING(jobUUID),
+                           CSTRING(scheduleUUID)
+                         )
                         );
   while (Database_getNextRow(&databaseStatementHandle,
                            "%lld %lld %S %d",

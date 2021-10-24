@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <semaphore.h>
 #include <assert.h>
 
@@ -58,6 +59,7 @@ typedef struct
   DatabaseTypes type;
   union
   {
+    intptr_t p;
     struct
     {
       String fileName;
@@ -111,17 +113,23 @@ typedef enum
 
   DATABASE_DATATYPE_BOOL,
   DATABASE_DATATYPE_INT,
+// TODO:`
+  DATABASE_DATATYPE_UINT = DATABASE_DATATYPE_INT,
+// TODO:`
   DATABASE_DATATYPE_INT64,
+  DATABASE_DATATYPE_UINT64 = DATABASE_DATATYPE_INT64,
   DATABASE_DATATYPE_DOUBLE,
   DATABASE_DATATYPE_DATETIME,
-  DATABASE_DATATYPE_TEXT,
+  DATABASE_DATATYPE_STRING,
+  DATABASE_DATATYPE_CSTRING,
   DATABASE_DATATYPE_BLOB,
 
   DATABASE_DATATYPE_UNKNOWN
 } DatabaseDataTypes;
 
-#define DATABASE_FLAG_NONE   0
-#define DATABASE_FLAG_IGNORE (1 << 0)
+#define DATABASE_FLAG_NONE    0
+#define DATABASE_FLAG_IGNORE  (1 << 0)
+#define DATABASE_FLAG_REPLACE (1 << 1)
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -414,20 +422,32 @@ typedef struct DatabaseHandle
 
 typedef char DatabaseColumnName[DATABASE_MAX_COLUMN_NAME_LENGTH+1];
 
+// databaes column
+typedef struct
+{
+  const char        *name;
+  DatabaseDataTypes type;
+} DatabaseColumn;
+
 // database value
 typedef struct
 {
-const char *name;
+  const char        *name;
   DatabaseDataTypes type;
   union
   {
-    uint64 id;
-    bool   b;
-    int64  i;
-    uint64 u;
-    double d;
-    uint64 dateTime;
-    char   *s;
+    intptr_t p;
+
+    uint64   id;
+    bool     b;
+    int      i;
+    int64    i64;
+    uint32   u;
+    uint64   u64;
+    double   d;
+    uint64   dateTime;
+    String   string;
+    char     *s;
 // TODO: use String?
     struct
     {
@@ -448,31 +468,93 @@ const char *name;
   };
 } DatabaseValue;
 
+// database filter
+typedef struct
+{
+  DatabaseDataTypes type;
+  union
+  {
+    intptr_t p;
+
+    uint64   id;
+    bool     b;
+    int      i;
+    int64    i64;
+    uint32   u;
+    uint64   u64;
+    double   d;
+    uint64   dateTime;
+    String   string;
+    char     *s;
+// TODO: use String?
+    struct
+    {
+      char  *data;
+      ulong length;
+    } text;
+    struct
+    {
+      void  *data;
+      ulong length;
+    } blob;
+// TODO: remove
+    struct
+    {
+      void  *p;
+      ulong length;
+    } data;
+  };
+} DatabaseFilter;
+
 // database statement handle
 typedef struct
 {
-  DatabaseHandle *databaseHandle;
+  DatabaseHandle    *databaseHandle;
   union
   {
     struct
     {
-      sqlite3_stmt *statementHandle;
+      sqlite3_stmt      *statementHandle;
+      DatabaseValue     **bind;
     }
     sqlite;
     struct
     {
-      MYSQL_STMT    *statementHandle;
-      MYSQL_BIND    *bind;
-      MYSQL_TIME    *dateTime;
+      MYSQL_STMT        *statementHandle;
+DatabaseDataTypes *dataTypes;
+      struct
+      {
+        MYSQL_BIND      *bind;
+        MYSQL_TIME      *time;
+      }                 values;
+      struct
+      {
+        MYSQL_BIND      *bind;
+        MYSQL_TIME      *time;
+      }                 results;
+      bool xxxexecutedFlag;
     }
     mysql;
   };
-  uint          valueIndex;
 
-  DatabaseValue *values;
-  uint          valueCount;
+//  const DatabaseValue **values;
+  uint                valueCount;
+  uint                valueIndex;
+
+#if 0
+  const DatabaseFilter **filters;
+  uint                filterCount;
+  uint                filterIndex;
+#endif
+
+  DatabaseValue       *results;
+  uint                resultCount;
+  uint                resultIndex;
+
   uint          *valueMap;
   uint          valueMapCount;
+
+//  DatabaseValue *results;
   #ifndef NDEBUG
     String sqlString;
     uint64 t0,t1;
@@ -554,6 +636,150 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_VALUES(...) \
   (DatabaseValue[]){ __VA_ARGS__ }, \
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
+
+
+// column macros
+#define _DATABASE_COLUMNS_ITERATOR_ARRAY0(x,...) \
+  _ITERATOR_EVAL1(DATABASE_COLUMN_NAME_TYPE_##x), \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_ARRAY0)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define __DATABASE_COLUMNS_ITERATOR_ARRAY0() _DATABASE_COLUMNS_ITERATOR_ARRAY0
+
+#define _DATABASE_COLUMNS_ITERATOR_ARRAY1(x,...) \
+  _ITERATOR_EVAL1(DATABASE_COLUMN_NAME_##x), \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_ARRAY1)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define __DATABASE_COLUMNS_ITERATOR_ARRAY1() _DATABASE_COLUMNS_ITERATOR_ARRAY1
+
+#define DATABASE_COLUMNS(...) \
+  (DatabaseColumn[]){_ITERATOR_EVAL(_DATABASE_COLUMNS_ITERATOR_ARRAY0(__VA_ARGS__))}, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
+
+
+#define DATABASE_COLUMN_NAME_TYPE_KEY(name)     { name, DATABASE_DATATYPE_KEY     }
+#define DATABASE_COLUMN_NAME_TYPE_BOOL(name)    { name, DATABASE_DATATYPE_BOOL    }
+#define DATABASE_COLUMN_NAME_TYPE_INT(name)     { name, DATABASE_DATATYPE_INT     }
+#define DATABASE_COLUMN_NAME_TYPE_STRING(name)  { name, DATABASE_DATATYPE_STRING  }
+#define DATABASE_COLUMN_NAME_TYPE_CSTRING(name) { name, DATABASE_DATATYPE_CSTRING }
+
+#define DATABASE_COLUMN_NAME_KEY(name)     name
+#define DATABASE_COLUMN_NAME_BOOL(name)    name
+#define DATABASE_COLUMN_NAME_INT(name)     name
+#define DATABASE_COLUMN_NAME_STRING (name) name
+#define DATABASE_COLUMN_NAME_CSTRING(name) name
+
+// value macros
+#define __DATABASE_ITERATOR_VALUES_TYPE_VALUE(x,...) \
+  _ITERATOR_EVAL1(DATABASE_VALUE_TYPE_VALUE_##x), \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(___DATABASE_ITERATOR_VALUES_TYPE_VALUE)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define ___DATABASE_ITERATOR_VALUES_TYPE_VALUE() __DATABASE_ITERATOR_VALUES_TYPE_VALUE
+
+#define _DATABASE_ITERATOR_VALUES_TYPE_VALUE(...) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_EVAL(__DATABASE_ITERATOR_VALUES_TYPE_VALUE(__VA_ARGS__)) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+
+#define __DATABASE_ITERATOR_VALUES_NAME(x,...) \
+  _ITERATOR_EVAL1(DATABASE_VALUE_NAME_##x), \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(___DATABASE_ITERATOR_VALUES_NAME)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define ___DATABASE_ITERATOR_VALUES_NAME() __DATABASE_ITERATOR_VALUES_NAME
+
+#define _DATABASE_ITERATOR_VALUES_NAME(...) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_EVAL(__DATABASE_ITERATOR_VALUES_NAME(__VA_ARGS__)) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+
+
+#define DATABASE_VALUES2(...) \
+  (const char*[]){_ITERATOR_EVAL(_DATABASE_ITERATOR_VALUES_NAME(__VA_ARGS__))}, \
+  (DatabaseValue[]){_ITERATOR_EVAL(_DATABASE_ITERATOR_VALUES_TYPE_VALUE(__VA_ARGS__))}, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
+
+#define DATABASE_VALUE_TYPE_VALUE_KEY(name,value)      { name, DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
+#define DATABASE_VALUE_TYPE_VALUE_BOOL(name,value)     { name, DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
+#define DATABASE_VALUE_TYPE_VALUE_INT(name,value)      { name, DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
+#define DATABASE_VALUE_TYPE_VALUE_UINT(name,value)     { name, DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
+#define DATABASE_VALUE_TYPE_VALUE_INT64(name,value)    { name, DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
+#define DATABASE_VALUE_TYPE_VALUE_UINT64(name,value)   { name, DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
+#define DATABASE_VALUE_TYPE_VALUE_DATETIME(name,value) { name, DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
+#define DATABASE_VALUE_TYPE_VALUE_STRING(name,value)   { name, DATABASE_DATATYPE_STRING,   { (intptr_t)(value) } }
+#define DATABASE_VALUE_TYPE_VALUE_CSTRING(name,value)  { name, DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
+
+#define DATABASE_VALUE_NAME_KEY(name,value)      name
+#define DATABASE_VALUE_NAME_BOOL(name,value)     name
+#define DATABASE_VALUE_NAME_INT(name,value)      name
+#define DATABASE_VALUE_NAME_INT64(name,value)    name
+#define DATABASE_VALUE_NAME_UINT(name,value)     name
+#define DATABASE_VALUE_NAME_UINT64(name,value)   name
+#define DATABASE_VALUE_NAME_DATETIME(name,value) name
+#define DATABASE_VALUE_NAME_STRING(name,value)   name
+#define DATABASE_VALUE_NAME_CSTRING(name,value)  name
+
+
+// filter macros
+#define __DATABASE_FILTERS_ITERATOR_ARRAY0(x,...) \
+  _ITERATOR_EVAL1(DATABASE_FILTER_TYPE_VALUE_##x), \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(___DATABASE_FILTERS_ITERATOR_ARRAY0)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define ___DATABASE_FILTERS_ITERATOR_ARRAY0() __DATABASE_FILTERS_ITERATOR_ARRAY0
+#define _DATABASE_FILTERS_ITERATOR_ARRAY0(...) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_EVAL(__DATABASE_FILTERS_ITERATOR_ARRAY0(__VA_ARGS__)) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+
+#define DATABASE_FILTERS(...) \
+  (DatabaseFilter[]){_ITERATOR_EVAL(_DATABASE_FILTERS_ITERATOR_ARRAY0(__VA_ARGS__))}, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
+
+#define DATABASE_FILTER_TYPE_VALUE_KEY(value)      { DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
+#define DATABASE_FILTER_TYPE_VALUE_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
+#define DATABASE_FILTER_TYPE_VALUE_INT(value)      { DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
+#define DATABASE_FILTER_TYPE_VALUE_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
+#define DATABASE_FILTER_TYPE_VALUE_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
+#define DATABASE_FILTER_TYPE_VALUE_UINT64(value)   { DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
+#define DATABASE_FILTER_TYPE_VALUE_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
+#define DATABASE_FILTER_TYPE_VALUE_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
+#define DATABASE_FILTER_TYPE_VALUE_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
+
 
 /***********************************************************************\
 * Name   : DATABASE_LOCKED_DO
@@ -1474,6 +1700,71 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
                        );
 
 /***********************************************************************\
+* Name   : Database_prepare
+* Purpose: prepare database query
+* Input  : databaseHandle - database handle
+*          command        - SQL command string with %[l]d, %[']S, %[']s
+*          ...            - optional arguments for SQL command string
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : databaseStatementHandle - initialized database statement handle
+* Return : -
+* Notes  : Database is locked until Database_finalize() is called
+\***********************************************************************/
+
+// TODO: comment
+#ifdef NDEBUG
+  Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
+                          DatabaseHandle          *databaseHandle,
+                          const DatabaseDataTypes *resultDataTypes,
+                          uint                    resultDataTypeCount,
+                          const char              *sqlCommand,
+                          const char              *names[],
+                          const DatabaseValue     values[],
+                          uint                    nameValueCount,
+                          const DatabaseFilter    filters[],
+                          uint                    filterCount
+                         );
+#else /* not NDEBUG */
+  Errors __Database_prepare(const char              *__fileName__,
+                            ulong                   __lineNb__,
+                            DatabaseStatementHandle *databaseStatementHandle,
+                            DatabaseHandle          *databaseHandle,
+                            const DatabaseDataTypes *resultDataTypes,
+                            uint                    resultDataTypeCount,
+                            const char              *sqlCommand,
+                            const char              *names[],
+                            const DatabaseValue     values[],
+                            uint                    nameValueCount,
+                            const DatabaseFilter    filters[],
+                            uint                    filterCount
+                           );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Database_getNextRow
+* Purpose: get next row from query result
+* Input  : databaseStatementHandle - database statment handle
+*          format - format string
+* Output : ... - variables
+* Return : TRUE if row read, FALSE if not more rows
+* Notes  : Support format types:
+*            %b              - bool
+*            %[<n>][(ll|l)\d - int
+*            %[<n>][(ll|l)\u - unsigned int
+*            %[<n>][l\f      - float/double
+*            %c              - char
+*            %[<n>]s         - char*
+*            %S              - string
+*            %p              - pointer
+\***********************************************************************/
+
+bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
+                         const char              *format,
+                         ...
+                        );
+
+/***********************************************************************\
 * Name   : Database_insert
 * Purpose: insert row into database table
 * Input  : databaseHandle   - database handle
@@ -1488,36 +1779,41 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_insert(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       DatabaseValue  values[],
-                       uint           valueCount
+Errors Database_insert(DatabaseHandle      *databaseHandle,
+                       ulong               *changedRowCount,
+                       const char          *tableName,
+                       uint                flags,
+                       const char          *names[],
+                       const DatabaseValue values[],
+                       uint                nameValueCount
                       );
 
 /***********************************************************************\
 * Name   : Database_insert
 * Purpose: insert row into database table
-* Input  : databaseHandle  - database handle
-*          changedRowCount - row count variable (can be NULL)
-*          flags           - insert flags; see DATABASE_FLAGS_...
-*          values          - values to insert
-*          valueCount      - value count
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          flags            - insert flags; see DATABASE_FLAGS_...
+*          values           - values to insert
+*          valueCount       - value count
+*          filter           - SQL filter
+*          filterValues     - values to insert
+*          filterValueCount - value count
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_update(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       DatabaseValue  values[],
-                       uint           valueCount,
-                       const char     *filter,
-                       DatabaseValue  filterValues[],
-                       uint           filterCalueCount
+Errors Database_update(DatabaseHandle       *databaseHandle,
+                       ulong                *changedRowCount,
+                       const char           *tableName,
+                       uint                 flags,
+                       const char           *names[],
+                       const DatabaseValue  values[],
+                       uint                 nameValueCount,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
                       );
 
 /***********************************************************************\
@@ -1545,60 +1841,51 @@ Errors Database_delete(DatabaseHandle *databaseHandle,
                       );
 
 /***********************************************************************\
-* Name   : Database_prepare
-* Purpose: prepare database query
-* Input  : databaseHandle - database handle
-*          command        - SQL command string with %[l]d, %[']S, %[']s
-*          ...            - optional arguments for SQL command string
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
-* Output : databaseStatementHandle - initialized database statement handle
+* Name   : Database_select
+* Purpose: select rows in database table
+* Input  : databaseHandle      - database handle
+*          databaseRowFunction - callback function for row data (can be
+*                                NULL)
+*          databaseRowUserData - user data for callback function
+*          changedRowCount     - number of changd rows (can be NULL)
+*          tableName           - table name,
+*          flags               - insert flags; see DATABASE_FLAGS_...
+*          values              - values
+*          valueCount          - values couont
+*          filter              - SQL filter expression
+*          filterValues        - filter values
+*          filterValueCount    - filter values count
+* Output : -
 * Return : -
-* Notes  : Database is locked until Database_finalize() is called
+* Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
-  Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
-                          DatabaseHandle          *databaseHandle,
-                          const DatabaseDataTypes *columnTypes,
-                          uint                    columnTypeCount,
-                          const char              *command,
-                          ...
-                         );
-#else /* not NDEBUG */
-  Errors __Database_prepare(const char              *__fileName__,
-                            ulong                   __lineNb__,
-                            DatabaseStatementHandle *databaseStatementHandle,
-                            DatabaseHandle          *databaseHandle,
-                            const DatabaseDataTypes *columnTypes,
-                            uint                    columnTypeCount,
-                            const char              *command,
-                            ...
-                           );
-#endif /* NDEBUG */
-
-/***********************************************************************\
-* Name   : Database_getNextRow
-* Purpose: get next row from query result
-* Input  : databaseStatementHandle - database statment handle
-*          format - format string
-* Output : ... - variables
-* Return : TRUE if row read, FALSE if not more rows
-* Notes  : Support format types:
-*            %b              - bool
-*            %[<n>][(ll|l)\d - int
-*            %[<n>][(ll|l)\u - unsigned int
-*            %[<n>][l\f      - float/double
-*            %c              - char
-*            %[<n>]s         - char*
-*            %S              - string
-*            %p              - pointer
-\***********************************************************************/
-
-bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                         const char              *format,
-                         ...
-                        );
+Errors Database_select(DatabaseHandle      *databaseHandle,
+                       DatabaseRowFunction databaseRowFunction,
+                       void                *databaseRowUserData,
+                       ulong               *changedRowCount,
+                       const char          *tableName,
+                       uint                flags,
+// TODO: select value datatype: name, type
+                       DatabaseValue       selectValues[],
+                       uint                selectValueCount,
+                       const char          *filter,
+                       DatabaseValue       filterValues[],
+                       uint                filterValueCount
+                      );
+Errors Database_select2(DatabaseHandle      *databaseHandle,
+                       DatabaseRowFunction databaseRowFunction,
+                       void                *databaseRowUserData,
+                       ulong               *changedRowCount,
+                       const char          *tableName,
+                       uint                flags,
+// TODO: select value datatype: name, type
+                       DatabaseColumn      selectColumn[],
+                       uint                selectColumnCount,
+                       const char          *filter,
+                       DatabaseFilter      filterValues[],
+                       uint                filterValueCount
+                      );
 
 /***********************************************************************\
 * Name   : Database_finalize
