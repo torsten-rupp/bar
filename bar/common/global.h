@@ -1569,6 +1569,176 @@ typedef byte* BitSet;
     while (0)
 #endif /* HAVE_BACKTRACE */
 
+/* begin macro iterator
+   Link: http://jhnet.co.uk/articles/cpp_magic
+*/
+#define _ITERATOR_FIRST(a, ...) a
+#define _ITERATOR_SECOND(a, b, ...) b
+
+#define _ITERATOR_EMPTY()
+
+#define _ITERATOR_EVAL(...)     _ITERATOR_EVAL8192(__VA_ARGS__)
+#define _ITERATOR_EVAL8192(...) _ITERATOR_EVAL4096(_ITERATOR_EVAL4096(__VA_ARGS__))
+#define _ITERATOR_EVAL4096(...) _ITERATOR_EVAL2048(_ITERATOR_EVAL2048(__VA_ARGS__))
+#define _ITERATOR_EVAL2048(...) _ITERATOR_EVAL1024(_ITERATOR_EVAL1024(__VA_ARGS__))
+#define _ITERATOR_EVAL1024(...) _ITERATOR_EVAL512 (_ITERATOR_EVAL512 (__VA_ARGS__))
+#define _ITERATOR_EVAL512(...)  _ITERATOR_EVAL256 (_ITERATOR_EVAL256 (__VA_ARGS__))
+#define _ITERATOR_EVAL256(...)  _ITERATOR_EVAL128 (_ITERATOR_EVAL128 (__VA_ARGS__))
+#define _ITERATOR_EVAL128(...)  _ITERATOR_EVAL64  (_ITERATOR_EVAL64  (__VA_ARGS__))
+#define _ITERATOR_EVAL64(...)   _ITERATOR_EVAL32  (_ITERATOR_EVAL32  (__VA_ARGS__))
+#define _ITERATOR_EVAL32(...)   _ITERATOR_EVAL16  (_ITERATOR_EVAL16  (__VA_ARGS__))
+#define _ITERATOR_EVAL16(...)   _ITERATOR_EVAL8   (_ITERATOR_EVAL8   (__VA_ARGS__))
+#define _ITERATOR_EVAL8(...)    _ITERATOR_EVAL4   (_ITERATOR_EVAL4   (__VA_ARGS__))
+#define _ITERATOR_EVAL4(...)    _ITERATOR_EVAL2   (_ITERATOR_EVAL2   (__VA_ARGS__))
+#define _ITERATOR_EVAL2(...)    _ITERATOR_EVAL1   (_ITERATOR_EVAL1   (__VA_ARGS__))
+#define _ITERATOR_EVAL1(...)    __VA_ARGS__
+
+#define _ITERATOR_DEFER1(m) m _ITERATOR_EMPTY()
+#define _ITERATOR_DEFER2(m) m _ITERATOR_EMPTY _ITERATOR_EMPTY()()
+#define _ITERATOR_DEFER3(m) m _ITERATOR_EMPTY _ITERATOR_EMPTY _ITERATOR_EMPTY()()()
+#define _ITERATOR_DEFER4(m) m _ITERATOR_EMPTY _ITERATOR_EMPTY _ITERATOR_EMPTY _ITERATOR_EMPTY()()()()
+
+#define _ITERATOR_IS_PROBE(...) _ITERATOR_SECOND(__VA_ARGS__, 0)
+#define _ITERATOR_PROBE() ~, 1
+
+#define _ITERATOR_CAT(a,b) a ## b
+
+#define _ITERATOR_NOT(x) _ITERATOR_IS_PROBE(_ITERATOR_CAT(_ITERATOR_NOT_, x))
+#define _ITERATOR_NOT_0 _ITERATOR_PROBE()
+
+#define _ITERATOR_BOOL(x) _ITERATOR_NOT(_ITERATOR_NOT(x))
+
+#define _ITERATOR_IF_ELSE(condition)  __ITERATOR_IF_ELSE(_ITERATOR_BOOL(condition))
+#define __ITERATOR_IF_ELSE(condition) _ITERATOR_CAT(_ITERATOR_IF_, condition)
+
+#define _ITERATOR_IF_1(...) __VA_ARGS__ _ITERATOR_IF_1_ELSE
+#define _ITERATOR_IF_0(...)             _ITERATOR_IF_0_ELSE
+
+#define _ITERATOR_IF_1_ELSE(...)
+#define _ITERATOR_IF_0_ELSE(...) __VA_ARGS__
+
+#define _ITERATOR_HAS_ARGS(...) _ITERATOR_BOOL(_ITERATOR_FIRST(_ITERATOR_END_OF_ARGUMENTS_ __VA_ARGS__)())
+#define _ITERATOR_END_OF_ARGUMENTS_() 0
+
+#if 0
+    // original without support of empty va-arg list
+    #define _ITERATOR_MAP(prefix, first, ...) \
+    prefix (first) \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+        _ITERATOR_DEFER2(__ITERATOR_MAP)()(prefix, __VA_ARGS__) \
+    ) \
+    ( \
+        /* Do nothing, just terminate */ \
+    )
+    #define __ITERATOR_MAP() _ITERATOR_MAP
+
+    #define _ITERATOR_MAP_COUNT(first, ...) \
+    1+ \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+        _ITERATOR_DEFER2(__ITERATOR_MAP_COUNT)()(__VA_ARGS__) \
+    ) \
+    ( \
+        /* nothing to do */ \
+    )
+    #define __ITERATOR_MAP_COUNT() _ITERATOR_MAP_COUNT
+#endif /* 0 */
+
+#define __ITERATOR_MAP(prefix, first, ...) \
+  prefix (first) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(___ITERATOR_MAP)()(prefix, __VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define ___ITERATOR_MAP() __ITERATOR_MAP
+
+#define _ITERATOR_MAP(prefix, ...) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_EVAL(__ITERATOR_MAP(prefix, __VA_ARGS__)) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+
+#define __ITERATOR_MAP_COUNT(first, ...) \
+  1+ \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(___ITERATOR_MAP_COUNT)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define ___ITERATOR_MAP_COUNT() __ITERATOR_MAP_COUNT
+
+#define _ITERATOR_MAP_COUNT(...) \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_EVAL(__ITERATOR_MAP_COUNT(__VA_ARGS__)) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+
+// get array [..][0] from array[..][3]
+#define _ITERATOR_ARRAY0(v0,v1,v3,...) \
+  v0, \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(__ITERATOR_ARRAY0)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define __ITERATOR_ARRAY0() _ITERATOR_ARRAY0 \
+
+// get array [..][1] from array[..][3]
+#define _ITERATOR_ARRAY1(v0,v1,v2,...) \
+  v1, \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(__ITERATOR_ARRAY1)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define __ITERATOR_ARRAY1() _ITERATOR_ARRAY1 \
+
+// get array [..][0,1] from array[..][3]
+#define _ITERATOR_ARRAY2(v0,v1,v2,...) \
+  v2, \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(__ITERATOR_ARRAY2)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define __ITERATOR_ARRAY2() _ITERATOR_ARRAY2 \
+
+// get array [..][0,1] from array[..][3]
+#define _ITERATOR_ARRAY01(v0,v1,v3,...) \
+  { v0,v1 }, \
+  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+  ( \
+    _ITERATOR_DEFER2(__ITERATOR_ARRAY01)()(__VA_ARGS__) \
+  ) \
+  ( \
+    /* nothing to do */ \
+  )
+#define __ITERATOR_ARRAY01() _ITERATOR_ARRAY01 \
+
+//#define fooMacro(x) FOO_ ## x
+//#define foo(...) _ITERATOR_EVAL(_ITERATOR_MAP(fooMacro, __VA_ARGS__))
+//#define fooCount(...) _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
+//foo(a,b,...) -> FOO_a, FOO_b, ...
+/* end macro iterator */
+
 #ifndef NDEBUG
   #define allocSecure(...) __allocSecure(__FILE__,__LINE__, ## __VA_ARGS__)
   #define freeSecure(...)  __freeSecure (__FILE__,__LINE__, ## __VA_ARGS__)
