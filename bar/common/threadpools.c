@@ -103,6 +103,8 @@ LOCAL void *threadPoolStartCode(void *userData)
   StartInfo      *startInfo = (StartInfo*)userData;
   ThreadPool     *threadPool;
   ThreadPoolNode *threadPoolNode;
+  struct timeval  timeval;
+  struct timespec timespec;
   void           (*entryFunction)(void*);
   void           *argument;
 
@@ -137,17 +139,16 @@ LOCAL void *threadPoolStartCode(void *userData)
     {
       while (!threadPool->quitFlag)
       {
-        // wait for function to exdecute or quit
+        // wait for function to execute
 //fprintf(stderr,"%s:%d: wait=%p %p\n",__FILE__,__LINE__,threadPoolNode,&threadPoolNode->trigger);
-        while (   !threadPool->quitFlag
-               && (pthread_cond_wait(&threadPoolNode->trigger,&threadPool->lock) != 0)
-              )
-        {
-          // nothing to do
-        }
+// TODO: work-around for missed signal; replace by semaphore per thread
+        gettimeofday(&timeval,NULL);
+        timespec.tv_sec  = timeval.tv_sec+1;
+        timespec.tv_nsec = timeval.tv_usec*1000;
+        (void)pthread_cond_timedwait(&threadPoolNode->trigger,&threadPool->lock,&timespec);
 
 //fprintf(stderr,"%s:%d: got %p qiot=%d\n",__FILE__,__LINE__,threadPoolNode,threadPool->quitFlag);
-        if (!threadPool->quitFlag)
+        if (!threadPool->quitFlag && (threadPoolNode->state == THREADPOOL_THREAD_STATE_RUNNING))
         {
           // get local copy of function
           entryFunction = threadPoolNode->entryFunction;
@@ -211,6 +212,7 @@ LOCAL void waitRunningThreads(ThreadPool *threadPool)
     // wait for thread termination
     if (threadPoolNode != NULL)
     {
+      pthread_cond_broadcast(&threadPoolNode->trigger);
       pthread_cond_wait(&threadPool->modified,&threadPool->lock);
     }
   }
@@ -234,10 +236,13 @@ LOCAL void waitIdleThreads(ThreadPool *threadPool)
 
   do
   {
+    // find not terminated thread pool thread
     threadPoolNode = LIST_FIND(&threadPool->idle,threadPoolNode,threadPoolNode->state != THREADPOOL_THREAD_STATE_QUIT);
+
+    // wait for thread termination
     if (threadPoolNode != NULL)
     {
-      pthread_cond_signal(&threadPoolNode->trigger);
+      pthread_cond_broadcast(&threadPoolNode->trigger);
       pthread_cond_wait(&threadPool->modified,&threadPool->lock);
     }
   }
@@ -320,7 +325,11 @@ bool ThreadPool_init(ThreadPool *threadPool,
 
       // stop threads
       threadPool->quitFlag = TRUE;
-      waitIdleThreads(threadPool);
+      pthread_mutex_lock(&threadPool->lock);
+      {
+        waitIdleThreads(threadPool);
+      }
+      pthread_mutex_unlock(&threadPool->lock);
 
       // free threads
       while (!List_isEmpty(&threadPool->idle))
@@ -379,23 +388,18 @@ void ThreadPool_done(ThreadPool *threadPool)
 
   DEBUG_REMOVE_RESOURCE_TRACE(threadPool,ThreadPool);
 
-  // signal quit
-  pthread_mutex_lock(&threadPool->lock);
-  {
-    // signal quit
-    threadPool->quitFlag = TRUE;
-
-    // wait running thrads
-    waitRunningThreads(threadPool);
-    assert(List_isEmpty(&threadPool->running));
-
-    // quit idle thread
-    waitIdleThreads(threadPool);
-  }
-  pthread_mutex_unlock(&threadPool->lock);
-
   // lock
   pthread_mutex_lock(&threadPool->lock);
+
+  // signal quit
+  threadPool->quitFlag = TRUE;
+
+  // wait running thrads
+  waitRunningThreads(threadPool);
+  assert(List_isEmpty(&threadPool->running));
+
+  // quit idle thread
+  waitIdleThreads(threadPool);
 
   // free thread pool threads
   while (!List_isEmpty(&threadPool->idle))
@@ -445,6 +449,7 @@ void ThreadPool_run(ThreadPool *threadPool,
 
     // run thread with funciton
     pthread_cond_signal(&threadPoolNode->trigger);
+//fprintf(stderr,"%s:%d: signaled start\n",__FILE__,__LINE__);
   }
   pthread_mutex_unlock(&threadPool->lock);
 }

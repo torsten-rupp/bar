@@ -219,21 +219,21 @@ endif
 # supported min. compress algorithms
 ifeq ($(MIN_COMPRESS_NAMES),)
   MIN_COMPRESS_NAMES = none
-  MIN_COMPRESS_NAMES += zip9
+  MIN_COMPRESS_NAMES += zip1
   ifeq (@HAVE_BZ2@,1)
-    MIN_COMPRESS_NAMES += bzip9
+    MIN_COMPRESS_NAMES += bzip1
   endif
   ifeq (@HAVE_LZMA@,1)
-    MIN_COMPRESS_NAMES += lzma9
+    MIN_COMPRESS_NAMES += lzma1
   endif
   ifeq (@HAVE_LZO@,1)
-    MIN_COMPRESS_NAMES += lzo5
+    MIN_COMPRESS_NAMES += lzo1
   endif
   ifeq (@HAVE_LZ4@,1)
-    MIN_COMPRESS_NAMES += lz4-9
+    MIN_COMPRESS_NAMES += lz4-1
   endif
   ifeq (@HAVE_ZSTD@,1)
-    MIN_COMPRESS_NAMES += zstd19
+    MIN_COMPRESS_NAMES += zstd1
   endif
 endif
 
@@ -745,6 +745,8 @@ help:
 	@$(ECHO) "  gcov_zero                                 reset gcov data"
 	@$(ECHO) "  gcov<1|2|3|4|5|6|7|8>"
 	@$(ECHO) "  gcov_html                                 re-generate gcov HTML report"
+	@$(ECHO) ""
+	@$(ECHO) "  gprof<1|2|3|4|5|6|7|8>"
 	@$(ECHO) ""
 	@$(ECHO) "  memcheck [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
 	@$(ECHO) "  memcheck_extended [CHECK=1|2|2a|2b|2c|2d|2e|3|4|5|6|7]"
@@ -1521,7 +1523,57 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 # ----------------------------------------------------------------------------
 
 # tests
-.PHONY: test test_min test_clean test_distclean
+.PHONY: test_smoke* test_min* test* test_clean* test_distclean*
+test_smoke: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-debug: \
+  bar-debug@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-debug TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-gcov: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-gcov TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-gprof: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-gprof TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_smoke-valgrind: \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test_smoke-valgrind TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+
+test_min: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-debug: \
+  bar-debug@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-debug TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-gcov: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-gcov TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-gprof: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-gprof TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+test_min-valgrind: \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test -j1 test-valgrind TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+
 test: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1531,15 +1583,6 @@ test: \
   bar-keygen@SHELLEXT@
 	@$(RMF) bar-test.log
 	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
-test_min: \
-  bar@EXEEXT@ \
-  bar-debug@EXEEXT@ \
-  bar-gcov@EXEEXT@ \
-  bar-gprof@EXEEXT@ \
-  bar-valgrind@EXEEXT@ \
-  bar-keygen@SHELLEXT@
-	@$(RMF) bar-test.log
-	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 CRYPT_NAMES=$(MIN_CRYPT_NAMES) COMPRESS_NAMES=$(MIN_COMPRESS_NAMES) IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
 test%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1552,17 +1595,14 @@ test%-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-
 test%-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
@@ -1735,9 +1775,7 @@ endif
 gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
-
-#	$(MAKE) gcov_html
+	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 gcov_clean:
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
@@ -1756,6 +1794,14 @@ ifneq ($(GENHTML),)
 else
 	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
 endif
+
+.PHONY: gprof_clean
+gprof_clean:
+
+gprof%: \
+  bar-gprof@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BASE_DIR)/bar-gprof@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 # ----------------------------------------------------------------------------
 

@@ -1130,7 +1130,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   assert(testInfo != NULL);
   assert(testInfo->jobOptions != NULL);
 
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   // init variables
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
@@ -1576,7 +1575,6 @@ Errors Command_test(const StringList        *storageNameList,
   TestInfo                   testInfo;
   StringNode                 *stringNode;
   String                     storageName;
-  Errors                     failError;
   bool                       someStorageFound;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -1606,7 +1604,6 @@ NULL,  //               requestedAbortFlag,
                logHandle
               );
 
-  failError        = ERROR_NONE;
   someStorageFound = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
@@ -1618,7 +1615,7 @@ NULL,  //               requestedAbortFlag,
                  String_cString(storageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
       continue;
     }
 
@@ -1677,7 +1674,7 @@ NULL,  //               requestedAbortFlag,
                                       );
             if (error != ERROR_NONE)
             {
-              if (failError == ERROR_NONE) failError = error;
+              if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
             }
           }
           someStorageFound = TRUE;
@@ -1689,17 +1686,17 @@ NULL,  //               requestedAbortFlag,
     }
     if (error != ERROR_NONE)
     {
-      if (failError == ERROR_NONE) failError = error;
+      if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
       continue;
     }
   }
-  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  if ((testInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
     printError("No matching storage files found!");
-    failError = ERROR_FILE_NOT_FOUND_;
+    testInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
 
-  if (   (failError == ERROR_NONE)
+  if (   (testInfo.failError == ERROR_NONE)
       && !jobOptions->noFragmentsCheckFlag
      )
   {
@@ -1709,12 +1706,12 @@ NULL,  //               requestedAbortFlag,
       if (!FragmentList_isComplete(fragmentNode))
       {
         printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
-        if (isPrintInfo(2))
+        if (isPrintInfo(1))
         {
-          printInfo(2,"  Fragments:\n");
+          printInfo(1,"  Fragments:\n");
           FragmentList_print(stdout,4,fragmentNode,TRUE);
         }
-        if (failError == ERROR_NONE) failError = ERROR_ENTRY_INCOMPLETE;
+        if (testInfo.failError == ERROR_NONE) testInfo.failError = ERROR_ENTRY_INCOMPLETE;
       }
     }
   }

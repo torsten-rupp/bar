@@ -286,6 +286,13 @@ typedef struct DatabaseNode
   DatabaseBusyHandlerList     busyHandlerList;
   DatabaseProgressHandlerList progressHandlerList;
 
+  union
+  {
+    #ifdef HAVE_MYSQL
+      MYSQL mysql;
+    #endif /* HAVE_MYSQL */
+  };
+
   // simple locking information: LWP ids only
   #ifdef DATABASE_DEBUG_LOCK
     ThreadLWPId readLPWIds[32];

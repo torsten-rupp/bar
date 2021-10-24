@@ -250,29 +250,31 @@ LOCAL Errors CompressZStd_init(CompressInfo       *compressInfo,
 
   assert(compressInfo != NULL);
 
-  compressionLevel = 0;
+  compressInfo->zstd.compressionLevel = 0;
+  compressInfo->zstd.totalIn          = 0;
+  compressInfo->zstd.totalOut         = 0;
   switch (compressAlgorithm)
   {
-    case COMPRESS_ALGORITHM_ZSTD_0:  compressionLevel =  0; break;
-    case COMPRESS_ALGORITHM_ZSTD_1:  compressionLevel =  1; break;
-    case COMPRESS_ALGORITHM_ZSTD_2:  compressionLevel =  2; break;
-    case COMPRESS_ALGORITHM_ZSTD_3:  compressionLevel =  3; break;
-    case COMPRESS_ALGORITHM_ZSTD_4:  compressionLevel =  4; break;
-    case COMPRESS_ALGORITHM_ZSTD_5:  compressionLevel =  5; break;
-    case COMPRESS_ALGORITHM_ZSTD_6:  compressionLevel =  6; break;
-    case COMPRESS_ALGORITHM_ZSTD_7:  compressionLevel =  7; break;
-    case COMPRESS_ALGORITHM_ZSTD_8:  compressionLevel =  8; break;
-    case COMPRESS_ALGORITHM_ZSTD_9:  compressionLevel =  9; break;
-    case COMPRESS_ALGORITHM_ZSTD_10: compressionLevel = 10; break;
-    case COMPRESS_ALGORITHM_ZSTD_11: compressionLevel = 11; break;
-    case COMPRESS_ALGORITHM_ZSTD_12: compressionLevel = 12; break;
-    case COMPRESS_ALGORITHM_ZSTD_13: compressionLevel = 13; break;
-    case COMPRESS_ALGORITHM_ZSTD_14: compressionLevel = 14; break;
-    case COMPRESS_ALGORITHM_ZSTD_15: compressionLevel = 15; break;
-    case COMPRESS_ALGORITHM_ZSTD_16: compressionLevel = 16; break;
-    case COMPRESS_ALGORITHM_ZSTD_17: compressionLevel = 17; break;
-    case COMPRESS_ALGORITHM_ZSTD_18: compressionLevel = 18; break;
-    case COMPRESS_ALGORITHM_ZSTD_19: compressionLevel = 19; break;
+    case COMPRESS_ALGORITHM_ZSTD_0:  compressInfo->zstd.compressionLevel =  0; break;
+    case COMPRESS_ALGORITHM_ZSTD_1:  compressInfo->zstd.compressionLevel =  1; break;
+    case COMPRESS_ALGORITHM_ZSTD_2:  compressInfo->zstd.compressionLevel =  2; break;
+    case COMPRESS_ALGORITHM_ZSTD_3:  compressInfo->zstd.compressionLevel =  3; break;
+    case COMPRESS_ALGORITHM_ZSTD_4:  compressInfo->zstd.compressionLevel =  4; break;
+    case COMPRESS_ALGORITHM_ZSTD_5:  compressInfo->zstd.compressionLevel =  5; break;
+    case COMPRESS_ALGORITHM_ZSTD_6:  compressInfo->zstd.compressionLevel =  6; break;
+    case COMPRESS_ALGORITHM_ZSTD_7:  compressInfo->zstd.compressionLevel =  7; break;
+    case COMPRESS_ALGORITHM_ZSTD_8:  compressInfo->zstd.compressionLevel =  8; break;
+    case COMPRESS_ALGORITHM_ZSTD_9:  compressInfo->zstd.compressionLevel =  9; break;
+    case COMPRESS_ALGORITHM_ZSTD_10: compressInfo->zstd.compressionLevel = 10; break;
+    case COMPRESS_ALGORITHM_ZSTD_11: compressInfo->zstd.compressionLevel = 11; break;
+    case COMPRESS_ALGORITHM_ZSTD_12: compressInfo->zstd.compressionLevel = 12; break;
+    case COMPRESS_ALGORITHM_ZSTD_13: compressInfo->zstd.compressionLevel = 13; break;
+    case COMPRESS_ALGORITHM_ZSTD_14: compressInfo->zstd.compressionLevel = 14; break;
+    case COMPRESS_ALGORITHM_ZSTD_15: compressInfo->zstd.compressionLevel = 15; break;
+    case COMPRESS_ALGORITHM_ZSTD_16: compressInfo->zstd.compressionLevel = 16; break;
+    case COMPRESS_ALGORITHM_ZSTD_17: compressInfo->zstd.compressionLevel = 17; break;
+    case COMPRESS_ALGORITHM_ZSTD_18: compressInfo->zstd.compressionLevel = 18; break;
+    case COMPRESS_ALGORITHM_ZSTD_19: compressInfo->zstd.compressionLevel = 19; break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -288,7 +290,7 @@ LOCAL Errors CompressZStd_init(CompressInfo       *compressInfo,
       {
         return ERROR_INIT_COMPRESS;
       }
-      zstdResult = ZSTD_initCStream(compressInfo->zstd.cStream,compressionLevel);
+      zstdResult = ZSTD_initCStream(compressInfo->zstd.cStream,compressInfo->zstd.compressionLevel);
       if (ZSTD_isError(zstdResult))
       {
         ZSTD_freeCStream(compressInfo->zstd.cStream);

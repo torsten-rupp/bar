@@ -2193,7 +2193,6 @@ Errors Command_compare(const StringList        *storageNameList,
   CompareInfo                compareInfo;
   StringNode                 *stringNode;
   String                     storageName;
-  Errors                     failError;
   bool                       someStorageFound;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -2223,7 +2222,6 @@ NULL,  //               requestedAbortFlag,
                   logHandle
                  );
 
-  failError        = ERROR_NONE;
   someStorageFound = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
@@ -2235,10 +2233,10 @@ NULL,  //               requestedAbortFlag,
                  String_cString(storageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
       continue;
     }
-    DEBUG_TESTCODE() { failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE() { compareInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
     if (String_isEmpty(storageSpecifier.archivePatternString))
     {
@@ -2290,7 +2288,7 @@ NULL,  //               requestedAbortFlag,
                                          );
             if (error != ERROR_NONE)
             {
-              if (failError == ERROR_NONE) failError = error;
+              if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
             }
           }
           someStorageFound = TRUE;
@@ -2302,19 +2300,19 @@ NULL,  //               requestedAbortFlag,
     }
     if (error != ERROR_NONE)
     {
-      if (failError == ERROR_NONE) failError = error;
+      if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
       continue;
     }
 
-    if (failError != ERROR_NONE) break;
+    if (compareInfo.failError != ERROR_NONE) break;
   }
-  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  if ((compareInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
     printError("No matching storage files found!");
-    failError = ERROR_FILE_NOT_FOUND_;
+    compareInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
 
-  if (   (failError == ERROR_NONE)
+  if (   (compareInfo.failError == ERROR_NONE)
       && !jobOptions->noFragmentsCheckFlag
      )
   {
@@ -2324,14 +2322,14 @@ NULL,  //               requestedAbortFlag,
       if (!FragmentList_isComplete(fragmentNode))
       {
         printInfo(0,"Warning: incomplete entry '%s'\n",String_cString(fragmentNode->name));
-        if (isPrintInfo(2))
+        if (isPrintInfo(1))
         {
-          printInfo(2,"  Fragments:\n");
+          printInfo(1,"  Fragments:\n");
           FragmentList_print(stdout,4,fragmentNode,TRUE);
         }
-        if (failError == ERROR_NONE)
+        if (compareInfo.failError == ERROR_NONE)
         {
-          failError = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));;
+          compareInfo.failError = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));;
         }
       }
     }
@@ -2365,7 +2363,7 @@ error = compareInfo.failError;
     printInfo(1,"Compare fail: %s\n",Error_getText(error));
   }
 
-  return failError;
+  return error;
 }
 
 #ifdef __cplusplus

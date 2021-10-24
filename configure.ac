@@ -880,17 +880,18 @@ AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
 AC_SUBST(EPM_VERSION_4)                     dnl 1 if EPM version 4, otherwise empty
 
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)          dnl sudo command chattr +-[ia] *
-AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)    dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)         dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
-AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)           dnl sudo command chmod o+rw /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DD,1)              dnl sudo command dd if=/dev/loop[[01]] of=-
-AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)            dnl sudo command mkfs -t * /dev/loop[01]
-AC_SUBST(HAVE_SUDO_COMMAND_CP,1)              dnl sudo command cp -r -p data/* test/dev[01]
-AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)            dnl sudo command diff -r test/dev0 test/dev1
+AC_SUBST(HAVE_SUDO_COMMANDS,1)              dnl sudo commands
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)        dnl sudo command chattr +-[ia] *
+AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)  dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)       dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
+AC_SUBST(HAVE_SUDO_COMMAND_CHMOD,1)         dnl sudo command chmod o+rw /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DD,1)            dnl sudo command dd if=/dev/loop[[01]] of=-
+AC_SUBST(HAVE_SUDO_COMMAND_MKFS,1)          dnl sudo command mkfs -t * /dev/loop[01]
+AC_SUBST(HAVE_SUDO_COMMAND_CP,1)            dnl sudo command cp -r -p data/* test/dev[01]
+AC_SUBST(HAVE_SUDO_COMMAND_DIFF,1)          dnl sudo command diff -r test/dev0 test/dev1
 
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)        dnl sudo command chattr +-i
-AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)        dnl sudo command chattr +-a
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_I,1)      dnl sudo command chattr +-i
+AC_SUBST(HAVE_SUDO_COMMAND_CHATTR_A,1)      dnl sudo command chattr +-a
 
 AC_SUBST(HEAPVIEW_DIR)                      dnl heapview directory
 
@@ -1540,20 +1541,20 @@ case "$host_os" in
 esac
 
 # sudo tests (Note: keep "," immediately after "]"!)
-AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR=0      )
-AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,HAVE_SUDO_COMMAND_CHATTR=0      )
-AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([umount intermediate/dev[[01]]],                       [umount intermediate/dev[[01]]],                       ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [losetup -d /dev/loop[[01]]],                          ,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,HAVE_SUDO_COMMAND_LOSETUP=0     )
-AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,HAVE_SUDO_COMMAND_CHMOD=0       )
-AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                          [dd if=/dev/loop[[01]] of=-],                          ,HAVE_SUDO_COMMAND_DD=0          )
-AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                          [mkfs -t \* /dev/loop[[01]]],                          ,HAVE_SUDO_COMMAND_MKFS=0        )
-AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,HAVE_SUDO_COMMAND_CP=0          )
-AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,HAVE_SUDO_COMMAND_DIFF=0        )
-AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR_I=0    )
-AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,HAVE_SUDO_COMMAND_CHATTR_A=0    )
+AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([umount intermediate/dev[[01]]],                       [umount intermediate/dev[[01]]],                       ,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [losetup -d /dev/loop[[01]]],                          ,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,[HAVE_SUDO_COMMAND_CHMOD=0;        HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                          [dd if=/dev/loop[[01]] of=-],                          ,[HAVE_SUDO_COMMAND_DD=0;           HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                          [mkfs -t \* /dev/loop[[01]]],                          ,[HAVE_SUDO_COMMAND_MKFS=0;         HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,[HAVE_SUDO_COMMAND_CP=0;           HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,[HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_A=0;     HAVE_SUDO_COMMANDS=0])
 
 dnl -------- mandatory headers/functions/definitions/libraries ---------
 
