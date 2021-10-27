@@ -18,7 +18,8 @@ def build()
           sh "pwd"
           sh "ls -la"
           sh "ls -la /"
-          sh "cp /extern/* extern"
+          sh "install -d extern"
+          sh "install -t extern /extern/*"
           sh "./download-third-party-packages.sh"
           sh "./configure"
 //TODO
