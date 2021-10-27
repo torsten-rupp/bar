@@ -20,7 +20,7 @@ def build()
           sh "ls -la /"
           sh "install -d extern"
           sh "cp -r /extern/* extern"
-          sh "./download-third-party-packages.sh --verbose"
+          sh "sh -x ./download-third-party-packages.sh"
           sh "./configure"
 //TODO
 //          sh "make -j`nproc --ignore=1`"
