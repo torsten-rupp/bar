@@ -14,14 +14,18 @@ def build()
         checkout scm
         script
         {
-          sh "id"
-          sh "pwd"
-          sh "ls -la"
-          sh "ls -la /"
-          sh "install -d extern"
-          sh "cp -r /extern/* extern"
-          sh "sh -x ./download-third-party-packages.sh"
+          // use existing extern packages if possible
+          sh "if test -d /extern; then
+                install -d extern;
+                cp -r /extern/* extern;
+              fi
+             "
+
+          // configure
+          sh "./download-third-party-packages.sh"
           sh "./configure"
+
+          // make
 //TODO
 //          sh "make -j`nproc --ignore=1`"
           sh "make"
