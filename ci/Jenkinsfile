@@ -14,7 +14,7 @@ def build()
         checkout scm
         script
         {
-          sh "./download-third-party-packages.sh"
+//          sh "./download-third-party-packages.sh"
           sh "./configure"
 //TODO
 //          sh "make -j`nproc --ignore=1`"
