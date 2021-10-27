@@ -19,6 +19,8 @@ def build()
           sh "ls -la"
           sh "ls -la /"
           sh "ls -la /root"
+          sh "cp /extern/* extern"
+          sh "./download-third-party-packages.sh"
           sh "./configure"
 //TODO
 //          sh "make -j`nproc --ignore=1`"
