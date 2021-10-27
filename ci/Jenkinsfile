@@ -1,6 +1,6 @@
 #!groovy
 
-dockerImageName='dockerregistry.macio.de:5000/backup_archiver'
+dockerImageName='dockerregistry.macio.de:5000/backup_archiver:latest'
 
 // build
 def build()
