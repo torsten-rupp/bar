@@ -1,21 +1,12 @@
 #!groovy
 
-//TODO: store docker image in registry?
-//dockerImageName="dockerregistry.macio.de:5000/macio_backup_archiver"
-dockerImageName='macio_backup_archiver'
+dockerImageName='backup_archiver'
 
 // build
 def build()
 {
   try
   {
-    stage("Docker image")
-    {
-      checkout scm
-      sh "(cd ci; docker build -t ${dockerImageName} .)"
-    }
-
-
     stage("Build")
     {
       docker.image(dockerImageName).inside
