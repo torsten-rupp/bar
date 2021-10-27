@@ -19,7 +19,7 @@ def build()
           sh "ls -la"
           sh "ls -la /"
           sh "install -d extern"
-          sh "install -t extern /extern/*"
+          sh "cp /extern/* extern"
           sh "./download-third-party-packages.sh"
           sh "./configure"
 //TODO
