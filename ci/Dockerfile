@@ -56,5 +56,3 @@ RUN apt-get -y install \
   ;
 
 RUN mkdir /.cache;
-
-CMD ["/usr/bin/bash"]
