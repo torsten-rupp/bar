@@ -3839,8 +3839,8 @@ throw new Error("NYI");
     public RemoteFile(String absolutePath, FileTypes fileType, long size, long dateTime)
     {
       super(absolutePath);
-      assert(   absolutePath.matches("^/.*")          // Unix
-             || absolutePath.matches("^[A-Za-z]:.*")  // Windows
+      assert(   absolutePath.matches("^(?s)/.*")          // Unix
+             || absolutePath.matches("^(?s)[A-Za-z]:.*")  // Windows
             ) : "'" + absolutePath + "' is not absolute";
 
       this.absoluteFile = new File(absolutePath);

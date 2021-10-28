@@ -9586,6 +9586,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                               NULL,  // changedRowCount
                               databaseHandle->timeout,
                               DATABASE_COLUMN_TYPES(),
+                              "%s",
                               String_cString(sqlString)
                              );
     });
@@ -9812,6 +9813,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                              NULL,  // changedRowCount
                              databaseHandle->timeout,
                              DATABASE_COLUMN_TYPES(),
+                             "%s",
                              String_cString(sqlString)
                             );
     if (error != ERROR_NONE)
@@ -9944,6 +9946,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                              NULL,  // changedRowCount
                              databaseHandle->timeout,
                              DATABASE_COLUMN_TYPES(),
+                             "%s",
                              String_cString(sqlString)
                             );
     if (error != ERROR_NONE)
@@ -10064,6 +10067,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                              NULL,  // changedRowCount
                              databaseHandle->timeout,
                              DATABASE_COLUMN_TYPES(),
+                             "%s",
                              String_cString(sqlString)
                             );
     if (error != ERROR_NONE)
@@ -11359,6 +11363,7 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
                            NULL,  // changedRowCount
                            databaseHandle->timeout,
                            DATABASE_COLUMN_TYPES(INT),
+                           "%s",
                            String_cString(sqlString)
                           );
   });
@@ -11455,6 +11460,7 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(KEY),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
@@ -11547,6 +11553,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(KEY),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
@@ -11647,6 +11654,7 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(INT),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
@@ -11743,6 +11751,7 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(INT64),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
@@ -11826,6 +11835,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                              NULL,  // changedRowCount
                              databaseHandle->timeout,
                              DATABASE_COLUMN_TYPES(),
+                             "%s",
                              String_cString(sqlString)
                             );
     if (error != ERROR_NONE)
@@ -11846,6 +11856,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                                NULL,  // changedRowCount
                                databaseHandle->timeout,
                                DATABASE_COLUMN_TYPES(),
+                               "%s",
                                String_cString(sqlString)
                               );
     }
@@ -11950,6 +11961,7 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(DOUBLE),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
@@ -12035,6 +12047,7 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
                              NULL,  // changedRowCount
                              databaseHandle->timeout,
                              DATABASE_COLUMN_TYPES(),
+                             "%s",
                              String_cString(sqlString)
                             );
     if (error != ERROR_NONE)
@@ -12055,6 +12068,7 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
                                NULL,  // changedRowCount
                                databaseHandle->timeout,
                                DATABASE_COLUMN_TYPES(),
+                               "%s",
                                String_cString(sqlString)
                               );
     }
@@ -12185,6 +12199,7 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(CSTRING),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
@@ -12257,6 +12272,7 @@ Errors Database_vgetCString(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(CSTRING),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
@@ -12341,6 +12357,7 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
                             NULL,  // changedRowCount
                             databaseHandle->timeout,
                             DATABASE_COLUMN_TYPES(),
+                            "%s",
                             String_cString(sqlString)
                            );
   });
