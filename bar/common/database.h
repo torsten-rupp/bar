@@ -353,6 +353,9 @@ typedef struct
   Semaphore lock;
 } DatabaseList;
 
+// database id
+typedef int64 DatabaseId;
+
 // database handle
 typedef struct DatabaseHandle
 {
@@ -380,6 +383,7 @@ typedef struct DatabaseHandle
   void                        *busyHandlerUserData;
   uint64                      lastCheckpointTimestamp;    // last time forced execution of a checkpoint
   sem_t                       wakeUp;                     // unlock wake-up
+  DatabaseId                  lastInsertId;
 
   #ifndef NDEBUG
     struct
@@ -492,9 +496,6 @@ typedef struct
 \***********************************************************************/
 
 typedef Errors(*DatabaseRowFunction)(const DatabaseValue values[], uint valueCount, void *userData);
-
-// database id
-typedef int64 DatabaseId;
 
 // tables columns
 typedef struct
@@ -1931,7 +1932,16 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle);
+INLINE DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle);
+#if defined(NDEBUG) || defined(__DATABASE_IMPLEMENTATION__)
+INLINE DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
+{
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  return databaseHandle->lastInsertId;
+}
+#endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Database_check

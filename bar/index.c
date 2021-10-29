@@ -273,7 +273,7 @@ typedef struct
 
 /***************************** Variables *******************************/
 //TODO
-LOCAL DatabaseSpecifier                *indexDatabaseSpecifier = NULL;
+LOCAL DatabaseSpecifier          *indexDatabaseSpecifier = NULL;
 LOCAL IndexIsMaintenanceTime     indexIsMaintenanceTimeFunction;
 LOCAL void                       *indexIsMaintenanceTimeUserData;
 LOCAL bool                       indexInitializedFlag = FALSE;
@@ -835,8 +835,8 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
   DatabaseSpecifier  renameToDatabaseSpecifier;
   Errors             error;
   DatabaseHandle     databaseHandle;
-  StringListIterator iterator;
-  String             name;
+//  StringListIterator iterator;
+//  String             name;
   IndexDefinition    indexDefinition;
 
   // drop triggers (required for some databases before rename)
@@ -1239,6 +1239,10 @@ LOCAL ulong getImportStepsCurrentVersion(IndexHandle *oldIndexHandle,
                                         )
 {
 // TODO:  return getImportStepsVersion7(oldIndexHandle,uuidCountFactor,entityCountFactor,storageCountFactor);
+(void)oldIndexHandle;
+(void)uuidCountFactor;
+(void)entityCountFactor;
+(void)storageCountFactor;
 return 7;
 }
 
@@ -1256,7 +1260,9 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                  )
 {
 // TODO:  return importIndexVersion7(oldIndexHandle,newIndexHandle);
-return 7;
+(void)oldIndexHandle;
+(void)newIndexHandle;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 /***********************************************************************\
@@ -1269,21 +1275,25 @@ return 7;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileName)
+LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldURIString)
 {
-  Errors           error;
-  IndexHandle      oldIndexHandle;
-  int64            indexVersion;
-  ulong            maxSteps;
-  IndexQueryHandle indexQueryHandle;
-  uint64           t0;
-  uint64           t1;
-  IndexId          uuidId,entityId,storageId;
+  DatabaseSpecifier databaseSpecifier;
+  Errors            error;
+  IndexHandle       oldIndexHandle;
+  int64             indexVersion;
+  ulong             maxSteps;
+  IndexQueryHandle  indexQueryHandle;
+  uint64            t0;
+  uint64            t1;
+  IndexId           uuidId,entityId,storageId;
+
+  Database_parseSpecifier(&databaseSpecifier,String_cString(oldURIString));
 
   // open old index (Note: must be read/write to fix errors in database)
-  error = openIndex(&oldIndexHandle,String_cString(oldDatabaseFileName),NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
+  error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
   if (error != ERROR_NONE)
   {
+    Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
 
@@ -1297,6 +1307,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&oldIndexHandle);
+    Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
 
@@ -1305,7 +1316,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
               LOG_TYPE_INDEX,
               "INDEX",
               "Import index database '%s' (version %d)",
-              String_cString(oldDatabaseFileName),
+              String_cString(oldURIString),
               indexVersion
              );
   DIMPORT("import index %"PRIi64"",indexVersion);
@@ -1370,6 +1381,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
+#else
+(void)maxSteps;
 #endif
   DIMPORT("import index done (error: %s)",Error_getText(error));
 
@@ -1525,7 +1538,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Imported old index database '%s' (version %d)",
-                String_cString(oldDatabaseFileName),
+                String_cString(oldURIString),
                 indexVersion
                );
   }
@@ -1535,7 +1548,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Import old index database '%s' (version %d) fail: %s",
-                String_cString(oldDatabaseFileName),
+                String_cString(oldURIString),
                 indexVersion,
                 Error_getText(error)
                );
@@ -1543,6 +1556,9 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
 
   // close old index
   (void)closeIndex(&oldIndexHandle);
+
+  // free resources
+  Database_doneSpecifier(&databaseSpecifier);
 
   return error;
 }
@@ -8987,7 +9003,7 @@ Errors Index_init(const char             *uriString,
   int64        indexVersion;
   String       saveDatabaseName;
   uint         n;
-  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {NULL} };
+  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {{NULL}} };
   IndexHandle  indexHandleReference,indexHandle;
   ProgressInfo progressInfo;
 
@@ -9017,7 +9033,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       // check index version
       error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: indexVersion=%lld\n",__FILE__,__LINE__,indexVersion);
+fprintf(stderr,"%s:%d: indexVersion=%ld\n",__FILE__,__LINE__,indexVersion);
       if (error == ERROR_NONE)
       {
         if (indexVersion < INDEX_VERSION)
@@ -13103,7 +13119,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       Misc_getUUID(s);
 
       // insert storage
-fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
@@ -13128,17 +13143,13 @@ fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
                                    %'S, \
                                    %'S, \
                                    %'S, \
-unix_timestamp(%llu) \
+                                   unix_timestamp(%llu), \
                                    %llu, \
                                    %d, \
                                    %d, \
                                    DATETIME('now') \
                                   ) \
                                ",
-
-//                                   DATETIME(%llu,'unixepoch'), \
-
-
                                Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
                                hostName,
