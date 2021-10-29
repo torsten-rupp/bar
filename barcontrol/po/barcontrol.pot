@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-10-24 11:59+0200\n"
+"POT-Creation-Date: 2021-10-29 11:41+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -54,7 +54,7 @@ msgstr ""
 msgid "continuous"
 msgstr ""
 
-#: src/BARControl.java:863 src/BARException.java:278
+#: src/BARControl.java:863 src/BARException.java:277
 msgid "unknown"
 msgstr ""
 
@@ -469,913 +469,909 @@ msgstr ""
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
 
-#: src/BARException.java:281
+#: src/BARException.java:280
 msgid "insufficient memory"
 msgstr ""
 
-#: src/BARException.java:284
+#: src/BARException.java:283
 msgid "initialize fail"
 msgstr ""
 
-#: src/BARException.java:287
+#: src/BARException.java:286
 msgid "invalid argument"
 msgstr ""
 
-#: src/BARException.java:290
+#: src/BARException.java:289
 msgid "configuration error"
 msgstr ""
 
-#: src/BARException.java:293
+#: src/BARException.java:292
 msgid "no writable configuration file"
 msgstr ""
 
-#: src/BARException.java:296 src/TabStatus.java:102
+#: src/BARException.java:295 src/TabStatus.java:102
 msgid "aborted"
 msgstr ""
 
-#: src/BARException.java:299
+#: src/BARException.java:298
 msgid "interrupted"
 msgstr ""
 
-#: src/BARException.java:302
+#: src/BARException.java:301
 msgid "function not supported"
 msgstr ""
 
-#: src/BARException.java:305
+#: src/BARException.java:304
 msgid "function still not implemented"
 msgstr ""
 
-#: src/BARException.java:308
+#: src/BARException.java:307
 msgid "run as daemon fail"
 msgstr ""
 
-#: src/BARException.java:311
+#: src/BARException.java:310
 msgid "inter-process communication fail"
 msgstr ""
 
-#: src/BARException.java:314
+#: src/BARException.java:313
 msgid "initialize password fail"
 msgstr ""
 
-#: src/BARException.java:317 src/BARException.java:366
+#: src/BARException.java:316 src/BARException.java:365
 msgid "no password given"
 msgstr ""
 
-#: src/BARException.java:320
+#: src/BARException.java:319
 msgid "invalid password"
 msgstr ""
 
-#: src/BARException.java:323
+#: src/BARException.java:322
 msgid "process data fail"
 msgstr ""
 
-#: src/BARException.java:326
+#: src/BARException.java:325
 msgid "invalid pattern"
 msgstr ""
 
-#: src/BARException.java:333
+#: src/BARException.java:332
 msgid "no host name given"
 msgstr ""
 
-#: src/BARException.java:336
+#: src/BARException.java:335
 msgid "host not found"
 msgstr ""
 
-#: src/BARException.java:343
+#: src/BARException.java:342
 msgid "bind fail"
 msgstr ""
 
-#: src/BARException.java:350
+#: src/BARException.java:349
 msgid "connect fail"
 msgstr ""
 
-#: src/BARException.java:357 src/BARServer.java:1089 src/TabStatus.java:103
+#: src/BARException.java:356 src/BARServer.java:1089 src/TabStatus.java:103
 msgid "disconnected"
 msgstr ""
 
-#: src/BARException.java:360
+#: src/BARException.java:359
 msgid "too many concurrent connections"
 msgstr ""
 
-#: src/BARException.java:363
+#: src/BARException.java:362
 msgid "no login name given"
 msgstr ""
 
-#: src/BARException.java:369
+#: src/BARException.java:368
 msgid "sending data fail"
 msgstr ""
 
-#: src/BARException.java:376
+#: src/BARException.java:375
 msgid "receiving data fail"
 msgstr ""
 
-#: src/BARException.java:379
+#: src/BARException.java:378
 msgid "execute command fail"
 msgstr ""
 
-#: src/BARException.java:382
+#: src/BARException.java:381
 msgid "timeout send data"
 msgstr ""
 
-#: src/BARException.java:385
+#: src/BARException.java:384
 msgid "timeout receive data"
 msgstr ""
 
-#: src/BARException.java:388
+#: src/BARException.java:387
 msgid "no response from remote program"
 msgstr ""
 
-#: src/BARException.java:391
+#: src/BARException.java:390
 msgid "invalid response from remote program"
 msgstr ""
 
-#: src/BARException.java:394
+#: src/BARException.java:393
 msgid "initialize TLS (SSL) fail"
 msgstr ""
 
-#: src/BARException.java:397
+#: src/BARException.java:396
 msgid "no TLS (SSL) certificate authority file"
 msgstr ""
 
-#: src/BARException.java:400
+#: src/BARException.java:399
 msgid "no TLS (SSL) certificate file"
 msgstr ""
 
-#: src/BARException.java:403
+#: src/BARException.java:402
 msgid "no or unreadable TLS (SSL) key file"
 msgstr ""
 
-#: src/BARException.java:406
+#: src/BARException.java:405
 msgid "invalid TLS (SSL) certificate authority"
 msgstr ""
 
-#: src/BARException.java:409
+#: src/BARException.java:408
 msgid "invalid TLS (SSL) certificate"
 msgstr ""
 
-#: src/BARException.java:412
+#: src/BARException.java:411
 msgid "TLS (SSL) certificate expired"
 msgstr ""
 
-#: src/BARException.java:419
+#: src/BARException.java:418
 msgid "TLS (SSL) certificate is still not active"
 msgstr ""
 
-#: src/BARException.java:426
+#: src/BARException.java:425
 msgid "TLS (SSL) handshake failure"
 msgstr ""
 
-#: src/BARException.java:433
+#: src/BARException.java:432
 msgid "invalid SSH specifier"
 msgstr ""
 
-#: src/BARException.java:436
+#: src/BARException.java:435
 msgid "no SSH public key"
 msgstr ""
 
-#: src/BARException.java:439
+#: src/BARException.java:438
 msgid "no SSH private key"
 msgstr ""
 
-#: src/BARException.java:442
+#: src/BARException.java:441
 msgid "no SSH password given"
 msgstr ""
 
-#: src/BARException.java:445 src/BARException.java:452
-#: src/BARException.java:459 src/BARException.java:469
-#: src/BARException.java:554 src/BARException.java:999
+#: src/BARException.java:444 src/BARException.java:451
+#: src/BARException.java:458 src/BARException.java:468
+#: src/BARException.java:553 src/BARException.java:1001
 msgid " for ''%s''"
 msgstr ""
 
-#: src/BARException.java:449
+#: src/BARException.java:448
 msgid "invalid SSH password"
 msgstr ""
 
-#: src/BARException.java:456
+#: src/BARException.java:455
 msgid "invalid SSH private key"
 msgstr ""
 
-#: src/BARException.java:463
+#: src/BARException.java:462
 msgid "initialize SSH session fail"
 msgstr ""
 
-#: src/BARException.java:466
+#: src/BARException.java:465
 msgid "SSH authentication fail"
 msgstr ""
 
-#: src/BARException.java:479
+#: src/BARException.java:478
 msgid "ssh protocol error"
 msgstr ""
 
-#: src/BARException.java:483
+#: src/BARException.java:482
 msgid "job ''%s'' already exists"
 msgstr ""
 
-#: src/BARException.java:486
+#: src/BARException.java:485
 msgid "job ''%s'' running"
 msgstr ""
 
-#: src/BARException.java:489
+#: src/BARException.java:488
 msgid "create job fail"
 msgstr ""
 
-#: src/BARException.java:496
+#: src/BARException.java:495
 msgid "delete job fail"
 msgstr ""
 
-#: src/BARException.java:503
+#: src/BARException.java:502
 msgid "rename job fail"
 msgstr ""
 
-#: src/BARException.java:510
+#: src/BARException.java:509
 msgid "initialize storage fail"
 msgstr ""
 
-#: src/BARException.java:513
+#: src/BARException.java:512
 msgid "no storage name given"
 msgstr ""
 
-#: src/BARException.java:516
+#: src/BARException.java:515
 msgid "invalid storage"
 msgstr ""
 
-#: src/BARException.java:519
+#: src/BARException.java:518
 msgid "invalid FTP specifier"
 msgstr ""
 
-#: src/BARException.java:522
+#: src/BARException.java:521
 msgid "initialize FTP session fail"
 msgstr ""
 
-#: src/BARException.java:529
+#: src/BARException.java:528
 msgid "no FTP password given"
 msgstr ""
 
-#: src/BARException.java:532
+#: src/BARException.java:531
 msgid "invalid FTP password"
 msgstr ""
 
-#: src/BARException.java:535
+#: src/BARException.java:534
 msgid "invalid FTP user/password"
 msgstr ""
 
-#: src/BARException.java:542
+#: src/BARException.java:541
 msgid "get FTP file size fail"
 msgstr ""
 
-#: src/BARException.java:545
+#: src/BARException.java:544
 msgid "invalid WebDAV specifier"
 msgstr ""
 
-#: src/BARException.java:548
+#: src/BARException.java:547
 msgid "initialize WebDAV session fail"
 msgstr ""
 
-#: src/BARException.java:551
+#: src/BARException.java:550
 msgid "no WebDAV password given"
 msgstr ""
 
-#: src/BARException.java:558
+#: src/BARException.java:557
 msgid "invalid WebDAV password"
 msgstr ""
 
-#: src/BARException.java:561
+#: src/BARException.java:560
 msgid "invalid WebDAV user/password"
 msgstr ""
 
-#: src/BARException.java:564
+#: src/BARException.java:563
 msgid "WebDAV bad request"
 msgstr ""
 
-#: src/BARException.java:567
+#: src/BARException.java:566
 msgid "get WebDAV file size"
 msgstr ""
 
-#: src/BARException.java:573
+#: src/BARException.java:572
 msgid "fail"
 msgstr ""
 
-#: src/BARException.java:576
+#: src/BARException.java:575
 msgid "WebDAV upload fail"
 msgstr ""
 
-#: src/BARException.java:583
+#: src/BARException.java:582
 msgid "WebDAV download fail"
 msgstr ""
 
-#: src/BARException.java:590
+#: src/BARException.java:589
 msgid "WebDAV fail"
 msgstr ""
 
-#: src/BARException.java:597
+#: src/BARException.java:596
 msgid "initialize compress fail"
 msgstr ""
 
-#: src/BARException.java:604
+#: src/BARException.java:603
 msgid "initialize decompress fail"
 msgstr ""
 
-#: src/BARException.java:611
+#: src/BARException.java:610
 msgid "compress fail"
 msgstr ""
 
-#: src/BARException.java:618
+#: src/BARException.java:617
 msgid "decompress fail"
 msgstr ""
 
-#: src/BARException.java:625
+#: src/BARException.java:624
 msgid "end of compressed file"
 msgstr ""
 
-#: src/BARException.java:628 src/BARException.java:1308
+#: src/BARException.java:627 src/BARException.java:1310
 msgid "delta source not found"
 msgstr ""
 
-#: src/BARException.java:635
+#: src/BARException.java:634
 msgid "invalid compress algorithm"
 msgstr ""
 
-#: src/BARException.java:638
+#: src/BARException.java:637
 msgid "unknown compress algorithm"
 msgstr ""
 
-#: src/BARException.java:641
+#: src/BARException.java:640
 msgid "compress algorithm not supported"
 msgstr ""
 
-#: src/BARException.java:644
+#: src/BARException.java:643
 msgid "unsupported block length"
 msgstr ""
 
-#: src/BARException.java:647
+#: src/BARException.java:646
 msgid "initialize crypt fail"
 msgstr ""
 
-#: src/BARException.java:654
+#: src/BARException.java:653
 msgid "no decrypt key for cipher"
 msgstr ""
 
-#: src/BARException.java:657
+#: src/BARException.java:656
 msgid "no password given for cipher"
 msgstr ""
 
-#: src/BARException.java:660
+#: src/BARException.java:659
 msgid "invalid decryption password"
 msgstr ""
 
-#: src/BARException.java:663
+#: src/BARException.java:662
 msgid "encryption passwords mismatch"
 msgstr ""
 
-#: src/BARException.java:666
+#: src/BARException.java:665
 msgid "initialize cipher fail"
 msgstr ""
 
-#: src/BARException.java:673
+#: src/BARException.java:672
 msgid "encrypt fail"
 msgstr ""
 
-#: src/BARException.java:680
+#: src/BARException.java:679
 msgid "decrypt fail"
 msgstr ""
 
-#: src/BARException.java:687
+#: src/BARException.java:686
 msgid "create public/private key fail"
 msgstr ""
 
-#: src/BARException.java:694
+#: src/BARException.java:693
 msgid "invalid encoding"
 msgstr ""
 
-#: src/BARException.java:697
+#: src/BARException.java:696
 msgid "initialize key fail"
 msgstr ""
 
-#: src/BARException.java:704
+#: src/BARException.java:703
 msgid "public/private key not found"
 msgstr ""
 
-#: src/BARException.java:711
+#: src/BARException.java:710
 msgid "read public/private key fail"
 msgstr ""
 
-#: src/BARException.java:718
+#: src/BARException.java:717
 msgid "invalid key"
 msgstr ""
 
-#: src/BARException.java:725
+#: src/BARException.java:724
 msgid "invalid key length"
 msgstr ""
 
-#: src/BARException.java:728
+#: src/BARException.java:727
 msgid "invalid block length"
 msgstr ""
 
-#: src/BARException.java:731
+#: src/BARException.java:730
 msgid "invalid salt length"
 msgstr ""
 
-#: src/BARException.java:734
+#: src/BARException.java:733
 msgid "no public encryption key"
 msgstr ""
 
-#: src/BARException.java:737
+#: src/BARException.java:736
 msgid "no private encryption key"
 msgstr ""
 
-#: src/BARException.java:740
+#: src/BARException.java:739
 msgid "key is not a public encryption key"
 msgstr ""
 
-#: src/BARException.java:747
+#: src/BARException.java:746
 msgid "key is not a private encryption key"
 msgstr ""
 
-#: src/BARException.java:754
+#: src/BARException.java:753
 msgid "no public signature key"
 msgstr ""
 
-#: src/BARException.java:757
+#: src/BARException.java:756
 msgid "no private signature key"
 msgstr ""
 
-#: src/BARException.java:760
+#: src/BARException.java:759
 msgid "key is not a public signature key"
 msgstr ""
 
-#: src/BARException.java:767
+#: src/BARException.java:766
 msgid "key is not a private signature key"
 msgstr ""
 
-#: src/BARException.java:774
+#: src/BARException.java:773
 msgid "key encryption fail"
 msgstr ""
 
-#: src/BARException.java:781
+#: src/BARException.java:780
 msgid "key decryption fail"
 msgstr ""
 
-#: src/BARException.java:788
+#: src/BARException.java:787
 msgid "wrong private decryption key"
 msgstr ""
 
-#: src/BARException.java:791
+#: src/BARException.java:790
 msgid "invalid encryption algorithm"
 msgstr ""
 
-#: src/BARException.java:794
+#: src/BARException.java:793
 msgid "unknown encryption algorithm"
 msgstr ""
 
-#: src/BARException.java:797
+#: src/BARException.java:796
 msgid "initialize hash fail"
 msgstr ""
 
-#: src/BARException.java:800
+#: src/BARException.java:799
 msgid "invalid hash algorithm"
 msgstr ""
 
-#: src/BARException.java:803
+#: src/BARException.java:802
 msgid "unknown hash algorithm"
 msgstr ""
 
-#: src/BARException.java:806
+#: src/BARException.java:805
 msgid "initialize message authentication code fail"
 msgstr ""
 
-#: src/BARException.java:809
+#: src/BARException.java:808
 msgid "invalid message authentication code algorithm"
 msgstr ""
 
-#: src/BARException.java:812
+#: src/BARException.java:811
 msgid "unknown message authentication code algorithm"
 msgstr ""
 
-#: src/BARException.java:815
+#: src/BARException.java:814
 msgid "no file name given"
 msgstr ""
 
-#: src/BARException.java:818
+#: src/BARException.java:817
 msgid "create file fail"
 msgstr ""
 
-#: src/BARException.java:825
+#: src/BARException.java:824
 msgid "open file fail"
 msgstr ""
 
-#: src/BARException.java:832
+#: src/BARException.java:831
 msgid "create directory fail"
 msgstr ""
 
-#: src/BARException.java:839
+#: src/BARException.java:838
 msgid "i/o error"
 msgstr ""
 
-#: src/BARException.java:846
+#: src/BARException.java:845
 msgid "read file fail"
 msgstr ""
 
-#: src/BARException.java:853
+#: src/BARException.java:852
 msgid "end of file"
 msgstr ""
 
-#: src/BARException.java:860
+#: src/BARException.java:859
 msgid "write file fail"
 msgstr ""
 
-#: src/BARException.java:867
+#: src/BARException.java:866
 msgid "delete file fail"
 msgstr ""
 
-#: src/BARException.java:874
+#: src/BARException.java:873
 msgid "open directory"
 msgstr ""
 
-#: src/BARException.java:881
+#: src/BARException.java:880
 msgid "read directory fail"
 msgstr ""
 
-#: src/BARException.java:884
+#: src/BARException.java:889
 msgid "file already exists"
 msgstr ""
 
-#: src/BARException.java:891
+#: src/BARException.java:893
 msgid "file not found"
 msgstr ""
 
-#: src/BARException.java:898
+#: src/BARException.java:900
 msgid "access denied"
 msgstr ""
 
-#: src/BARException.java:901
+#: src/BARException.java:903
 msgid "not a directory"
 msgstr ""
 
-#: src/BARException.java:908
+#: src/BARException.java:910
 msgid "end of directory list"
 msgstr ""
 
-#: src/BARException.java:911
+#: src/BARException.java:913
 msgid "init file notify fail"
 msgstr ""
 
-#: src/BARException.java:914
+#: src/BARException.java:916
 msgid "insufficient file notify entries"
 msgstr ""
 
-#: src/BARException.java:917
+#: src/BARException.java:919
 msgid "CD/DVD/BD device not found"
 msgstr ""
 
-#: src/BARException.java:924
+#: src/BARException.java:926
 msgid "open CD/DVD/BD disk fail"
 msgstr ""
 
-#: src/BARException.java:931
+#: src/BARException.java:933
 msgid "open ISO 9660 image fail"
 msgstr ""
 
-#: src/BARException.java:938
+#: src/BARException.java:940
 msgid "no device name given"
 msgstr ""
 
-#: src/BARException.java:941
+#: src/BARException.java:943
 msgid "open device fail"
 msgstr ""
 
-#: src/BARException.java:948
+#: src/BARException.java:950
 msgid "invalid device block size"
 msgstr ""
 
-#: src/BARException.java:951
+#: src/BARException.java:953
 msgid "read device fail"
 msgstr ""
 
-#: src/BARException.java:954
+#: src/BARException.java:956
 msgid "write device fail"
 msgstr ""
 
-#: src/BARException.java:957
+#: src/BARException.java:959
 msgid "error parsing device list"
 msgstr ""
 
-#: src/BARException.java:960
+#: src/BARException.java:962
 msgid "mount fail"
 msgstr ""
 
-#: src/BARException.java:967
+#: src/BARException.java:969
 msgid "unmount fail"
 msgstr ""
 
-#: src/BARException.java:974
+#: src/BARException.java:976
 msgid "no archive file name given"
 msgstr ""
 
-#: src/BARException.java:977
+#: src/BARException.java:979
 msgid "not an archive file"
 msgstr ""
 
-#: src/BARException.java:980
+#: src/BARException.java:982
 msgid "archive not found"
 msgstr ""
 
-#: src/BARException.java:987
+#: src/BARException.java:989
 msgid "end of archive"
 msgstr ""
 
-#: src/BARException.java:990
+#: src/BARException.java:992
 msgid "no meta entry"
 msgstr ""
 
-#: src/BARException.java:993
+#: src/BARException.java:995
 msgid "no file entry"
 msgstr ""
 
-#: src/BARException.java:996
+#: src/BARException.java:998
 msgid "no file data entry"
 msgstr ""
 
-#: src/BARException.java:1003
+#: src/BARException.java:1005
 msgid "no directory entry"
 msgstr ""
 
-#: src/BARException.java:1006
+#: src/BARException.java:1008
 msgid "no link entry"
 msgstr ""
 
-#: src/BARException.java:1009
+#: src/BARException.java:1011
 msgid "no hard link entry"
 msgstr ""
 
-#: src/BARException.java:1012
+#: src/BARException.java:1014
 msgid "no special entry"
 msgstr ""
 
-#: src/BARException.java:1015
+#: src/BARException.java:1017
 msgid "no image entry"
 msgstr ""
 
-#: src/BARException.java:1018
+#: src/BARException.java:1020
 msgid "no image data entry"
 msgstr ""
 
-#: src/BARException.java:1021
+#: src/BARException.java:1023
 msgid "end of data"
 msgstr ""
 
-#: src/BARException.java:1024
+#: src/BARException.java:1026
 msgid "incomplete archive"
 msgstr ""
 
-#: src/BARException.java:1027
+#: src/BARException.java:1029
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: src/BARException.java:1030
+#: src/BARException.java:1032
 msgid "wrong CRC"
 msgstr ""
 
-#: src/BARException.java:1034
+#: src/BARException.java:1036
 msgid "at offset"
 msgstr ""
 
-#: src/BARException.java:1047
+#: src/BARException.java:1049
 msgid "entry is incomplete"
 msgstr ""
 
-#: src/BARException.java:1054
+#: src/BARException.java:1056
 msgid "wrong entry type"
 msgstr ""
 
-#: src/BARException.java:1061
+#: src/BARException.java:1063
 msgid "entries differ"
 msgstr ""
 
-#: src/BARException.java:1068
+#: src/BARException.java:1070
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: src/BARException.java:1075
+#: src/BARException.java:1077
 msgid "invalid chunk size"
 msgstr ""
 
-#: src/BARException.java:1078
+#: src/BARException.java:1080
 msgid "unknown chunk"
 msgstr ""
 
-#: src/BARException.java:1085
+#: src/BARException.java:1087
 msgid "invalid signature"
 msgstr ""
 
-#: src/BARException.java:1088
+#: src/BARException.java:1090
 msgid "invalid incremental file"
 msgstr ""
 
-#: src/BARException.java:1091
+#: src/BARException.java:1093
 msgid "wrong incremental file version"
 msgstr ""
 
-#: src/BARException.java:1094
+#: src/BARException.java:1096
 msgid "corrupt incremental file"
 msgstr ""
 
-#: src/BARException.java:1097
+#: src/BARException.java:1099
 msgid "invalid device specifier"
 msgstr ""
 
-#: src/BARException.java:1100
+#: src/BARException.java:1102
 msgid "load volume fail"
 msgstr ""
 
-#: src/BARException.java:1103
+#: src/BARException.java:1105
 msgid "parse command fail"
 msgstr ""
 
-#: src/BARException.java:1110
+#: src/BARException.java:1112
 msgid "expand command template fail"
 msgstr ""
 
-#: src/BARException.java:1113
+#: src/BARException.java:1115
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1116
+#: src/BARException.java:1118
 msgid "i/o redirect fail"
 msgstr ""
 
-#: src/BARException.java:1123
+#: src/BARException.java:1125
 msgid "execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1134
+#: src/BARException.java:1136
 msgid "terminate external program fail"
 msgstr ""
 
-#: src/BARException.java:1145
+#: src/BARException.java:1147
 msgid "parsing data fail"
 msgstr ""
 
-#: src/BARException.java:1152
+#: src/BARException.java:1154
 msgid "parsing date fail"
 msgstr ""
 
-#: src/BARException.java:1159
+#: src/BARException.java:1161
 msgid "parsing time fail"
 msgstr ""
 
-#: src/BARException.java:1166
+#: src/BARException.java:1168
 msgid "parsing weekdays fail"
 msgstr ""
 
-#: src/BARException.java:1173
+#: src/BARException.java:1175
 msgid "parsing maintenance fail"
 msgstr ""
 
-#: src/BARException.java:1180
+#: src/BARException.java:1182
 msgid "parsing schedule fail"
 msgstr ""
 
-#: src/BARException.java:1187
+#: src/BARException.java:1189
 msgid "unknown command"
 msgstr ""
 
-#: src/BARException.java:1194
+#: src/BARException.java:1196
 msgid "expected parameter"
 msgstr ""
 
-#: src/BARException.java:1207
+#: src/BARException.java:1209
 msgid "unknown value"
 msgstr ""
 
-#: src/BARException.java:1211
+#: src/BARException.java:1213
 msgid "invalid value"
 msgstr ""
 
-#: src/BARException.java:1218
+#: src/BARException.java:1220
 msgid "deprecated or ignored value"
 msgstr ""
 
-#: src/BARException.java:1225
+#: src/BARException.java:1227
 msgid "authorization fail"
 msgstr ""
 
-#: src/BARException.java:1228
+#: src/BARException.java:1230
 msgid "job not found"
 msgstr ""
 
-#: src/BARException.java:1235
+#: src/BARException.java:1237
 msgid "schedule not found"
 msgstr ""
 
-#: src/BARException.java:1248
+#: src/BARException.java:1250
 msgid "persistence not found"
 msgstr ""
 
-#: src/BARException.java:1258
+#: src/BARException.java:1260
 msgid "maintenance not found"
 msgstr ""
 
-#: src/BARException.java:1268
+#: src/BARException.java:1270
 msgid "server not found"
 msgstr ""
 
-#: src/BARException.java:1278
+#: src/BARException.java:1280
 msgid "entry not found"
 msgstr ""
 
-#: src/BARException.java:1288
+#: src/BARException.java:1290
 msgid "pattern not found"
 msgstr ""
 
-#: src/BARException.java:1298
+#: src/BARException.java:1300
 msgid "mount not found"
 msgstr ""
 
-#: src/BARException.java:1312
+#: src/BARException.java:1314
 msgid "database"
 msgstr ""
 
-#: src/BARException.java:1319
-msgid "database connection lost"
+#: src/BARException.java:1321
+msgid "datbase connection lost"
 msgstr ""
 
-#: src/BARException.java:1322
+#: src/BARException.java:1324
 msgid "database already exists"
 msgstr ""
 
-#: src/BARException.java:1325
-msgid "unknown version of index"
+#: src/BARException.java:1327
+msgid "unknown version on index"
 msgstr ""
 
-#: src/BARException.java:1328
+#: src/BARException.java:1330
 msgid "missing table"
 msgstr ""
 
-#: src/BARException.java:1335
+#: src/BARException.java:1337
 msgid "missing column"
 msgstr ""
 
-#: src/BARException.java:1342
+#: src/BARException.java:1344
 msgid "obsolete table"
 msgstr ""
 
-#: src/BARException.java:1349
+#: src/BARException.java:1351
 msgid "obsolete column"
 msgstr ""
 
-#: src/BARException.java:1356
-msgid "database bind fail"
-msgstr ""
-
-#: src/BARException.java:1363
-msgid "type mismatch"
-msgstr ""
-
-#: src/BARException.java:1370
-msgid "error creating index"
-msgstr ""
-
-#: src/BARException.java:1373
-msgid "index not found"
-msgstr ""
-
-#: src/BARException.java:1376
-msgid "index still not initialized"
-msgstr ""
-
-#: src/BARException.java:1379
-msgid "invalid index"
-msgstr ""
-
-#: src/BARException.java:1386
-msgid "parse index id fail"
-msgstr ""
-
-#: src/BARException.java:1393
+#: src/BARException.java:1358
 msgid "database busy"
 msgstr ""
 
-#: src/BARException.java:1396
+#: src/BARException.java:1361
 msgid "database operation interupted"
 msgstr ""
 
-#: src/BARException.java:1399
+#: src/BARException.java:1364
+msgid "type mismatch"
+msgstr ""
+
+#: src/BARException.java:1371
+msgid "error creating index"
+msgstr ""
+
+#: src/BARException.java:1374
+msgid "index not found"
+msgstr ""
+
+#: src/BARException.java:1377
+msgid "index still not initialized"
+msgstr ""
+
+#: src/BARException.java:1380
+msgid "invalid index"
+msgstr ""
+
+#: src/BARException.java:1387
+msgid "parse index id fail"
+msgstr ""
+
+#: src/BARException.java:1394
 msgid "timeout accessing index"
 msgstr ""
 
-#: src/BARException.java:1402
+#: src/BARException.java:1397
 msgid "master disconnected"
 msgstr ""
 
-#: src/BARException.java:1405
+#: src/BARException.java:1400
 msgid "slave disconnected"
 msgstr ""
 
-#: src/BARException.java:1408
+#: src/BARException.java:1403
 msgid "slave is not paired"
 msgstr ""
 
-#: src/BARException.java:1411
+#: src/BARException.java:1406
 msgid "instance is not a slave"
 msgstr ""
 

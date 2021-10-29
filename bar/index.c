@@ -833,10 +833,12 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
 LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDatabaseName)
 {
-  DatabaseSpecifier renameToDatabaseSpecifier;
-  Errors            error;
-  DatabaseHandle    databaseHandle;
-  IndexDefinition   indexDefinition;
+  DatabaseSpecifier  renameToDatabaseSpecifier;
+  Errors             error;
+  DatabaseHandle     databaseHandle;
+//  StringListIterator iterator;
+//  String             name;
+  IndexDefinition    indexDefinition;
 
   // drop triggers (required for some databases before rename)
   error = Database_open(&databaseHandle,
@@ -1242,6 +1244,10 @@ LOCAL ulong getImportStepsCurrentVersion(IndexHandle *oldIndexHandle,
 (void)entityCountFactor;
 (void)storageCountFactor;
 // TODO:  return getImportStepsVersion7(oldIndexHandle,uuidCountFactor,entityCountFactor,storageCountFactor);
+(void)oldIndexHandle;
+(void)uuidCountFactor;
+(void)entityCountFactor;
+(void)storageCountFactor;
 return 7;
 }
 
@@ -1274,19 +1280,19 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
+LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldURIString)
 {
   DatabaseSpecifier databaseSpecifier;
   Errors            error;
   IndexHandle       oldIndexHandle;
   int64             indexVersion;
-//  ulong             maxSteps;
+  ulong             maxSteps;
   IndexQueryHandle  indexQueryHandle;
   uint64            t0;
   uint64            t1;
   IndexId           uuidId,entityId,storageId;
 
-  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI));
+  Database_parseSpecifier(&databaseSpecifier,String_cString(oldURIString));
 
   // open old index (Note: must be read/write to fix errors in database)
   error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
@@ -1315,7 +1321,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
               LOG_TYPE_INDEX,
               "INDEX",
               "Import index database '%s' (version %d)",
-              String_cString(oldDatabaseURI),
+              String_cString(oldURIString),
               indexVersion
              );
   DIMPORT("import index %"PRIi64"",indexVersion);
@@ -1380,6 +1386,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
       error = ERROR_DATABASE_VERSION_UNKNOWN;
       break;
   }
+#else
+(void)maxSteps;
 #endif
   DIMPORT("import index done (error: %s)",Error_getText(error));
 
@@ -1535,7 +1543,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Imported old index database '%s' (version %d)",
-                String_cString(oldDatabaseURI),
+                String_cString(oldURIString),
                 indexVersion
                );
   }
@@ -1545,7 +1553,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Import old index database '%s' (version %d) fail: %s",
-                String_cString(oldDatabaseURI),
+                String_cString(oldURIString),
                 indexVersion,
                 Error_getText(error)
                );
@@ -9293,15 +9301,14 @@ Errors Index_init(const char             *uriString,
                   void                   *isMaintenanceTimeUserData
                  )
 {
-  bool              createFlag;
-  Errors            error;
-  int64             indexVersion;
-//  String            saveDatabaseName;
-//  uint              n;
-//  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {(intptr_t)NULL} };
-//  IndexHandle       indexHandleReference,indexHandle;
-IndexHandle       indexHandle;
-//  ProgressInfo      progressInfo;
+  bool         createFlag;
+  Errors       error;
+  int64        indexVersion;
+  String       saveDatabaseName;
+  uint         n;
+  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {{NULL}} };
+  IndexHandle  indexHandleReference,indexHandle;
+  ProgressInfo progressInfo;
 
   assert(uriString != NULL);
 
@@ -9331,7 +9338,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       // check index version
       error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: indexVersion=%lld\n",__FILE__,__LINE__,indexVersion);
+fprintf(stderr,"%s:%d: indexVersion=%ld\n",__FILE__,__LINE__,indexVersion);
       if (error == ERROR_NONE)
       {
         if (indexVersion < INDEX_VERSION)
@@ -13618,25 +13625,49 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       Misc_getUUID(s);
 
       // insert storage
-fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
-      error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "storages",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
-                              (
-                                KEY   ("uuidId",      Index_getDatabaseId(uuidId)),
-                                KEY   ("entityId",    Index_getDatabaseId(entityId)),
-                                STRING("hostName",    hostName),
-                                STRING("userName",    userName),
-                                STRING("name",        String_isEmpty(storageName) ? s : storageName),
-                                UINT64("created",     dateTime),
-                                UINT64("size",        size),
-                                UINT  ("state",       indexState),
-                                UINT  ("mode",        indexMode),
-                                UINT64("lastChecked", "NOW()")
-                              )
-                             );
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "INSERT INTO storages \
+                                  ( \
+                                   uuidId, \
+                                   entityId, \
+                                   hostName, \
+                                   userName, \
+                                   name, \
+                                   created, \
+                                   size, \
+                                   state, \
+                                   mode, \
+                                   lastChecked\
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld, \
+                                   %'S, \
+                                   %'S, \
+                                   %'S, \
+                                   unix_timestamp(%llu), \
+                                   %llu, \
+                                   %d, \
+                                   %d, \
+                                   DATETIME('now') \
+                                  ) \
+                               ",
+                               Index_getDatabaseId(uuidId),
+                               Index_getDatabaseId(entityId),
+                               hostName,
+                               userName,
+//                               storageName,
+//TODO: remove with index version 8
+String_isEmpty(storageName) ? s : storageName,
+                               dateTime,
+                               size,
+                               indexState,
+                               indexMode
+                              );
       if (error != ERROR_NONE)
       {
         return error;
