@@ -818,6 +818,7 @@ LOCAL void doneProgress(ProgressInfo *progressInfo)
 * Notes  : increment step counter for each call!
 \***********************************************************************/
 
+// TODO: use IndexCommon_progressStep
 LOCAL void progressStep(void *userData)
 {
   UNUSED_VARIABLE(userData);
