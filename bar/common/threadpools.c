@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -196,7 +197,7 @@ LOCAL void *threadPoolStartCode(void *userData)
 
 LOCAL void waitRunningThreads(ThreadPool *threadPool)
 {
-  const ThreadPoolNode *threadPoolNode;
+  ThreadPoolNode *threadPoolNode;
 
   assert(threadPool != NULL);
 

@@ -1629,9 +1629,12 @@ LOCAL void schedulerThreadCode(void)
       {
         if (!Job_isActive(jobNode->jobState))
         {
-          executeScheduleNodeFull       = NULL;
-          executeScheduleNode           = NULL;
-          executeScheduleNodeContinuous = NULL;
+          executeScheduleNodeFull           = NULL;
+          executeScheduleDateTimeFull       = 0LL;
+          executeScheduleNode               = NULL;
+          executeScheduleDateTime           = 0LL;
+          executeScheduleNodeContinuous     = NULL;
+          executeScheduleDateTimeContinuous = 0LL;
 
           // check if job have to be executed by regular schedule (check backward in time)
           if (!List_isEmpty(&jobNode->job.options.scheduleList))
@@ -1691,7 +1694,7 @@ fprintf(stderr,"%s:%d: %d %d %d : %d %d : %x\n",__FILE__,__LINE__,scheduleNode->
                       {
                         while (day >= 1)
                         {
-const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"};
+//const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"};
                           weekDay = Misc_getWeekDay(year,month,day);
 //fprintf(stderr,"%s:%d: month=%d day=%d weekday=%d %s %d\n",__FILE__,__LINE__,month,day,weekDay,W[weekDay],scheduleNode->date.day);
 
@@ -1773,19 +1776,19 @@ const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"};
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 if (executeScheduleNodeFull != NULL)
 {
-fprintf(stderr,"%s:%d: full %s %llu\n",__FILE__,__LINE__,String_cString(executeScheduleNodeFull->uuid),executeScheduleDateTimeFull);
+fprintf(stderr,"%s:%d: full %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNodeFull->uuid),executeScheduleDateTimeFull);
 //Misc_mdelay(5000);
 //exit(1);
 }
 else if (executeScheduleNodeFull != NULL)
 {
-fprintf(stderr,"%s:%d: %s %llu\n",__FILE__,__LINE__,String_cString(executeScheduleNode->uuid),executeScheduleDateTime);
+fprintf(stderr,"%s:%d: %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNode->uuid),executeScheduleDateTime);
 Misc_mdelay(5000);
 exit(1);
 }
 else if (executeScheduleNodeContinuous != NULL)
 {
-fprintf(stderr,"%s:%d: cont %s %llu\n",__FILE__,__LINE__,String_cString(executeScheduleNodeContinuous->uuid),executeScheduleDateTimeContinuous);
+fprintf(stderr,"%s:%d: cont %s %lu\n",__FILE__,__LINE__,String_cString(executeScheduleNodeContinuous->uuid),executeScheduleDateTimeContinuous);
 Misc_mdelay(5000);
 exit(1);
 }

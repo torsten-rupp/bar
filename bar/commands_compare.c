@@ -61,7 +61,7 @@ typedef struct
 {
   const EntryList         *includeEntryList;                  // list of included entries
   const PatternList       *excludePatternList;                // list of exclude patterns
-  const JobOptions        *jobOptions;
+  JobOptions              *jobOptions;
   LogHandle               *logHandle;                         // log handle
 
   bool                    *pauseTestFlag;                     // TRUE for pause creation
@@ -139,7 +139,7 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 LOCAL void initCompareInfo(CompareInfo             *compareInfo,
                            const EntryList         *includeEntryList,
                            const PatternList       *excludePatternList,
-                           const JobOptions        *jobOptions,
+                           JobOptions              *jobOptions,
                            bool                    *pauseTestFlag,
                            bool                    *requestedAbortFlag,
                            GetNamePasswordFunction getNamePasswordFunction,

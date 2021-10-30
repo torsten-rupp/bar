@@ -4204,13 +4204,6 @@ LOCAL Errors runDebug(void)
 }
 #endif /* NDEBUG */
 
-LOCAL void xxx(int a)
-{
-fprintf(stderr,"%s:%d: a=%d\n",__FILE__,__LINE__,a);
-Misc_mdelay(a*1000);
-fprintf(stderr,"%s:%d: a=%d\n",__FILE__,__LINE__,a);
-}
-
 /***********************************************************************\
 * Name   : bar
 * Purpose: BAR main program
