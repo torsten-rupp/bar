@@ -1,0 +1,2830 @@
+/***********************************************************************\
+*
+* $Revision$
+* $Date$
+* $Author$
+* Contents: index entity functions
+* Systems: all
+*
+\***********************************************************************/
+
+/****************************** Includes *******************************/
+#include <config.h>  // use <...> to support separated build directory
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <inttypes.h>
+#include <assert.h>
+
+#include "common/global.h"
+#include "common/dictionaries.h"
+#include "common/threads.h"
+#include "common/strings.h"
+#include "common/database.h"
+#include "common/arrays.h"
+#include "common/files.h"
+#include "common/filesystems.h"
+#include "common/misc.h"
+#include "errors.h"
+
+#include "storage.h"
+#include "server_io.h"
+#include "index_definition.h"
+#include "archive.h"
+#include "bar.h"
+#include "bar_global.h"
+
+#include "index.h"
+#include "index/index_common.h"
+#include "index/index_storages.h"
+#include "index/index_uuids.h"
+
+#include "index_entities.h"
+
+/****************** Conditional compilation switches *******************/
+
+/***************************** Constants *******************************/
+
+/***************************** Datatypes *******************************/
+
+/***************************** Variables *******************************/
+
+/****************************** Macros *********************************/
+
+/***************************** Forwards ********************************/
+
+/***************************** Functions *******************************/
+
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
+/***********************************************************************\
+* Name   : cleanUpStorageNoEntity
+* Purpose: clean-up storage entries without any entity
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
+{
+//TODO
+#if 0
+  Errors                  error;
+  String                  name1,name2;
+  DatabaseStatementHandle databaseStatementHandle1,databaseStatementHandle2;
+  DatabaseId              storageDatabaseId;
+  StaticString            (uuid,MISC_UUID_STRING_LENGTH);
+  uint64                  createdDateTime;
+  DatabaseId              entityDatabaseId;
+  bool                    equalsFlag;
+  ulong                   i;
+  String                  oldDatabaseFileName;
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up no entity-entries"
+             );
+
+  // init variables
+  name1 = String_new();
+  name2 = String_new();
+
+  // try to set entityId in storage entries
+  INDEX_DOX(error,
+            indexHandle,
+  {
+   error = Database_prepare(&databaseStatementHandle1,
+                             &indexHandle->databaseHandle,
+                             DATABASE_COLUMN_TYPES(STRING,STRING,UINT64),
+                             "SELECT uuid, \
+                                     name, \
+                                     UNIX_TIMESTAMP(created) \
+                              FROM storages \
+                              WHERE entityId=0 \
+                              ORDER BY id,created ASC \
+                             ",
+                             DATABASE_VALUES
+                             (
+                             ),
+                             DATABASE_FILTERS
+                             (
+                             )
+                            );
+    if (error == ERROR_NONE)
+    {
+      while (Database_getNextRow(&databaseStatementHandle1,results
+                                 "%S %llu",
+                                 uuid,
+                                 name1,
+                                 &createdDateTime
+                                )
+         )
+      {
+        // find matching entity/create default entity
+        error = Database_prepare(&databaseStatementHandle2,
+                                 &oldIndexHandle->databaseHandle,
+                                 DATABASE_COLUMN_TYPES(KEY,STRING),
+                                 "SELECT id, \
+                                         name \
+                                  FROM storages \
+                                  WHERE uuid=? \
+                                 ",
+                                 DATABASE_VALUES
+                                 (
+                                 ).
+                                 DATABASE_FILTERS
+                                 (
+                                   STRING(uuid)
+                                 )
+                                );
+        if (error == ERROR_NONE)
+        {
+          while (Database_getNextRow(&databaseStatementHandle2,
+                                     "%lld %S",
+                                     &storageId,
+                                     name2
+                                    )
+                )
+          {
+            // compare names (equals except digits)
+            equalsFlag = String_length(name1) == String_length(name2);
+            i = STRING_BEGIN;
+            while (equalsFlag
+                   && (i < String_length(name1))
+                   && (   isdigit(String_index(name1,i))
+                       || (String_index(name1,i) == String_index(name2,i))
+                      )
+                  )
+            {
+              i++;
+            }
+            if (equalsFlag)
+            {
+              // assign entity id
+// TODO:
+              (void)Database_execute(&newIndexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     "UPDATE storages \
+                                      SET entityId=%lld \
+                                      WHERE id=%lld \
+                                     ",
+                                     entityDatabaseId,
+                                     storageDatabaseId
+                                    );
+            }
+          }
+          Database_finalize(&databaseStatementHandle2);
+        }
+
+        error = Database_insert(&newIndexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "entities",
+                                DATABASE_FLAG_NONE,
+                                DATABASE_VALUES2
+                                (
+                                  STRING("jobUUID", uuid),
+                                  UINT64("created", createdDateTime),
+                                  UINT  ("type",    ARCHIVE_TYPE_FULL),
+                                )
+                               );
+        if (error == ERROR_NONE)
+        {
+          // get entity id
+          entityId = Database_getLastRowId(&newIndexHandle->databaseHandle);
+
+          // assign entity id for all storage entries with same uuid and matching name (equals except digits)
+          error = Database_prepare(&databaseStatementHandle2,
+                                   &oldIndexHandle->databaseHandle,
+                                   DATABASE_COLUMN_TYPES(KEY,STRING),
+                                   "SELECT id, \
+                                           name \
+                                    FROM storages \
+                                    WHERE uuid=? \
+                                   ",
+                                   DATABASE_VALUES
+                                   (
+                                   ),
+                                   DATABASE_FILTERS
+                                   (
+                                     STRING(uuid)
+                                   )
+                                  );
+          if (error == ERROR_NONE)
+          {
+            while (Database_getNextRow(&databaseStatementHandle2,
+                                       "%lld %S",
+                                       &storageId,
+                                       name2
+                                      )
+                  )
+            {
+              // compare names (equals except digits)
+              equalsFlag = String_length(name1) == String_length(name2);
+              i = STRING_BEGIN;
+              while (equalsFlag
+                     && (i < String_length(name1))
+                     && (   isdigit(String_index(name1,i))
+                         || (String_index(name1,i) == String_index(name2,i))
+                        )
+                    )
+              {
+                i++;
+              }
+              if (equalsFlag)
+              {
+                // assign entity id
+// TODO:
+                (void)Database_execute(&newIndexHandle->databaseHandle,
+                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                       NULL,  // changedRowCount
+                                       DATABASE_COLUMN_TYPES(),
+                                       "UPDATE storages \
+                                        SET entityId=%lld \
+                                        WHERE id=%lld \
+                                       ",
+                                       entityId,
+                                       storageId
+                                      );
+              }
+            }
+            Database_finalize(&databaseStatementHandle2);
+          }
+        }
+      }
+      Database_finalize(&databaseStatementHandle1);
+    }
+
+    return ERROR_NONE;
+  });
+
+  // free resources
+  String_delete(name2);
+  String_delete(name1);
+
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Clean-up no entity-entries"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Clean-up no entity-entries failed (error: %s)",
+                Error_getText(error)
+               );
+  }
+#else
+UNUSED_VARIABLE(indexHandle);
+return ERROR_NONE;
+#endif
+}
+
+/***********************************************************************\
+* Name   : isEmptyEntity
+* Purpose: check if entity if empty
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+* Output : -
+* Return : TRUE iff entity is empty
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
+                         DatabaseId  entityId
+                        )
+{
+  assert(indexHandle != NULL);
+
+  return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "storages",
+                                  "id",
+                                  "WHERE entityId=%lld",
+                                  entityId
+                                 )
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "entries",
+                                  "id",
+                                  "WHERE entityId=%lld",
+                                  entityId
+                                 )
+         && !Database_existsValue(&indexHandle->databaseHandle,
+                                  "entriesNewest",
+                                  "id",
+                                  "WHERE entityId=%lld",
+                                  entityId
+                                 );
+}
+
+/***********************************************************************\
+* Name   : refreshEntitiesInfos
+* Purpose: refresh entities infos
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+
+  // clean-up
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 NULL,  // jobUUID,
+                                 NULL,  // scheduldUUID
+                                 ARCHIVE_TYPE_ANY,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 INDEX_ENTITY_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_ASCENDING,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error == ERROR_NONE)
+  {
+    while (Index_getNextEntity(&indexQueryHandle,
+                               NULL,  // uuidId,
+                               NULL,  // jobUUID,
+                               NULL,  // scheduleUUID,
+                               &entityId,
+                               NULL,  // archiveType,
+                               NULL,  // createdDateTime,
+                               NULL,  // lastErrorMessage
+                               NULL,  // totalSize
+                               NULL,  // totalEntryCount
+                               NULL,  // totalEntrySize
+                               NULL  // lockedCount
+                              )
+          )
+    {
+      error = Index_updateEntityInfos(indexHandle,entityId);
+    }
+    Index_doneList(&indexQueryHandle);
+  }
+  if (error == ERROR_NONE)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed entities infos"
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Refreshed entities infos fail (error: %s)",
+                Error_getText(error)
+               );
+  }
+
+  // free resource
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : rebuildNewestInfo
+* Purpose:
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+//TODO
+#if 0
+// not used
+LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
+{
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  DatabaseId       entryId;
+  String           name;
+  uint64           size;
+  uint64           timeModified;
+
+
+  error = Index_initListEntries(&indexQueryHandle,
+                                indexHandle,
+                                NULL,  // indexIds
+                                0L,  // indexIdCount
+                                NULL,  // entryIds
+                                0L,  // entryIdCount
+                                INDEX_TYPE_SET_ANY_ENTRY,
+                                NULL,  // entryPattern,
+                                FALSE,  // newestOnly
+                                FALSE,  // fragmentsCount
+                                INDEX_ENTRY_SORT_MODE_NONE,
+                                DATABASE_ORDERING_NONE,
+                                0LL,  // offset
+                                INDEX_UNLIMITED
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  name = String_new();
+  while (Index_getNextEntry(&indexQueryHandle,
+                            NULL,  // uuidId
+                            NULL,  // jobUUID
+                            NULL,  // entityId
+                            NULL,  // scheduleUUID
+                            NULL,  // hostName
+                            NULL,  // userName
+                            NULL,  // archiveType
+                            NULL,  // storageId
+                            NULL,  // storageName
+                            NULL,  // storageDateTime
+                            &entryId,
+                            name,
+                            NULL,  // storageId
+                            NULL,  // storageName
+                            NULL,  // destinationName
+                            NULL,  // fileSystemType
+                            &size,
+                            &timeModified,
+                            NULL,  // userId
+                            NULL,  // groupId
+                            NULL,  // permission
+                            NULL  // fragmentCount
+                           )
+        )
+  {
+  }
+  String_delete(name);
+  Index_doneList(&indexQueryHandle);
+
+  return ERROR_NONE;
+}
+#endif
+
+// ----------------------------------------------------------------------
+
+#if 0
+//TODO: trigger or implementation here?
+/***********************************************************************\
+* Name   : insertUpdateNewestEntry
+* Purpose: insert or update newest entry
+* Input  : indexHandle     - index handle
+*          entryId         - entry database id
+*          uuidId          - index id of UUID
+*          entityId        - index id of entity
+*          name            - file name
+*          size            - size [bytes]
+*          timeLastChanged - last changed date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
+                                     DatabaseId  entryId,
+                                     DatabaseId  uuidId,
+                                     DatabaseId  entityId,
+                                     ConstString name,
+                                     IndexTypes  indexType,
+                                     uint64      size,
+                                     uint64      timeLastChanged,
+                                     uint32      userId,
+                                     uint32      groupId,
+                                     uint32      permission
+                                    )
+{
+  Errors              error;
+  DatabaseStatementHandle databaseStatementHandle;
+  DatabaseId          newestEntryId;
+  uint64              newestTimeLastChanged;
+
+  assert(indexHandle != NULL);
+  assert(entryId != DATABASE_ID_NONE);
+  assert(name != NULL);
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    // atomic add/get entry
+    DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      // get existing newest entry
+      error = Database_prepare(&databaseStatementHandle,
+                               &indexHandle->databaseHandle,
+                               DATABASE_COLUMN_TYPES(KEY,UINT64),
+                               "SELECT id, \
+                                       UNIX_TIMESTAMP(timeLastChanged) \
+                                FROM entriesNewest\
+                                WHERE name=? \
+                               ",
+                               DATABASE_VALUES2
+                               (
+                               ),
+                               DATABASE_FILTERS
+                               (
+                                 STRING(name)
+                               )
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (!Database_getNextRow(&databaseStatementHandle,
+                                 "%lld %llu",
+                                 &newestEntryId,
+                                 &newestTimeLastChanged
+                                )
+           )
+        {
+          newestEntryId         = DATABASE_ID_NONE;
+          newestTimeLastChanged = 0LL;
+        }
+        Database_finalize(&databaseStatementHandle);
+      }
+
+      // insert/update newest
+      if (error == ERROR_NONE)
+      {
+        if (timeLastChanged > newestTimeLastChanged)
+        {
+          if (newestEntryId != DATABASE_ID_NONE)
+          {
+            // update
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     "UPDATE entriesNewest \
+                                      SET entryId=%lld, \
+                                          uuidId=%lld, \
+                                          entityId=%lld, \
+                                          type=%u, \
+                                          timeLastChanged=%lld, \
+                                          userId=%u, \
+                                          groupId=%u, \
+                                          permission=%u \
+                                      WHERE id=%lld \
+                                     ",
+                                     entryId,
+                                     uuidId,
+                                     entityId,
+                                     indexType,
+                                     timeLastChanged,
+                                     userId,
+                                     groupId,
+                                     permission,
+                                     newestEntryId
+                                    );
+          }
+          else
+          {
+            // insert
+            error = Database_insert(&indexHandle->databaseHandle,
+                                    NULL,  // changedRowCount
+                                    "entriesNewest",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES2
+                                    (
+                                      KEY   ("entryId",         entryId),
+                                      KEY   ("uuidId",          uuidId),
+                                      KEY   ("entityId",        entityId),
+                                      UINT  ("type",            indexType),
+                                      STRING("name",            name),
+                                      UINT64("timeLastChanged", timeLastChanged),
+                                      UINT  ("userId",          userId),
+                                      UINT  ("groupId",         groupId),
+                                      UINT  ("permission",      permission)
+                                    )
+                                   );
+          }
+        }
+      }
+    }
+
+    return error;
+  });
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : removeUpdateNewestEntry
+* Purpose: remove or update newest entry
+* Input  : indexHandle - index handle
+*          entryId     - entry database id
+*          name        - file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
+                                     DatabaseId  entryId,
+                                     ConstString name
+                                    )
+{
+  Errors              error;
+  DatabaseStatementHandle databaseStatementHandle;
+  DatabaseId          newestEntryId;
+  uint64              newestTimeLastChanged;
+
+  assert(indexHandle != NULL);
+  assert(entryId != DATABASE_ID_NONE);
+  assert(name != NULL);
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "DELETE FROM entriesNewest \
+                              WHERE id=%lld \
+                             ",
+                             entryId
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "INSERT OR IGNORE INTO entriesNewest \
+                                ( \
+                                 entryId, \
+                                 uuidId, \
+                                 entityId, \
+                                 type, \
+                                 name, \
+                                 timeLastChanged, \
+                                 userId, \
+                                 groupId, \
+                                 permission, \
+                                ) \
+                              SELECT id, \
+                                     uuidId, \
+                                     entityId, \
+                                     type, \
+                                     name, \
+                                     timeLastChanged, \
+                                     userId, \
+                                     groupId, \
+                                     permission \
+                               FROM entries \
+                               WHERE name=%'S \
+                               ORDER BY timeLastChanged DESC \
+                               LIMIT 0,1 \
+                             ",
+                             name
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+#endif
+
+/***********************************************************************\
+* Name   : assignEntityStoragesToEntity
+* Purpose: assign storages of entity to other entity
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+*          toUUIDId    - to-UUID database id
+*          toEntityId  - to-entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignEntityStoragesToEntity(IndexHandle *indexHandle,
+                                          DatabaseId  entityId,
+                                          DatabaseId  toUUIDId,
+                                          DatabaseId  toEntityId
+                                         )
+{
+  Errors error;
+
+  error = ERROR_NONE;
+
+  // set uuid/entity id of all storages of entity
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "UPDATE storages \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE entityId=%lld \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             entityId
+                            );
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : assignEntityEntriesToEntity
+* Purpose: assign entries of entity to other entity
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+*          toUUIDId    - to-UUID database id
+*          toEntityId  - to-entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignEntityEntriesToEntity(IndexHandle *indexHandle,
+                                         DatabaseId  entityId,
+                                         DatabaseId  toUUIDId,
+                                         DatabaseId  toEntityId
+                                        )
+{
+  Errors error;
+
+  error = ERROR_NONE;
+
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "UPDATE entries \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE entityId=%lld \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             entityId
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "UPDATE entriesNewest \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE entryId IN (SELECT entries.id FROM entries LEFT JOIN entriesNewest ON entriesNewest.entryId=entries.id WHERE entries.entityId=%lld) \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             entityId
+                            );
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : assignStorageToEntity
+* Purpose: assign all entries of storage and storage to other entity
+* Input  : indexHandle - index handle
+*          storageId   - storage database id
+*          toEntityId  - to entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : all entries are assigned to new entity where some fragment
+*          is inside storage!
+\***********************************************************************/
+
+LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
+                                   DatabaseId  storageId,
+                                   DatabaseId  toEntityId
+                                  )
+{
+  DatabaseStatementHandle databaseStatementHandle;
+  DatabaseId          entityId,uuidId;
+  DatabaseId          toUUIDId;
+  Errors              error;
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+  assert(toEntityId != DATABASE_ID_NONE);
+
+  /* steps to do:
+     - get entity id, UUID id
+     - get to-UUID id
+     - assign entries of storage
+     - assign storage
+     - update entity aggregates
+     - prune entity
+  */
+
+  // init variables
+
+  error = ERROR_NONE;
+
+  // get entity id, uuid id
+  if (error == ERROR_NONE)
+  {
+    error = Database_prepare(&databaseStatementHandle,
+                             &indexHandle->databaseHandle,
+                             DATABASE_COLUMN_TYPES(KEY,KEY),
+                             "SELECT uuids.id, \
+                                     entities.id \
+                              FROM storages \
+                                LEFT JOIN entities ON entities.id=storages.entityId \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                              WHERE storages.id=? \
+                             ",
+                             DATABASE_VALUES2
+                             (
+                             ),
+                             DATABASE_FILTERS
+                             (
+                               KEY(storageId)
+                             )
+                            );
+    if (error == ERROR_NONE)
+    {
+      if (!Database_getNextRow(&databaseStatementHandle,
+                               "%llu %llu",
+                               &uuidId,
+                               &entityId
+                              )
+         )
+      {
+        error = ERRORX_(DATABASE,0,"assign storages");
+      }
+      Database_finalize(&databaseStatementHandle);
+    }
+  }
+
+  // get to-uuid id
+  if (error == ERROR_NONE)
+  {
+    error = Database_getId(&indexHandle->databaseHandle,
+                           &toUUIDId,
+                           "entities",
+                           "uuids.id",
+                           "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                            WHERE entities.id=%lld \
+                           ",
+                           toEntityId
+                          );
+  }
+
+  // assign storage to new entity
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "UPDATE storages \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE id=%lld \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             storageId
+                            );
+  }
+
+  // assign entries of storage to new entity
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "UPDATE entries \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
+                                          ) \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             storageId,
+                             storageId,
+                             storageId,
+                             storageId
+                            );
+  }
+
+  // update entity aggregates
+  if (error == ERROR_NONE)
+  {
+    error = IndexEntity_updateAggregates(indexHandle,toEntityId);
+  }
+
+  // prune entity
+  if (error == ERROR_NONE)
+  {
+    error = IndexEntity_prune(indexHandle,
+                                    NULL,  // doneFlag
+                                    NULL,  // deletedCounter
+                                    entityId
+                                   );
+  }
+
+  // free resources
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : assignEntityToEntity
+* Purpose: assign entity to other entity
+* Input  : indexHandle   - index handle
+*          entityId      - entity database id
+*          toEntityId    - to entity database id
+*          toArchiveType - archive type or ARCHIVE_TYPE_NONE
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
+                                  DatabaseId   entityId,
+                                  DatabaseId   toEntityId,
+                                  ArchiveTypes toArchiveType
+                                 )
+{
+  Errors     error;
+  DatabaseId toUUIDId;
+
+  assert(indexHandle != NULL);
+
+  /* steps to do:
+       - assign all storages of entity
+       - assign all entries of entity
+       - update entity aggregates
+       - prune entity
+       - set archive type
+  */
+
+  error = ERROR_NONE;
+
+  // assign to entity, update aggregates, prune entity
+  if (entityId != toEntityId)
+  {
+    // get to-uuid id
+    if (error == ERROR_NONE)
+    {
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &toUUIDId,
+                             "entities",
+                             "uuids.id",
+                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              WHERE entities.id=%lld \
+                             ",
+                             toEntityId
+                            );
+    }
+
+    // assign entries of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityEntriesToEntity(indexHandle,
+                                          entityId,
+                                          toUUIDId,
+                                          toEntityId
+                                         );
+    }
+
+    // assign storages of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityStoragesToEntity(indexHandle,
+                                           entityId,
+                                           toUUIDId,
+                                           toEntityId
+                                          );
+    }
+
+    // update entities aggregates
+    if (error == ERROR_NONE)
+    {
+      error = IndexEntity_updateAggregates(indexHandle,entityId);
+    }
+    if (error == ERROR_NONE)
+    {
+      error = IndexEntity_updateAggregates(indexHandle,toEntityId);
+    }
+
+    // prune entity
+    if (error == ERROR_NONE)
+    {
+      error = IndexEntity_prune(indexHandle,
+                                      NULL,  // doneFlag
+                                      NULL,  // deletedCounter
+                                      entityId
+                                     );
+    }
+  }
+
+  // set entity type
+  if (toArchiveType != ARCHIVE_TYPE_NONE)
+  {
+    if (error == ERROR_NONE)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "UPDATE entities \
+                                SET type=%d \
+                                WHERE id=%lld \
+                               ",
+                               toArchiveType,
+                               toEntityId
+                              );
+    }
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : assignEntityToJob
+* Purpose: assign entity to other job
+* Input  : indexHandle   - index handle
+*          entityId      - entity index id
+*          toJobUUID     - to job UUID
+*          toArchiveType - archive type or ARCHIVE_TYPE_NONE
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
+                               DatabaseId   entityId,
+                               ConstString  toJobUUID,
+                               ArchiveTypes toArchiveType
+                              )
+{
+  Errors     error;
+  DatabaseId uuidId;
+  DatabaseId toUUIDId;
+
+  assert(indexHandle != NULL);
+  assert(entityId != DATABASE_ID_NONE);
+  assert(toJobUUID != NULL);
+
+  /* steps to do:
+       - assign all storages of entity
+       - assign entity
+       - prune UUID
+  */
+
+  error = ERROR_NONE;
+
+  if (toJobUUID != NULL)
+  {
+    // get uuid id, to-uuid id
+    if (error == ERROR_NONE)
+    {
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &uuidId,
+                             "entities",
+                             "uuids.id",
+                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                              WHERE entities.id=%lld \
+                             ",
+                             entityId
+                            );
+    }
+    if (error == ERROR_NONE)
+    {
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &toUUIDId,
+                             "uuids",
+                             "id",
+                             "WHERE jobUUID=%'S \
+                             ",
+                             toJobUUID
+                            );
+    }
+
+    // assign storages of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityStoragesToEntity(indexHandle,
+                                           entityId,
+                                           toUUIDId,
+                                           entityId
+                                          );
+    }
+
+    // assign entries of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityEntriesToEntity(indexHandle,
+                                          entityId,
+                                          toUUIDId,
+                                          entityId
+                                         );
+    }
+
+    // assign entity to job
+    if (error == ERROR_NONE)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "UPDATE entities \
+                                SET uuidId =%lld, \
+                                    jobUUID=%'S \
+                                WHERE id=%lld \
+                               ",
+                               toUUIDId,
+                               toJobUUID,
+                               entityId
+                              );
+    }
+
+    // prune UUID
+    if (error == ERROR_NONE)
+    {
+      error = IndexUUID_prune(indexHandle,
+                              NULL,  // doneFlag,
+                              NULL,  // deletedCounter,
+                              uuidId
+                             );
+    }
+  }
+
+  if (toArchiveType != ARCHIVE_TYPE_NONE)
+  {
+    // set entity type
+    if (error == ERROR_NONE)
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "UPDATE entities \
+                                SET type=%d \
+                                WHERE id=%lld \
+                               ",
+                               toArchiveType,
+                               entityId
+                              );
+    }
+  }
+
+  return error;
+}
+
+/*---------------------------------------------------------------------*/
+
+Errors IndexEntity_prune(IndexHandle *indexHandle,
+                               bool        *doneFlag,
+                               ulong       *deletedCounter,
+                               DatabaseId  entityId
+                              )
+{
+  String                  string;
+  int64                   lockedCount;
+  Errors                  error;
+  DatabaseStatementHandle databaseStatementHandle;
+  DatabaseId              uuidId;
+  StaticString            (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64                  createdDateTime;
+  ArchiveTypes            archiveType;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  string = String_new();
+
+  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+  {
+    // get locked count
+    error = Database_getInteger64(&indexHandle->databaseHandle,
+                                  &lockedCount,
+                                  "entities",
+                                  "lockedCount",
+                                  "WHERE id=%lld",
+                                  entityId
+                                 );
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      return error;
+    }
+
+    // prune if not locked entity and empty
+    if ((lockedCount == 0LL) && isEmptyEntity(indexHandle,entityId))
+    {
+      // get uuid id, job UUID, created date/time, archive type
+      error = Database_prepare(&databaseStatementHandle,
+                               &indexHandle->databaseHandle,
+                               DATABASE_COLUMN_TYPES(KEY,STRING,UINT64,INT),
+                               "SELECT uuids.id, \
+                                       entities.jobUUID, \
+                                       UNIX_TIMESTAMP(entities.created), \
+                                       entities.type \
+                                FROM entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                WHERE entities.id=? \
+                               ",
+                               DATABASE_VALUES2
+                               (
+                               ),
+                               DATABASE_FILTERS
+                               (
+                                 KEY (entityId)
+                               )
+                              );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        return error;
+      }
+      if (!Database_getNextRow(&databaseStatementHandle,
+                               "%llu %S %llu %u",
+                               &uuidId,
+                               jobUUID,
+                               &createdDateTime,
+                               &archiveType
+                              )
+         )
+      {
+        String_clear(jobUUID);
+        createdDateTime = 0LL;
+        archiveType     = ARCHIVE_TYPE_NONE;
+      }
+      Database_finalize(&databaseStatementHandle);
+
+      // delete entity from index
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "DELETE FROM entities WHERE id=%lld",
+                               entityId
+                              );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        return error;
+      }
+
+      // purge skipped entries of entity
+      error = IndexCommon_purge(indexHandle,
+                                doneFlag,
+                                deletedCounter,
+                                "skippedEntries",
+                                "entityId=%lld",
+                                entityId
+                               );
+      if (error != ERROR_NONE)
+      {
+        String_delete(string);
+        return error;
+      }
+
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Purged entity #%llu, job %s, created at %s: no archives",
+                  entityId,
+                  String_cString(jobUUID),
+                  String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
+                 );
+
+      // prune UUID
+      if (uuidId != DATABASE_ID_NONE)
+      {
+        error = IndexUUID_prune(indexHandle,
+                                doneFlag,
+                                deletedCounter,
+                                uuidId
+                               );
+        if (error != ERROR_NONE)
+        {
+          String_delete(string);
+          return error;
+        }
+      }
+    }
+  }
+
+  // free resources
+  String_delete(string);
+
+  return ERROR_NONE;
+}
+
+Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
+                                 bool        *doneFlag,
+                                 ulong       *deletedCounter
+                                )
+{
+  Array         entityIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    entityId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all entity ids (Note: skip default entity!)
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &entityIds,
+                          "entities",
+                          "id",
+                          "WHERE id!=%lld \
+                          ",
+                          INDEX_DEFAULT_ENTITY_DATABASE_ID
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // prune entities
+  ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
+  {
+    error = IndexEntity_prune(indexHandle,doneFlag,deletedCounter,entityId);
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&entityIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : IndexEntity_updateAggregates
+* Purpose: update entity aggregates
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
+                                          DatabaseId  entityId
+                                         )
+{
+  Errors              error;
+  DatabaseStatementHandle databaseStatementHandle;
+  ulong               totalFileCount;
+  double              totalFileSize_;
+  uint64              totalFileSize;
+  ulong               totalImageCount;
+  double              totalImageSize_;
+  uint64              totalImageSize;
+  ulong               totalDirectoryCount;
+  ulong               totalLinkCount;
+  ulong               totalHardlinkCount;
+  double              totalHardlinkSize_;
+  uint64              totalHardlinkSize;
+  ulong               totalSpecialCount;
+
+  assert(indexHandle != NULL);
+
+  // get file aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT,INT64),
+//TODO: use entries.size?
+                           "SELECT COUNT(DISTINCT entries.id), \
+                                   SUM(entryFragments.size) \
+                            FROM entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                            WHERE     entries.type=? \
+                                  AND entries.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_FILE),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu %lf",
+                           &totalFileCount,
+                           &totalFileSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalFileSize_ >= 0.0);
+  totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
+  Database_finalize(&databaseStatementHandle);
+
+  // get image aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT,INT64),
+//TODO: use entries.size?
+                           "SELECT COUNT(DISTINCT entries.id), \
+                                   SUM(entryFragments.size) \
+                            FROM entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                            WHERE     entries.type=? \
+                                  AND entries.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_IMAGE),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu %lf",
+                           &totalImageCount,
+                           &totalImageSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalImageSize_ >= 0.0);
+  totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
+  Database_finalize(&databaseStatementHandle);
+
+  // get directory aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT),
+                           "SELECT COUNT(DISTINCT entries.id) \
+                            FROM entries \
+                            WHERE     entries.type=? \
+                                  AND entries.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_DIRECTORY),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu",
+                           &totalDirectoryCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseStatementHandle);
+
+  // get link aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT),
+                           "SELECT COUNT(DISTINCT entries.id) \
+                            FROM entries \
+                            WHERE     entries.type=? \
+                                  AND entries.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_LINK),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu",
+                           &totalLinkCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseStatementHandle);
+
+  // get hardlink aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT,INT64),
+//TODO: use entries.size?
+                           "SELECT COUNT(DISTINCT entries.id), \
+                                   SUM(entryFragments.size) \
+                            FROM entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                            WHERE     entries.type=? \
+                                  AND entries.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_HARDLINK),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu %lf",
+                           &totalHardlinkCount,
+                           &totalHardlinkSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalHardlinkSize_ >= 0.0);
+  totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
+  Database_finalize(&databaseStatementHandle);
+
+  // get special aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT),
+                           "SELECT COUNT(DISTINCT entries.id) \
+                            FROM entries \
+                            WHERE     entries.type=? \
+                                  AND entries.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_SPECIAL),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu",
+                           &totalSpecialCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseStatementHandle);
+
+  // update entity aggregate data
+#if 0
+(void)Database_update(&indexHandle->databaseHandle,
+                    NULL,  // changedRowCount
+                    "entities",
+                    DATABASE_FLAG_NONE,
+                    DATABASE_VALUES2
+                    (
+                      UINT("lockedCount", 0),
+                    ),
+                    NULL,
+                    DATABASE_FILTERS
+                    (
+                    )
+                   );
+#endif
+
+  error = Database_update(&indexHandle->databaseHandle,
+                          NULL,  // changedRowCount
+                          "entities",
+                          DATABASE_FLAG_NONE,
+                          DATABASE_VALUES2
+                          (
+                            UINT  ("totalEntryCount",     totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount),
+                            UINT64("totalEntrySize",      totalFileSize+totalImageSize+totalHardlinkSize),
+                            UINT  ("totalFileCount",      totalFileCount),
+                            UINT64("totalFileSize",       totalFileSize),
+                            UINT  ("totalImageCount",     totalImageCount),
+                            UINT64("totalImageSize",      totalImageSize),
+                            UINT  ("totalDirectoryCount", totalDirectoryCount),
+                            UINT  ("totalLinkCount",      totalLinkCount),
+                            UINT  ("totalHardlinkCount",  totalHardlinkCount),
+                            UINT64("totalHardlinkSize",   totalHardlinkSize),
+                            UINT  ("totalSpecialCount",   totalSpecialCount)
+                          ),
+                          "id=?",
+                          DATABASE_FILTERS
+                          (
+                            KEY(entityId),
+                          )
+                         );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // -----------------------------------------------------------------
+
+  // get newest file aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT,INT64),
+                           "SELECT COUNT(DISTINCT entriesNewest.id), \
+                                   SUM(entryFragments.size) \
+                            FROM entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                            WHERE     entriesNewest.type=? \
+                                  AND entriesNewest.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_FILE),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu %lf",
+                           &totalFileCount,
+                           &totalFileSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalFileSize_ >= 0.0);
+  totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
+  Database_finalize(&databaseStatementHandle);
+
+  // get newest image aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT,INT64),
+                           "SELECT COUNT(DISTINCT entriesNewest.id), \
+                                   SUM(entryFragments.size) \
+                            FROM entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                            WHERE     entriesNewest.type=? \
+                                  AND entriesNewest.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_IMAGE),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu %lf",
+                           &totalImageCount,
+                           &totalImageSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalImageSize_ >= 0.0);
+  totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
+  Database_finalize(&databaseStatementHandle);
+
+  // get newest directory aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT),
+                           "SELECT COUNT(DISTINCT entriesNewest.id) \
+                            FROM entriesNewest \
+                            WHERE     entriesNewest.type=? \
+                                  AND entriesNewest.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_DIRECTORY),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu",
+                           &totalDirectoryCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseStatementHandle);
+
+  // get newest link aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT),
+                           "SELECT COUNT(DISTINCT entriesNewest.id) \
+                            FROM entriesNewest \
+                            WHERE     entriesNewest.type=? \
+                                  AND entriesNewest.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_LINK),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu",
+                           &totalLinkCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseStatementHandle);
+
+  // get newest hardlink aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT,INT64),
+//TODO: use entriesNewest.size?
+                           "SELECT COUNT(DISTINCT entriesNewest.id), \
+                                   SUM(entryFragments.size) \
+                            FROM entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                            WHERE     entriesNewest.type=? \
+                                  AND entriesNewest.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_HARDLINK),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu %lf",
+                           &totalHardlinkCount,
+                           &totalHardlinkSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalHardlinkSize_ >= 0.0);
+  totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
+  Database_finalize(&databaseStatementHandle);
+
+  // get newest special aggregate data
+  error = Database_prepare(&databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           DATABASE_COLUMN_TYPES(INT),
+                           "SELECT COUNT(DISTINCT entriesNewest.id) \
+                            FROM entriesNewest \
+                            WHERE     entriesNewest.type=? \
+                                  AND entriesNewest.entityId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             UINT(INDEX_TYPE_SPECIAL),
+                             KEY (entityId)
+                           )
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseStatementHandle,
+                           "%lu",
+                           &totalSpecialCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseStatementHandle);
+
+  // update newest aggregate data
+// TODO:
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           DATABASE_COLUMN_TYPES(),
+                           "UPDATE entities \
+                            SET totalEntryCountNewest    =%llu, \
+                                totalEntrySizeNewest     =%llu, \
+                                totalFileCountNewest     =%llu, \
+                                totalFileSizeNewest      =%llu, \
+                                totalImageCountNewest    =%llu, \
+                                totalImageSizeNewest     =%llu, \
+                                totalDirectoryCountNewest=%llu, \
+                                totalLinkCountNewest     =%llu, \
+                                totalHardlinkCountNewest =%llu, \
+                                totalHardlinkSizeNewest  =%llu, \
+                                totalSpecialCountNewest  =%llu \
+                            WHERE id=%lld \
+                           ",
+                           totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
+                           totalFileSize+totalImageSize+totalHardlinkSize,
+                           totalFileCount,
+                           totalFileSize,
+                           totalImageCount,
+                           totalImageSize,
+                           totalDirectoryCount,
+                           totalLinkCount,
+                           totalHardlinkCount,
+                           totalHardlinkSize,
+                           totalSpecialCount,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+/*---------------------------------------------------------------------*/
+
+bool Index_findEntity(IndexHandle  *indexHandle,
+                      IndexId      findEntityId,
+                      ConstString  findJobUUID,
+                      ConstString  findScheduleUUID,
+                      ConstString  findHostName,
+                      ArchiveTypes findArchiveType,
+                      uint64       findCreatedDateTime,
+                      String       jobUUID,
+                      String       scheduleUUID,
+                      IndexId      *uuidId,
+                      IndexId      *entityId,
+                      ArchiveTypes *archiveType,
+                      uint64       *createdDateTime,
+                      String       lastErrorMessage,
+                      ulong        *totalEntryCount,
+                      uint64       *totalEntrySize
+                     )
+{
+  String                  filterString;
+  Errors                  error;
+  DatabaseStatementHandle databaseStatementHandle;
+  bool                    result;
+  DatabaseId              uuidDatabaseId,entityDatabaseId;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+  // get filters
+  filterString = String_newCString("1");
+  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%lld",Index_getDatabaseId(findEntityId));
+  IndexCommon_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
+  IndexCommon_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_NONE,"AND","entities.type=%u",findArchiveType);
+  IndexCommon_filterAppend(filterString,findCreatedDateTime != 0LL,"AND","entities.created=%llu",findCreatedDateTime);
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+
+    error = Database_prepare(&databaseStatementHandle,
+                             &indexHandle->databaseHandle,
+                             DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,UINT64,INT,STRING,INT,INT64),
+                             stringFormat(sqlCommand,sizeof(sqlCommand),
+                                          "SELECT IFNULL(uuids.id,0), \
+                                                  entities.jobUUID, \
+                                                  IFNULL(entities.id,0), \
+                                                  entities.scheduleUUID, \
+                                                  UNIX_TIMESTAMP(entities.created), \
+                                                  entities.type, \
+                                                  (SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1), \
+                                                  SUM(storages.totalEntryCount), \
+                                                  SUM(storages.totalEntrySize) \
+                                           FROM entities \
+                                             LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
+                                             LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                           WHERE     entities.deletedFlag!=1 \
+                                                 AND %s \
+                                           GROUP BY entities.id \
+                                           LIMIT 0,1 \
+                                          ",
+                                          String_cString(filterString)
+                                         ),
+                             DATABASE_VALUES2
+                             (
+                             ),
+                             DATABASE_FILTERS
+                             (
+                             )
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    result = Database_getNextRow(&databaseStatementHandle,
+                                 "%lld %S %lld %S %lld %d %S %lu %llu",
+                                 &uuidDatabaseId,
+                                 jobUUID,
+                                 &entityDatabaseId,
+                                 scheduleUUID,
+                                 createdDateTime,
+                                 archiveType,
+                                 lastErrorMessage,
+                                 totalEntryCount,
+                                 totalEntrySize
+                                );
+
+    Database_finalize(&databaseStatementHandle);
+
+    return ERROR_NONE;
+  });
+  if (error != ERROR_NONE)
+  {
+    String_delete(filterString);
+    return FALSE;
+  }
+
+  if (uuidId   != NULL) (*uuidId  ) = INDEX_ID_UUID(uuidDatabaseId    );
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityDatabaseId);
+
+  // free resources
+  String_delete(filterString);
+
+  return result;
+}
+
+Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
+                              IndexId       uuidId,
+                              IndexId       entityId,
+//TODO: remove?
+                              ConstString   jobUUID,
+                              const IndexId indexIds[],
+                              ulong         indexIdCount,
+                              ConstString   name,
+                              ulong         *totalStorageCount,
+                              uint64        *totalStorageSize,
+                              ulong         *totalEntryCount,
+                              uint64        *totalEntrySize
+                             )
+{
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(uuidId);
+UNUSED_VARIABLE(entityId);
+UNUSED_VARIABLE(jobUUID);
+UNUSED_VARIABLE(indexIds);
+UNUSED_VARIABLE(indexIdCount);
+UNUSED_VARIABLE(name);
+UNUSED_VARIABLE(totalStorageCount);
+UNUSED_VARIABLE(totalStorageSize);
+UNUSED_VARIABLE(totalEntryCount);
+UNUSED_VARIABLE(totalEntrySize);
+
+return ERROR_STILL_NOT_IMPLEMENTED;
+}
+
+Errors Index_updateEntityInfos(IndexHandle *indexHandle,
+                               IndexId     entityId
+                              )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return IndexEntity_updateAggregates(indexHandle,Index_getDatabaseId(entityId));
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_ENTITY_UPDATE_INFOS entityId=%lld",
+                                    entityId
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
+                              IndexHandle          *indexHandle,
+                              IndexId              uuidId,
+                              ConstString          jobUUID,
+                              ConstString          scheduleUUID,
+                              ArchiveTypes         archiveType,
+                              IndexStateSet        indexStateSet,
+                              IndexModeSet         indexModeSet,
+                              ConstString          name,
+                              IndexEntitySortModes sortMode,
+                              DatabaseOrdering     ordering,
+                              ulong                offset,
+                              uint64               limit
+                             )
+{
+  String ftsName;
+  String filterString;
+  String string;
+  String orderString;
+  Errors error;
+
+  assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+  assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  // init variables
+  ftsName      = String_new();
+  filterString = String_format(String_new(),"entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  orderString  = String_new();
+
+  // get FTS
+  IndexCommon_getFTSString(ftsName,name);
+
+  // get filters
+  string = String_newCString("1");
+  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  IndexCommon_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+  IndexCommon_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
+  IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
+  String_delete(string);
+
+  // get sort mode, ordering
+  IndexCommon_appendOrdering(orderString,sortMode != INDEX_ENTITY_SORT_MODE_NONE,INDEX_ENTITY_SORT_MODE_COLUMNS[sortMode],ordering);
+
+  #ifdef INDEX_DEBUG_LIST_INFO
+    fprintf(stderr,"%s, %d: Index_initListEntities ------------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
+    fprintf(stderr,"%s, %d: archiveType=%u\n",__FILE__,__LINE__,archiveType);
+    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
+  #endif /* INDEX_DEBUG_LIST_INFO */
+
+  // prepare list
+  IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
+                            &indexHandle->databaseHandle,
+                            DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,UINT64,UINT,STRING,UINT64,UINT,UINT64,BOOL),
+                            stringFormat(sqlCommand,sizeof(sqlCommand),
+                                         "SELECT IFNULL(uuids.id,0), \
+                                                 entities.jobUUID, \
+                                                 entities.id, \
+                                                 entities.scheduleUUID, \
+                                                 UNIX_TIMESTAMP(entities.created), \
+                                                 entities.type, \
+                                                 (SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 0,1), \
+                                                 SUM(storages.size), \
+                                                 SUM(storages.totalEntryCount), \
+                                                 SUM(storages.totalEntrySize), \
+                                                 entities.lockedCount \
+                                          FROM entities \
+                                            LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                            LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %s \
+                                          GROUP BY entities.id \
+                                          %s \
+                                          LIMIT ?,? \
+                                         ",
+                                         String_cString(filterString),
+                                         String_cString(orderString)
+                                        ),
+                            DATABASE_VALUES2
+                            (
+                            ),
+                            DATABASE_FILTERS
+                            (
+                              UINT64(offset),
+                              UINT64(limit)
+                            )
+                           );
+  });
+  if (error != ERROR_NONE)
+  {
+    IndexCommon_doneIndexQueryHandle(indexQueryHandle);
+    String_delete(orderString);
+    String_delete(filterString);
+    String_delete(ftsName);
+    return error;
+  }
+  #ifdef INDEX_DEBUG_LIST_INFO
+    Database_debugPrintQueryInfo(&indexQueryHandle->databaseStatementHandle);
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
+  #endif
+
+  // free resources
+  String_delete(orderString);
+  String_delete(filterString);
+  String_delete(ftsName);
+
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
+
+  return ERROR_NONE;
+}
+
+bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
+                         IndexId          *uuidId,
+                         String           jobUUID,
+                         String           scheduleUUID,
+                         IndexId          *entityId,
+                         ArchiveTypes     *archiveType,
+                         uint64           *createdDateTime,
+                         String           lastErrorMessage,
+                         uint64           *totalSize,
+                         ulong            *totalEntryCount,
+                         uint64           *totalEntrySize,
+                         uint             *lockedCount
+                        )
+{
+  DatabaseId uuidDatabaseId,entityDatatabaseId;
+  double     totalSize_;
+  double     totalEntryCount_;
+  double     totalEntrySize_;
+
+  assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+
+  // check init error
+  if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+  if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
+                           "%lld %S %lld %S %llu %u %S %lf %lf %lf %d",
+                           &uuidDatabaseId,
+                           jobUUID,
+                           &entityDatatabaseId,
+                           scheduleUUID,
+                           createdDateTime,
+                           archiveType,
+                           lastErrorMessage,
+                           &totalSize_,
+                           &totalEntryCount_,
+                           &totalEntrySize_,
+                           lockedCount
+                          )
+     )
+  {
+    return FALSE;
+  }
+  if (uuidId          != NULL) (*uuidId         ) = INDEX_ID_ENTITY(uuidDatabaseId);
+  if (entityId        != NULL) (*entityId       ) = INDEX_ID_ENTITY(entityDatatabaseId);
+  if (totalSize       != NULL) (*totalSize      ) = (uint64)totalSize_;
+  if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
+  if (totalEntrySize  != NULL) (*totalEntrySize ) = (uint64)totalEntrySize_;
+
+  return TRUE;
+}
+
+Errors Index_newEntity(IndexHandle  *indexHandle,
+                       ConstString  jobUUID,
+                       ConstString  scheduleUUID,
+                       ConstString  hostName,
+                       ConstString  userName,
+                       ArchiveTypes archiveType,
+                       uint64       createdDateTime,
+                       bool         locked,
+                       IndexId      *entityId
+                      )
+{
+  Errors     error;
+  DatabaseId uuidId;
+
+  assert(indexHandle != NULL);
+  assert(jobUUID != NULL);
+  assert(entityId != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // create UUID (if it does not exists)
+      error = Database_insert(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "uuids",
+                              DATABASE_FLAG_IGNORE,
+                              DATABASE_VALUES2
+                              (
+                                STRING("jobUUID", jobUUID)
+                              )
+                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // get uuid id
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &uuidId,
+                             "uuids",
+                             "id",
+                             "WHERE jobUUID=%'S \
+                             ",
+                             jobUUID
+                            );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // create entity
+      if (createdDateTime == 0LL) createdDateTime = Misc_getCurrentDateTime();
+      error = Database_insert(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                               KEY   ("uuidId",       uuidId),
+                               STRING("jobUUID",      jobUUID),
+                               STRING("scheduleUUID", scheduleUUID),
+                               STRING("hostName",     hostName),
+                               STRING("userName",     userName),
+                               UINT64("created",      createdDateTime),
+                               UINT  ("type",         archiveType),
+                               UINT  ("lockedCount",  locked ? 1 : 0)
+                              )
+                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    {
+                                      assert(resultMap != NULL);
+
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (StringMap_getInt64 (resultMap,"entityId",entityId,INDEX_ID_NONE))
+                                      {
+                                        return ERROR_NONE;
+                                      }
+                                      else
+                                      {
+                                        return ERROR_EXPECTED_PARAMETER;
+                                      }
+                                    },NULL),
+                                    "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s hostName=%S userName=%S archiveType=%s createdDateTime=%llu locked=%y",
+                                    jobUUID,
+                                    (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
+                                    hostName,
+                                    userName,
+                                    Archive_archiveTypeToString(archiveType),
+                                    createdDateTime,
+                                    locked
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Index_updateEntity(IndexHandle  *indexHandle,
+                          IndexId      entityId,
+                          ConstString  jobUUID,
+                          ConstString  scheduleUUID,
+                          ConstString  hostName,
+                          ConstString  userName,
+                          ArchiveTypes archiveType,
+                          uint64       createdDateTime
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "UPDATE entities \
+                                SET jobUUID=%'S, \
+                                    scheduleUUID=%'S, \
+                                    hostName=%'S, \
+                                    userName=%'S, \
+                                    created=%llu, \
+                                    type=%u \
+                                WHERE id=%lld \
+                               ",
+                               jobUUID,
+                               scheduleUUID,
+                               hostName,
+                               userName,
+                               (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime(),
+                               archiveType,
+                               Index_getDatabaseId(entityId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),
+                                    "INDEX_UPDATE_ENTITY jobUUID=%S scheduleUUID=%s hostName=%'S userName=%'S archiveType=%s createdDateTime=%llu",
+                                    jobUUID,
+                                    (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
+                                    hostName,
+                                    userName,
+                                    Archive_archiveTypeToString(archiveType),
+                                    createdDateTime
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Index_lockEntity(IndexHandle *indexHandle,
+                        IndexId     entityId
+                       )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "UPDATE entities SET lockedCount=lockedCount+1 WHERE id=%lld",
+                             Index_getDatabaseId(entityId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors Index_unlockEntity(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "UPDATE entities SET lockedCount=lockedCount-1 WHERE id=%lld AND lockedCount>0;",
+                             Index_getDatabaseId(entityId)
+                            );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors Index_deleteEntity(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         )
+{
+  Errors        error;
+  DatabaseId    uuidId;
+  Array         storageIds;
+  ArrayIterator arrayIterator;
+  DatabaseId    storageId;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  if (indexHandle->masterIO == NULL)
+  {
+    // init variables
+    Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // get UUID id
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &uuidId,
+                             "entities LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID",
+                             "uuids.id",
+                             "WHERE entities.id=%lld \
+                             ",
+                             Index_getDatabaseId(entityId)
+                            );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // get storages to delete
+      error = Database_getIds(&indexHandle->databaseHandle,
+                              &storageIds,
+                              "storages",
+                              "storages.id",
+                              "LEFT JOIN entities ON entities.id=storages.entityId \
+                               WHERE entities.id=%lld \
+                              ",
+                              Index_getDatabaseId(entityId)
+                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      return ERROR_NONE;
+    });
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      return error;
+    }
+
+    // delete storages
+    if (error == ERROR_NONE)
+    {
+      ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+      {
+        error = Index_deleteStorage(indexHandle,INDEX_ID_STORAGE(storageId));
+      }
+    }
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      return error;
+    }
+
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // set deleted flag
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
+                               "UPDATE entities \
+                                SET deletedFlag=1 \
+                                WHERE id=%lld \
+                               ",
+                               Index_getDatabaseId(entityId)
+                              );
+      if (error == ERROR_NONE)
+      {
+        return error;
+      }
+
+      // prune UUID
+      error = IndexUUID_prune(indexHandle,
+                              NULL,  // doneFlag
+                              NULL,  // deletedCounter
+                              uuidId
+                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      return ERROR_NONE;
+    });
+    if (error != ERROR_NONE)
+    {
+      Array_done(&storageIds);
+      return error;
+    }
+
+    if (error == ERROR_NONE)
+    {
+      // trigger clean-up thread
+      Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+    }
+
+    // free resources
+    Array_done(&storageIds);
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_ENTITY_DELETE entityId=%lld",
+                                    entityId
+                                   );
+  }
+
+  return error;
+}
+
+bool Index_isDeletedEntity(IndexHandle *indexHandle,
+                           IndexId     entityId
+                          )
+{
+  bool deletedFlag;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(deletedFlag,
+              indexHandle,
+    {
+      return !Database_existsValue(&indexHandle->databaseHandle,
+                                   "entities",
+                                   "id",
+                                   "WHERE id=%lld AND deletedFlag!=1",
+                                   Index_getDatabaseId(entityId)
+                                  );
+    });
+  }
+  else
+  {
+    // slave mode: always deleted
+    deletedFlag = TRUE;
+  }
+
+  return deletedFlag;
+}
+
+bool Index_isEmptyEntity(IndexHandle *indexHandle,
+                         IndexId     entityId
+                        )
+{
+  bool emptyFlag;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
+
+  INDEX_DOX(emptyFlag,
+            indexHandle,
+  {
+    return isEmptyEntity(indexHandle,
+                         Index_getDatabaseId(entityId)
+                        );
+  });
+
+  return emptyFlag;
+}
+
+Errors Index_pruneEntity(IndexHandle *indexHandle,
+                         IndexId     indexId
+                        )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
+  assert(Index_getDatabaseId(indexId) != INDEX_DEFAULT_ENTITY_DATABASE_ID);
+
+  // prune storages of entity if not default entity
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return IndexEntity_prune(indexHandle,
+                                     NULL,  // doneFlag
+                                     NULL,  // deletedCounter
+                                     Index_getDatabaseId(indexId)
+                                    );
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_PRUNE_ENTITY entityId=%lld",
+                                    indexId
+                                   );
+  }
+
+  return error;
+}
+
+#ifdef __cplusplus
+  }
+#endif
+
+/* end of file */

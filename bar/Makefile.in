@@ -425,7 +425,14 @@ BAR_SOURCES                 = bar.c \
                               deltasourcelists.c \
                               crypt.c \
                               storage.c \
-                              index.c \
+                              index/index.c \
+                              index/index_uuids.c \
+                              index/index_entities.c \
+                              index/index_entries.c \
+                              index/index_storages.c \
+                              index/index_history.c \
+                              index/index_assign.c \
+                              index/index_common.c \
                               jobs.c \
                               continuous.c \
                               server.c \
