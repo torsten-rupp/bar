@@ -45,7 +45,7 @@
 #include "crypt.h"
 #include "archive.h"
 #include "storage.h"
-#include "index.h"
+#include "index/index.h"
 #include "continuous.h"
 #include "jobs.h"
 #include "server_io.h"

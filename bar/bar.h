@@ -32,7 +32,7 @@
 #include "entrylists.h"
 #include "compress.h"
 #include "crypt.h"
-#include "index.h"
+#include "index/index_common.h"
 #include "jobs.h"
 #include "bar_global.h"
 

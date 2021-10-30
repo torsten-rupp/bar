@@ -38,7 +38,7 @@
 
 #include "sqlite3.h"
 
-#include "index.h"
+#include "index/index.h"
 #include "index_definition.h"
 #include "archive_format_const.h"
 

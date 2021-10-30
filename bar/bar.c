@@ -59,7 +59,7 @@
 #include "archive.h"
 #include "storage.h"
 #include "deltasources.h"
-#include "index.h"
+#include "index/index.h"
 #include "continuous.h"
 #if HAVE_BREAKPAD
   #include "minidump.h"
