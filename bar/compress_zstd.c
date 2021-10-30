@@ -245,7 +245,6 @@ LOCAL Errors CompressZStd_init(CompressInfo       *compressInfo,
                                CompressAlgorithms compressAlgorithm
                               )
 {
-  int    compressionLevel;
   size_t zstdResult;
 
   assert(compressInfo != NULL);
