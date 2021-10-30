@@ -5103,113 +5103,18 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             HALT_INSUFFICIENT_MEMORY();
           }
 
-<<<<<<< HEAD
-            // bind results
-            for (i = 0; i < valueCount; i++)
-            {
-              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  values[i].id = DATABASE_ID_NONE;
-                  bind[i].buffer_type   = MYSQL_TYPE_LONG;
-                  bind[i].buffer        = (char *)&values[i].id;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  values[i].b = FALSE;
-                  bind[i].buffer_type   = MYSQL_TYPE_TINY;
-                  bind[i].buffer        = (char *)&values[i].b;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  values[i].i = 0;
-                  bind[i].buffer_type   = MYSQL_TYPE_LONG;
-                  bind[i].buffer        = (char *)&values[i].i;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  values[i].i64 = 0LL;
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&values[i].i64;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  values[i].d = 0.0;
-                  bind[i].buffer_type   = MYSQL_TYPE_DOUBLE;
-                  bind[i].buffer        = (char *)&values[i].d;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  values[i].dateTime = 0LL;
-                  bind[i].buffer_type   = MYSQL_TYPE_DATETIME;
-                  bind[i].buffer        = (char *)&dateTime[i];
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_STRING:
-                  values[i].text.data   = NULL;
-                  values[i].text.length = 0;
-                  bind[i].buffer_type   = MYSQL_TYPE_STRING;
-                  bind[i].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
-                  bind[i].buffer_length = MAX_TEXT_LENGTH;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = &values[i].text.length;
-                  break;
-                case DATABASE_DATATYPE_CSTRING:
-                  values[i].text.data   = NULL;
-                  values[i].text.length = 0;
-                  bind[i].buffer_type   = MYSQL_TYPE_STRING;
-                  bind[i].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
-                  bind[i].buffer_length = MAX_TEXT_LENGTH;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = &values[i].text.length;
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  values[i].blob.data   = NULL;
-                  values[i].blob.length = 0;
-                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                  break;
-                #ifndef NDEBUG
-                  default:
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    break;
-                #endif /* NDEBUG */
-              }
-            }
-=======
           values = (DatabaseValue*)malloc(valueCount*sizeof(DatabaseValue));
           if (values == NULL)
           {
             HALT_INSUFFICIENT_MEMORY();
           }
->>>>>>> master
 
           // bind results
           for (i = 0; i < valueCount; i++)
           {
-            switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+            switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
             {
-<<<<<<< HEAD
-              if (mysql_stmt_bind_result(statementHandle, bind) != 0)
-              {
-                free(values);
-                free(dateTime);
-                free(bind);
-                mysql_stmt_close(statementHandle);
-                error = ERRORX_(DATABASE_BIND,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
-=======
               case DATABASE_DATATYPE_NONE:
->>>>>>> master
                 break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
@@ -5256,7 +5161,8 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                 bind[i].is_null       = NULL;
                 bind[i].length        = NULL;
                 break;
-              case DATABASE_DATATYPE_TEXT:
+              case DATABASE_DATATYPE_STRING:
+              case DATABASE_DATATYPE_CSTRING:
                 values[i].text.data   = NULL;
                 values[i].text.length = 0;
                 bind[i].buffer_type   = MYSQL_TYPE_STRING;
@@ -5339,35 +5245,8 @@ abort();
               {
                 for (i = 0; i < valueCount; i++)
                 {
-                  switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+                  switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
                   {
-<<<<<<< HEAD
-                    switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
-                    {
-                      case DATABASE_DATATYPE_NONE:
-                        break;
-                      case DATABASE_DATATYPE_PRIMARY_KEY:
-                      case DATABASE_DATATYPE_KEY:
-                        break;
-                      case DATABASE_DATATYPE_BOOL:
-                        break;
-                      case DATABASE_DATATYPE_INT:
-                        break;
-                      case DATABASE_DATATYPE_INT64:
-                        break;
-                      case DATABASE_DATATYPE_DOUBLE:
-                        break;
-                      case DATABASE_DATATYPE_DATETIME:
-                        break;
-                      case DATABASE_DATATYPE_STRING:
-                        String_setBuffer(values[i].string, bind[i].buffer, *bind[i].length);
-                        break;
-                      case DATABASE_DATATYPE_CSTRING:
-                        values[i].text.data = bind[i].buffer;
-                        break;
-                      case DATABASE_DATATYPE_BLOB:
-                        HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-=======
                     case DATABASE_DATATYPE_NONE:
                       break;
                     case DATABASE_DATATYPE_PRIMARY_KEY:
@@ -5383,7 +5262,8 @@ abort();
                       break;
                     case DATABASE_DATATYPE_DATETIME:
                       break;
-                    case DATABASE_DATATYPE_TEXT:
+                    case DATABASE_DATATYPE_STRING:
+                    case DATABASE_DATATYPE_CSTRING:
                       values[i].text.data = bind[i].buffer;
                       break;
                     case DATABASE_DATATYPE_BLOB:
@@ -5392,50 +5272,12 @@ abort();
                     #ifndef NDEBUG
                       default:
                         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
->>>>>>> master
                         break;
                     #endif /* NDEBUG */
                   }
                 }
                 error = databaseRowFunction(values,valueCount,databaseRowUserData);
               }
-<<<<<<< HEAD
-              while (   (mysqlResult == 0)
-                     && (error == ERROR_NONE)
-                    );
-            }
-
-            // free call-back data
-            for (i = 0; i < valueCount; i++)
-            {
-              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  break;
-                case DATABASE_DATATYPE_CSTRING:
-                  free(bind[i].buffer);
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  break;
-                #ifndef NDEBUG
-                  default:
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    break;
-                #endif /* NDEBUG */
-=======
               else if (mysqlResult == 1)
               {
                 error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
@@ -5443,7 +5285,6 @@ abort();
               else if (mysqlResult == MYSQL_DATA_TRUNCATED)
               {
                 error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
->>>>>>> master
               }
             }
             while (   (mysqlResult == 0)
@@ -5454,7 +5295,7 @@ abort();
           // free call-back data
           for (i = 0; i < valueCount; i++)
           {
-            switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_TEXT)
+            switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
             {
               case DATABASE_DATATYPE_NONE:
                 break;
@@ -5471,7 +5312,8 @@ abort();
                 break;
               case DATABASE_DATATYPE_DATETIME:
                 break;
-              case DATABASE_DATATYPE_TEXT:
+              case DATABASE_DATATYPE_STRING:
+              case DATABASE_DATATYPE_CSTRING:
                 free(bind[i].buffer);
                 break;
               case DATABASE_DATATYPE_BLOB:
@@ -5490,31 +5332,7 @@ abort();
           // get number of changes
           if (changedRowCount != NULL)
           {
-<<<<<<< HEAD
-            // query SQL statement
-            mysqlResult = mysql_real_query(databaseHandle->mysql.handle,
-                                           String_cString(sqlString),
-                                           String_length(sqlString)
-                                          );
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-            {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),String_cString(sqlString));
-              break;
-            }
-            else if (mysqlResult != 0)
-            {
-              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),String_cString(sqlString));
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-              break;
-            }
-=======
             (*changedRowCount) += (ulong)mysql_stmt_affected_rows(statementHandle);
->>>>>>> master
           }
 
           // get last insert id
@@ -5765,97 +5583,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         // bind values
         for (i = 0; i < valueCount; i++)
         {
-<<<<<<< HEAD
 // TODO:remove          databaseStatementHandle->values[databaseStatementHandle->valueIndex] = &values[i];
-=======
-          if (databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount)
-          {
-            switch (values[i].type)
-            {
-              case DATABASE_DATATYPE_NONE:
-                break;
-              case DATABASE_DATATYPE_PRIMARY_KEY:
-              case DATABASE_DATATYPE_KEY:
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONG;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].id;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].length        = NULL;
-                break;
-              case DATABASE_DATATYPE_BOOL:
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_TINY;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].b;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].length        = NULL;
-                break;
-              case DATABASE_DATATYPE_INT:
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].i;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].length        = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].error         = NULL;
-                break;
-              case DATABASE_DATATYPE_INT64:
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].i;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].length        = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].error         = NULL;
-                break;
-              case DATABASE_DATATYPE_DOUBLE:
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].d;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].length        = NULL;
-                break;
-              case DATABASE_DATATYPE_DATETIME:
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_DATETIME;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&databaseStatementHandle->mysql.dateTime[databaseStatementHandle->valueIndex];
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].length        = NULL;
-                break;
-              case DATABASE_DATATYPE_TEXT:
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer        = values[i].s;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].buffer_length = stringLength(values[i].s);
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
-                databaseStatementHandle->mysql.bind[databaseStatementHandle->valueIndex].length        = 0;
-                break;
-              case DATABASE_DATATYPE_BLOB:
-                HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                break;
-              default:
-                #ifndef NDEBUG
-                  HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                #endif /* NDEBUG */
-                break;
-            }
-            databaseStatementHandle->valueIndex++;
-          }
-        }
-        if (mysql_stmt_bind_param(databaseStatementHandle->mysql.statementHandle,databaseStatementHandle->mysql.bind) != 0)
-        {
-          error = ERRORX_(DATABASE_CONNECTION_LOST,
-                          mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
-                          "%s",
-                          mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                         );
-          break;
-        }
-      }
-      break;
-    #ifndef NDEBUG
-      default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      break;
-    #endif
-  }
-(void)error;
-(void)done;
-
-  return ERROR_NONE;
-}
->>>>>>> master
-
           switch (values[i].type)
           {
             case DATABASE_DATATYPE_NONE:
@@ -10531,7 +10259,6 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
   return error;
 }
 
-// TODO: comment
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
@@ -10603,229 +10330,9 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
                              );
   }
 
-<<<<<<< HEAD
-=======
-  // finalize statementHandle
-  finalizeStatement(&databaseStatementHandle);
-
   // free resources
-  String_delete(sqlString);
 
   return ERROR_NONE;
-}
-
-Errors Database_update(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       DatabaseValue  values[],
-                       uint           valueCount,
-                       const char     *filter,
-                       DatabaseValue  filterValues[],
-                       uint           filterValueCount
-                      )
-{
-  String                  sqlString;
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors                  error;
-
-  // create SQL string
-  sqlString = String_newCString("UPDATE ");
-  if (IS_SET(flags,DATABASE_FLAG_IGNORE))
-  {
-    switch (Database_getType(databaseHandle))
-    {
-      case DATABASE_TYPE_SQLITE3:
-        String_appendCString(sqlString," OR IGNORE ");
-        break;
-      case DATABASE_TYPE_MYSQL:
-        String_appendCString(sqlString," IGNORE ");
-        break;
-    }
-  }
-
-  String_formatAppend(sqlString,"%s SET ",tableName);
-  for (uint i = 0; i < valueCount; i++)
-  {
-    if (i > 0) String_appendChar(sqlString,',');
-    String_formatAppend(sqlString,"%s=?",values[i].name);
-  }
-  if (filter != NULL)
-  {
-    String_formatAppend(sqlString," WHERE %s",filter);
-  }
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
-
-
-  // prepare statement
-  error = prepareStatement(&databaseStatementHandle,
-                           databaseHandle,
-                           String_cString(sqlString)
-                          );
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
-  }
-
-  // bind values
-  error = bindValues(&databaseStatementHandle,
-                     values,
-                     valueCount
-                    );
-  if (error != ERROR_NONE)
-  {
-    finalizeStatement(&databaseStatementHandle);
-    String_delete(sqlString);
-    return error;
-  }
-  if (filter != NULL)
-  {
-    error = bindValues(&databaseStatementHandle,
-                       filterValues,
-                       filterValueCount
-                      );
-    if (error != ERROR_NONE)
-    {
-      finalizeStatement(&databaseStatementHandle);
-      String_delete(sqlString);
-      return error;
-    }
-  }
-
-  // execute statement
-  error = executeQuery(&databaseStatementHandle,
-                       changedRowCount,
-                       WAIT_FOREVER
-                      );
-  if (error != ERROR_NONE)
-  {
-    finalizeStatement(&databaseStatementHandle);
-    String_delete(sqlString);
-    return error;
-  }
-
-  // finalize statementHandle
-  finalizeStatement(&databaseStatementHandle);
-
-  // free resources
-  String_delete(sqlString);
-
-  return ERROR_NONE;
-}
-
-Errors Database_delete(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       const char     *filter,
-                       DatabaseValue  filterValues[],
-                       uint           filterValueCount
-                      )
-{
-  String                  sqlString;
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors                  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-
-// TODO
-(void)flags;
-
-  // create SQL string
-  sqlString = String_newCString("DELETE FROM ");
-  String_appendCString(sqlString,tableName);
-  if (filter != NULL)
-  {
-    String_formatAppend(sqlString," WHERE %s",filter);
-  }
-
-  // prepare statement
-  error = prepareStatement(&databaseStatementHandle,
-                           databaseHandle,
-                           String_cString(sqlString)
-                          );
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
-  }
-
-  if (filter != NULL)
-  {
-    error = bindValues(&databaseStatementHandle,
-                       filterValues,
-                       filterValueCount
-                      );
-    if (error != ERROR_NONE)
-    {
-      finalizeStatement(&databaseStatementHandle);
-      String_delete(sqlString);
-      return error;
-    }
-  }
-
-  // execute statement
-  error = executeQuery(&databaseStatementHandle,
-                       changedRowCount,
-                       WAIT_FOREVER
-                      );
-
-  // finalize statementHandle
-  finalizeStatement(&databaseStatementHandle);
-
-  // free resources
-  String_delete(sqlString);
-
-  return ERROR_NONE;
-}
-
-#ifdef NDEBUG
-  Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
-                          DatabaseHandle          *databaseHandle,
-                          const DatabaseDataTypes *columnTypes,
-                          uint                    columnTypeCount,
-                          const char              *command,
-                          ...
-                         )
-#else /* not NDEBUG */
-  Errors __Database_prepare(const char              *__fileName__,
-                            ulong                   __lineNb__,
-                            DatabaseStatementHandle *databaseStatementHandle,
-                            DatabaseHandle          *databaseHandle,
-                            const DatabaseDataTypes *columnTypes,
-                            uint                    columnTypeCount,
-                            const char              *command,
-                            ...
-                           )
-#endif /* NDEBUG */
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseStatementHandle != NULL);
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(command != NULL);
-
-  // prepare statement
-  va_start(arguments,command);
-  #ifdef NDEBUG
-    error = vprepareStatement(databaseStatementHandle,databaseHandle,command,arguments);
-  #else /* not NDEBUG */
-    error = __vprepareStatement(__fileName__,__lineNb__,databaseStatementHandle,databaseHandle,command,arguments);
-  #endif /* NDEBUG */
-  va_end(arguments);
-
-  // bind results
-  if (error == ERROR_NONE)
-  {
-    error = bindResults(databaseStatementHandle,columnTypes,columnTypeCount);
-  }
-
->>>>>>> master
-  return error;
 }
 
 bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
