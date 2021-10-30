@@ -2543,6 +2543,7 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
             if (error == ERROR_NONE) error = File_printLine(fileHandle,"");
 
             // init iterator
+            data = NULL;
             if (configValues[index].section.iteratorFunction != NULL)
             {
               if      (configValues[index].offset >= 0)
@@ -2641,6 +2642,10 @@ LOCAL Errors writeConfigFile(FileHandle        *fileHandle,
                                                            configValues[index].section.userData
                                                           );
             }
+          }
+          else
+          {
+            sectionLastValueIndex = index;
           }
 
           // done section
@@ -2855,6 +2860,8 @@ bool ConfigValue_init(const ConfigValue configValues[])
 void ConfigValue_done(const ConfigValue configValues[])
 {
   assert(configValues != NULL);
+
+  UNUSED_VARIABLE(configValues);
 
   List_done(&commentsList,(ListNodeFreeFunction)freeCommentsNode,NULL);
 }
@@ -3485,6 +3492,8 @@ bool ConfigValue_format(ConfigValueFormat *configValueFormat,
   void doneLine(String line)
   {
     assert(line != NULL);
+
+    UNUSED_VARIABLE(line);
   }
 
   ConfigVariable          configVariable;

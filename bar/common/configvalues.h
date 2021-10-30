@@ -673,7 +673,9 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
+#ifndef WERROR
 #warning obsolete
+#endif
 #define xxxCONFIG_VALUE_ENUM(name,variablePointer,offset,value,templateText) \
   { \
     CONFIG_VALUE_TYPE_ENUM,\

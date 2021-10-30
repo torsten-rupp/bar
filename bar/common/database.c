@@ -1401,10 +1401,10 @@ LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
   assert(argv != NULL);
 
   UNUSED_VARIABLE(argc);
+  UNUSED_VARIABLE(argv);
 
   // convert to Unix timestamp
   Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),DATE_TIME_FORMAT_DEFAULT);
-fprintf(stderr,"%s:%d: text\n",__FILE__,__LINE__);
 
   sqlite3_result_text(context,text,stringLength(text),NULL);
 }
@@ -1987,6 +1987,8 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                                               );
         assert(sqliteResult == SQLITE_OK);
 #endif
+
+        UNUSED_VARIABLE(sqliteResult);
       }
       break;
     case DATABASE_TYPE_MYSQL:
@@ -2005,6 +2007,8 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                                     NULL
                                    );
         assert(sqliteResult == SQLITE_OK);
+
+        UNUSED_VARIABLE(sqliteResult);
       }
       break;
     case DATABASE_TYPE_MYSQL:
@@ -3819,6 +3823,8 @@ fprintf(stderr,"%s:%d: value Count=%d\n",__FILE__,__LINE__,databaseStatementHand
 fprintf(stderr,"%s:%d: %d: %s=%s\n",__FILE__,__LINE__,i,DATABASE_DATATYPE_NAMES[databaseStatementHandle->values[i].type],buffer);
 
         }
+#else
+UNUSED_VARIABLE(databaseStatementHandle);
 #endif
 }
 
@@ -4027,11 +4033,11 @@ databaseStatementHandle->values[databaseStatementHandle->valueMap[i]].type
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break;
           }
         }
 
@@ -4118,11 +4124,11 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break;
           }
         }
       }
@@ -4217,11 +4223,11 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break;
           }
         }
 
@@ -4321,7 +4327,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
 
-  n = 0;
+  n      = 0;
+  result = FALSE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -4416,11 +4423,11 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
-              #ifndef NDEBUG
-                default:
+              default:
+                #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  break;
-              #endif /* NDEBUG */
+                #endif /* NDEBUG */
+                break;
             }
           }
 
@@ -4498,11 +4505,11 @@ databaseStatementHandle->mysql.dateTime[i].second
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
-              #ifndef NDEBUG
-                default:
+              default:
+                #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  break;
-              #endif /* NDEBUG */
+                #endif /* NDEBUG */
+                break;
             }
           }
         }
@@ -4579,11 +4586,11 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break;
           }
         }
 
@@ -4683,11 +4690,11 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break;
           }
         }
 
@@ -4739,6 +4746,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
 
+  id = DATABASE_ID_NONE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -4939,11 +4947,11 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                     case DATABASE_DATATYPE_BLOB:
                       HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                       break;
-                    #ifndef NDEBUG
-                      default:
+                    default:
+                      #ifndef NDEBUG
                         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                        break;
-                    #endif /* NDEBUG */
+                      #endif /* NDEBUG */
+                      break;
                   }
                 }
                 error = databaseRowFunction(values,valueCount,databaseRowUserData);
@@ -4975,11 +4983,11 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                   break;
                 case DATABASE_DATATYPE_BLOB:
                   break;
-                #ifndef NDEBUG
-                  default:
+                default:
+                  #ifndef NDEBUG
                     HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    break;
-                #endif /* NDEBUG */
+                  #endif /* NDEBUG */
+                  break;
               }
             }
             free(values);
@@ -5167,11 +5175,11 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                 values[i].blob.length = 0;
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
-              #ifndef NDEBUG
-                default:
+              default:
+                #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  break;
-              #endif /* NDEBUG */
+                #endif /* NDEBUG */
+                break;
             }
           }
 
@@ -5259,11 +5267,11 @@ abort();
                     case DATABASE_DATATYPE_BLOB:
                       HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                       break;
-                    #ifndef NDEBUG
-                      default:
+                    default:
+                      #ifndef NDEBUG
                         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                        break;
-                    #endif /* NDEBUG */
+                      #endif /* NDEBUG */
+                      break;
                   }
                 }
                 error = databaseRowFunction(values,valueCount,databaseRowUserData);
@@ -5307,11 +5315,11 @@ abort();
                 break;
               case DATABASE_DATATYPE_BLOB:
                 break;
-              #ifndef NDEBUG
-                default:
+              default:
+                #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  break;
-              #endif /* NDEBUG */
+                #endif /* NDEBUG */
+                break;
             }
           }
           free(values);
@@ -5331,11 +5339,11 @@ abort();
           mysql_stmt_close(statementHandle);
         }
         break;
-      #ifndef NDEBUG
-        default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif
         break;
-      #endif
     }
 
     #ifndef NDEBUG
@@ -5529,11 +5537,11 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                 break;
-              #ifndef NDEBUG
-                default:
+              default:
+                #ifndef NDEBUG
                   HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  break;
-              #endif /* NDEBUG */
+                #endif /* NDEBUG */
+                break;
             }
             databaseStatementHandle->valueIndex++;
           }
@@ -5620,11 +5628,11 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         }
       }
       break;
-    #ifndef NDEBUG
-      default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif
       break;
-    #endif
   }
 (void)error;
 (void)done;
@@ -5761,11 +5769,11 @@ LOCAL Errors executeQuery(DatabaseStatementHandle *databaseStatementHandle,
           }
         }
         break;
-      #ifndef NDEBUG
-        default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif
         break;
-      #endif
     }
 
     // check result
@@ -10338,6 +10346,8 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert(format != NULL);
 
+  result = FALSE;
+
   DATABASE_DEBUG_TIME_START(databaseStatementHandle);
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
@@ -10576,10 +10586,6 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 
         result = TRUE;
       }
-      else
-      {
-        result = FALSE;
-      }
       break;
     case DATABASE_TYPE_MYSQL:
       if (getNextRow(databaseStatementHandle,0))
@@ -10804,10 +10810,6 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 
         result = TRUE;
       }
-      else
-      {
-        result = FALSE;
-      }
       break;
   }
   DATABASE_DEBUG_TIME_END(databaseStatementHandle);
@@ -10928,6 +10930,7 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
                              assert(values != NULL);
                              assert(valueCount == 1);
 
+                             UNUSED_VARIABLE(values);
                              UNUSED_VARIABLE(valueCount);
                              UNUSED_VARIABLE(userData);
 
