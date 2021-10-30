@@ -36,6 +36,7 @@
 #include "bar.h"
 #include "bar_global.h"
 
+#include "index/index.h"
 #include "index/index_common.h"
 
 #include "index/index_history.h"

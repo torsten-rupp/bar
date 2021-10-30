@@ -44,7 +44,7 @@
 #include "index/index_storages.h"
 #include "index/index_uuids.h"
 
-#include "index.h"
+#include "index/index.h"
 
 /****************** Conditional compilation switches *******************/
 // switch off for debugging only!
@@ -2548,13 +2548,13 @@ LOCAL void indexThreadCode(void)
   do
   {
     error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_KEYS,INDEX_PURGE_TIMEOUT);
-    if ((error != ERROR_NONE) && !quitFlag)
+    if ((error != ERROR_NONE) && !indexQuitFlag)
     {
       Misc_mdelay(1*MS_PER_SECOND);
     }
   }
-  while ((error != ERROR_NONE) && !quitFlag);
-  if (quitFlag)
+  while ((error != ERROR_NONE) && !indexQuitFlag);
+  if (indexQuitFlag)
   {
     if (error == ERROR_NONE) closeIndex(&indexHandle);
     return;
@@ -2606,7 +2606,7 @@ LOCAL void indexThreadCode(void)
     i                   = 0;
     oldDatabaseFileName = String_new();
     oldDatabaseCount    = 0;
-    while (   !quitFlag
+    while (   !indexQuitFlag
            && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
           )
     {
@@ -2672,7 +2672,7 @@ LOCAL void indexThreadCode(void)
 #if 0
   // regular clean-ups
   storageName = String_new();
-  while (!quitFlag)
+  while (!indexQuitFlag)
   {
     #ifdef INDEX_SUPPORT_DELETE
       // remove deleted storages from index if maintenance time
@@ -2685,7 +2685,7 @@ LOCAL void indexThreadCode(void)
           // wait until index is unused
           WAIT_NOT_IN_USEX(5LL*MS_PER_SECOND,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-              || quitFlag
+              || indexQuitFlag
              )
           {
             break;
@@ -2737,7 +2737,7 @@ LOCAL void indexThreadCode(void)
             return error;
           });
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-              || quitFlag
+              || indexQuitFlag
              )
           {
             break;
@@ -2746,7 +2746,7 @@ LOCAL void indexThreadCode(void)
           // wait until index is unused
           WAIT_NOT_IN_USEX(5LL*MS_PER_SECOND,IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime()));
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-              || quitFlag
+              || indexQuitFlag
              )
           {
             break;
@@ -2770,7 +2770,7 @@ LOCAL void indexThreadCode(void)
             }
             while (   (error == ERROR_INTERRUPTED)
                    && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-                   && !quitFlag
+                   && !indexQuitFlag
                   );
 
             // prune entity
@@ -2793,14 +2793,14 @@ LOCAL void indexThreadCode(void)
               }
               while (   (error == ERROR_INTERRUPTED)
                      && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-                     && !quitFlag
+                     && !indexQuitFlag
                     );
             }
           }
         }
         while (   (storageId != DATABASE_ID_NONE)
                && IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-               && !quitFlag
+               && !indexQuitFlag
               );
       }
     #endif /* INDEX_SUPPORT_DELETE */
@@ -2810,7 +2810,7 @@ LOCAL void indexThreadCode(void)
     sleepTime = 10;
     SEMAPHORE_LOCKED_DO(&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      while (   !quitFlag
+      while (   !indexQuitFlag
              && (sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD)
              && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
         )
@@ -3152,7 +3152,7 @@ IndexHandle       indexHandle;
   // init variables
   indexIsMaintenanceTimeFunction = IndexCommon_isMaintenanceTimeFunction;
   indexIsMaintenanceTimeUserData = IndexCommon_isMaintenanceTimeUserData;
-  quitFlag                       = FALSE;
+  indexQuitFlag                  = FALSE;
 
   // get database specifier
   assert(indexDatabaseSpecifier == NULL);
@@ -3400,7 +3400,7 @@ void Index_done(void)
 {
   #ifdef INDEX_INTIIAL_CLEANUP
     // stop threads
-    quitFlag = TRUE;
+    indexQuitFlag = TRUE;
     if (!Thread_join(&indexThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop index thread!");

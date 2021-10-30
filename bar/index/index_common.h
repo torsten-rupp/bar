@@ -8,6 +8,9 @@
 *
 \***********************************************************************/
 
+#ifndef __INDEX_COMMON__
+#define __INDEX_COMMON__
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -36,7 +39,7 @@
 #include "bar.h"
 #include "bar_global.h"
 
-#include "index.h"
+#include "index/index.h"
 
 /****************** Conditional compilation switches *******************/
 // switch off for debugging only!
@@ -195,7 +198,7 @@ extern Thread                     indexThread;    // upgrade/clean-up thread
 extern Semaphore                  indexThreadTrigger;
 extern IndexHandle                *indexThreadIndexHandle;
 extern Semaphore                  indexClearStorageLock;
-extern bool                       quitFlag;
+extern bool                       indexQuitFlag;
 
 /****************************** Macros *********************************/
 
@@ -320,7 +323,7 @@ extern bool                       quitFlag;
   do \
   { \
     while (   IndexCommon_isIndexInUse() \
-           && !quitFlag \
+           && !indexQuitFlag \
           ) \
     { \
       Misc_udelay(time*US_PER_MS); \
@@ -329,7 +332,7 @@ extern bool                       quitFlag;
   while (0)
 
 /***********************************************************************\
-* Name   : WAIT_NOT_IN_USE
+* Name   : WAIT_NOT_IN_USEX
 * Purpose: wait until index is unused
 * Input  : time      - wait delta time [ms]
 *          condition - condition to check
@@ -343,7 +346,7 @@ extern bool                       quitFlag;
   { \
     while (   (condition) \
            && IndexCommon_isIndexInUse() \
-           && !quitFlag \
+           && !indexQuitFlag \
           ) \
     { \
       Misc_udelay(time*US_PER_MS); \
@@ -705,5 +708,7 @@ void IndexCommon_verify(IndexHandle *indexHandle,
 #ifdef __cplusplus
   }
 #endif
+
+#endif /* __INDEX_COMMON__ */
 
 /* end of file */

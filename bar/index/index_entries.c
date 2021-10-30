@@ -36,7 +36,7 @@
 #include "bar.h"
 #include "bar_global.h"
 
-#include "index.h"
+#include "index/index.h"
 #include "index/index_common.h"
 
 #include "index/index_entries.h"
@@ -231,7 +231,7 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
   }
 
   // purge file entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !indexQuitFlag)
   {
     error = purge(indexHandle,
                   doneFlag,
@@ -264,7 +264,7 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
   }
 
   // purge image entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !indexQuitFlag)
   {
     error = purge(indexHandle,
                   doneFlag,
@@ -297,7 +297,7 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
   }
 
   // purge hardlink entries without fragments
-  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !indexQuitFlag)
   {
     error = purge(indexHandle,
                   doneFlag,

@@ -24,8 +24,8 @@
 #include "common/files.h"
 #include "common/filesystems.h"
 #include "errors.h"
-#include "index_definition.h"
 
+#include "index_definition.h"
 #include "storage.h"
 #include "server_io.h"
 

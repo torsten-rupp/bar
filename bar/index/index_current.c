@@ -17,8 +17,9 @@
 #include "common/global.h"
 #include "common/strings.h"
 #include "common/database.h"
+#include "common/dictionaries.h"
 
-#include "errors.h"
+#include "index/index.h"
 #include "index_definition.h"
 
 #include "index.h"
@@ -44,19 +45,19 @@
 /***********************************************************************\
 * Name   : upgradeFromVersion7_importFileEntry
 * Purpose: import file entry
-* Input  : oldIndexHandle,newIndexHandle - index handles
-*          storageIdDictionary           - storage id dictionary
-*          fromEntryId,toEntry           - from/to entry id
+* Input  : oldDatabaseHandle,newDatabaseHandle - database handles
+*          storageIdDictionary                 - storage id dictionary
+*          fromEntryId,toEntry                 - from/to entry id
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion7_importFileEntry(IndexHandle *oldIndexHandle,
-                                                 IndexHandle *newIndexHandle,
-                                                 Dictionary  *storageIdDictionary,
-                                                 DatabaseId  fromEntryId,
-                                                 DatabaseId  toEntryId
+LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHandle,
+                                                 DatabaseHandle *newDatabaseHandle,
+                                                 Dictionary     *storageIdDictionary,
+                                                 DatabaseId     fromEntryId,
+                                                 DatabaseId     toEntryId
                                                 )
 {
   typedef union
@@ -65,35 +66,43 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(IndexHandle *oldIndexHandle,
     DatabaseId *id;
   } ValueData;
 
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
-  int64               size;
-  DatabaseId          fromStorageId;
-  ValueData           valueData;
-  DatabaseId          toStorageId;
-  int64               fragmentOffset;
-  int64               fragmentSize;
+  Errors                  error;
+  DatabaseStatementHandle databaseStatementHandle;
+  int64                   size;
+  DatabaseId              fromStorageId;
+  ValueData               valueData;
+  DatabaseId              toStorageId;
+  int64                   fragmentOffset;
+  int64                   fragmentSize;
 
-  error = Database_prepare(&databaseQueryHandle,
-                          &oldIndexHandle->databaseHandle,
-                          "SELECT fileEntries.size, \
-                                  entryFragments.storageId, \
-                                  entryFragments.offset AS fragmentOffset, \
-                                  entryFragments.size AS fragmentSize \
-                           FROM fileEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
-                           WHERE fileEntries.entryId=%lld \
-                          ",
-                          fromEntryId
+  error = Database_prepare(&databaseStatementHandle,
+                           oldDatabaseHandle,
+                           DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
+                           "SELECT fileEntries.size, \
+                                   entryFragments.storageId, \
+                                   entryFragments.offset AS fragmentOffset, \
+                                   entryFragments.size AS fragmentSize \
+                            FROM fileEntries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
+                            WHERE fileEntries.entryId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             KEY (fromEntryId)
+                           )
                          );
   if (error == ERROR_NONE)
   {
-    if (Database_getNextRow(&databaseQueryHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
+    if (Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
     {
       DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-      error = Database_execute(&newIndexHandle->databaseHandle,
+      error = Database_execute(newDatabaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO fileEntries \
                                   ( \
                                    entryId, \
@@ -128,9 +137,10 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(IndexHandle *oldIndexHandle,
           }
 
           DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
-          error = Database_execute(&newIndexHandle->databaseHandle,
+          error = Database_execute(newDatabaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
@@ -153,11 +163,11 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(IndexHandle *oldIndexHandle,
                                   );
          }
          while (   (error == ERROR_NONE)
-                && Database_getNextRow(&databaseQueryHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
+                && Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
                );
        }
     }
-    Database_finalize(&databaseQueryHandle);
+    Database_finalize(&databaseStatementHandle);
   }
 
   return error;
@@ -174,11 +184,11 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(IndexHandle *oldIndexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
-                                                  IndexHandle *newIndexHandle,
-                                                  Dictionary  *storageIdDictionary,
-                                                  DatabaseId  fromEntryId,
-                                                  DatabaseId  toEntryId
+LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHandle,
+                                                  DatabaseHandle *newDatabaseHandle,
+                                                  Dictionary     *storageIdDictionary,
+                                                  DatabaseId     fromEntryId,
+                                                  DatabaseId     toEntryId
                                                  )
 {
   typedef union
@@ -188,7 +198,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
   } ValueData;
 
   Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseStatementHandle databaseStatementHandle;
   int64               size;
   DatabaseId          fromStorageId;
   ValueData           valueData;
@@ -196,26 +206,34 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
   int64               fragmentOffset;
   int64               fragmentSize;
 
-  error = Database_prepare(&databaseQueryHandle,
-                          &oldIndexHandle->databaseHandle,
-                          "SELECT imageEntries.size, \
-                                  entryFragments.storageId, \
-                                  entryFragments.offset AS fragmentOffset, \
-                                  entryFragments.size AS fragmentSize \
-                           FROM imageEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
-                           WHERE imageEntries.entryId=%lld \
-                          ",
-                          fromEntryId
-                         );
+  error = Database_prepare(&databaseStatementHandle,
+                           oldDatabaseHandle,
+                           DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
+                           "SELECT imageEntries.size, \
+                                   entryFragments.storageId, \
+                                   entryFragments.offset AS fragmentOffset, \
+                                   entryFragments.size AS fragmentSize \
+                            FROM imageEntries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
+                            WHERE imageEntries.entryId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             KEY (fromEntryId)
+                           )
+                          );
   if (error == ERROR_NONE)
   {
-    if (Database_getNextRow(&databaseQueryHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
+    if (Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
     {
       DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-      error = Database_execute(&newIndexHandle->databaseHandle,
+      error = Database_execute(newDatabaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO imageEntries \
                                   ( \
                                    entryId, \
@@ -250,9 +268,10 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
           }
 
           DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
-          error = Database_execute(&newIndexHandle->databaseHandle,
+          error = Database_execute(newDatabaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
@@ -275,11 +294,11 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
                                   );
          }
          while (   (error == ERROR_NONE)
-                && Database_getNextRow(&databaseQueryHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
+                && Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
                );
        }
     }
-    Database_finalize(&databaseQueryHandle);
+    Database_finalize(&databaseStatementHandle);
   }
 
   return error;
@@ -296,11 +315,11 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle,
-                                                     IndexHandle *newIndexHandle,
-                                                     Dictionary  *storageIdDictionary,
-                                                     DatabaseId  fromEntryId,
-                                                     DatabaseId  toEntryId
+LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabaseHandle,
+                                                     DatabaseHandle *newDatabaseHandle,
+                                                     Dictionary     *storageIdDictionary,
+                                                     DatabaseId     fromEntryId,
+                                                     DatabaseId     toEntryId
                                                     )
 {
   typedef union
@@ -310,7 +329,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
   } ValueData;
 
   Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseStatementHandle databaseStatementHandle;
   int64               size;
   DatabaseId          fromStorageId;
   ValueData           valueData;
@@ -318,26 +337,34 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
   int64               fragmentOffset;
   int64               fragmentSize;
 
-  error = Database_prepare(&databaseQueryHandle,
-                          &oldIndexHandle->databaseHandle,
-                          "SELECT hardlinkEntries.size, \
-                                  entryFragments.storageId, \
-                                  entryFragments.offset AS fragmentOffset, \
-                                  entryFragments.size AS fragmentSize \
-                           FROM hardlinkEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
-                           WHERE hardlinkEntries.entryId=%lld \
-                          ",
-                          fromEntryId
-                         );
+  error = Database_prepare(&databaseStatementHandle,
+                           oldDatabaseHandle,
+                           DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
+                           "SELECT hardlinkEntries.size, \
+                                   entryFragments.storageId, \
+                                   entryFragments.offset AS fragmentOffset, \
+                                   entryFragments.size AS fragmentSize \
+                            FROM hardlinkEntries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
+                            WHERE hardlinkEntries.entryId=? \
+                           ",
+                           DATABASE_VALUES2
+                           (
+                           ),
+                           DATABASE_FILTERS
+                           (
+                             KEY (fromEntryId)
+                           )
+                          );
   if (error == ERROR_NONE)
   {
-    if (Database_getNextRow(&databaseQueryHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
+    if (Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
     {
       DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-      error = Database_execute(&newIndexHandle->databaseHandle,
+      error = Database_execute(newDatabaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_COLUMN_TYPES(),
                                "INSERT INTO hardlinkEntries \
                                   ( \
                                    entryId, \
@@ -372,9 +399,10 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
           }
 
           DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
-          error = Database_execute(&newIndexHandle->databaseHandle,
+          error = Database_execute(newDatabaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
+                                   DATABASE_COLUMN_TYPES(),
                                    "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
@@ -397,11 +425,11 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
                                   );
          }
          while (   (error == ERROR_NONE)
-                && Database_getNextRow(&databaseQueryHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
+                && Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
                );
        }
     }
-    Database_finalize(&databaseQueryHandle);
+    Database_finalize(&databaseStatementHandle);
   }
 
   return error;
@@ -419,10 +447,10 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
-                                   uint        uuidCountFactor,
-                                   uint        entityCountFactor,
-                                   uint        storageCountFactor
+LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
+                                   uint           uuidCountFactor,
+                                   uint           entityCountFactor,
+                                   uint           storageCountFactor
                                   )
 {
   ulong  maxSteps;
@@ -440,7 +468,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   maxSteps += 6;
 
   // get max. steps (entities+storages+entries)
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &uuidCount,
                                 "uuids",
                                 "COUNT(id)",
@@ -454,7 +482,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     uuidCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &entityCount,
                                 "entities",
                                 "COUNT(id)",
@@ -468,7 +496,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     entityCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &storageCount,
                                 "storages",
                                 "COUNT(id)",
@@ -482,7 +510,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     storageCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &entriesCount,
                                 "entries",
                                 "COUNT(id)",
@@ -496,7 +524,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     entriesCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &fileEntryCount,
                                 "fileEntries",
                                 "COUNT(id)",
@@ -510,7 +538,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     fileEntryCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &imageEntryCount,
                                 "imageEntries",
                                 "COUNT(id)",
@@ -524,7 +552,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     imageEntryCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &directoryEntryCount,
                                 "directoryEntries",
                                 "COUNT(id)",
@@ -538,7 +566,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     directoryEntryCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &linkEntryCount,
                                 "linkEntries",
                                 "COUNT(id)",
@@ -553,7 +581,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     linkEntryCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &hardlinkEntryCount,
                                 "hardlinkEntries",
                                 "COUNT(id)",
@@ -567,7 +595,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     hardlinkEntryCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &specialEntryCount,
                                 "specialEntries",
                                 "COUNT(id)",
@@ -582,7 +610,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     specialEntryCount = 0LL;
   }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+  error = Database_getInteger64(oldDatabaseHandle,
                                 &entryFragmentsCount,
                                 "entryFragments",
                                 "COUNT(id)",
@@ -596,6 +624,8 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
   {
     entryFragmentsCount = 0LL;
   }
+// TODO:
+#if 0
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -605,6 +635,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
               entriesCount,
               entryFragmentsCount
              );
+#endif
   DIMPORT("import %"PRIu64" entities",         entityCount);
   DIMPORT("import %"PRIu64" storages",         storageCount);
   DIMPORT("import %"PRIu64" entries",          entriesCount);
@@ -622,14 +653,14 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
 /***********************************************************************\
 * Name   : importIndexVersion7
 * Purpose: import index version 7
-* Input  : oldIndexHandle,newIndexHandle - index handle
+* Input  : oldDatabaseHandle,newDatabaseHandle - database handles
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
-                                 IndexHandle *newIndexHandle
+LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
+                                 DatabaseHandle *newDatabaseHandle
                                 )
 {
   typedef union
@@ -650,10 +681,13 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   KeyData            keyData;
   ValueData          valueData;
   String             storageIdsString;
-  IndexId            toEntityId;
+  DatabaseId         toEntityId;
 
   error = ERROR_NONE;
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+// TODO:
+#if 0
   // fix possible broken ids
   fixBrokenIds(oldIndexHandle,"storage");     IndexCommon_progressStep(&importProgressInfo);
   fixBrokenIds(oldIndexHandle,"files");       IndexCommon_progressStep(&importProgressInfo);
@@ -662,10 +696,11 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   fixBrokenIds(oldIndexHandle,"links");       IndexCommon_progressStep(&importProgressInfo);
   fixBrokenIds(oldIndexHandle,"special");     IndexCommon_progressStep(&importProgressInfo);
   DIMPORT("fixed broken ids");
+#endif
 
   // transfer uuids (if not exists, ignore errors)
-  (void)Database_copyTable(&oldIndexHandle->databaseHandle,
-                           &newIndexHandle->databaseHandle,
+  (void)Database_copyTable(oldDatabaseHandle,
+                           newDatabaseHandle,
                            "uuids",
                            "uuids",
                            FALSE,  // transaction flag
@@ -673,7 +708,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(IndexCommon_progressStep,&importProgressInfo),  // progress
+                           CALLBACK_(progressStep,&importProgressInfo),  // progress
                            NULL  // filter
                           );
   DIMPORT("imported UUIDs");
@@ -682,17 +717,23 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   duration = 0LL;
   Dictionary_init(&storageIdDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   storageIdsString = String_new();
-  error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                             &newIndexHandle->databaseHandle,
+  error = Database_copyTable(oldDatabaseHandle,
+                             newDatabaseHandle,
                              "entities",
                              "entities",
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                     DatabaseColumns *toColumns,
+                                                     void            *userData
+                                                    ),
                              {
-                               UNUSED_VARIABLE(fromColumnList);
-                               UNUSED_VARIABLE(toColumnList);
+                               assert(fromColumns != NULL);
+                               assert(toColumns != NULL);
+
+                               UNUSED_VARIABLE(fromColumns);
+                               UNUSED_VARIABLE(toColumns);
                                UNUSED_VARIABLE(userData);
 
                                // currently nothing special to do
@@ -700,7 +741,10 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storages, entries
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                     DatabaseColumns *toColumns,
+                                                     void            *userData
+                                                    ),
                              {
                                DatabaseId fromStorageId;
                                DatabaseId toStorageId;
@@ -710,44 +754,59 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                uint64     t1;
                                Errors     error;
 
-                               UNUSED_VARIABLE(toColumnList);
+                               assert(fromColumns != NULL);
+                               assert(toColumns != NULL);
+
                                UNUSED_VARIABLE(userData);
 
-                               fromEntityId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                               fromEntityId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
                                assert(fromEntityId != DATABASE_ID_NONE);
-                               toEntityId = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
+                               toEntityId = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                assert(toEntityId != DATABASE_ID_NONE);
+fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,fromEntityId,toEntityId);
 
                                // transfer storages of entity
                                t0 = Misc_getTimestamp();
-                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                          &newIndexHandle->databaseHandle,
+                               error = Database_copyTable(oldDatabaseHandle,
+                                                          newDatabaseHandle,
                                                           "storages",
                                                           "storages",
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                  DatabaseColumns *toColumns,
+                                                                                  void            *userData
+                                                                                 ),
                                                           {
-                                                            UNUSED_VARIABLE(fromColumnList);
-                                                            UNUSED_VARIABLE(toColumnList);
+                                                            assert(fromColumns != NULL);
+                                                            assert(toColumns != NULL);
+
+                                                            UNUSED_VARIABLE(fromColumns);
+                                                            UNUSED_VARIABLE(toColumns);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           // post: get from/to storage ids
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                  DatabaseColumns *toColumns,
+                                                                                  void            *userData
+                                                                                 ),
                                                           {
+                                                            assert(fromColumns != NULL);
+                                                            assert(toColumns != NULL);
+
                                                             UNUSED_VARIABLE(userData);
 
-                                                            fromStorageId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            fromStorageId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
                                                             assert(fromStorageId != DATABASE_ID_NONE);
-                                                            toStorageId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
+                                                            toStorageId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
-                                                            DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
+                                                            DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumns,"name",NULL));
                                                             Dictionary_add(&storageIdDictionary,
                                                                            &fromStorageId,
                                                                            sizeof(DatabaseId),
@@ -758,7 +817,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(IndexCommon_progressStep,NULL),
+                                                          CALLBACK_(progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -784,77 +843,96 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                Dictionary_doneIterator(&dictionaryIterator);
 
                                // transfer entries of entity
-                               DIMPORT("import entity %ld -> %ld: jobUUID=%s, storages=%s",fromEntityId,toEntityId,Database_getTableColumnListCString(fromColumnList,"jobUUID",NULL),String_cString(storageIdsString));
+                               DIMPORT("import entity %ld -> %ld: jobUUID=%s, storages=%s",fromEntityId,toEntityId,Database_getTableColumnCString(fromColumns,"jobUUID",NULL),String_cString(storageIdsString));
                                t0 = Misc_getTimestamp();
-                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                          &newIndexHandle->databaseHandle,
+                               error = Database_copyTable(oldDatabaseHandle,
+                                                          newDatabaseHandle,
                                                           "entries",
                                                           "entries",
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer entry
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                  DatabaseColumns *toColumns,
+                                                                                  void            *userData
+                                                                                 ),
                                                           {
-                                                            UNUSED_VARIABLE(fromColumnList);
+                                                            assert(fromColumns != NULL);
+                                                            assert(toColumns != NULL);
+
+                                                            UNUSED_VARIABLE(fromColumns);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           // post: transfer files, images, directories, links, special entries
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                  DatabaseColumns *toColumns,
+                                                                                  void            *userData
+                                                                                 ),
                                                           {
                                                             DatabaseId fromEntryId;
                                                             IndexTypes type;
                                                             DatabaseId toEntryId;
 
-                                                            UNUSED_VARIABLE(userData);
-                                                            UNUSED_VARIABLE(toColumnList);
+                                                            assert(fromColumns != NULL);
+                                                            assert(toColumns != NULL);
 
-                                                            fromEntryId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            UNUSED_VARIABLE(toColumns);
+                                                            UNUSED_VARIABLE(userData);
+
+                                                            fromEntryId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
-                                                            type = Database_getTableColumnListId(fromColumnList,"type",INDEX_TYPE_NONE);
-                                                            toEntryId = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
+                                                            type = Database_getTableColumnId(fromColumns,"type",INDEX_TYPE_NONE);
+                                                            toEntryId = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
+                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumns,"name",NULL));
+#if 1
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
-                                                                error = upgradeFromVersion7_importFileEntry(oldIndexHandle,
-                                                                                                            newIndexHandle,
+                                                                error = upgradeFromVersion7_importFileEntry(oldDatabaseHandle,
+                                                                                                            newDatabaseHandle,
                                                                                                             &storageIdDictionary,
                                                                                                             fromEntryId,
                                                                                                             toEntryId
                                                                                                            );
                                                                 break;
                                                               case INDEX_TYPE_IMAGE:
-                                                                error = upgradeFromVersion7_importImageEntry(oldIndexHandle,
-                                                                                                             newIndexHandle,
+                                                                error = upgradeFromVersion7_importImageEntry(oldDatabaseHandle,
+                                                                                                             newDatabaseHandle,
                                                                                                              &storageIdDictionary,
                                                                                                              fromEntryId,
                                                                                                              toEntryId
                                                                                                             );
                                                                 break;
                                                               case INDEX_TYPE_DIRECTORY:
-                                                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                           &newIndexHandle->databaseHandle,
+                                                                error = Database_copyTable(oldDatabaseHandle,
+                                                                                           newDatabaseHandle,
                                                                                            "directoryEntries",
                                                                                            "directoryEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                                                   DatabaseColumns *toColumns,
+                                                                                                                   void            *userData
+                                                                                                                  ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             UNUSED_VARIABLE(fromColumnList);
+                                                                                             assert(fromColumns != NULL);
+                                                                                             assert(toColumns != NULL);
+
+                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -871,8 +949,8 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -884,21 +962,27 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                           );
                                                                 break;
                                                               case INDEX_TYPE_LINK:
-                                                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                           &newIndexHandle->databaseHandle,
+                                                                error = Database_copyTable(oldDatabaseHandle,
+                                                                                           newDatabaseHandle,
                                                                                            "linkEntries",
                                                                                            "linkEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                                                   DatabaseColumns *toColumns,
+                                                                                                                   void            *userData
+                                                                                                                  ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             UNUSED_VARIABLE(fromColumnList);
+                                                                                             assert(fromColumns != NULL);
+                                                                                             assert(toColumns != NULL);
+
+                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -915,8 +999,8 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -928,29 +1012,36 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                           );
                                                                 break;
                                                               case INDEX_TYPE_HARDLINK:
-                                                                error = upgradeFromVersion7_importHardlinkEntry(oldIndexHandle,
-                                                                                                                newIndexHandle,
+                                                                error = upgradeFromVersion7_importHardlinkEntry(oldDatabaseHandle,
+                                                                                                                newDatabaseHandle,
                                                                                                                 &storageIdDictionary,
                                                                                                                 fromEntryId,
                                                                                                                 toEntryId
                                                                                                                );
                                                                 break;
                                                               case INDEX_TYPE_SPECIAL:
-                                                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                           &newIndexHandle->databaseHandle,
+                                                                error = Database_copyTable(oldDatabaseHandle,
+                                                                                           newDatabaseHandle,
                                                                                            "specialEntries",
                                                                                            "specialEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                                                   DatabaseColumns *toColumns,
+                                                                                                                   void            *userData
+                                                                                                                  ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             UNUSED_VARIABLE(fromColumnList);
+                                                                                             assert(fromColumns != NULL);
+                                                                                             assert(toColumns != NULL);
+
+                                                                                             UNUSED_VARIABLE(fromColumns);
+                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -967,8 +1058,8 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -985,11 +1076,14 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
+#else
+error = ERROR_NONE;
+#endif
 
-                                                            return ERROR_NONE;
+                                                            return error;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(IndexCommon_progressStep,NULL),
+                                                          CALLBACK_(progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -1001,14 +1095,14 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
 
                                logImportProgress("Imported entity #%"PRIi64": '%s' (%llus)",
                                                  toEntityId,
-                                                 Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
+                                                 Database_getTableColumnCString(fromColumns,"jobUUID",""),
                                                  (t1-t0)/US_PER_SECOND
                                                 );
 
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
-                             CALLBACK_(IndexCommon_progressStep,NULL),
+                             CALLBACK_(progressStep,NULL),
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
@@ -1019,77 +1113,39 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   }
 
   // transfer storages and entries without entity
-  error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                             &newIndexHandle->databaseHandle,
+  error = Database_copyTable(oldDatabaseHandle,
+                             newDatabaseHandle,
                              "storages",
                              "storages",
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer storage and create entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                     DatabaseColumns *toColumns,
+                                                     void            *userData
+                                                    ),
                              {
-                               Errors       error;
-                               StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+                               Errors error;
 
-                               UNUSED_VARIABLE(fromColumnList);
+                               assert(fromColumns != NULL);
+                               assert(toColumns != NULL);
+
                                UNUSED_VARIABLE(userData);
 
-                               if (   Index_findStorageById(oldIndexHandle,
-                                                            INDEX_ID_STORAGE(Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE)),
-                                                            jobUUID,
-                                                            NULL,  // scheduleUUDI
-                                                            NULL,  // uuidId
-                                                            NULL,  // entityId
-                                                            NULL,  // storageName
-                                                            NULL,  // createdDateTime
-                                                            NULL,  // size
-                                                            NULL,  // indexState
-                                                            NULL,  // indexMode
-                                                            NULL,  // lastCheckedDateTime
-                                                            NULL,  // errorMessage
-                                                            NULL,  // totalEntryCount
-                                                            NULL  // totalEntrySize
-                                                           )
-                                   && Index_findEntity(newIndexHandle,
-                                                       INDEX_ID_NONE,
-                                                       jobUUID,
-                                                       NULL,  // scheduleUUID
-                                                       NULL,  // hostName
-                                                       ARCHIVE_TYPE_NONE,
-                                                       0LL,  // createdDateTime
-                                                       NULL,  // jobUUID
-                                                       NULL,  // scheduleUUID
-                                                       NULL,  // uuidId
-                                                       &toEntityId,
-                                                       NULL,  // createdDateTime
-                                                       NULL,  // archiveType
-                                                       NULL,  // lastErrorMessage
-                                                       NULL,  // totalEntryCount
-                                                       NULL  // totalEntrySize,
-                                                      )
-                                  )
-                               {
-                                 error = ERROR_NONE;
-                               }
-                               else
-                               {
-                                 error = Index_newEntity(newIndexHandle,
-                                                         Misc_getUUID(jobUUID),
-                                                         NULL,  // scheduleUUID
-                                                         NULL,  // hostName
-                                                         NULL,  // userName
-                                                         ARCHIVE_TYPE_FULL,
-                                                         0LL,  // createdDateTime
-                                                         TRUE,  // locked
-                                                         &toEntityId
-                                                        );
-                               }
-                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(toEntityId));
+                               error = initEntity(oldDatabaseHandle,
+                                                  newDatabaseHandle,
+                                                  Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE),
+                                                  &toEntityId
+                                                 );
+                               (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                return error;
                              },NULL),
                              // post: copy files, images, directories, links, special entries
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                     DatabaseColumns *toColumns,
+                                                     void            *userData
+                                                    ),
                              {
                                DatabaseId fromStorageId;
                                DatabaseId toStorageId;
@@ -1097,81 +1153,106 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                uint64     t1;
                                Errors     error;
 
+                               assert(fromColumns != NULL);
+                               assert(toColumns != NULL);
+
                                UNUSED_VARIABLE(userData);
 
-                               fromStorageId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                               fromStorageId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
                                assert(fromStorageId != DATABASE_ID_NONE);
-                               toStorageId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
+                               toStorageId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                assert(toStorageId != DATABASE_ID_NONE);
 
+#if 1
                                t0 = Misc_getTimestamp();
-                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                          &newIndexHandle->databaseHandle,
+                               error = Database_copyTable(oldDatabaseHandle,
+                                                          newDatabaseHandle,
                                                           "entries",
                                                           "entries",
                                                           TRUE,  // transaction flag
                                                           &duration,
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                  DatabaseColumns *toColumns,
+                                                                                  void            *userData
+                                                                                 ),
                                                           {
-                                                            UNUSED_VARIABLE(fromColumnList);
+                                                            assert(fromColumns != NULL);
+                                                            assert(toColumns != NULL);
+
+                                                            UNUSED_VARIABLE(fromColumns);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(toEntityId));
+                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                  DatabaseColumns *toColumns,
+                                                                                  void            *userData
+                                                                                 ),
                                                           {
                                                             Errors     error;
                                                             DatabaseId fromEntryId;
-                                                            IndexTypes type;
+//                                                            IndexTypes type;
                                                             DatabaseId toEntryId;
+
+                                                            assert(fromColumns != NULL);
+                                                            assert(toColumns != NULL);
 
                                                             UNUSED_VARIABLE(userData);
 
-                                                            fromEntryId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                                                            fromEntryId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
-                                                            type = Database_getTableColumnListId(fromColumnList,"type",INDEX_TYPE_NONE);
-                                                            toEntryId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
+//                                                            type = Database_getTableColumnId(fromColumns,"type",INDEX_TYPE_NONE);
+                                                            toEntryId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
+                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumns,"name",NULL));
+// TODO:
+#if 0
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
-                                                                error = upgradeFromVersion7_importFileEntry(oldIndexHandle,
-                                                                                                            newIndexHandle,
+                                                                error = upgradeFromVersion7_importFileEntry(oldDatabaseHandle,
+                                                                                                            newDatabaseHandle,
                                                                                                             &storageIdDictionary,
                                                                                                             fromEntryId,
                                                                                                             toEntryId
                                                                                                            );
                                                                 break;
                                                               case INDEX_TYPE_IMAGE:
-                                                                error = upgradeFromVersion7_importImageEntry(oldIndexHandle,
-                                                                                                             newIndexHandle,
+                                                                error = upgradeFromVersion7_importImageEntry(oldDatabaseHandle,
+                                                                                                             newDatabaseHandle,
                                                                                                              &storageIdDictionary,
                                                                                                              fromEntryId,
                                                                                                              toEntryId
                                                                                                             );
                                                                 break;
                                                               case INDEX_TYPE_DIRECTORY:
-                                                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                           &newIndexHandle->databaseHandle,
+                                                                error = Database_copyTable(oldDatabaseHandle,
+                                                                                           newDatabaseHandle,
                                                                                            "directoryEntries",
                                                                                            "directoryEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                                                   DatabaseColumns *toColumns,
+                                                                                                                   void            *userData
+                                                                                                                  ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             UNUSED_VARIABLE(fromColumnList);
+                                                                                             assert(fromColumns != NULL);
+                                                                                             assert(toColumns != NULL);
+
+                                                                                             UNUSED_VARIABLE(fromColumns);
+                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -1188,8 +1269,8 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1201,21 +1282,28 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                           );
                                                                 break;
                                                               case INDEX_TYPE_LINK:
-                                                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                           &newIndexHandle->databaseHandle,
+                                                                error = Database_copyTable(oldDatabaseHandle,
+                                                                                           newDatabaseHandle,
                                                                                            "linkEntries",
                                                                                            "linkEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                                                   DatabaseColumns *toColumns,
+                                                                                                                   void            *userData
+                                                                                                                  ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             UNUSED_VARIABLE(fromColumnList);
+                                                                                             assert(fromColumns != NULL);
+                                                                                             assert(toColumns != NULL);
+
+                                                                                             UNUSED_VARIABLE(fromColumns);
+                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -1232,8 +1320,8 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1245,29 +1333,35 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                           );
                                                                 break;
                                                               case INDEX_TYPE_HARDLINK:
-                                                                error = upgradeFromVersion7_importHardlinkEntry(oldIndexHandle,
-                                                                                                                newIndexHandle,
+                                                                error = upgradeFromVersion7_importHardlinkEntry(oldDatabaseHandle,
+                                                                                                                newDatabaseHandle,
                                                                                                                 &storageIdDictionary,
                                                                                                                 fromEntryId,
                                                                                                                 toEntryId
                                                                                                                );
                                                                 break;
                                                               case INDEX_TYPE_SPECIAL:
-                                                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
-                                                                                           &newIndexHandle->databaseHandle,
+                                                                error = Database_copyTable(oldDatabaseHandle,
+                                                                                           newDatabaseHandle,
                                                                                            "specialEntries",
                                                                                            "specialEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
+                                                                                                                   DatabaseColumns *toColumns,
+                                                                                                                   void            *userData
+                                                                                                                  ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             UNUSED_VARIABLE(fromColumnList);
+                                                                                             assert(fromColumns != NULL);
+                                                                                             assert(toColumns != NULL);
+
+                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -1284,8 +1378,8 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1302,7 +1396,9 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
-
+#else
+error = ERROR_NONE;
+#endif
                                                             return error;
                                                           },NULL),
                                                           CALLBACK_(NULL,NULL),  // pause
@@ -1310,23 +1406,24 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                           "WHERE storageId=%lld",
                                                           fromStorageId
                                                          );
-                               (void)Index_unlockEntity(newIndexHandle,toEntityId);
+                               (void)unlockEntity(newDatabaseHandle,toEntityId);
                                if (error != ERROR_NONE)
                                {
                                  return error;
                                }
                                t1 = Misc_getTimestamp();
+#endif
 
                                logImportProgress("Imported storage #%"PRIi64": '%s' (%llus)",
                                                  toStorageId,
-                                                 Database_getTableColumnListCString(fromColumnList,"name",""),
+                                                 Database_getTableColumnCString(fromColumns,"name",""),
                                                  (t1-t0)/US_PER_SECOND
                                                 );
 
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(NULL,NULL),  // pause
-                             CALLBACK_(IndexCommon_progressStep,NULL),
+                             CALLBACK_(progressStep,NULL),
                              "WHERE entityId IS NULL"
                             );
   String_delete(storageIdsString);
@@ -1338,7 +1435,6 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
 
   return error;
 }
-
 
 #ifdef __cplusplus
   }

@@ -38,13 +38,13 @@
 #include "bar.h"
 #include "bar_global.h"
 
-#include "index/index_common.h"
+#include "index/index.h"
 #include "index/index_entities.h"
 #include "index/index_entries.h"
 #include "index/index_storages.h"
 #include "index/index_uuids.h"
 
-#include "index.h"
+#include "index/index_common.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -64,7 +64,7 @@ Thread                     indexThread;    // upgrade/clean-up thread
 Semaphore                  indexThreadTrigger;
 IndexHandle                *indexThreadIndexHandle;
 Semaphore                  indexClearStorageLock;
-bool                       quitFlag;
+bool                       indexQuitFlag;
 
 /****************************** Macros *********************************/
 
@@ -110,7 +110,7 @@ void IndexCommon_indexThreadInterrupt(void)
 {
   if (   indexInitializedFlag
       && !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-      && !quitFlag
+      && !indexQuitFlag
      )
   {
     assert(indexThreadIndexHandle != NULL);
@@ -336,7 +336,7 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
 
     // wait until index is unused
     WAIT_NOT_IN_USE(time);
-    if (quitFlag)
+    if (indexQuitFlag)
     {
       return ERROR_INTERRUPTED;
     }
