@@ -708,7 +708,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(IndexCommon_progressStep,&importProgressInfo),  // progress
+                           CALLBACK_(progressStep,&importProgressInfo),  // progress
                            NULL  // filter
                           );
   DIMPORT("imported UUIDs");
@@ -817,7 +817,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(IndexCommon_progressStep,NULL),
+                                                          CALLBACK_(progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -1083,7 +1083,7 @@ error = ERROR_NONE;
                                                             return error;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(IndexCommon_progressStep,NULL),
+                                                          CALLBACK_(progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -1102,7 +1102,7 @@ error = ERROR_NONE;
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
-                             CALLBACK_(IndexCommon_progressStep,NULL),
+                             CALLBACK_(progressStep,NULL),
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
@@ -1423,7 +1423,7 @@ error = ERROR_NONE;
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(NULL,NULL),  // pause
-                             CALLBACK_(IndexCommon_progressStep,NULL),
+                             CALLBACK_(progressStep,NULL),
                              "WHERE entityId IS NULL"
                             );
   String_delete(storageIdsString);
