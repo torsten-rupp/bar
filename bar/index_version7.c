@@ -8,8 +8,6 @@
 *
 \***********************************************************************/
 
-#define __INDEX_IMPLEMENTATION__
-
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -657,12 +655,12 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   error = ERROR_NONE;
 
   // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storage");     progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"files");       progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"images");      progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"directories"); progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"links");       progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"special");     progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"storage");     IndexCommon_progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"files");       IndexCommon_progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"images");      IndexCommon_progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"directories"); IndexCommon_progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"links");       IndexCommon_progressStep(&importProgressInfo);
+  fixBrokenIds(oldIndexHandle,"special");     IndexCommon_progressStep(&importProgressInfo);
   DIMPORT("fixed broken ids");
 
   // transfer uuids (if not exists, ignore errors)
@@ -675,7 +673,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(progressStep,&importProgressInfo),  // progress
+                           CALLBACK_(IndexCommon_progressStep,&importProgressInfo),  // progress
                            NULL  // filter
                           );
   DIMPORT("imported UUIDs");
@@ -760,7 +758,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(progressStep,NULL),
+                                                          CALLBACK_(IndexCommon_progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -991,7 +989,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
-                                                          CALLBACK_(progressStep,NULL),
+                                                          CALLBACK_(IndexCommon_progressStep,NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -1010,7 +1008,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
-                             CALLBACK_(progressStep,NULL),
+                             CALLBACK_(IndexCommon_progressStep,NULL),
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
@@ -1328,7 +1326,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              CALLBACK_(NULL,NULL),  // pause
-                             CALLBACK_(progressStep,NULL),
+                             CALLBACK_(IndexCommon_progressStep,NULL),
                              "WHERE entityId IS NULL"
                             );
   String_delete(storageIdsString);
