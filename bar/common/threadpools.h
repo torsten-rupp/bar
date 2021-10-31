@@ -203,8 +203,6 @@ INLINE uint ThreadPool_idleCount(ThreadPool *threadPool);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 INLINE uint ThreadPool_idleCount(ThreadPool *threadPool)
 {
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
 
@@ -227,8 +225,6 @@ INLINE uint ThreadPool_runningCount(ThreadPool *threadPool);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 INLINE uint ThreadPool_runningCount(ThreadPool *threadPool)
 {
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
 

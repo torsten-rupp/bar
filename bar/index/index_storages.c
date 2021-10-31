@@ -2570,6 +2570,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                                 assert(valueCount == 2);
 
                                 UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(valueCount);
 
                                 entryNode->newest.entryId         = values[0].id;
                                 entryNode->newest.timeLastChanged = values[1].dateTime;
@@ -2846,6 +2847,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                   assert(valueCount == 9);
 
                                   UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(valueCount);
 
                                   entryNode->newest.entryId         = values[0].id;
                                   entryNode->newest.uuidId          = values[1].id;
@@ -3136,6 +3138,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             assert(valueCount == 2);
 
                             UNUSED_VARIABLE(userData);
+                            UNUSED_VARIABLE(valueCount);
 
                             totalFileCount = values[0].u;
                             totalFileSize_ = values[1].u64;
@@ -3214,6 +3217,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             assert(valueCount == 2);
 
                             UNUSED_VARIABLE(userData);
+                            UNUSED_VARIABLE(valueCount);
 
                             totalImageCount = values[0].u;
                             totalImageSize_ = values[1].u64;

@@ -1553,6 +1553,10 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
           return ERRORX_(FILE_EXISTS_,0,"%s",String_cString(fileName));
         }
         break;
+      case ARCHIVE_FILE_MODE_RENAME:
+// TODO:
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        break;
       case ARCHIVE_FILE_MODE_APPEND:
         // not supported - ignored
         break;

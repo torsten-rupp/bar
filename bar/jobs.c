@@ -2284,8 +2284,6 @@ Errors Job_rereadAll(ConstString jobsDirectory)
 
 Errors Job_write(JobNode *jobNode)
 {
-// TODO:remove
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 #if 0
   StringList            jobLinesList;
   String                line;

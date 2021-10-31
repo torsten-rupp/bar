@@ -543,10 +543,10 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createParentDirectory(const RestoreInfo *restoreInfo,
-                                   ConstString       fileName,
-                                   uint32            userId,
-                                   uint32            groupId
+LOCAL Errors createParentDirectory(RestoreInfo  *restoreInfo,
+                                   ConstString  fileName,
+                                   uint32       userId,
+                                   uint32       groupId
                                   )
 {
   String parentDirectoryName;
@@ -1221,7 +1221,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   FileHandle       fileHandle;
   uint64           block;
   ulong            bufferBlockCount;
-  bool             isComplete;
   char             sizeString[32];
   char             fragmentString[256];
 
@@ -2304,7 +2303,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   uint                      n;
   const StringNode          *stringNode;
   String                    fileName;
-              FileInfo                  localFileInfo;
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;

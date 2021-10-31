@@ -1115,6 +1115,8 @@ LOCAL void initCertificate(Certificate *certificate)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: no used
+#ifndef WERROR
 LOCAL bool duplicateCertificate(Certificate *toCertificate, const Certificate *fromCertificate)
 {
   void *data;
@@ -1136,6 +1138,7 @@ LOCAL bool duplicateCertificate(Certificate *toCertificate, const Certificate *f
 
   return TRUE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : doneCertificate
@@ -1166,6 +1169,8 @@ LOCAL void doneCertificate(Certificate *certificate)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: no used
+#ifndef WERROR
 LOCAL void clearCertificate(Certificate *certificate)
 {
   assert(certificate != NULL);
@@ -1175,6 +1180,7 @@ LOCAL void clearCertificate(Certificate *certificate)
   certificate->data   = NULL;
   certificate->length = 0;
 }
+#endif
 
 /***********************************************************************\
 * Name   : setCertificate
@@ -1187,6 +1193,8 @@ LOCAL void clearCertificate(Certificate *certificate)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: no used
+#ifndef WERROR
 LOCAL bool setCertificate(Certificate *certificate, const void *certificateData, uint certificateLength)
 {
   void *data;
@@ -1208,6 +1216,7 @@ LOCAL bool setCertificate(Certificate *certificate, const void *certificateData,
 
   return TRUE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : setCertificateString
@@ -1219,10 +1228,13 @@ LOCAL bool setCertificate(Certificate *certificate, const void *certificateData,
 * Notes  : -
 \***********************************************************************/
 
+// TODO: no used
+#ifndef WERROR
 LOCAL bool setCertificateString(Certificate *certificate, ConstString string)
 {
   return setCertificate(certificate,String_cString(string),String_length(string));
 }
+#endif
 
 /***********************************************************************\
 * Name   : initHash
@@ -6348,6 +6360,8 @@ LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations ope
   return TRUE;
 }
 
+// TODO: no used
+#ifndef WERROR
 LOCAL bool configValuePublicPrivateKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   CryptKey *cryptKey = (CryptKey*)variable;
@@ -6421,6 +6435,7 @@ LOCAL bool configValuePublicPrivateKeyParse(void *userData, void *variable, cons
 
   return TRUE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : configValueHashDataParse

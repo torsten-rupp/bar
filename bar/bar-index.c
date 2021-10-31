@@ -973,7 +973,7 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
                          );
 }
 
-#include "index_current.c"
+#include "index/index_current.c"
 
 /***********************************************************************\
 * Name   : importIntoDatabase
