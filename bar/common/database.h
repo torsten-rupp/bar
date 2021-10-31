@@ -37,7 +37,9 @@
 #define _DATABASE_LOCK_PER_INSTANCE   // if defined use lock per database instance, otherwise a global lock for all database is used
 
 // switch on for debugging only!
+#ifndef WERROR
 #warning remove/revert
+#endif
 #define DATABASE_DEBUG_LOCK
 #define _DATABASE_DEBUG_LOCK_PRINT
 #define _DATABASE_DEBUG_TIMEOUT
@@ -670,12 +672,18 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_COLUMN_NAME_TYPE_KEY(name)     { name, DATABASE_DATATYPE_KEY     }
 #define DATABASE_COLUMN_NAME_TYPE_BOOL(name)    { name, DATABASE_DATATYPE_BOOL    }
 #define DATABASE_COLUMN_NAME_TYPE_INT(name)     { name, DATABASE_DATATYPE_INT     }
+#define DATABASE_COLUMN_NAME_TYPE_INT64(name)   { name, DATABASE_DATATYPE_INT64   }
+#define DATABASE_COLUMN_NAME_TYPE_UINT(name)    { name, DATABASE_DATATYPE_UINT    }
+#define DATABASE_COLUMN_NAME_TYPE_UINT64(name)  { name, DATABASE_DATATYPE_UINT64  }
 #define DATABASE_COLUMN_NAME_TYPE_STRING(name)  { name, DATABASE_DATATYPE_STRING  }
 #define DATABASE_COLUMN_NAME_TYPE_CSTRING(name) { name, DATABASE_DATATYPE_CSTRING }
 
 #define DATABASE_COLUMN_NAME_KEY(name)     name
 #define DATABASE_COLUMN_NAME_BOOL(name)    name
 #define DATABASE_COLUMN_NAME_INT(name)     name
+#define DATABASE_COLUMN_NAME_INT64(name)   name
+#define DATABASE_COLUMN_NAME_UINT(name)    name
+#define DATABASE_COLUMN_NAME_UINT64(name)  name
 #define DATABASE_COLUMN_NAME_STRING (name) name
 #define DATABASE_COLUMN_NAME_CSTRING(name) name
 
@@ -746,6 +754,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_VALUE_NAME_STRING(name,value)   name
 #define DATABASE_VALUE_NAME_CSTRING(name,value)  name
 
+#define DATABASE_VALUES2_NONE (const char**)NULL,(DatabaseValue*)NULL,0
 
 // filter macros
 #define __DATABASE_FILTERS_ITERATOR_ARRAY0(x,...) \
@@ -781,6 +790,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_FILTER_TYPE_VALUE_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
 #define DATABASE_FILTER_TYPE_VALUE_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
 
+#define DATABASE_FILTERS_NONE (const char*)NULL,(DatabaseFilter*)NULL,0
 
 /***********************************************************************\
 * Name   : DATABASE_LOCKED_DO
@@ -2016,7 +2026,103 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
                          );
 
 /***********************************************************************\
-* Name   : Database_getInteger64, Database_vgetInteger64
+* Name   : Database_getInt
+* Purpose: get int value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - int64 value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getInt(DatabaseHandle       *databaseHandle,
+                       int                 *value,
+                       const char           *tableName,
+                       const char           *columnName,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_setInt
+* Purpose: insert or update int value in database table
+* Input  : databaseHandle - database handle
+*          value          - int64 value
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setInt(DatabaseHandle       *databaseHandle,
+                       const char           *tableName,
+                       uint                 flags,
+                       const char           *columnName,
+                       int                  value,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_getUInt
+* Purpose: get uint value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - int64 value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getUInt(DatabaseHandle       *databaseHandle,
+                        uint                 *value,
+                        const char           *tableName,
+                        const char           *columnName,
+                        const char           *filter,
+                        const DatabaseFilter filterValues[],
+                        uint                 filterValueCount
+                       );
+
+/***********************************************************************\
+* Name   : Database_setUint
+* Purpose: insert or update uint value in database table
+* Input  : databaseHandle - database handle
+*          value          - int64 value
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setUInt(DatabaseHandle       *databaseHandle,
+                        const char           *tableName,
+                        uint                 flags,
+                        const char           *columnName,
+                        uint                 value,
+                        const char           *filter,
+                        const DatabaseFilter filterValues[],
+                        uint                 filterValueCount
+                       );
+
+/***********************************************************************\
+* Name   : Database_getInt64
 * Purpose: get int64 value from database table
 * Input  : databaseHandle - database handle
 *          tableName      - table name
@@ -2029,6 +2135,15 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
+Errors Database_getInt64(DatabaseHandle       *databaseHandle,
+                         int64                *value,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        );
+// TODO: replace by Database_getInt64
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              int64          *value,
                              const char     *tableName,
@@ -2059,6 +2174,16 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
+Errors Database_setInt64(DatabaseHandle       *databaseHandle,
+                         const char           *tableName,
+                         uint                 flags,
+                         const char           *columnName,
+                         int64                value,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        );
+// TODO: rename to Database_setInt64
 Errors Database_setInteger64(DatabaseHandle *databaseHandle,
                              int64          value,
                              const char     *tableName,
@@ -2073,6 +2198,54 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                               const char     *additional,
                               va_list        arguments
                              );
+
+/***********************************************************************\
+* Name   : Database_getUInt64
+* Purpose: get uint64 value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - int64 value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
+                          uint64               *value,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
+                         );
+
+/***********************************************************************\
+* Name   : Database_setUInt64
+* Purpose: insert or update uint64 value in database table
+* Input  : databaseHandle - database handle
+*          value          - int64 value
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          uint64               value,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
+                         );
 
 /***********************************************************************\
 * Name   : Database_getDouble, Database_vgetDouble
