@@ -3807,7 +3807,9 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
                          );
 // TODO: remove
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+#ifndef NDEBUG
 debugPrintStackTrace();
+#endif
           mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
@@ -5137,7 +5139,9 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                            );
 // TODO: remove
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+#ifndef NDEBUG
 debugPrintStackTrace();
+#endif
             break;
           }
 
