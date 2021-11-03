@@ -4056,15 +4056,15 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
   return ERROR_NONE;
 }
 LOCAL Errors bindResults2(DatabaseStatementHandle *databaseStatementHandle,
-                         const DatabaseDataTypes resultDataTypes[],
-                         uint                    resultDataTypeCount
+                         const DatabaseColumn    columns[],
+                         uint                    columnsCount
                         )
 {
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
-  assert((resultDataTypeCount == 0) || (resultDataTypes != NULL));
-  assertx((databaseStatementHandle->resultIndex+resultDataTypeCount) <= databaseStatementHandle->resultCount,"invalid result count: given %u, expected %u",databaseStatementHandle->resultIndex+resultDataTypeCount,databaseStatementHandle->resultCount);
+  assert((columnsCount == 0) || (columns != NULL));
+  assertx((databaseStatementHandle->resultIndex+columnsCount) <= databaseStatementHandle->resultCount,"invalid result count: given %u, expected %u",databaseStatementHandle->resultIndex+columnsCount,databaseStatementHandle->resultCount);
 
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
@@ -4073,10 +4073,10 @@ LOCAL Errors bindResults2(DatabaseStatementHandle *databaseStatementHandle,
         uint i;
 
         // bind results
-        for (i = 0; i < resultDataTypeCount; i++)
+        for (i = 0; i < columnsCount; i++)
         {
-          databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = resultDataTypes[i];
-          switch (resultDataTypes[i])
+          databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
+          switch (columns[i].type)
           {
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
@@ -4116,10 +4116,10 @@ LOCAL Errors bindResults2(DatabaseStatementHandle *databaseStatementHandle,
         uint i;
 
         // bind results
-        for (i = 0; i < resultDataTypeCount; i++)
+        for (i = 0; i < columnsCount; i++)
         {
-          databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = resultDataTypes[i];
-          switch (resultDataTypes[i])
+          databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
+          switch (columns[i].type)
           {
             case DATABASE_DATATYPE_NONE:
               break;
@@ -6018,7 +6018,7 @@ LOCAL Errors executeQuery(DatabaseStatementHandle *databaseStatementHandle,
   retryCount    = 0;
   do
   {
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
 // TODO: reactivate when each thread has his own index handle
 #if 0
     assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
@@ -10368,6 +10368,11 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(sqlCommand != NULL);
 
+DatabaseColumn columns[64];
+for (uint i = 0; i < resultDataTypeCount; i++) {
+  columns[i].type = resultDataTypes[i];
+}
+
   error = prepareStatement2(databaseStatementHandle,
                             databaseHandle,
                             sqlCommand
@@ -10387,7 +10392,7 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
   }
   if (error == ERROR_NONE)
   {
-    error = bindResults2(databaseStatementHandle,resultDataTypes,resultDataTypeCount);
+    error = bindResults2(databaseStatementHandle,columns,resultDataTypeCount);
   }
 
   if (error == ERROR_NONE)
@@ -11112,8 +11117,8 @@ Errors Database_select(DatabaseHandle      *databaseHandle,
                        ulong               *changedRowCount,
                        const char          *tableName,
                        uint                flags,
-                       DatabaseValue       selectValues[],
-                       uint                selectValueCount,
+                       DatabaseValue       columns[],
+                       uint                columnCount,
                        const char          *filter,
                        DatabaseValue       filterValues[],
                        uint                filterValueCount
@@ -11124,8 +11129,11 @@ Errors Database_select(DatabaseHandle      *databaseHandle,
   DatabaseStatementHandle databaseStatementHandle;
   DatabaseDataTypes       selectDataTypes[DATABASE_MAX_TABLE_COLUMNS];
 
+  assert(databaseHandle != NULL);
+  assert((columnCount == 0) || (columns != NULL));
+
   // create SQL string
-fprintf(stderr,"%s:%d: %d %d\n",__FILE__,__LINE__,selectValueCount,filterValueCount);
+fprintf(stderr,"%s:%d: %d %d\n",__FILE__,__LINE__,columnCount,filterValueCount);
   sqlString = String_newCString("SELECT ");
 (void)flags;
 #if 0
@@ -11143,11 +11151,11 @@ fprintf(stderr,"%s:%d: %d %d\n",__FILE__,__LINE__,selectValueCount,filterValueCo
   }
 #endif
 
-  for (uint i = 0; i < selectValueCount; i++)
+  for (uint i = 0; i < columnCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_formatAppend(sqlString,"%s",selectValues[i].name);
-selectDataTypes[i] = selectValues[i].type;
+    String_formatAppend(sqlString,"%s",columns[i].name);
+selectDataTypes[i] = columns[i].type;
   }
   String_formatAppend(sqlString," FROM %s ",tableName);
   if (filter != NULL)
@@ -11181,10 +11189,9 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
       return error;
     }
   }
-// TODO:
   error = bindResults2(&databaseStatementHandle,
-                      selectDataTypes,
-                      selectValueCount
+                      columns,
+                      columnCount
                      );
   if (error != ERROR_NONE)
   {
@@ -11219,19 +11226,19 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
                        const char              *tables,
                        uint                    flags,
 // TODO: select value datatype: name, type
-                       DatabaseColumn          selectColumns[],
-                       uint                    selectColumnCount,
+                       DatabaseColumn          columns[],
+                       uint                    columnCount,
                        const char              *filter,
                        DatabaseFilter          filterValues[],
                        uint                    filterValueCount
                       )
 {
-  String            sqlString;
-  Errors            error;
-  DatabaseDataTypes selectDataTypes[DATABASE_MAX_TABLE_COLUMNS];
+  String sqlString;
+  Errors error;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
+  assert((columnCount == 0) || (columns != NULL));
 
   // create SQL string
   sqlString = String_newCString("SELECT ");
@@ -11251,11 +11258,10 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
   }
 #endif
 
-  for (uint i = 0; i < selectColumnCount; i++)
+  for (uint i = 0; i < columnCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_formatAppend(sqlString,"%s",selectColumns[i].name);
-selectDataTypes[i] = selectColumns[i].type;
+    String_formatAppend(sqlString,"%s",columns[i].name);
   }
   String_formatAppend(sqlString," FROM %s ",tables);
   if (filter != NULL)
@@ -11290,9 +11296,8 @@ selectDataTypes[i] = selectColumns[i].type;
     }
   }
   error = bindResults2(databaseStatementHandle,
-// TODO: use selectColumns
-                      selectDataTypes,
-                      selectColumnCount
+                      columns,
+                      columnCount
                      );
   if (error != ERROR_NONE)
   {
@@ -11400,27 +11405,26 @@ Errors Database_get(DatabaseHandle      *databaseHandle,
                     ulong               *changedRowCount,
                     const char          *tableName,
 // TODO: select value datatype: name, type
-                    DatabaseColumn      selectColumn[],
-                    uint                selectColumnCount,
+                    DatabaseColumn      columns[],
+                    uint                columnCount,
                     const char          *filter,
                     DatabaseFilter      filterValues[],
                     uint                filterValueCount
                    )
 {
-  String            sqlString;
-  Errors            error;
-  DatabaseDataTypes selectDataTypes[DATABASE_MAX_TABLE_COLUMNS];
+  String                  sqlString;
+  Errors                  error;
   DatabaseStatementHandle databaseStatementHandle;
 
   assert(databaseHandle != NULL);
+  assert((columnCount == 0) || (columns != NULL));
 
   // create SQL string
   sqlString = String_newCString("SELECT ");
-  for (uint i = 0; i < selectColumnCount; i++)
+  for (uint i = 0; i < columnCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_formatAppend(sqlString,"%s",selectColumn[i].name);
-selectDataTypes[i] = selectColumn[i].type;
+    String_formatAppend(sqlString,"%s",columns[i].name);
   }
   String_formatAppend(sqlString," FROM %s ",tableName);
   if (filter != NULL)
@@ -11455,9 +11459,8 @@ selectDataTypes[i] = selectColumn[i].type;
     }
   }
   error = bindResults2(&databaseStatementHandle,
-// TODO: use selectColumn
-                      selectDataTypes,
-                      selectColumnCount
+                      columns,
+                      columnCount
                      );
   if (error != ERROR_NONE)
   {

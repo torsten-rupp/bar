@@ -1917,8 +1917,8 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
                        const char              *tables,
                        uint                    flags,
 // TODO: select value datatype: name, type
-                       DatabaseColumn          selectColumns[],
-                       uint                    selectColumnCount,
+                       DatabaseColumn          columns[],
+                       uint                    columnCount,
                        const char              *filter,
                        DatabaseFilter          filterValues[],
                        uint                    filterValueCount
