@@ -604,6 +604,7 @@ BAR_INDEX_SOURCES           = bar-index.c \
 
 BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
                               index_definition.def \
+                              index/index_current.c \
 
 BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/cmdoptions.c \
