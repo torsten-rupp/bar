@@ -5837,12 +5837,14 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                                              );
               break;
             case DATABASE_DATATYPE_INT:
+//            case DATABASE_DATATYPE_UINT:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 filters[i].i
                                                );
               break;
             case DATABASE_DATATYPE_INT64:
+//            case DATABASE_DATATYPE_UINT64:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 filters[i].i64
@@ -6492,7 +6494,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
 }
 
 /***********************************************************************\
-* Name   : executeStatement2
+* Name   : executePreparedStatement
 * Purpose: execute single database statement with prepared statement or
 *          query
 * Input  : databaseHandle      - database handle
@@ -6511,12 +6513,12 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors executeStatement2(DatabaseStatementHandle *databaseStatementHandle,
-                              DatabaseRowFunction     databaseRowFunction,
-                              void                    *databaseRowUserData,
-                              ulong                   *changedRowCount,
-                              long                     timeout
-                             )
+LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatementHandle,
+                                      DatabaseRowFunction     databaseRowFunction,
+                                      void                    *databaseRowUserData,
+                                      ulong                   *changedRowCount,
+                                      long                     timeout
+                                     )
 {
   assert(databaseStatementHandle != NULL);
 
@@ -6990,17 +6992,17 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
 * Notes  : -
 \***********************************************************************/
 
-LOCAL DatabaseValue *findTableColumn(const DatabaseColumns *columns, const char *columnName)
+LOCAL DatabaseValue *findTableColumn(const DatabaseColumnInfo *columnInfo, const char *columnName)
 {
   uint i;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
 
-  for (i = 0; i < columns->count; i++)
+  for (i = 0; i < columnInfo->count; i++)
   {
-    if (stringEquals(columns->names[i],columnName))
+    if (stringEquals(columnInfo->names[i],columnName))
     {
-      return &columns->values[i];
+      return &columnInfo->values[i];
     }
   }
 
@@ -8907,10 +8909,14 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
 
   Errors                  error;
   uint64                  t;
-  DatabaseColumnName      fromColumnNames[DATABASE_MAX_TABLE_COLUMNS],toColumnNames[DATABASE_MAX_TABLE_COLUMNS];
-  DatabaseDataTypes       fromColumnTypes[DATABASE_MAX_TABLE_COLUMNS],toColumnTypes[DATABASE_MAX_TABLE_COLUMNS];
-  DatabaseColumns         fromColumns,toColumns;
+
+  DatabaseColumnName      fromColumnNames[DATABASE_MAX_TABLE_COLUMNS];
+  DatabaseDataTypes       fromColumnTypes[DATABASE_MAX_TABLE_COLUMNS];
+  DatabaseColumnName      toColumnNames[DATABASE_MAX_TABLE_COLUMNS];
+  DatabaseDataTypes       toColumnTypes[DATABASE_MAX_TABLE_COLUMNS];
   uint                    fromColumnCount,toColumnCount;
+  DatabaseColumn          fromColumns[DATABASE_MAX_TABLE_COLUMNS];
+
   uint                    toColumnMap[DATABASE_MAX_TABLE_COLUMNS];
   DatabaseColumnName      toColumnMapNames[DATABASE_MAX_TABLE_COLUMNS];
   uint                    toColumnMapCount;
@@ -8919,9 +8925,15 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
   int                     toColumnPrimaryKeyIndex;
   DatabaseValue           fromValues[DATABASE_MAX_TABLE_COLUMNS],toValues[DATABASE_MAX_TABLE_COLUMNS];
   uint                    fromValueCount,toValueCount;
+  DatabaseValue           parameterValues[DATABASE_MAX_TABLE_COLUMNS];
+  uint                    parameterValueCount;
+
   uint                    i,j;
   uint                    n;
   String                  sqlSelectString,sqlInsertString;
+
+  DatabaseColumnInfo      fromColumnInfo,toColumnInfo;
+
   DatabaseStatementHandle fromDatabaseStatementHandle,toDatabaseStatementHandle;
   va_list                 arguments;
   DatabaseId              lastRowId;
@@ -8950,14 +8962,26 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 
   // get table columns
   START_TIMER();
-  error = getTableColumns(fromColumnNames,fromColumnTypes,&fromColumnCount,DATABASE_MAX_TABLE_COLUMNS,fromDatabaseHandle,fromTableName);
+  error = getTableColumns(fromColumnNames,
+                          fromColumnTypes,
+                          &fromColumnCount,
+                          DATABASE_MAX_TABLE_COLUMNS,
+                          fromDatabaseHandle,
+                          fromTableName
+                         );
   if (error != ERROR_NONE)
   {
     return error;
   }
 //fprintf(stderr,"%s:%d: fromTableName=%s fromColumns=",__FILE__,__LINE__,fromTableName); for (int i = 0; i < fromColumnCount;i++) fprintf(stderr,"%s %s, ",fromColumnNames[i],DATABASE_DATATYPE_NAMES[fromColumnTypes[i]]); fprintf(stderr,"\n");
 
-  error = getTableColumns(toColumnNames,toColumnTypes,&toColumnCount,DATABASE_MAX_TABLE_COLUMNS,toDatabaseHandle,toTableName);
+  error = getTableColumns(toColumnNames,
+                          toColumnTypes,
+                          &toColumnCount,
+                          DATABASE_MAX_TABLE_COLUMNS,
+                          toDatabaseHandle,
+                          toTableName
+                         );
   if (error != ERROR_NONE)
   {
     return error;
@@ -8974,6 +8998,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     {
       toColumnMap[toColumnMapCount] = j;
       stringSet(toColumnMapNames[toColumnMapCount],sizeof(toColumnMapNames[toColumnMapCount]),toColumnNames[i]);
+//      toColumnMapTypes[toColumnMapCount] = toColumnTypes[i];
       toColumnMapCount++;
     }
   }
@@ -9004,6 +9029,9 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   for (i = 0; i < fromColumnCount; i++)
   {
     fromValues[i].type = fromColumnTypes[i];
+
+    fromColumns[i].name = fromColumnNames[i];
+    fromColumns[i].type = fromColumnTypes[i];
   }
   fromValueCount = fromColumnCount;
   for (i = 0; i < toColumnCount; i++)
@@ -9011,6 +9039,12 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     toValues[i].type = toColumnTypes[i];
   }
   toValueCount = toColumnCount;
+
+  for (i = 0; i < parameterMapCount; i++)
+  {
+    parameterValues[i].type = toColumnTypes[parameterMap[i]];
+  }
+  parameterValueCount = parameterMapCount;
 
   // create SQL select statement strings
   sqlSelectString = String_format(String_new(),"SELECT ");
@@ -9031,7 +9065,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     va_end(arguments);
   }
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
-//fprintf(stderr,"%s:%d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
+fprintf(stderr,"%s:%d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
 
   sqlInsertString = String_format(String_new(),"INSERT INTO %s (",toTableName);
   for (i = 0; i < parameterMapCount; i++)
@@ -9047,7 +9081,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   }
   String_formatAppend(sqlInsertString,")");
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlInsertString);
-//fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
+fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
 
   // create select+insert statements
   error = prepareStatement2(&fromDatabaseStatementHandle,
@@ -9059,16 +9093,16 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
-  error = bindResults(&fromDatabaseStatementHandle,fromValues,fromValueCount);
+  error = bindResults2(&fromDatabaseStatementHandle,fromColumns,fromColumnCount);
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-  fromColumns.names  = fromColumnNames;
-  fromColumns.values = fromValues;
-  fromColumns.count  = fromColumnCount;
+  fromColumnInfo.names  = fromColumnNames;
+  fromColumnInfo.values = fromDatabaseStatementHandle.results;
+  fromColumnInfo.count  = fromColumnCount;
 
   error = prepareStatement2(&toDatabaseStatementHandle,
                            toDatabaseHandle,
@@ -9080,7 +9114,7 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-  error = bindValues(&toDatabaseStatementHandle,toValues,toValueCount);
+  error = bindValues(&toDatabaseStatementHandle,parameterValues,parameterValueCount);
   if (error != ERROR_NONE)
   {
 fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
@@ -9088,9 +9122,9 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-  toColumns.names  = toColumnMapNames;
-  toColumns.values = toValues;
-  toColumns.count  = toColumnCount;
+  toColumnInfo.names  = toColumnMapNames;
+  toColumnInfo.values = toValues;
+  toColumnInfo.count  = toColumnCount;
 
   // select rows in from-table and copy to to-table
   BLOCK_DOX(error,
@@ -9156,8 +9190,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
         {
-          return preCopyTableFunction(&fromColumns,
-                                      &toColumns,
+          return preCopyTableFunction(&fromColumnInfo,
+                                      &toColumnInfo,
                                       preCopyTableUserData
                                      );
         });
@@ -9175,7 +9209,10 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 
       // insert row
 //fprintf(stderr,"%s:%d: b\n",__FILE__,__LINE__); dumpStatementHandle(&toDatabaseStatementHandle);
-// TODO: use insert      error = executeRowStatement(&toDatabaseStatementHandle);
+      error = executePreparedQuery(&toDatabaseStatementHandle,
+                                   NULL,  // changeRowCount
+                                   toDatabaseHandle->timeout
+                                  );
       if (error != ERROR_NONE)
       {
         finalizeStatement(&toDatabaseStatementHandle);
@@ -9203,8 +9240,8 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
         {
-          return postCopyTableFunction(&fromColumns,
-                                       &toColumns,
+          return postCopyTableFunction(&fromColumnInfo,
+                                       &toColumnInfo,
                                        postCopyTableUserData
                                       );
         });
@@ -9367,14 +9404,14 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
   #undef START_TIMER
 }
 
-DatabaseId Database_getTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId defaultValue)
+DatabaseId Database_getTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -9396,14 +9433,14 @@ DatabaseId Database_getTableColumnId(DatabaseColumns *columns, const char *colum
   }
 }
 
-int Database_getTableColumnInt(DatabaseColumns *columns, const char *columnName, int defaultValue)
+int Database_getTableColumnInt(DatabaseColumnInfo *columnInfo, const char *columnName, int defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -9426,14 +9463,14 @@ int Database_getTableColumnInt(DatabaseColumns *columns, const char *columnName,
   }
 }
 
-uint Database_getTableColumnUInt(DatabaseColumns *columns, const char *columnName, uint defaultValue)
+uint Database_getTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *columnName, uint defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -9456,14 +9493,14 @@ uint Database_getTableColumnUInt(DatabaseColumns *columns, const char *columnNam
   }
 }
 
-int64 Database_getTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 defaultValue)
+int64 Database_getTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -9486,14 +9523,14 @@ int64 Database_getTableColumnInt64(DatabaseColumns *columns, const char *columnN
   }
 }
 
-uint64 Database_getTableColumnUInt64(DatabaseColumns *columns, const char *columnName, uint64 defaultValue)
+uint64 Database_getTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -9516,14 +9553,14 @@ uint64 Database_getTableColumnUInt64(DatabaseColumns *columns, const char *colum
   }
 }
 
-double Database_getTableColumnDouble(DatabaseColumns *columns, const char *columnName, double defaultValue)
+double Database_getTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DOUBLE);
@@ -9535,14 +9572,14 @@ double Database_getTableColumnDouble(DatabaseColumns *columns, const char *colum
   }
 }
 
-uint64 Database_getTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 defaultValue)
+uint64 Database_getTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DATETIME);
@@ -9554,14 +9591,14 @@ uint64 Database_getTableColumnDateTime(DatabaseColumns *columns, const char *col
   }
 }
 
-String Database_getTableColumnString(DatabaseColumns *columns, const char *columnName, String value, const char *defaultValue)
+String Database_getTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, String value, const char *defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_CSTRING);
@@ -9575,14 +9612,14 @@ String Database_getTableColumnString(DatabaseColumns *columns, const char *colum
   return value;
 }
 
-const char *Database_getTableColumnCString(DatabaseColumns *columns, const char *columnName, const char *defaultValue)
+const char *Database_getTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *defaultValue)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_CSTRING);
@@ -9594,17 +9631,17 @@ const char *Database_getTableColumnCString(DatabaseColumns *columns, const char 
   }
 }
 
-void Database_getTableColumnBlob(DatabaseColumns *columns, const char *columnName, void *data, uint length)
+void Database_getTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, void *data, uint length)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
 UNUSED_VARIABLE(data);
 UNUSED_VARIABLE(length);
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_BLOB);
@@ -9616,14 +9653,14 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
 }
 
-bool Database_setTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId value)
+bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId value)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_INT);
@@ -9637,14 +9674,14 @@ abort();
   }
 }
 
-bool Database_setTableColumnBool(DatabaseColumns *columns, const char *columnName, bool value)
+bool Database_setTableColumnBool(DatabaseColumnInfo *columnInfo, const char *columnName, bool value)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_BOOL);
@@ -9657,14 +9694,14 @@ bool Database_setTableColumnBool(DatabaseColumns *columns, const char *columnNam
   }
 }
 
-bool Database_setTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 value)
+bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 value)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_INT);
@@ -9677,14 +9714,14 @@ bool Database_setTableColumnInt64(DatabaseColumns *columns, const char *columnNa
   }
 }
 
-bool Database_setTableColumnDouble(DatabaseColumns *columns, const char *columnName, double value)
+bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double value)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DOUBLE);
@@ -9697,14 +9734,14 @@ bool Database_setTableColumnDouble(DatabaseColumns *columns, const char *columnN
   }
 }
 
-bool Database_setTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 value)
+bool Database_setTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DATETIME);
@@ -9717,22 +9754,22 @@ bool Database_setTableColumnDateTime(DatabaseColumns *columns, const char *colum
   }
 }
 
-bool Database_setTableColumnString(DatabaseColumns *columns, const char *columnName, ConstString value)
+bool Database_setTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, ConstString value)
 {
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  return Database_setTableColumnCString(columns,columnName,String_cString(value));
+  return Database_setTableColumnCString(columnInfo,columnName,String_cString(value));
 }
 
-bool Database_setTableColumnCString(DatabaseColumns *columns, const char *columnName, const char *value)
+bool Database_setTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *value)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_CSTRING);
@@ -9747,14 +9784,14 @@ bool Database_setTableColumnCString(DatabaseColumns *columns, const char *column
     return FALSE;
   }
 }
-bool Database_setTableColumnBlob(DatabaseColumns *columns, const char *columnName, const void *data, uint length)
+bool Database_setTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, const void *data, uint length)
 {
   DatabaseValue *databaseValue;
 
-  assert(columns != NULL);
+  assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columns,columnName);
+  databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_BLOB);
@@ -10653,7 +10690,7 @@ for (uint i = 0; i < resultDataTypeCount; i++) {
 
   if (error == ERROR_NONE)
   {
-    error = executeStatement2(databaseStatementHandle,
+    error = executePreparedStatement(databaseStatementHandle,
                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               NO_WAIT
@@ -11125,7 +11162,7 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
     String_appendChar(sqlString,'?');
   }
   String_appendChar(sqlString,')');
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement2(&databaseStatementHandle,
@@ -11457,7 +11494,7 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
   }
 
   // execute statement
-  error = executeStatement2(&databaseStatementHandle,
+  error = executePreparedStatement(&databaseStatementHandle,
                            databaseRowFunction,
                            databaseRowUserData,
                            changedRowCount,
@@ -11563,7 +11600,7 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
   }
 
   // execute statement
-  error = executeStatement2(databaseStatementHandle,
+  error = executePreparedStatement(databaseStatementHandle,
 NULL,                           //databaseRowFunction,
 NULL,//                           databaseRowUserData,
 NULL,  //                         changedRowCount,
@@ -11726,7 +11763,7 @@ Errors Database_get(DatabaseHandle      *databaseHandle,
   }
 
   // execute statement
-  error = executeStatement2(&databaseStatementHandle,
+  error = executePreparedStatement(&databaseStatementHandle,
                            databaseRowFunction,
                            databaseRowUserData,
                            changedRowCount,

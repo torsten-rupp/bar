@@ -587,7 +587,7 @@ typedef struct
   const DatabaseColumnName *names;
   DatabaseValue            *values;
   uint                     count;
-} DatabaseColumns;
+} DatabaseColumnInfo;
 
 /***********************************************************************\
 * Name   : DatabaseCopyTableFunction
@@ -600,8 +600,8 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*DatabaseCopyTableFunction)(DatabaseColumns *fromColumns,
-                                           DatabaseColumns *toColumns,
+typedef Errors(*DatabaseCopyTableFunction)(DatabaseColumnInfo *fromColumns,
+                                           DatabaseColumnInfo *toColumns,
                                            void            *userData
                                           );
 
@@ -1547,16 +1547,16 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
 * Notes  : -
 \***********************************************************************/
 
-DatabaseId Database_getTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId defaultValue);
-int Database_getTableColumnInt(DatabaseColumns *columns, const char *columnName, int defaultValue);
-uint Database_getTableColumnUInt(DatabaseColumns *columns, const char *columnName, uint defaultValue);
-int64 Database_getTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 defaultValue);
-uint64 Database_getTableColumnUInt64(DatabaseColumns *columns, const char *columnName, uint64 defaultValue);
-double Database_getTableColumnDouble(DatabaseColumns *columns, const char *columnName, double defaultValue);
-uint64 Database_getTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 defaultValue);
-String Database_getTableColumnString(DatabaseColumns *columns, const char *columnName, String value, const char *defaultValue);
-const char *Database_getTableColumnCString(DatabaseColumns *columns, const char *columnName, const char *defaultValue);
-void Database_getTableColumnBlob(DatabaseColumns *columns, const char *columnName, void *data, uint length);
+DatabaseId Database_getTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId defaultValue);
+int Database_getTableColumnInt(DatabaseColumnInfo *columnInfo, const char *columnName, int defaultValue);
+uint Database_getTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *columnName, uint defaultValue);
+int64 Database_getTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 defaultValue);
+uint64 Database_getTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue);
+double Database_getTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double defaultValue);
+uint64 Database_getTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue);
+String Database_getTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, String value, const char *defaultValue);
+const char *Database_getTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *defaultValue);
+void Database_getTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, void *data, uint length);
 
 /***********************************************************************\
 * Name   : Database_setTableColumn*
@@ -1569,14 +1569,14 @@ void Database_getTableColumnBlob(DatabaseColumns *columns, const char *columnNam
 * Notes  : -
 \***********************************************************************/
 
-bool Database_setTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId value);
-bool Database_setTableColumnBool(DatabaseColumns *columns, const char *columnName, bool value);
-bool Database_setTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 value);
-bool Database_setTableColumnDouble(DatabaseColumns *columns, const char *columnName, double value);
-bool Database_setTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 value);
-bool Database_setTableColumnString(DatabaseColumns *columns, const char *columnName, ConstString value);
-bool Database_setTableColumnCString(DatabaseColumns *columns, const char *columnName, const char *value);
-bool Database_setTableColumnBlob(DatabaseColumns *columns, const char *columnName, const void *data, uint length);
+bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId value);
+bool Database_setTableColumnBool(DatabaseColumnInfo *columnInfo, const char *columnName, bool value);
+bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 value);
+bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double value);
+bool Database_setTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value);
+bool Database_setTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, ConstString value);
+bool Database_setTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *value);
+bool Database_setTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, const void *data, uint length);
 
 /***********************************************************************\
 * Name   : Database_addColumn
