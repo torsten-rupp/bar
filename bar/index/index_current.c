@@ -75,102 +75,118 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
   int64                   fragmentOffset;
   int64                   fragmentSize;
 
-  error = Database_prepare(&databaseStatementHandle,
-                           oldDatabaseHandle,
-                           DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
-                           "SELECT fileEntries.size, \
-                                   entryFragments.storageId, \
-                                   entryFragments.offset AS fragmentOffset, \
-                                   entryFragments.size AS fragmentSize \
-                            FROM fileEntries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
-                            WHERE fileEntries.entryId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_COLUMN_KEY (fromEntryId)
-                           )
-                         );
-  if (error == ERROR_NONE)
-  {
-    if (Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
-    {
-      DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-      error = Database_execute(newDatabaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "INSERT INTO fileEntries \
-                                  ( \
-                                   entryId, \
-                                   size \
-                                  ) \
-                                VALUES \
-                                  ( \
-                                   %lld, \
-                                   %lld \
-                                  ); \
-                               ",
-                               toEntryId,
-                               size
-                              );
-      if (error == ERROR_NONE)
-      {
-        do
-        {
-          if (Dictionary_find(storageIdDictionary,
-                              &fromStorageId,
-                              sizeof(DatabaseId),
-                              &valueData.value,
-                              NULL
-                             )
-             )
-          {
-            toStorageId = *valueData.id;
-          }
-          else
-          {
-            toStorageId = DATABASE_ID_NONE;
-          }
+  return Database_get(oldDatabaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-          DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
-          error = Database_execute(newDatabaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "INSERT INTO entryFragments \
-                                      ( \
-                                       entryId, \
-                                       storageId, \
-                                       offset, \
-                                       size \
-                                      ) \
-                                    VALUES \
-                                      ( \
-                                       %lld, \
-                                       %lld, \
-                                       %lld, \
-                                       %lld \
-                                      ); \
-                                   ",
-                                   toEntryId,
-                                   toStorageId,
-                                   fragmentOffset,
-                                   fragmentSize
-                                  );
-         }
-         while (   (error == ERROR_NONE)
-                && Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
-               );
-       }
-    }
-    Database_finalize(&databaseStatementHandle);
-  }
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-  return error;
+                        size = values[0].u64;
+
+                        DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        error = Database_insert(newDatabaseHandle,
+                                                NULL,  // changedRowCount
+                                                "fileEntries",
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_VALUES2
+                                                (
+                                                  DATABASE_VALUE_KEY   ("entryId", toEntryId),
+                                                  DATABASE_VALUE_UINT64("size",    size)
+                                                )
+                                               );
+                        if (error != ERROR_NONE)
+                        {
+                          return error;
+                        }
+
+                        error = Database_get(oldDatabaseHandle,
+                                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                             {
+                                               assert(values != NULL);
+                                               assert(valueCount == 3);
+
+                                               UNUSED_VARIABLE(userData);
+                                               UNUSED_VARIABLE(valueCount);
+
+                                               fromStorageId  = values[0].id;
+                                               fragmentOffset = values[1].u64;
+                                               fragmentSize   = values[2].u64;
+
+                                               if (Dictionary_find(storageIdDictionary,
+                                                                   &fromStorageId,
+                                                                   sizeof(DatabaseId),
+                                                                   &valueData.value,
+                                                                   NULL
+                                                                  )
+                                                  )
+                                               {
+                                                 toStorageId = *valueData.id;
+                                               }
+                                               else
+                                               {
+                                                 toStorageId = DATABASE_ID_NONE;
+                                               }
+
+                                               DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
+                                               error = Database_insert(newDatabaseHandle,
+                                                                       NULL,  // changedRowCount
+                                                                       "entryFragments",
+                                                                       DATABASE_FLAG_NONE,
+                                                                       DATABASE_VALUES2
+                                                                       (
+                                                                         DATABASE_VALUE_KEY   ("entryId",  toEntryId),
+                                                                         DATABASE_VALUE_KEY   ("storageId",toStorageId),
+                                                                         DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                                                         DATABASE_VALUE_UINT64("size",     fragmentSize)
+                                                                       )
+                                                                      );
+                                               if (error != ERROR_NONE)
+                                               {
+                                                 return error;
+                                               }
+
+                                               return ERROR_NONE;
+                                             },NULL),
+                                             NULL,  // changedRowCount
+                       //TODO newest
+                                             "entryFragments \
+                                             ",
+                                             DATABASE_COLUMNS
+                                             (
+                                               DATABASE_COLUMN_KEY   ("storageId"),
+                                               DATABASE_COLUMN_UINT64("offset"),
+                                               DATABASE_COLUMN_UINT64("size"),
+                                             ),
+                                             "entryId=?",
+                                             DATABASE_FILTERS
+                                             (
+                                               DATABASE_FILTER_KEY (fromEntryId)
+                                             )
+                                           );
+                        if (error != ERROR_NONE)
+                        {
+                          return error;
+                        }
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+//TODO newest
+                      "fileEntries \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT64("size"),
+                      ),
+                      "entryId=?",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (fromEntryId)
+                      )
+                    );
 }
 
 /***********************************************************************\
@@ -724,16 +740,16 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer entity
-                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                     DatabaseColumns *toColumns,
-                                                     void            *userData
+                             CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                     DatabaseColumnInfo *toColumnInfo,
+                                                     void               *userData
                                                     ),
                              {
-                               assert(fromColumns != NULL);
-                               assert(toColumns != NULL);
+                               assert(fromColumnInfo != NULL);
+                               assert(toColumnInfo != NULL);
 
-                               UNUSED_VARIABLE(fromColumns);
-                               UNUSED_VARIABLE(toColumns);
+                               UNUSED_VARIABLE(fromColumnInfo);
+                               UNUSED_VARIABLE(toColumnInfo);
                                UNUSED_VARIABLE(userData);
 
                                // currently nothing special to do
@@ -741,9 +757,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storages, entries
-                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                     DatabaseColumns *toColumns,
-                                                     void            *userData
+                             CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                     DatabaseColumnInfo *toColumnInfo,
+                                                     void               *userData
                                                     ),
                              {
                                DatabaseId fromStorageId;
@@ -754,14 +770,14 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                uint64     t1;
                                Errors     error;
 
-                               assert(fromColumns != NULL);
-                               assert(toColumns != NULL);
+                               assert(fromColumnInfo != NULL);
+                               assert(toColumnInfo != NULL);
 
                                UNUSED_VARIABLE(userData);
 
-                               fromEntityId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
+                               fromEntityId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                assert(fromEntityId != DATABASE_ID_NONE);
-                               toEntityId = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
+                               toEntityId = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                assert(toEntityId != DATABASE_ID_NONE);
 fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,fromEntityId,toEntityId);
 
@@ -774,39 +790,39 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage
-                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                  DatabaseColumns *toColumns,
-                                                                                  void            *userData
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
                                                                                  ),
                                                           {
-                                                            assert(fromColumns != NULL);
-                                                            assert(toColumns != NULL);
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
 
-                                                            UNUSED_VARIABLE(fromColumns);
-                                                            UNUSED_VARIABLE(toColumns);
+                                                            UNUSED_VARIABLE(fromColumnInfo);
+                                                            UNUSED_VARIABLE(toColumnInfo);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           // post: get from/to storage ids
-                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                  DatabaseColumns *toColumns,
-                                                                                  void            *userData
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
                                                                                  ),
                                                           {
-                                                            assert(fromColumns != NULL);
-                                                            assert(toColumns != NULL);
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
 
                                                             UNUSED_VARIABLE(userData);
 
-                                                            fromStorageId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
+                                                            fromStorageId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(fromStorageId != DATABASE_ID_NONE);
-                                                            toStorageId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
+                                                            toStorageId   = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
-                                                            DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumns,"name",NULL));
+                                                            DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                             Dictionary_add(&storageIdDictionary,
                                                                            &fromStorageId,
                                                                            sizeof(DatabaseId),
@@ -843,7 +859,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                Dictionary_doneIterator(&dictionaryIterator);
 
                                // transfer entries of entity
-                               DIMPORT("import entity %ld -> %ld: jobUUID=%s, storages=%s",fromEntityId,toEntityId,Database_getTableColumnCString(fromColumns,"jobUUID",NULL),String_cString(storageIdsString));
+                               DIMPORT("import entity %ld -> %ld: jobUUID=%s, storages=%s",fromEntityId,toEntityId,Database_getTableColumnCString(fromColumnInfo,"jobUUID",NULL),String_cString(storageIdsString));
                                t0 = Misc_getTimestamp();
                                error = Database_copyTable(oldDatabaseHandle,
                                                           newDatabaseHandle,
@@ -852,46 +868,46 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer entry
-                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                  DatabaseColumns *toColumns,
-                                                                                  void            *userData
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
                                                                                  ),
                                                           {
-                                                            assert(fromColumns != NULL);
-                                                            assert(toColumns != NULL);
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
 
-                                                            UNUSED_VARIABLE(fromColumns);
-                                                            UNUSED_VARIABLE(userData);
+                                                            UNUSED_VARIABLE(fromColumnInfo);
+                                                            UNUSED_VARIABLE(toColumnInfo);
 
-                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           // post: transfer files, images, directories, links, special entries
-                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                  DatabaseColumns *toColumns,
-                                                                                  void            *userData
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
                                                                                  ),
                                                           {
                                                             DatabaseId fromEntryId;
                                                             IndexTypes type;
                                                             DatabaseId toEntryId;
 
-                                                            assert(fromColumns != NULL);
-                                                            assert(toColumns != NULL);
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
 
-                                                            UNUSED_VARIABLE(toColumns);
+                                                            UNUSED_VARIABLE(toColumnInfo);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            fromEntryId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
+                                                            fromEntryId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
-                                                            type = Database_getTableColumnId(fromColumns,"type",INDEX_TYPE_NONE);
-                                                            toEntryId = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
+                                                            type = Database_getTableColumnId(fromColumnInfo,"type",INDEX_TYPE_NONE);
+                                                            toEntryId = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumns,"name",NULL));
+                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
 #if 1
                                                             switch (type)
                                                             {
@@ -918,21 +934,21 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                            "directoryEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                                                   DatabaseColumns *toColumns,
-                                                                                                                   void            *userData
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                                                   DatabaseColumnInfo *toColumnInfo,
+                                                                                                                   void               *userData
                                                                                                                   ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             assert(fromColumns != NULL);
-                                                                                             assert(toColumns != NULL);
+                                                                                             assert(fromColumnInfo != NULL);
+                                                                                             assert(toColumnInfo != NULL);
 
-                                                                                             UNUSED_VARIABLE(toColumns);
+                                                                                             UNUSED_VARIABLE(toColumnInfo);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -949,8 +965,8 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -968,21 +984,21 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                            "linkEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                                                   DatabaseColumns *toColumns,
-                                                                                                                   void            *userData
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                                                   DatabaseColumnInfo *toColumnInfo,
+                                                                                                                   void               *userData
                                                                                                                   ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             assert(fromColumns != NULL);
-                                                                                             assert(toColumns != NULL);
+                                                                                             assert(fromColumnInfo != NULL);
+                                                                                             assert(toColumnInfo != NULL);
 
-                                                                                             UNUSED_VARIABLE(toColumns);
+                                                                                             UNUSED_VARIABLE(toColumnInfo);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -999,8 +1015,8 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1026,22 +1042,22 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                            "specialEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                                                   DatabaseColumns *toColumns,
-                                                                                                                   void            *userData
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                                                   DatabaseColumnInfo *toColumnInfo,
+                                                                                                                   void               *userData
                                                                                                                   ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             assert(fromColumns != NULL);
-                                                                                             assert(toColumns != NULL);
+                                                                                             assert(fromColumnInfo != NULL);
+                                                                                             assert(toColumnInfo != NULL);
 
-                                                                                             UNUSED_VARIABLE(fromColumns);
-                                                                                             UNUSED_VARIABLE(toColumns);
+                                                                                             UNUSED_VARIABLE(fromColumnInfo);
+                                                                                             UNUSED_VARIABLE(toColumnInfo);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -1058,8 +1074,8 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1095,7 +1111,7 @@ error = ERROR_NONE;
 
                                logImportProgress("Imported entity #%"PRIi64": '%s' (%llus)",
                                                  toEntityId,
-                                                 Database_getTableColumnCString(fromColumns,"jobUUID",""),
+                                                 Database_getTableColumnCString(fromColumnInfo,"jobUUID",""),
                                                  (t1-t0)/US_PER_SECOND
                                                 );
 
@@ -1120,31 +1136,31 @@ error = ERROR_NONE;
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer storage and create entity
-                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                     DatabaseColumns *toColumns,
-                                                     void            *userData
+                             CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                     DatabaseColumnInfo *toColumnInfo,
+                                                     void               *userData
                                                     ),
                              {
                                Errors error;
 
-                               assert(fromColumns != NULL);
-                               assert(toColumns != NULL);
+                               assert(fromColumnInfo != NULL);
+                               assert(toColumnInfo != NULL);
 
                                UNUSED_VARIABLE(userData);
 
                                error = initEntity(oldDatabaseHandle,
                                                   newDatabaseHandle,
-                                                  Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE),
+                                                  Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE),
                                                   &toEntityId
                                                  );
-                               (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
+                               (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
 
                                return error;
                              },NULL),
                              // post: copy files, images, directories, links, special entries
-                             CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                     DatabaseColumns *toColumns,
-                                                     void            *userData
+                             CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                     DatabaseColumnInfo *toColumnInfo,
+                                                     void               *userData
                                                     ),
                              {
                                DatabaseId fromStorageId;
@@ -1153,14 +1169,14 @@ error = ERROR_NONE;
                                uint64     t1;
                                Errors     error;
 
-                               assert(fromColumns != NULL);
-                               assert(toColumns != NULL);
+                               assert(fromColumnInfo != NULL);
+                               assert(toColumnInfo != NULL);
 
                                UNUSED_VARIABLE(userData);
 
-                               fromStorageId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
+                               fromStorageId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                assert(fromStorageId != DATABASE_ID_NONE);
-                               toStorageId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
+                               toStorageId   = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                assert(toStorageId != DATABASE_ID_NONE);
 
 #if 1
@@ -1171,24 +1187,24 @@ error = ERROR_NONE;
                                                           "entries",
                                                           TRUE,  // transaction flag
                                                           &duration,
-                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                  DatabaseColumns *toColumns,
-                                                                                  void            *userData
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
                                                                                  ),
                                                           {
-                                                            assert(fromColumns != NULL);
-                                                            assert(toColumns != NULL);
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
 
-                                                            UNUSED_VARIABLE(fromColumns);
+                                                            UNUSED_VARIABLE(fromColumnInfo);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnId(toColumns,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
-                                                          CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                  DatabaseColumns *toColumns,
-                                                                                  void            *userData
+                                                          CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                  DatabaseColumnInfo *toColumnInfo,
+                                                                                  void               *userData
                                                                                  ),
                                                           {
                                                             Errors     error;
@@ -1196,20 +1212,20 @@ error = ERROR_NONE;
 //                                                            IndexTypes type;
                                                             DatabaseId toEntryId;
 
-                                                            assert(fromColumns != NULL);
-                                                            assert(toColumns != NULL);
+                                                            assert(fromColumnInfo != NULL);
+                                                            assert(toColumnInfo != NULL);
 
                                                             UNUSED_VARIABLE(userData);
 
-                                                            fromEntryId = Database_getTableColumnId(fromColumns,"id",DATABASE_ID_NONE);
+                                                            fromEntryId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
-//                                                            type = Database_getTableColumnId(fromColumns,"type",INDEX_TYPE_NONE);
-                                                            toEntryId   = Database_getTableColumnId(toColumns,"id",DATABASE_ID_NONE);
+//                                                            type = Database_getTableColumnId(fromColumnInfo,"type",INDEX_TYPE_NONE);
+                                                            toEntryId   = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumns,"name",NULL));
+                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
 // TODO:
 #if 0
                                                             switch (type)
@@ -1237,22 +1253,22 @@ error = ERROR_NONE;
                                                                                            "directoryEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                                                   DatabaseColumns *toColumns,
-                                                                                                                   void            *userData
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                                                   DatabaseColumnInfo *toColumnInfo,
+                                                                                                                   void               *userData
                                                                                                                   ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             assert(fromColumns != NULL);
-                                                                                             assert(toColumns != NULL);
+                                                                                             assert(fromColumnInfo != NULL);
+                                                                                             assert(toColumnInfo != NULL);
 
                                                                                              UNUSED_VARIABLE(fromColumns);
                                                                                              UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -1269,8 +1285,8 @@ error = ERROR_NONE;
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1288,22 +1304,22 @@ error = ERROR_NONE;
                                                                                            "linkEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                                                   DatabaseColumns *toColumns,
-                                                                                                                   void            *userData
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                                                   DatabaseColumnInfo *toColumnInfo,
+                                                                                                                   void               *userData
                                                                                                                   ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             assert(fromColumns != NULL);
-                                                                                             assert(toColumns != NULL);
+                                                                                             assert(fromColumnInfo != NULL);
+                                                                                             assert(toColumnInfo != NULL);
 
                                                                                              UNUSED_VARIABLE(fromColumns);
                                                                                              UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -1320,8 +1336,8 @@ error = ERROR_NONE;
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1347,21 +1363,21 @@ error = ERROR_NONE;
                                                                                            "specialEntries",
                                                                                            FALSE,  // transaction flag
                                                                                            &duration,
-                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumns *fromColumns,
-                                                                                                                   DatabaseColumns *toColumns,
-                                                                                                                   void            *userData
+                                                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
+                                                                                                                   DatabaseColumnInfo *toColumnInfo,
+                                                                                                                   void               *userData
                                                                                                                   ),
                                                                                            {
                                                                                              DatabaseId fromStorageId;
                                                                                              DatabaseId toStorageId;
 
-                                                                                             assert(fromColumns != NULL);
-                                                                                             assert(toColumns != NULL);
+                                                                                             assert(fromColumnInfo != NULL);
+                                                                                             assert(toColumnInfo != NULL);
 
                                                                                              UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
-                                                                                             fromStorageId = Database_getTableColumnId(fromColumns,"storageId",DATABASE_ID_NONE);
+                                                                                             fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
@@ -1378,8 +1394,8 @@ error = ERROR_NONE;
                                                                                                toStorageId = DATABASE_ID_NONE;
                                                                                              }
 
-                                                                                             (void)Database_setTableColumnId(toColumns,"entryId",toEntryId);
-                                                                                             (void)Database_setTableColumnId(toColumns,"storageId",toStorageId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                                                                             (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
 
                                                                                              return ERROR_NONE;
                                                                                            },NULL),
@@ -1416,7 +1432,7 @@ error = ERROR_NONE;
 
                                logImportProgress("Imported storage #%"PRIi64": '%s' (%llus)",
                                                  toStorageId,
-                                                 Database_getTableColumnCString(fromColumns,"name",""),
+                                                 Database_getTableColumnCString(fromColumnInfo,"name",""),
                                                  (t1-t0)/US_PER_SECOND
                                                 );
 
