@@ -1911,7 +1911,7 @@ Errors Database_select(DatabaseHandle      *databaseHandle,
                        const char          *filter,
                        DatabaseValue       filterValues[],
                        uint                filterValueCount
-                      );
+                      ) ATTRIBUTE_DEPRECATED;
 Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseHandle          *databaseHandle,
                        const char              *tables,

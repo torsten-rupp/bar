@@ -94,13 +94,15 @@ LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
   INDEX_DOX(error,
             indexHandle,
   {
-    return Database_execute(&indexHandle->databaseHandle,
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+    return Database_delete(&indexHandle->databaseHandle,
                             &n,
-                            DATABASE_COLUMN_TYPES(),
-                            "DELETE FROM uuids \
-                             WHERE uuids.jobUUID='' \
-                            "
+                            "uuids",
+                            DATABASE_FLAG_NONE,
+                            "uuids.jobUUID=''",
+                            DATABASE_FILTERS
+                            (
+                            )
                            );
   });
 
@@ -210,13 +212,17 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
   if (isEmptyUUID(indexHandle,uuidId))
   {
     // delete UUID index
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM uuids WHERE id=%lld",
-                             uuidId
-                            );
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "uuids",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(uuidId)
+                            )
+                           );
     if (error != ERROR_NONE)
     {
       return error;
@@ -576,50 +582,43 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
     // get last executed, total entities count, total entry count, total entry size
-    error = Database_prepare(&databaseStatementHandle,
-                             &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(UINT64,INT,INT,INT64),
-                             stringFormat(sqlCommand,sizeof(sqlCommand),
-                                          "SELECT MAX(UNIX_TIMESTAMP(entities.created)), \
-                                                  COUNT(entities.id), \
-                                                  SUM(storages.totalEntryCount), \
-                                                  SUM(storages.totalEntrySize) \
-                                           FROM uuids \
-                                             LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                                             LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
-                                           WHERE %s \
-                                          ",
-                                          String_cString(filterString)
-                                         ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                            );
-//Database_debugPrintQueryInfo(&databaseStatementHandle);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    if (Database_getNextRow(&databaseStatementHandle,
-                            "%llu %lu %lf %lf",
-                            lastExecutedDateTime,
-                            totalEntityCount,
-                            &totalEntryCount_,
-                            &totalEntrySize_
-                           )
-          )
-    {
-      assert(totalEntryCount_ >= 0.0);
-      assert(totalEntrySize_ >= 0.0);
-      if (totalEntryCount != NULL) (*totalEntryCount) = (totalEntryCount_ >= 0.0) ? (ulong)totalEntryCount_ : 0L;
-      if (totalEntrySize != NULL) (*totalEntrySize) = (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
-    }
-    Database_finalize(&databaseStatementHandle);
+    return Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 4);
 
-    return ERROR_NONE;
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         (*lastExecutedDateTime) = values[0].u64;
+                         (*totalEntityCount)     = values[1].u;
+                         (*totalEntryCount)      = values[2].u;
+                         (*totalEntrySize)       = values[3].u64;
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+//TODO newest
+                       "uuids \
+                         LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                         LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT64("MAX(UNIX_TIMESTAMP(entities.created))"),
+                         DATABASE_COLUMN_UINT  ("COUNT(entities.id)"),
+                         DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
+                         DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)"),
+                       ),
+                       stringFormat(sqlCommand,sizeof(sqlCommand),
+                                    "%s",
+                                    String_cString(filterString)
+                                   ),
+                       DATABASE_FILTERS
+                       (
+                       )
+                      );
   });
   if (error != ERROR_NONE)
   {
@@ -1429,15 +1428,18 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     }
 
     // delete UUID index
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM uuids \
-                              WHERE id=%lld \
-                             ",
-                             Index_getDatabaseId(uuidId)
-                            );
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "uuids",
+                            DATABASE_FLAG_NONE,
+                            "id=? \
+                            ",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
+                            )
+                           );
     if (error != ERROR_NONE)
     {
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);

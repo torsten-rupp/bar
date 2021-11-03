@@ -383,11 +383,13 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
     #define ATTRIBUTE_NO_INSTRUMENT_FUNCTION
   #endif
   #define ATTRIBUTE_AUTO(functionCode) __attribute((cleanup(functionCode)))
+  #define ATTRIBUTE_DEPRECATED         __attribute__((deprecated))
 #else
   #define ATTRIBUTE_PACKED
   #define ATTRIBUTE_WARN_UNUSED_RESULT
   #define ATTRIBUTE_NO_INSTRUMENT_FUNCTION
   #define ATTRIBUTE_AUTO(functionCode)
+  #define ATTRIBUTE_DEPRECATED
 #endif /* __GNUC__ */
 
 // only for better reading

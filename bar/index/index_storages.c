@@ -838,66 +838,54 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
 * Notes  : -
 \***********************************************************************/
 
-// TODO:
-LOCAL Errors IndexStorage_getStorageState(IndexHandle *indexHandle,
-                                    DatabaseId  storageId,
-                                    IndexStates *indexState,
-                                    uint64      *lastCheckedDateTime,
-                                    String      errorMessage
-                                   )
+LOCAL Errors getStorageState(IndexHandle *indexHandle,
+                             DatabaseId  storageId,
+                             IndexStates *indexState,
+                             uint64      *lastCheckedDateTime,
+                             String      errorMessage
+                            )
 {
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
+  return Database_get(&indexHandle->databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 4);
 
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,UINT64,STRING),
-                           "SELECT state, \
-                                   UNIX_TIMESTAMP(lastChecked), \
-                                   errorMessage \
-                            FROM storages \
-                            WHERE id=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY (storageId)
-                           )
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%d %llu %S",
-                           indexState,
-                           lastCheckedDateTime,
-                           errorMessage
-                          )
-     )
-  {
-    (*indexState) = INDEX_STATE_UNKNOWN;
-    if (errorMessage != NULL) String_clear(errorMessage);
-  }
+                        (*indexState)          = (IndexStates)values[0].u;
+                        (*lastCheckedDateTime) = values[1].u64;
+                        String_setBuffer(errorMessage,values[2].text.data,values[2].text.length);
 
-  Database_finalize(&databaseStatementHandle);
-
-  return ERROR_NONE;
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      "storages",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT  ("state"),
+                        DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(lastChecked)"),
+                        DATABASE_COLUMN_STRING("errorMessage")
+                      ),
+                      "id=?",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (storageId)
+                      )
+                     );
 }
 
-/***********************************************************************\
-* Name   : clearStorageFragments
-* Purpose: purge storage fragments
-* Input  : indexHandle  - index handle
-*          storageId    - storage id
-*          progressInfo - progress info
+/*************************** ********************************************\
+* Name   : clearStorageFragm ents
+* Purpose: purge storage fra gments
+* Input  : indexHandle  - in dex handle
+*          storageId    - st orage id
+*          progressInfo - pr ogress info
 * Output : -
-* Return : ERROR_NONE or error code
+* Return : ERROR_NONE or err or code
 * Notes  : -
-\***********************************************************************/
+\*************************** ********************************************/
 
 LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
                                    DatabaseId   storageId,
@@ -2105,7 +2093,7 @@ LOCAL Errors pruneStorage(IndexHandle  *indexHandle,
   string = String_new();
 
   // get storage state
-  error = IndexStorage_getStorageState(indexHandle,
+  error = getStorageState(indexHandle,
                           storageId,
                           &indexState,
                           NULL,  // lastCheckedDateTime
@@ -2753,70 +2741,172 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(KEY,STRING),
-                               "      SELECT entries.id, \
-                                             entries.name \
-                                      FROM entryFragments \
-                                        LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                                      WHERE entryFragments.storageId=? \
-                                UNION SELECT entries.id, \
-                                             entries.name \
-                                      FROM directoryEntries \
-                                        LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                                      WHERE directoryEntries.storageId=? \
-                                UNION SELECT entries.id, \
-                                             entries.name \
-                                      FROM linkEntries \
-                                        LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                                      WHERE linkEntries.storageId=? \
-                                UNION SELECT entries.id, \
-                                             entries.name \
-                                      FROM specialEntries \
-                                        LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                                      WHERE specialEntries.storageId=? \
-                                ORDER BY entries.name \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 DATABASE_FILTER_KEY(storageId),
-                                 DATABASE_FILTER_KEY(storageId),
-                                 DATABASE_FILTER_KEY(storageId),
-                                 DATABASE_FILTER_KEY(storageId)
-                               )
-                              );
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
-        return error;
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "entryFragments \
+                                LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                             ",
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "entryFragments.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
+                            );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "directoryEntries \
+                                LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                             ",
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "directoryEntries.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
+                            );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "linkEntries \
+                                LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                             ",
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "linkEntries.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
+                            );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             "specialEntries \
+                                LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                             ",
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "specialEntries.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
+                            );
       }
 
-      while (Database_getNextRow(&databaseStatementHandle,
-                                 "%lld %S",
-                                 &entryId,
-                                 entryName
-                                )
-            )
-      {
-        entryNode = LIST_NEW_NODE(EntryNode);
-        if (entryNode == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-
-        entryNode->entryId        = entryId;
-        entryNode->name           = String_duplicate(entryName);
-        entryNode->newest.entryId = DATABASE_ID_NONE;
-
-        List_append(&entryList,entryNode);
-      }
-
-      Database_finalize(&databaseStatementHandle);
-
-      return ERROR_NONE;
+      return error;
     });
   }
   if (error != ERROR_NONE)
@@ -4049,12 +4139,12 @@ Errors Index_getStorageState(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    return IndexStorage_getStorageState(indexHandle,
-                                        Index_getDatabaseId(storageId),
-                                        indexState,
-                                        lastCheckedDateTime,
-                                        errorMessage
-                                       );
+    return getStorageState(indexHandle,
+                           Index_getDatabaseId(storageId),
+                           indexState,
+                           lastCheckedDateTime,
+                           errorMessage
+                          );
   });
 
   return error;
@@ -4961,6 +5051,7 @@ fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
                                   );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             (void)Database_delete(&indexHandle->databaseHandle,
                                   NULL,  // changedRowCount
                                   "storages",

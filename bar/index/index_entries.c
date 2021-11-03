@@ -3901,25 +3901,25 @@ Errors Index_addFile(IndexHandle *indexHandle,
 
           // add FTS entry
 // TODO: do this wit a trigger again?
-          switch (Database_getType(&indexHandle->databaseHandle))
+          if (error == ERROR_NONE)
           {
-            case DATABASE_TYPE_SQLITE3:
-              if (error == ERROR_NONE)
-              {
-                error = Database_insert(&indexHandle->databaseHandle,
-                                        NULL,  // changedRowCount
-                                        "FTS_entries",
-                                        DATABASE_FLAG_NONE,
-                                        DATABASE_VALUES2
-                                        (
-                                          DATABASE_VALUE_KEY   ("entryId", entryId),
-                                          DATABASE_VALUE_STRING("name",    name)
-                                        )
-                                       );
-              }
-              break;
-            case DATABASE_TYPE_MYSQL:
-              break;
+            switch (Database_getType(&indexHandle->databaseHandle))
+            {
+              case DATABASE_TYPE_SQLITE3:
+                  error = Database_insert(&indexHandle->databaseHandle,
+                                          NULL,  // changedRowCount
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          DATABASE_VALUES2
+                                          (
+                                            DATABASE_VALUE_KEY   ("entryId", entryId),
+                                            DATABASE_VALUE_STRING("name",    name)
+                                          )
+                                         );
+                break;
+              case DATABASE_TYPE_MYSQL:
+                break;
+            }
           }
 
           // add file entry
@@ -4556,26 +4556,26 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
           }
 
           // add FTS entry
-// TODO: do this in a trigger again?
-          switch (Database_getType(&indexHandle->databaseHandle))
+          if (error == ERROR_NONE)
           {
-            case DATABASE_TYPE_SQLITE3:
-              if (error == ERROR_NONE)
-              {
-                error = Database_insert(&indexHandle->databaseHandle,
-                                        NULL,  // changedRowCount
-                                        "FTS_entries",
-                                        DATABASE_FLAG_NONE,
-                                        DATABASE_VALUES2
-                                        (
-                                          DATABASE_VALUE_KEY   ("entryId", entryId),
-                                          DATABASE_VALUE_STRING("name",    name)
-                                        )
-                                       );
-              }
-              break;
-            case DATABASE_TYPE_MYSQL:
-              break;
+// TODO: do this in a trigger again?
+            switch (Database_getType(&indexHandle->databaseHandle))
+            {
+              case DATABASE_TYPE_SQLITE3:
+                  error = Database_insert(&indexHandle->databaseHandle,
+                                          NULL,  // changedRowCount
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          DATABASE_VALUES2
+                                          (
+                                            DATABASE_VALUE_KEY   ("entryId", entryId),
+                                            DATABASE_VALUE_STRING("name",    name)
+                                          )
+                                         );
+                break;
+              case DATABASE_TYPE_MYSQL:
+                break;
+            }
           }
 
           // add hard link entry
@@ -4733,19 +4733,26 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       entryId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // add FTS entry
-      error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "FTS_entries",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
-                              (
-                                DATABASE_VALUE_KEY   ("entryId", entryId),
-                                DATABASE_VALUE_STRING("name",    name)
-                              )
-                             );
-      if (error != ERROR_NONE)
+      switch (Database_getType(&indexHandle->databaseHandle))
       {
-        return error;
+        case DATABASE_TYPE_SQLITE3:
+          error = Database_insert(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "FTS_entries",
+                                  DATABASE_FLAG_NONE,
+                                  DATABASE_VALUES2
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId", entryId),
+                                    DATABASE_VALUE_STRING("name",    name)
+                                  )
+                                 );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+          break;
+        case DATABASE_TYPE_MYSQL:
+          break;
       }
 
       // add special entry
