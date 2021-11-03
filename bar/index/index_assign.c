@@ -113,7 +113,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
                              ),
                              DATABASE_FILTERS
                              (
-                               KEY(toStorageId)
+                               DATABASE_FILTER_KEY(toStorageId)
                              )
                             );
     if (error == ERROR_NONE)
@@ -420,7 +420,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                              ),
                              DATABASE_FILTERS
                              (
-                               KEY(storageId)
+                               DATABASE_FILTER_KEY(storageId)
                              )
                             );
     if (error == ERROR_NONE)

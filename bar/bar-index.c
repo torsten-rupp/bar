@@ -3606,21 +3606,21 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                          DATABASE_FLAG_NONE,
                                                          DATABASE_VALUES2
                                                          (
-                                                           UINT64("totalFileCount",      totalFileCount),
-                                                           UINT64("totalImageCount",     totalImageCount),
-                                                           UINT64("totalDirectoryCount", totalDirectoryCount),
-                                                           UINT64("totalLinkCount",      totalLinkCount),
-                                                           UINT64("totalHardlinkCount",  totalHardlinkCount),
-                                                           UINT64("totalSpecialCount",   totalSpecialCount),
-                                                           UINT64(
-                                                           UINT64("totalFileSize",       totalFileSize),
-                                                           UINT64("totalImageSize",      totalImageSize),
-                                                           UINT64("totalHardlinkSize",   totalHardlinkSize)
+                                                           DATABASE_VALUE?UINT64("totalFileCount",      totalFileCount),
+                                                           DATABASE_VALUE?UINT64("totalImageCount",     totalImageCount),
+                                                           DATABASE_VALUE?UINT64("totalDirectoryCount", totalDirectoryCount),
+                                                           DATABASE_VALUE?UINT64("totalLinkCount",      totalLinkCount),
+                                                           DATABASE_VALUE?UINT64("totalHardlinkCount",  totalHardlinkCount),
+                                                           DATABASE_VALUE?UINT64("totalSpecialCount",   totalSpecialCount),
+                                                           DATABASE_VALUE?UINT64(
+                                                           DATABASE_VALUE?UINT64("totalFileSize",       totalFileSize),
+                                                           DATABASE_VALUE?UINT64("totalImageSize",      totalImageSize),
+                                                           DATABASE_VALUE?UINT64("totalHardlinkSize",   totalHardlinkSize)
                                                          ),
                                                          "id=?",
                                                          DATABASE_FILTERS
                                                          (
-                                                           KEY(entityId)
+                                                           DATABASE_FILTER_KEY(entityId)
                                                          )
                                                         );
                                }
@@ -3652,7 +3652,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                        "id=?",
                                                        DATABASE_FILTERS
                                                        (
-                                                         KEY(entityId)
+                                                         DATABASE_FILTER_KEY(entityId)
                                                        )
                                                       );
                                if (error != ERROR_NONE)
@@ -3764,7 +3764,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                        "id=?",
                                                        DATABASE_FILTERS
                                                        (
-                                                         KEY(entityId)
+                                                         DATABASE_FILTER_KEY(entityId)
                                                        )
                                                       );
                                if (error != ERROR_NONE)
@@ -3792,242 +3792,241 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
 #else
 fprintf(stderr,"%s:%d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
-    error = Database_select2(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId entityId;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId entityId;
 
-                               assert(values != NULL);
-                               assert(valueCount == 1);
+                           assert(values != NULL);
+                           assert(valueCount == 1);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               entityId = values[0].id;
+                           entityId = values[0].id;
 
 fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
 
-                               // total count/size
+                           // total count/size
 {
-                               int64 totalFileCount;
-                               int64 totalImageCount;
-                               int64 totalDirectoryCount;
-                               int64 totalLinkCount;
-                               int64 totalHardlinkCount;
-                               int64 totalSpecialCount;
-                               int64 totalFileSize;
-                               int64 totalImageSize;
-                               int64 totalHardlinkSize;
+                           int64 totalFileCount;
+                           int64 totalImageCount;
+                           int64 totalDirectoryCount;
+                           int64 totalLinkCount;
+                           int64 totalHardlinkCount;
+                           int64 totalSpecialCount;
+                           int64 totalFileSize;
+                           int64 totalImageSize;
+                           int64 totalHardlinkSize;
 
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,     entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageCount,    "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,    entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalDirectoryCount,"entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_DIRECTORY,entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalLinkCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_LINK,     entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkCount, "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK, entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalSpecialCount,  "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_SPECIAL,  entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,     entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageCount,    "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,    entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalDirectoryCount,"entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_DIRECTORY,entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalLinkCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_LINK,     entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkCount, "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK, entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalSpecialCount,  "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_SPECIAL,  entityId);
 
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileSize,    "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,    entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageSize,   "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,   entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkSize,"entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK,entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileSize,    "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,    entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageSize,   "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,   entityId);
+                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkSize,"entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK,entityId);
 
-                               if (error == ERROR_NONE)
-                               {
-                                 error = Database_update(databaseHandle,
-                                                         NULL,  // changedRowCount
-                                                         "entities",
-                                                         DATABASE_FLAG_NONE,
-                                                         DATABASE_VALUES2
-                                                         (
-                                                           INT64("totalFileCount",      totalFileCount),
-                                                           INT64("totalImageCount",     totalImageCount),
-                                                           INT64("totalDirectoryCount", totalDirectoryCount),
-                                                           INT64("totalLinkCount",      totalLinkCount),
-                                                           INT64("totalHardlinkCount",  totalHardlinkCount),
-                                                           INT64("totalSpecialCount",   totalSpecialCount),
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "entities",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES2
+                                                     (
+                                                       DATABASE_VALUE_INT64("totalFileCount",      totalFileCount),
+                                                       DATABASE_VALUE_INT64("totalImageCount",     totalImageCount),
+                                                       DATABASE_VALUE_INT64("totalDirectoryCount", totalDirectoryCount),
+                                                       DATABASE_VALUE_INT64("totalLinkCount",      totalLinkCount),
+                                                       DATABASE_VALUE_INT64("totalHardlinkCount",  totalHardlinkCount),
+                                                       DATABASE_VALUE_INT64("totalSpecialCount",   totalSpecialCount),
 
-                                                           INT64("totalFileSize",       totalFileSize),
-                                                           INT64("totalImageSize",      totalImageSize),
-                                                           INT64("totalHardlinkSize",   totalHardlinkSize)
-                                                         ),
-                                                         "id=?",
-                                                         DATABASE_FILTERS
-                                                         (
-                                                           KEY(entityId)
-                                                         )
-                                                        );
-                               }
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
+                                                       DATABASE_VALUE_INT64("totalFileSize",       totalFileSize),
+                                                       DATABASE_VALUE_INT64("totalImageSize",      totalImageSize),
+                                                       DATABASE_VALUE_INT64("totalHardlinkSize",   totalHardlinkSize)
+                                                     ),
+                                                     "id=?",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY(entityId)
+                                                     )
+                                                    );
+                           }
+                           if (error != ERROR_NONE)
+                           {
+                             printInfo("FAIL!\n");
+                             printError("create aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
+                             return error;
+                           }
 
-                               error = Database_update(databaseHandle,
-                                                       NULL,  // changedRowCount
-                                                       "entities",
-                                                       DATABASE_FLAG_NONE,
-                                                       DATABASE_VALUES2
-                                                       (
-                                                         INT64("totalEntryCount",  totalFileCount
-                                                                                   +totalImageCount
-                                                                                   +totalDirectoryCount
-                                                                                   +totalLinkCount
-                                                                                   +totalHardlinkCount
-                                                                                   +totalSpecialCount
-                                                               ),
-                                                         INT64("totalEntrySize",  totalFileSize
-                                                                                  +totalImageSize
-                                                                                  +totalHardlinkSize
-                                                               )
-                                                       ),
-                                                       "id=?",
-                                                       DATABASE_FILTERS
-                                                       (
-                                                         KEY(entityId)
-                                                       )
-                                                      );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create aggregates fail for entity #%"PRIi64": (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
+                           error = Database_update(databaseHandle,
+                                                   NULL,  // changedRowCount
+                                                   "entities",
+                                                   DATABASE_FLAG_NONE,
+                                                   DATABASE_VALUES2
+                                                   (
+                                                     DATABASE_VALUE_UINT64("totalEntryCount", totalFileCount
+                                                                                             +totalImageCount
+                                                                                             +totalDirectoryCount
+                                                                                             +totalLinkCount
+                                                                                             +totalHardlinkCount
+                                                                                             +totalSpecialCount
+                                                           ),
+                                                     DATABASE_VALUE_UINT64("totalEntrySize", totalFileSize
+                                                                                            +totalImageSize
+                                                                                            +totalHardlinkSize
+                                                           )
+                                                   ),
+                                                   "id=?",
+                                                   DATABASE_FILTERS
+                                                   (
+                                                     DATABASE_FILTER_KEY(entityId)
+                                                   )
+                                                  );
+                           if (error != ERROR_NONE)
+                           {
+                             printInfo("FAIL!\n");
+                             printError("create aggregates fail for entity #%"PRIi64": (error: %s)!",entityId,Error_getText(error));
+                             return error;
+                           }
 
-                               // total count/size newest
+                           // total count/size newest
 // TODO:
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                        NULL,  // changedRowCount
-                                                        DATABASE_COLUMN_TYPES(),
-                                                        "UPDATE entities \
-                                                         SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalImageCountNewest    =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalDirectoryCountNewest=(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalLinkCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalHardlinkCountNewest =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalSpecialCountNewest  =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             \
-                                                             totalFileSizeNewest      =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalImageSizeNewest     =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalHardlinkSizeNewest  =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ) \
-                                                         WHERE id=%lld \
-                                                        ",
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_DIRECTORY,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_LINK,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_SPECIAL,
-                                                        entityId,
+                           error = Database_execute(databaseHandle,
+                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                    NULL,  // changedRowCount
+                                                    DATABASE_COLUMN_TYPES(),
+                                                    "UPDATE entities \
+                                                     SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
+                                                                                    FROM entriesNewest \
+                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         totalImageCountNewest    =(SELECT COUNT(entriesNewest.id) \
+                                                                                    FROM entriesNewest \
+                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         totalDirectoryCountNewest=(SELECT COUNT(entriesNewest.id) \
+                                                                                    FROM entriesNewest \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         totalLinkCountNewest     =(SELECT COUNT(entriesNewest.id) \
+                                                                                    FROM entriesNewest \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         totalHardlinkCountNewest =(SELECT COUNT(entriesNewest.id) \
+                                                                                    FROM entriesNewest \
+                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         totalSpecialCountNewest  =(SELECT COUNT(entriesNewest.id) \
+                                                                                    FROM entriesNewest \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         \
+                                                         totalFileSizeNewest      =(SELECT SUM(entryFragments.size) \
+                                                                                    FROM entriesNewest \
+                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         totalImageSizeNewest     =(SELECT SUM(entryFragments.size) \
+                                                                                    FROM entriesNewest \
+                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ), \
+                                                         totalHardlinkSizeNewest  =(SELECT SUM(entryFragments.size) \
+                                                                                    FROM entriesNewest \
+                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
+                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
+                                                                                   ) \
+                                                     WHERE id=%lld \
+                                                    ",
+                                                    INDEX_CONST_TYPE_FILE,
+                                                    entityId,
+                                                    INDEX_CONST_TYPE_IMAGE,
+                                                    entityId,
+                                                    INDEX_CONST_TYPE_DIRECTORY,
+                                                    entityId,
+                                                    INDEX_CONST_TYPE_LINK,
+                                                    entityId,
+                                                    INDEX_CONST_TYPE_HARDLINK,
+                                                    entityId,
+                                                    INDEX_CONST_TYPE_SPECIAL,
+                                                    entityId,
 
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        entityId,
+                                                    INDEX_CONST_TYPE_FILE,
+                                                    entityId,
+                                                    INDEX_CONST_TYPE_IMAGE,
+                                                    entityId,
+                                                    INDEX_CONST_TYPE_HARDLINK,
+                                                    entityId,
 
-                                                        entityId
-                                                       );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
+                                                    entityId
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             printInfo("FAIL!\n");
+                             printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
+                             return error;
+                           }
 
-                               error = Database_update(databaseHandle,
-                                                       NULL,  // changedRowCount
-                                                       "entities",
-                                                       DATABASE_FLAG_NONE,
-                                                       DATABASE_VALUES2
-                                                       (
-                                                         INT64("totalEntryCountNewest", totalFileCount
-                                                                                        +totalImageCount
-                                                                                        +totalDirectoryCount
-                                                                                        +totalLinkCount
-                                                                                        +totalHardlinkCount
-                                                                                        +totalSpecialCount
-                                                               ),
-                                                         INT64("totalEntrySizeNewest",  totalFileSize
-                                                                                        +totalImageSize
-                                                                                        +totalHardlinkSize
-                                                               )
-                                                       ),
-                                                       "id=?",
-                                                       DATABASE_FILTERS
-                                                       (
-                                                         KEY(entityId)
-                                                       )
-                                                      );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
+                           error = Database_update(databaseHandle,
+                                                   NULL,  // changedRowCount
+                                                   "entities",
+                                                   DATABASE_FLAG_NONE,
+                                                   DATABASE_VALUES2
+                                                   (
+                                                     DATABASE_VALUE_UINT64("totalEntryCountNewest", totalFileCount
+                                                                                                   +totalImageCount
+                                                                                                   +totalDirectoryCount
+                                                                                                   +totalLinkCount
+                                                                                                   +totalHardlinkCount
+                                                                                                   +totalSpecialCount
+                                                           ),
+                                                     DATABASE_VALUE_UINT64("totalEntrySizeNewest",  totalFileSize
+                                                                                                   +totalImageSize
+                                                                                                   +totalHardlinkSize
+                                                           )
+                                                   ),
+                                                   "id=?",
+                                                   DATABASE_FILTERS
+                                                   (
+                                                     DATABASE_FILTER_KEY(entityId)
+                                                   )
+                                                  );
+                           if (error != ERROR_NONE)
+                           {
+                             printInfo("FAIL!\n");
+                             printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
+                             return error;
+                           }
 }
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             "entities",
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               KEY("id")
-                             ),
-                             "     (? OR id IN (?)) \
-                              AND deletedFlag!=1 \
-                             ",
-                             DATABASE_FILTERS
-                             (
-                               BOOL   (String_isEmpty(entityIdsString)),
-                               CSTRING(!String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0")
-                             )
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "entities",
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY("id")
+                         ),
+                         "     (? OR id IN (?)) \
+                          AND deletedFlag!=1 \
+                         ",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_BOOL   (String_isEmpty(entityIdsString)),
+                           DATABASE_FILTER_CSTRING(!String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0")
+                         )
+                        );
 #endif
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }

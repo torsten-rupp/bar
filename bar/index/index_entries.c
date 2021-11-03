@@ -742,10 +742,10 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors IndexEntry_collectIds(Array        *entryIds,
-                                  IndexHandle  *indexHandle,
-                                  DatabaseId   storageId,
-                                  ProgressInfo *progressInfo
-                                 )
+                             IndexHandle  *indexHandle,
+                             DatabaseId   storageId,
+                             ProgressInfo *progressInfo
+                            )
 {
   Errors error;
   #ifdef INDEX_DEBUG_PURGE
@@ -972,172 +972,277 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
             {
               case INDEX_TYPE_NONE:
               case INDEX_TYPE_ANY:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalEntryCountNewest), \
-                                                              SUM(entities.totalEntrySizeNewest) \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     %s \
-                                                             AND entities.deletedFlag!=1 \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalEntryCountNewest)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySizeNewest)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_FILE:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalFileCountNewest), \
-                                                              SUM(entities.totalFileSizeNewest) \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     %s \
-                                                             AND entities.deletedFlag!=1 \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalFileCountNewest)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalFileSizeNewest)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_IMAGE:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalImageCountNewest), \
-                                                              0 \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     %s \
-                                                             AND entities.deletedFlag!=1 \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalImageCountNewest)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalImageSizeNewest)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_DIRECTORY:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalDirectoryCountNewest), \
-                                                              0 \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     %s \
-                                                             AND entities.deletedFlag!=1 \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalDirectoryCountNewest)"),
+                                       DATABASE_COLUMN_UINT64("0")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_LINK:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalLinkCountNewest), \
-                                                              0 \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     %s \
-                                                             AND entities.deletedFlag!=1 \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalLinkCountNewest)"),
+                                       DATABASE_COLUMN_UINT64("0")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_HARDLINK:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalHardlinkCountNewest), \
-                                                              SUM(entities.totalHardlinkSizeNewest) \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     %s \
-                                                             AND entities.deletedFlag!=1 \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalHardlinkCountNewest)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalHardlinkSizeNewest)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_SPECIAL:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalSpecialCountNewest), \
-                                                              0 \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     %s \
-                                                             AND entities.deletedFlag!=1 \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalSpecialCountNewest)"),
+                                       DATABASE_COLUMN_UINT64("0")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1146,29 +1251,44 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           }
           else
           {
-            error = Database_prepare(&databaseStatementHandle,
-                                     &indexHandle->databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "SELECT 0, \
-                                                          0, \
-                                                          COUNT(entriesNewest.id), \
-                                                          SUM(entriesNewest.size) \
-                                                   FROM entriesNewest \
-                                                     LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                                     LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                                   WHERE     entities.deletedFlag!=1 \
-                                                         AND %s \
-                                                  ",
-                                                  String_cString(filterString)
-                                                 ),
-                                     DATABASE_VALUES2
-                                     (
-                                     ),
-                                     DATABASE_FILTERS
-                                     (
-                                     )
-                                    );
+            error = Database_get(&indexHandle->databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 4);
+
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
+
+                                   if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                   if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                   if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                   if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 "entriesNewest \
+                                    LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                    LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                 ",
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_UINT  ("0"),
+                                   DATABASE_COLUMN_UINT64("0"),
+                                   DATABASE_COLUMN_UINT  ("COUNT(entriesNewest.id)"),
+                                   DATABASE_COLUMN_UINT64("SUM(entriesNewest.size)")
+                                 ),
+                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                              "    %s \
+                                               AND entities.deletedFlag!=1 \
+                                              ",
+                                              String_cString(filterString)
+                                             ),
+                                 DATABASE_FILTERS
+                                 (
+                                 )
+                                );
           }
         }
         else
@@ -1180,170 +1300,277 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
             {
               case INDEX_TYPE_NONE:
               case INDEX_TYPE_ANY:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalEntryCount), \
-                                                              SUM(entities.totalEntrySize) \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     entities.deletedFlag!=1 \
-                                                             AND %s \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalEntryCount)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_FILE:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalFileCount), \
-                                                              SUM(entities.totalFileSize) \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     entities.deletedFlag!=1 \
-                                                             AND %s \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalFileCount)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalFileSize)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_IMAGE:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalImageCount), \
-                                                              SUM(entities.totalImageSize) \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     entities.deletedFlag!=1 \
-                                                             AND %s \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalImageCount)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalImageSize)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_DIRECTORY:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalDirectoryCount), \
-                                                              0 \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     entities.deletedFlag!=1 \
-                                                             AND %s \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalDirectoryCount)"),
+                                       DATABASE_COLUMN_UINT64("0")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_LINK:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalLinkCount), \
-                                                              0 \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     entities.deletedFlag!=1 \
-                                                             AND %s \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalLinkCount)"),
+                                       DATABASE_COLUMN_UINT64("0")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_HARDLINK:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT 0, \
-                                                              0, \
-                                                              SUM(entities.totalHardlinkCount), \
-                                                              SUM(entities.totalHardlinkSize) \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     entities.deletedFlag!=1 \
-                                                             AND %s \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalHardlinkCount)"),
+                                       DATABASE_COLUMN_UINT64("SUM(entities.totalHardlinkSize)")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               case INDEX_TYPE_SPECIAL:
-                error = Database_prepare(&databaseStatementHandle,
-                                         &indexHandle->databaseHandle,
-                                         DATABASE_COLUMN_TYPES(INT,INT),
-                                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                      "SELECT SUM(entities.totalSpecialCount), \
-                                                              0 \
-                                                       FROM entities \
-                                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                       WHERE     entities.deletedFlag!=1 \
-                                                             AND %s \
-                                                      ",
-                                                      String_cString(filterString)
-                                                     ),
-                                         DATABASE_VALUES2
-                                         (
-                                         ),
-                                         DATABASE_FILTERS
-                                         (
-                                         )
-                                        );
+                error = Database_get(&indexHandle->databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 4);
+
+                                       UNUSED_VARIABLE(userData);
+                                       UNUSED_VARIABLE(valueCount);
+
+                                       if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                       if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                       if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                       if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     "entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                     ",
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_UINT  ("0"),
+                                       DATABASE_COLUMN_UINT64("0"),
+                                       DATABASE_COLUMN_UINT  ("SUM(entities.totalSpecialCount)"),
+                                       DATABASE_COLUMN_UINT64("0")
+                                     ),
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "    %s \
+                                                   AND entities.deletedFlag!=1 \
+                                                  ",
+                                                  String_cString(filterString)
+                                                 ),
+                                     DATABASE_FILTERS
+                                     (
+                                     )
+                                    );
                 break;
               default:
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1352,56 +1579,50 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           }
           else
           {
-            error = Database_prepare(&databaseStatementHandle,
-                                     &indexHandle->databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT,INT,INT,INT64),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "SELECT 0, \
-                                                          0, \
-                                                          COUNT(entries.id), \
-                                                          SUM(entries.size) \
-                                                   FROM entries \
-                                                     LEFT JOIN entities ON entities.id=entries.entityId \
-                                                     LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                                   WHERE     entities.deletedFlag!=1 \
-                                                         AND %s \
-                                                  ",
-                                                  String_cString(filterString)
-                                                 ),
-                                     DATABASE_VALUES2
-                                     (
-                                     ),
-                                     DATABASE_FILTERS
-                                     (
-                                     )
-                                    );
+            error = Database_get(&indexHandle->databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 4);
+
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
+
+                                   if (totalStorageCount != NULL) (*totalStorageCount) = values[0].u;
+                                   if (totalStorageSize  != NULL) (*totalStorageSize ) = values[1].u64;
+                                   if (totalEntryCount   != NULL) (*totalEntryCount  ) = values[2].u;
+                                   if (totalEntrySize    != NULL) (*totalEntrySize   ) = values[3].u64;
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 "entries \
+                                    LEFT JOIN entities ON entities.id=entries.entityId \
+                                    LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                 ",
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_UINT  ("0"),
+                                   DATABASE_COLUMN_UINT64("0"),
+                                   DATABASE_COLUMN_UINT  ("COUNT(entries.id)"),
+                                   DATABASE_COLUMN_UINT64("SUM(entries.size)")
+                                 ),
+                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                              "    %s \
+                                               AND entities.deletedFlag!=1 \
+                                              ",
+                                              String_cString(filterString)
+                                             ),
+                                 DATABASE_FILTERS
+                                 (
+                                 )
+                                );
           }
         }
         if (error != ERROR_NONE)
         {
           return error;
         }
-        #ifdef INDEX_DEBUG_LIST_INFO
-          Database_debugPrintQueryInfo(&databaseStatementHandle);
-        #endif
-        if (!Database_getNextRow(&databaseStatementHandle,
-                                 "%llu %lf %llu %lf",
-                                 &totalStorageCount_,
-                                 &totalStorageSize_,
-                                 &totalEntryCount_,
-                                 &totalEntrySize_
-                                )
-           )
-        {
-          Database_finalize(&databaseStatementHandle);
-          return ERRORX_(DATABASE,0,"get entries count/size");
-        }
-        assert(totalEntrySize_ >= 0.0);
-        if (totalStorageCount != NULL) (*totalStorageCount) = (ulong)totalStorageCount_;
-        if (totalStorageSize  != NULL) (*totalStorageSize ) = (totalStorageSize_ >= 0.0) ? (uint64)totalStorageSize_ : 0LL;
-        if (totalEntryCount   != NULL) (*totalEntryCount  ) = (ulong)totalEntryCount_;
-        if (totalEntrySize    != NULL) (*totalEntrySize   ) = (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
-        Database_finalize(&databaseStatementHandle);
 
         return ERROR_NONE;
       });
@@ -1972,100 +2193,102 @@ fprintf(stderr,"%s:%d: 1\n",__FILE__,__LINE__);
                                  ),
                                  DATABASE_FILTERS
                                  (
-                                   UINT64(offset),
-                                   UINT64(limit)
+                                   DATABASE_FILTER_UINT64(offset),
+                                   DATABASE_FILTER_UINT64(limit)
                                  )
                                );
       }
       else
       {
-fprintf(stderr,"%s:%d: 2\n",__FILE__,__LINE__);
-        return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                                &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,STRING,STRING,INT,KEY,INT,STRING,DATETIME,INT,INT,INT,INT64,INT,KEY,STRING,INT64,INT64,INT,INT,INT64,STRING,INT64),
-                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                             "SELECT uuids.id, \
-                                                     uuids.jobUUID, \
-                                                     entities.id, \
-                                                     entities.scheduleUUID, \
-                                                     entities.hostName, \
-                                                     entities.userName, \
-                                                     entities.type, \
-                                                     entries.id, \
-                                                     entries.type, \
-                                                     entries.name, \
-                                                     entries.timeLastChanged, \
-                                                     entries.userId, \
-                                                     entries.groupId, \
-                                                     entries.permission, \
-                                                     entries.size, \
-                                                     %s, \
-                                                     CASE entries.type \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN directoryEntries.storageId \
-                                                       WHEN %u THEN linkEntries.storageId \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN specialEntries.storageId \
-                                                     END, \
-                                                     (SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN directoryEntries.storageId \
-                                                                                           WHEN %u THEN linkEntries.storageId \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN specialEntries.storageId \
-                                                                                         END \
-                                                     ), \
-                                                     fileEntries.size, \
-                                                     imageEntries.size, \
-                                                     imageEntries.fileSystemType, \
-                                                     imageEntries.blockSize, \
-                                                     directoryEntries.totalEntrySize, \
-                                                     linkEntries.destinationName, \
-                                                     hardlinkEntries.size \
-                                              FROM entries \
-                                                LEFT JOIN entities         ON entities.id=entries.entityId \
-                                                LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
-                                                LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
-                                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                                LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                                LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
-                                                LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                              WHERE     entities.deletedFlag!=1 \
-                                                    AND %s \
-                                              %s \
-                                              LIMIT ?,? \
-                                             ",
-                                             fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0",
+fprintf(stderr,"%s:%d: 2xxxx\n",__FILE__,__LINE__);
+        return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                               &indexHandle->databaseHandle,
+                               "entries \
+                                  LEFT JOIN entities         ON entities.id=entries.entityId \
+                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
+                                  LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
+                                  LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
+                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                               ",
+                               DATABASE_FLAG_NONE,
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_KEY   ("uuids.id"),
+                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY   ("entities.id"),
+                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING("entities.hostName"),
+                                 DATABASE_COLUMN_STRING("entities.userName"),
+                                 DATABASE_COLUMN_UINT  ("entities.type"),
+                                 DATABASE_COLUMN_KEY   ("entries.id"),
+                                 DATABASE_COLUMN_UINT  ("entries.type"),
+                                 DATABASE_COLUMN_STRING("entries.name"),
+                                 DATABASE_COLUMN_UINT64("entries.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT  ("entries.userId"),
+                                 DATABASE_COLUMN_UINT  ("entries.groupId"),
+                                 DATABASE_COLUMN_UINT  ("entries.permission"),
+                                 DATABASE_COLUMN_UINT64("entries.size"),
+                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
+                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN directoryEntries.storageId \
+                                                           WHEN ? THEN linkEntries.storageId \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN specialEntries.storageId \
+                                                         END"
+                                                       ),
+                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN directoryEntries.storageId \
+                                                                                               WHEN ? THEN linkEntries.storageId \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN specialEntries.storageId \
+                                                                                             END \
+                                                         ) \
+                                                        "
+                                                       ),
+                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySize"),
+                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "     entities.deletedFlag!=1 \
+                                             AND %s \
+                                             %s \
+                                             LIMIT ?,? \
+                                            ",
+                                            String_cString(filterString),
+                                            String_cString(orderString)
+                                           ),
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
-
-                                             String_cString(filterString),
-                                             String_cString(orderString)
-                                            ),
-                                 DATABASE_VALUES2
-                                 (
-                                 ),
-                                 DATABASE_FILTERS
-                                 (
-                                   UINT64(offset),
-                                   UINT64(limit)
-                                 )
-                               );
+                                 DATABASE_FILTER_UINT64(offset),
+                                 DATABASE_FILTER_UINT64(limit)
+                               )
+                              );
       }
     });
   }
@@ -2176,8 +2399,8 @@ fprintf(stderr,"%s:%d: 3\n",__FILE__,__LINE__);
                                  ),
                                  DATABASE_FILTERS
                                  (
-                                   UINT64(offset),
-                                   UINT64(limit)
+                                   DATABASE_FILTER_UINT64(offset),
+                                   DATABASE_FILTER_UINT64(limit)
                                  )
                                );
       });
@@ -2273,8 +2496,8 @@ fprintf(stderr,"%s:%d: 4\n",__FILE__,__LINE__);
                                  ),
                                  DATABASE_FILTERS
                                  (
-                                   UINT64(offset),
-                                   UINT64(limit)
+                                   DATABASE_FILTER_UINT64(offset),
+                                   DATABASE_FILTER_UINT64(limit)
                                  )
                                );
       });
@@ -2448,9 +2671,9 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                              ),
                              DATABASE_FILTERS
                              (
-                               KEY   (Index_getDatabaseId(entryId)),
-                               UINT64(offset),
-                               UINT64(limit)
+                               DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId)),
+                               DATABASE_FILTER_UINT64(offset),
+                               DATABASE_FILTER_UINT64(limit)
 
                              )
                            );
@@ -3655,18 +3878,18 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES2
                                   (
-                                    KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    UINT  ("type",            INDEX_TYPE_FILE),
-                                    STRING("name",            name),
-                                    UINT64("timeLastAccess",  timeLastAccess),
-                                    UINT64("timeModified",    timeModified),
-                                    UINT64("timeLastChanged", timeLastChanged),
-                                    UINT  ("userId",          userId),
-                                    UINT  ("groupId",         groupId),
-                                    UINT  ("permission",      permission),
+                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_FILE),
+                                    DATABASE_VALUE_STRING("name",            name),
+                                    DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
+                                    DATABASE_VALUE_UINT64("timeModified",    timeModified),
+                                    DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                    DATABASE_VALUE_UINT  ("userId",          userId),
+                                    DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                    DATABASE_VALUE_UINT  ("permission",      permission),
 
-                                    KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    UINT64("size",            size)
+                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64("size",            size)
                                   )
                                  );
 
@@ -3689,8 +3912,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                         DATABASE_FLAG_NONE,
                                         DATABASE_VALUES2
                                         (
-                                          KEY   ("entryId", entryId),
-                                          STRING("name",    name)
+                                          DATABASE_VALUE_KEY   ("entryId", entryId),
+                                          DATABASE_VALUE_STRING("name",    name)
                                         )
                                        );
               }
@@ -3708,8 +3931,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES2
                                     (
-                                      KEY   ("entryId", entryId),
-                                      UINT64("size",    size)
+                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_UINT64("size",    size)
                                     )
                                    );
           }
@@ -3727,10 +3950,10 @@ Errors Index_addFile(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entryId",   entryId),
-                                KEY   ("storageId", Index_getDatabaseId(storageId)),
-                                UINT64("offset",    fragmentOffset),
-                                UINT64("size",      fragmentSize)
+                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_UINT64("offset",    fragmentOffset),
+                                DATABASE_VALUE_UINT64("size",      fragmentSize)
                               )
                              );
       if (error != ERROR_NONE)
@@ -3845,18 +4068,18 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES2
                                   (
-                                    KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    UINT  ("type",            INDEX_TYPE_IMAGE),
-                                    STRING("name",            name),
-                                    UINT64("timeLastAccess",  0LL),
-                                    UINT64("timeLastAccess",  0LL),
-                                    UINT64("timeLastChanged", 0LL),
-                                    UINT  ("userId",          0),
-                                    UINT  ("groupId",         0),
-                                    UINT  ("permission",      0),
+                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_IMAGE),
+                                    DATABASE_VALUE_STRING("name",            name),
+                                    DATABASE_VALUE_UINT64("timeLastAccess",  0LL),
+                                    DATABASE_VALUE_UINT64("timeLastAccess",  0LL),
+                                    DATABASE_VALUE_UINT64("timeLastChanged", 0LL),
+                                    DATABASE_VALUE_UINT  ("userId",          0),
+                                    DATABASE_VALUE_UINT  ("groupId",         0),
+                                    DATABASE_VALUE_UINT  ("permission",      0),
 
-                                    KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    UINT64("size",            size)
+                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64("size",            size)
                                   )
                                  );
           // get entry id
@@ -3877,8 +4100,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                         DATABASE_FLAG_NONE,
                                         DATABASE_VALUES2
                                         (
-                                          KEY   ("entryId", entryId),
-                                          STRING("name",    name)
+                                          DATABASE_VALUE_KEY   ("entryId", entryId),
+                                          DATABASE_VALUE_STRING("name",    name)
                                         )
                                        );
                 break;
@@ -3896,10 +4119,10 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES2
                                     (
-                                      KEY   ("entryId",        entryId),
-                                      UINT  ("fileSystemType", fileSystemType),
-                                      UINT64("size",           size),
-                                      UINT  ("blockSize",      blockSize)
+                                      DATABASE_VALUE_KEY   ("entryId",        entryId),
+                                      DATABASE_VALUE_UINT  ("fileSystemType", fileSystemType),
+                                      DATABASE_VALUE_UINT64("size",           size),
+                                      DATABASE_VALUE_UINT  ("blockSize",      blockSize)
                                     )
                                    );
           }
@@ -3917,10 +4140,10 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entryId",   entryId),
-                                KEY   ("storageId", Index_getDatabaseId(storageId)),
-                                UINT64("offset",    blockOffset*(uint64)blockSize),
-                                UINT64("size",      blockCount*(uint64)blockSize)
+                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_UINT64("offset",    blockOffset*(uint64)blockSize),
+                                DATABASE_VALUE_UINT64("size",      blockCount*(uint64)blockSize)
                               )
                              );
       if (error != ERROR_NONE)
@@ -3997,18 +4220,18 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                UINT  ("type",            INDEX_TYPE_DIRECTORY),
-                                STRING("name",            name),
-                                UINT64("timeLastAccess",  timeLastAccess),
-                                UINT64("timeModified",    timeModified),
-                                UINT64("timeLastChanged", timeLastChanged),
-                                UINT  ("userId",          userId),
-                                UINT  ("groupId",         groupId),
-                                UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_DIRECTORY),
+                                DATABASE_VALUE_STRING("name",            name),
+                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
+                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT  ("userId",          userId),
+                                DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                DATABASE_VALUE_UINT  ("permission",      permission),
 
-                                KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                UINT64("size",            0)
+                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4030,8 +4253,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES2
                                   (
-                                    KEY   ("entryId", entryId),
-                                    STRING("name",    name)
+                                    DATABASE_VALUE_KEY   ("entryId", entryId),
+                                    DATABASE_VALUE_STRING("name",    name)
                                   )
                                  );
           if (error != ERROR_NONE)
@@ -4050,9 +4273,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entryId",   entryId),
-                                KEY   ("storageId", Index_getDatabaseId(storageId)),
-                                STRING("name",      name)
+                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_STRING("name",      name)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4149,18 +4372,18 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                UINT  ("type",            INDEX_TYPE_LINK),
-                                STRING("name",            linkName),
-                                UINT64("timeLastAccess",  timeLastAccess),
-                                UINT64("timeModified",    timeModified),
-                                UINT64("timeLastChanged", timeLastChanged),
-                                UINT  ("userId",          userId),
-                                UINT  ("groupId",         groupId),
-                                UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_LINK),
+                                DATABASE_VALUE_STRING("name",            linkName),
+                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
+                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT  ("userId",          userId),
+                                DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                DATABASE_VALUE_UINT  ("permission",      permission),
 
-                                KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                UINT64("size",            0)
+                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4182,8 +4405,8 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES2
                                   (
-                                    KEY   ("entryId", entryId),
-                                    STRING("name",    linkName)
+                                    DATABASE_VALUE_KEY   ("entryId", entryId),
+                                    DATABASE_VALUE_STRING("name",    linkName)
                                   )
                                  );
           if (error != ERROR_NONE)
@@ -4202,9 +4425,9 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entryId",         entryId),
-                                KEY   ("storageId",       Index_getDatabaseId(storageId)),
-                                STRING("destinationName", destinationName)
+                                DATABASE_VALUE_KEY   ("entryId",         entryId),
+                                DATABASE_VALUE_KEY   ("storageId",       Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_STRING("destinationName", destinationName)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4311,18 +4534,18 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES2
                                   (
-                                    KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    UINT  ("type",            INDEX_TYPE_HARDLINK),
-                                    STRING("name",            name),
-                                    UINT64("timeLastAccess",  timeLastAccess),
-                                    UINT64("timeModified",    timeModified),
-                                    UINT64("timeLastChanged", timeLastChanged),
-                                    UINT  ("userId",          userId),
-                                    UINT  ("groupId",         groupId),
-                                    UINT  ("permission",      permission),
+                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_HARDLINK),
+                                    DATABASE_VALUE_STRING("name",            name),
+                                    DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
+                                    DATABASE_VALUE_UINT64("timeModified",    timeModified),
+                                    DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                    DATABASE_VALUE_UINT  ("userId",          userId),
+                                    DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                    DATABASE_VALUE_UINT  ("permission",      permission),
 
-                                    KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    UINT64("size",            size)
+                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64("size",            size)
                                   )
                                  );
 
@@ -4345,8 +4568,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                         DATABASE_FLAG_NONE,
                                         DATABASE_VALUES2
                                         (
-                                          KEY   ("entryId", entryId),
-                                          STRING("name",    name)
+                                          DATABASE_VALUE_KEY   ("entryId", entryId),
+                                          DATABASE_VALUE_STRING("name",    name)
                                         )
                                        );
               }
@@ -4364,8 +4587,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES2
                                     (
-                                      KEY   ("entryId", entryId),
-                                      UINT64("size",    size)
+                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_UINT64("size",    size)
                                     )
                                    );
           }
@@ -4383,10 +4606,10 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entryId",   entryId),
-                                KEY   ("storageId", Index_getDatabaseId(storageId)),
-                                UINT64("offset",    fragmentOffset),
-                                UINT64("size",      fragmentSize)
+                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_UINT64("offset",    fragmentOffset),
+                                DATABASE_VALUE_UINT64("size",      fragmentSize)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4487,18 +4710,18 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                UINT  ("type",            INDEX_TYPE_SPECIAL),
-                                STRING("name",            name),
-                                UINT64("timeLastAccess",  timeLastAccess),
-                                UINT64("timeModified",    timeModified),
-                                UINT64("timeLastChanged", timeLastChanged),
-                                UINT  ("userId",          userId),
-                                UINT  ("groupId",         groupId),
-                                UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_SPECIAL),
+                                DATABASE_VALUE_STRING("name",            name),
+                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
+                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT  ("userId",          userId),
+                                DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                DATABASE_VALUE_UINT  ("permission",      permission),
 
-                                KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                UINT64("size",            0)
+                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4516,8 +4739,8 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entryId", entryId),
-                                STRING("name",    name)
+                                DATABASE_VALUE_KEY   ("entryId", entryId),
+                                DATABASE_VALUE_STRING("name",    name)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4532,11 +4755,11 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                KEY   ("entryId",     entryId),
-                                KEY   ("storageId",   Index_getDatabaseId(storageId)),
-                                UINT  ("specialType", specialType),
-                                UINT  ("major",       major),
-                                UINT  ("minor",       minor)
+                                DATABASE_VALUE_KEY   ("entryId",     entryId),
+                                DATABASE_VALUE_KEY   ("storageId",   Index_getDatabaseId(storageId)),
+                                DATABASE_VALUE_UINT  ("specialType", specialType),
+                                DATABASE_VALUE_UINT  ("major",       major),
+                                DATABASE_VALUE_UINT  ("minor",       minor)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4676,9 +4899,9 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES2
                             (
-                              KEY   ("entityId", Index_getDatabaseId(entityId)),
-                              UINT  ("type",     indexType),
-                              STRING("name",     entryName)
+                              DATABASE_VALUE_KEY   ("entityId", Index_getDatabaseId(entityId)),
+                              DATABASE_VALUE_UINT  ("type",     indexType),
+                              DATABASE_VALUE_STRING("name",     entryName)
                             )
                            );
     if (error != ERROR_NONE)

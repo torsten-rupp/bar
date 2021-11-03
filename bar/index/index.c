@@ -681,7 +681,7 @@ LOCAL_INLINE DatabaseCopyPauseCallbackFunction getCopyPauseCallback(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getIndexVersion(int64 *indexVersion, const DatabaseSpecifier *databaseSpecifier)
+LOCAL Errors getIndexVersion(uint *indexVersion, const DatabaseSpecifier *databaseSpecifier)
 {
   Errors      error;
   IndexHandle indexHandle;
@@ -694,12 +694,15 @@ LOCAL Errors getIndexVersion(int64 *indexVersion, const DatabaseSpecifier *datab
   }
 
   // get database version
-  error = Database_getInteger64(&indexHandle.databaseHandle,
-                                indexVersion,
-                                "meta",
-                                "value",
-                                "WHERE name='version'"
-                               );
+  error = Database_getUInt(&indexHandle.databaseHandle,
+                           indexVersion,
+                           "meta",
+                           "value",
+                           "name='version'",
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&indexHandle);
@@ -1309,7 +1312,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           DATABASE_FLAG_NONE,
                           DATABASE_VALUES2
                           (
-                            UINT("lockedCount", 0),
+                            DATABASE_VALUE_UINT("lockedCount", 0),
                           ),
                           NULL,
                           DATABASE_FILTERS
@@ -1324,12 +1327,12 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           DATABASE_FLAG_NONE,
                           DATABASE_VALUES2
                           (
-                            UINT("state", INDEX_STATE_NONE),
+                            DATABASE_VALUE_UINT("state", INDEX_STATE_NONE),
                           ),
                           "deletedFlag=?",
                           DATABASE_FILTERS
                           (
-                            BOOL(TRUE),
+                            DATABASE_FILTER_BOOL(TRUE),
                           )
                          );
 
@@ -1722,7 +1725,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                  ).
                                  DATABASE_FILTERS
                                  (
-                                   STRING(uuid)
+                                   DATABASE_FILTER_STRING(uuid)
                                  )
                                 );
         if (error == ERROR_NONE)
@@ -2042,7 +2045,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                  ),
                                  DATABASE_FILTERS
                                  (
-                                   STRING(uuid)
+                                   DATABASE_FILTER_STRING(uuid)
                                  )
                                 );
         if (error == ERROR_NONE)
@@ -2344,7 +2347,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                ),
                                DATABASE_FILTERS
                                (
-                                 STRING(name)
+                                 DATABASE_FILTER_STRING(name)
                                )
                               );
       if (error == ERROR_NONE)
@@ -3139,7 +3142,7 @@ Errors Index_init(const char             *uriString,
 {
   bool              createFlag;
   Errors            error;
-  int64             indexVersion;
+  uint              indexVersion;
 //  String            saveDatabaseName;
 //  uint              n;
 //  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {(intptr_t)NULL} };

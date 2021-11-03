@@ -133,8 +133,8 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                             ),
                             DATABASE_FILTERS
                             (
-                              UINT64(offset),
-                              UINT64(limit)
+                              DATABASE_FILTER_UINT64(offset),
+                              DATABASE_FILTER_UINT64(limit)
                             )
                            );
   });
@@ -250,21 +250,21 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                STRING ("jobUUID",           jobUUID),
-                                STRING ("scheduleUUID",      scheduleUUID),
-                                STRING ("hostName",          hostName),
-                                STRING ("userName",          userName),
-                                UINT   ("type",              archiveType),
-                                UINT   ("type",              archiveType),
-                                UINT64 ("created",           createdDateTime),
-                                CSTRING("errorMessage",      errorMessage),
-                                UINT64 ("duration",          duration),
-                                UINT   ("totalEntryCount",   totalEntryCount),
-                                UINT64 ("totalEntrySize",    totalEntrySize),
-                                UINT   ("skippedEntryCount", skippedEntryCount),
-                                UINT64 ("skippedEntrySize",  skippedEntrySize),
-                                UINT   ("errorEntryCount",   errorEntryCount),
-                                UINT64 ("errorEntrySize",    errorEntrySize)
+                                DATABASE_VALUE_STRING ("jobUUID",           jobUUID),
+                                DATABASE_VALUE_STRING ("scheduleUUID",      scheduleUUID),
+                                DATABASE_VALUE_STRING ("hostName",          hostName),
+                                DATABASE_VALUE_STRING ("userName",          userName),
+                                DATABASE_VALUE_UINT   ("type",              archiveType),
+                                DATABASE_VALUE_UINT   ("type",              archiveType),
+                                DATABASE_VALUE_UINT64 ("created",           createdDateTime),
+                                DATABASE_VALUE_CSTRING("errorMessage",      errorMessage),
+                                DATABASE_VALUE_UINT64 ("duration",          duration),
+                                DATABASE_VALUE_UINT   ("totalEntryCount",   totalEntryCount),
+                                DATABASE_VALUE_UINT64 ("totalEntrySize",    totalEntrySize),
+                                DATABASE_VALUE_UINT   ("skippedEntryCount", skippedEntryCount),
+                                DATABASE_VALUE_UINT64 ("skippedEntrySize",  skippedEntrySize),
+                                DATABASE_VALUE_UINT   ("errorEntryCount",   errorEntryCount),
+                                DATABASE_VALUE_UINT64 ("errorEntrySize",    errorEntrySize)
                               )
                              );
       if (error != ERROR_NONE)

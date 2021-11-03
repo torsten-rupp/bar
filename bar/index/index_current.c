@@ -91,7 +91,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                            ),
                            DATABASE_FILTERS
                            (
-                             KEY (fromEntryId)
+                             DATABASE_COLUMN_KEY (fromEntryId)
                            )
                          );
   if (error == ERROR_NONE)
@@ -222,7 +222,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                            ),
                            DATABASE_FILTERS
                            (
-                             KEY (fromEntryId)
+                             DATABASE_COLUMN_KEY (fromEntryId)
                            )
                           );
   if (error == ERROR_NONE)
@@ -353,7 +353,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                            ),
                            DATABASE_FILTERS
                            (
-                             KEY (fromEntryId)
+                             DATABASE_COLUMN_KEY (fromEntryId)
                            )
                           );
   if (error == ERROR_NONE)

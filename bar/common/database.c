@@ -3561,6 +3561,8 @@ LOCAL int waitUnlockNotify(sqlite3 *handle)
   return SQLITE_OK;
 }
 
+// TODO: remove
+#if 0
 /***********************************************************************\
 * Name   : sqliteStep
 * Purpose: step statement
@@ -3607,6 +3609,7 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
 
   #undef SLEEP_TIME
 }
+#endif
 
 /***********************************************************************\
 * Name   : prepareStatement2
@@ -4061,7 +4064,7 @@ LOCAL Errors bindResults2(DatabaseStatementHandle *databaseStatementHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((resultDataTypeCount == 0) || (resultDataTypes != NULL));
-  assert((databaseStatementHandle->resultIndex+resultDataTypeCount) <= databaseStatementHandle->resultCount);
+  assertx((databaseStatementHandle->resultIndex+resultDataTypeCount) <= databaseStatementHandle->resultCount,"invalid result count: given %u, expected %u",databaseStatementHandle->resultIndex+resultDataTypeCount,databaseStatementHandle->resultCount);
 
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
@@ -5515,7 +5518,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((valueCount == 0) || (values != NULL));
-  assert((databaseStatementHandle->valueIndex+valueCount) <= databaseStatementHandle->valueCount);
+  assertx((databaseStatementHandle->valueIndex+valueCount) <= databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex+valueCount,databaseStatementHandle->valueCount);
 
   error = ERROR_NONE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
@@ -5761,7 +5764,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(filters != NULL);
-  assert((databaseStatementHandle->valueIndex+filterCount) <= databaseStatementHandle->valueCount);
+  assertx((databaseStatementHandle->valueIndex+filterCount) <= databaseStatementHandle->valueCount,"invalid filter count: given %u, expected %u",databaseStatementHandle->valueIndex+filterCount,databaseStatementHandle->valueCount);
 
   error = ERROR_NONE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
@@ -6015,7 +6018,7 @@ LOCAL Errors executeQuery(DatabaseStatementHandle *databaseStatementHandle,
   retryCount    = 0;
   do
   {
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
 // TODO: reactivate when each thread has his own index handle
 #if 0
     assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
@@ -6028,36 +6031,49 @@ LOCAL Errors executeQuery(DatabaseStatementHandle *databaseStatementHandle,
           int sqliteResult;
 
           // do query
+          sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
+          if      ((sqliteResult == SQLITE_OK) || (sqliteResult == SQLITE_DONE))
+          {
+            error = ERROR_NONE;
+          }
+          else if (sqliteResult == SQLITE_LOCKED)
+          {
+// TODO:
+          }
+          else if (sqliteResult == SQLITE_MISUSE)
+          {
+            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
+                                sqliteResult,
+                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                               );
+          }
+          else if (sqliteResult == SQLITE_INTERRUPT)
+          {
+            error = ERRORX_(INTERRUPTED,
+                            sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                            "%s",
+                            sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                           );
+          }
+          else
+          {
+            error = ERRORX_(DATABASE,
+                            sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                            "%s",
+                            sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                           );
+          }
+
           if (error == ERROR_NONE)
           {
-            sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
-            if      (sqliteResult == SQLITE_OK)
+            // get number of changes
+            if (changedRowCount != NULL)
             {
-              error = ERROR_NONE;
+              (*changedRowCount) += (ulong)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
             }
-            else if (sqliteResult == SQLITE_MISUSE)
-            {
-              HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                                  sqliteResult,
-                                  sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
-                                 );
-            }
-            else if (sqliteResult == SQLITE_INTERRUPT)
-            {
-              error = ERRORX_(INTERRUPTED,
-                              sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
-                              "%s",
-                              sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
-                             );
-            }
-            else
-            {
-              error = ERRORX_(DATABASE,
-                              sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
-                              "%s",
-                              sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
-                             );
-            }
+
+            // get last insert id
+            databaseStatementHandle->databaseHandle->lastInsertId = (DatabaseId)sqlite3_last_insert_rowid(databaseStatementHandle->databaseHandle->sqlite.handle);;
           }
         }
         break;
@@ -6122,16 +6138,19 @@ LOCAL Errors executeQuery(DatabaseStatementHandle *databaseStatementHandle,
                             "%s",
                             mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
                            );
-// TODO: remove
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
             break;
           }
 
-          // get number of changes
-          if (changedRowCount != NULL)
+          if (error == ERROR_NONE)
           {
-            (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mysql.handle);
+            // get number of changes
+            if (changedRowCount != NULL)
+            {
+              (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mysql.handle);
+            }
+
+            // get last insert id
+            databaseStatementHandle->databaseHandle->lastInsertId = (DatabaseId)mysql_stmt_insert_id(databaseStatementHandle->mysql.statementHandle);
           }
         }
         break;
@@ -6311,7 +6330,7 @@ LOCAL Errors executeStatement2(DatabaseStatementHandle *databaseStatementHandle,
   retryCount    = 0;
   do
   {
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
 // TODO: reactivate when each thread has his own index handle
 #if 0
     assert(Thread_isCurrentThread(databaseStatementHandle->databaseHandle->databaseNode->readWriteLockedBy));
@@ -10322,7 +10341,6 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
                           const DatabaseDataTypes *resultDataTypes,
                           uint                    resultDataTypeCount,
                           const char              *sqlCommand,
-                          const char              *names[],
                           const DatabaseValue     values[],
                           uint                    nameValueCount,
                           const DatabaseFilter    filters[],
@@ -10336,7 +10354,6 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
                             const DatabaseDataTypes *resultDataTypes,
                             uint                    resultDataTypeCount,
                             const char              *sqlCommand,
-                            const char              *names[],
                             const DatabaseValue     values[],
                             uint                    nameValueCount,
                             const DatabaseFilter    filters[],
@@ -10351,14 +10368,6 @@ Errors Database_vexecute(DatabaseHandle         *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(sqlCommand != NULL);
 
-// TODO:
-UNUSED_VARIABLE(names);
-
-#ifdef NDEBUG
-#else /* not NDEBUG */
-(void)__fileName__;
-(void)__lineNb__;
-#endif /* NDEBUG */
   error = prepareStatement2(databaseStatementHandle,
                             databaseHandle,
                             sqlCommand
@@ -10391,6 +10400,13 @@ UNUSED_VARIABLE(names);
   }
 
   // free resources
+
+// TODO: debug version
+#ifdef NDEBUG
+#else /* not NDEBUG */
+(void)__fileName__;
+(void)__lineNb__;
+#endif /* NDEBUG */
 
   return ERROR_NONE;
 }
@@ -10703,108 +10719,87 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   result = FALSE;
 
   DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-  switch (Database_getType(databaseStatementHandle->databaseHandle))
+  if (getNextRow(databaseStatementHandle,NO_WAIT))
   {
-    case DATABASE_TYPE_SQLITE3:
-      if (sqliteStep(databaseStatementHandle->databaseHandle->sqlite.handle,
-                      databaseStatementHandle->sqlite.statementHandle,
-                      databaseStatementHandle->databaseHandle->timeout
-                     ) == SQLITE_ROW
-         )
+    va_start(arguments,format);
+    for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
+    {
+      switch (databaseStatementHandle->results[i].type)
       {
-        // get data
-        va_start(arguments,format);
-// TODO:
-        va_end(arguments);
-
-        result = TRUE;
-      }
-      break;
-    case DATABASE_TYPE_MYSQL:
-      if (getNextRow(databaseStatementHandle,NO_WAIT))
-      {
-        va_start(arguments,format);
-        for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
-        {
-          switch (databaseStatementHandle->results[i].type)
+        case DATABASE_DATATYPE_NONE:
+          break;
+        case DATABASE_DATATYPE_PRIMARY_KEY:
+        case DATABASE_DATATYPE_KEY:
+          value.i64 = va_arg(arguments,int64*);
+          if (value.i64 != NULL)
           {
-            case DATABASE_DATATYPE_NONE:
-              break;
-            case DATABASE_DATATYPE_PRIMARY_KEY:
-            case DATABASE_DATATYPE_KEY:
-              value.i64 = va_arg(arguments,int64*);
-              if (value.i64 != NULL)
-              {
-                (*value.i64) = (int64)databaseStatementHandle->results[i].i64;
-              }
-              break;
-            case DATABASE_DATATYPE_BOOL:
-              value.b = va_arg(arguments,bool*);
-              if (value.b != NULL)
-              {
-                (*value.b) = databaseStatementHandle->results[i].b;
-              }
-              break;
-            case DATABASE_DATATYPE_INT:
-              value.i = va_arg(arguments,int*);
-              if (value.i != NULL)
-              {
-                (*value.i) = (int)databaseStatementHandle->results[i].i;
-              }
-              break;
-            case DATABASE_DATATYPE_INT64:
-              value.i64 = va_arg(arguments,int64*);
-              if (value.i64 != NULL)
-              {
-                (*value.i64) = databaseStatementHandle->results[i].i64;
-              }
-              break;
-            case DATABASE_DATATYPE_DOUBLE:
-              value.d = va_arg(arguments,double*);
-              if (value.d != NULL)
-              {
-                (*value.d) = (ulong)databaseStatementHandle->results[i].d;
-              }
-              break;
-            case DATABASE_DATATYPE_DATETIME:
-              value.u64 = va_arg(arguments,uint64*);
-              if (value.u64 != NULL)
-              {
-                (*value.u64) = databaseStatementHandle->results[i].dateTime;
-              }
-              break;
-            case DATABASE_DATATYPE_STRING:
-              value.string = va_arg(arguments,String);
-              if (value.string != NULL)
-              {
-                String_setBuffer(value.string,
-                                 databaseStatementHandle->results[i].text.data,
-                                 databaseStatementHandle->results[i].text.length
-                                );
-              }
-              break;
-            case DATABASE_DATATYPE_CSTRING:
-              value.s = va_arg(arguments,char**);
-              if (value.s != NULL)
-              {
-                (*value.s) = databaseStatementHandle->results[i].text.data;
-              }
-              break;
-            case DATABASE_DATATYPE_BLOB:
-              HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break;
+            (*value.i64) = (int64)databaseStatementHandle->results[i].i64;
           }
-        }
-        va_end(arguments);
-
-        result = TRUE;
+          break;
+        case DATABASE_DATATYPE_BOOL:
+          value.b = va_arg(arguments,bool*);
+          if (value.b != NULL)
+          {
+            (*value.b) = databaseStatementHandle->results[i].b;
+          }
+          break;
+        case DATABASE_DATATYPE_INT:
+          value.i = va_arg(arguments,int*);
+          if (value.i != NULL)
+          {
+            (*value.i) = (int)databaseStatementHandle->results[i].i;
+          }
+          break;
+        case DATABASE_DATATYPE_INT64:
+          value.i64 = va_arg(arguments,int64*);
+          if (value.i64 != NULL)
+          {
+            (*value.i64) = databaseStatementHandle->results[i].i64;
+          }
+          break;
+        case DATABASE_DATATYPE_DOUBLE:
+          value.d = va_arg(arguments,double*);
+          if (value.d != NULL)
+          {
+            (*value.d) = (ulong)databaseStatementHandle->results[i].d;
+          }
+          break;
+        case DATABASE_DATATYPE_DATETIME:
+          value.u64 = va_arg(arguments,uint64*);
+          if (value.u64 != NULL)
+          {
+            (*value.u64) = databaseStatementHandle->results[i].dateTime;
+          }
+          break;
+        case DATABASE_DATATYPE_STRING:
+          value.string = va_arg(arguments,String);
+          if (value.string != NULL)
+          {
+            String_setBuffer(value.string,
+                             databaseStatementHandle->results[i].text.data,
+                             databaseStatementHandle->results[i].text.length
+                            );
+          }
+          break;
+        case DATABASE_DATATYPE_CSTRING:
+          value.s = va_arg(arguments,char**);
+          if (value.s != NULL)
+          {
+            (*value.s) = databaseStatementHandle->results[i].text.data;
+          }
+          break;
+        case DATABASE_DATATYPE_BLOB:
+          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
       }
-      break;
+    }
+
+    result = TRUE;
   }
   DATABASE_DEBUG_TIME_END(databaseStatementHandle);
 
@@ -10816,14 +10811,15 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
                        ulong               *changedRowCount,
                        const char          *tableName,
                        uint                flags,
-                       const char          *names[],
                        const DatabaseValue values[],
-                       uint                nameValueCount
+                       uint                valueCount
                       )
 {
   String                  sqlString;
   DatabaseStatementHandle databaseStatementHandle;
   Errors                  error;
+
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 
   // create SQL string
   sqlString = String_new();
@@ -10855,20 +10851,20 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
       }
       break;
   }
-
   String_formatAppend(sqlString,"INTO %s (",tableName);
-  for (uint i = 0; i < nameValueCount; i++)
+  for (uint i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_appendCString(sqlString,names[i]);
+    String_appendCString(sqlString,values[i].name);
   }
   String_appendCString(sqlString,") VALUES (");
-  for (uint i = 0; i < nameValueCount; i++)
+  for (uint i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
     String_appendChar(sqlString,'?');
   }
   String_appendChar(sqlString,')');
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement2(&databaseStatementHandle,
@@ -10884,7 +10880,7 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
   // bind values
   error = bindValues(&databaseStatementHandle,
                      values,
-                     nameValueCount
+                     valueCount
                     );
   if (error != ERROR_NONE)
   {
@@ -10918,7 +10914,6 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                        ulong                *changedRowCount,
                        const char           *tableName,
                        uint                 flags,
-                       const char           *names[],
                        const DatabaseValue  values[],
                        uint                 nameValueCount,
                        const char           *filter,
@@ -10929,9 +10924,6 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   String                  sqlString;
   DatabaseStatementHandle databaseStatementHandle;
   Errors                  error;
-
-// TODO:
-UNUSED_VARIABLE(names);
 
   // create SQL string
   sqlString = String_newCString("UPDATE ");
@@ -11133,6 +11125,7 @@ Errors Database_select(DatabaseHandle      *databaseHandle,
   DatabaseDataTypes       selectDataTypes[DATABASE_MAX_TABLE_COLUMNS];
 
   // create SQL string
+fprintf(stderr,"%s:%d: %d %d\n",__FILE__,__LINE__,selectValueCount,filterValueCount);
   sqlString = String_newCString("SELECT ");
 (void)flags;
 #if 0
@@ -11161,6 +11154,7 @@ selectDataTypes[i] = selectValues[i].type;
   {
     String_formatAppend(sqlString," WHERE %s",filter);
   }
+fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement2(&databaseStatementHandle,
@@ -11220,24 +11214,24 @@ selectDataTypes[i] = selectValues[i].type;
   return ERROR_NONE;
 }
 
-Errors Database_select2(DatabaseHandle      *databaseHandle,
-                       DatabaseRowFunction databaseRowFunction,
-                       void                *databaseRowUserData,
-                       ulong               *changedRowCount,
-                       const char          *tableName,
-                       uint                flags,
+Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
+                       DatabaseHandle          *databaseHandle,
+                       const char              *tables,
+                       uint                    flags,
 // TODO: select value datatype: name, type
-                       DatabaseColumn      selectColumn[],
-                       uint                selectColumnCount,
-                       const char          *filter,
-                       DatabaseFilter      filterValues[],
-                       uint                filterValueCount
+                       DatabaseColumn          selectColumns[],
+                       uint                    selectColumnCount,
+                       const char              *filter,
+                       DatabaseFilter          filterValues[],
+                       uint                    filterValueCount
                       )
 {
-  String                  sqlString;
-  Errors                  error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseDataTypes       selectDataTypes[DATABASE_MAX_TABLE_COLUMNS];
+  String            sqlString;
+  Errors            error;
+  DatabaseDataTypes selectDataTypes[DATABASE_MAX_TABLE_COLUMNS];
+
+  assert(databaseStatementHandle != NULL);
+  assert(databaseHandle != NULL);
 
   // create SQL string
   sqlString = String_newCString("SELECT ");
@@ -11248,10 +11242,10 @@ Errors Database_select2(DatabaseHandle      *databaseHandle,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_appendCString(sqlString," OR IGNORE ");
+        String_appendCString(sqlString,"OR IGNORE ");
         break;
       case DATABASE_TYPE_MYSQL:
-        String_appendCString(sqlString," IGNORE ");
+        String_appendCString(sqlString,"IGNORE ");
         break;
     }
   }
@@ -11260,18 +11254,18 @@ Errors Database_select2(DatabaseHandle      *databaseHandle,
   for (uint i = 0; i < selectColumnCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_formatAppend(sqlString,"%s",selectColumn[i].name);
-selectDataTypes[i] = selectColumn[i].type;
+    String_formatAppend(sqlString,"%s",selectColumns[i].name);
+selectDataTypes[i] = selectColumns[i].type;
   }
-  String_formatAppend(sqlString," FROM %s ",tableName);
+  String_formatAppend(sqlString," FROM %s ",tables);
   if (filter != NULL)
   {
     String_formatAppend(sqlString," WHERE %s",filter);
   }
-fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
-  error = prepareStatement2(&databaseStatementHandle,
+  error = prepareStatement2(databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString)
                           );
@@ -11284,45 +11278,44 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
   // bind values
   if (filter != NULL)
   {
-    error = bindFilters(&databaseStatementHandle,
+    error = bindFilters(databaseStatementHandle,
                         filterValues,
                         filterValueCount
                        );
     if (error != ERROR_NONE)
     {
-      finalizeStatement(&databaseStatementHandle);
+      finalizeStatement(databaseStatementHandle);
       String_delete(sqlString);
       return error;
     }
   }
-// TODO:
-  error = bindResults2(&databaseStatementHandle,
+  error = bindResults2(databaseStatementHandle,
+// TODO: use selectColumns
                       selectDataTypes,
                       selectColumnCount
                      );
   if (error != ERROR_NONE)
   {
-    finalizeStatement(&databaseStatementHandle);
+    finalizeStatement(databaseStatementHandle);
     String_delete(sqlString);
     return error;
   }
 
   // execute statement
-  error = executeStatement2(&databaseStatementHandle,
-                           databaseRowFunction,
-                           databaseRowUserData,
-                           changedRowCount,
+  error = executeStatement2(databaseStatementHandle,
+NULL,                           //databaseRowFunction,
+NULL,//                           databaseRowUserData,
+NULL,  //                         changedRowCount,
                            WAIT_FOREVER
                           );
   if (error != ERROR_NONE)
   {
-    finalizeStatement(&databaseStatementHandle);
+    finalizeStatement(databaseStatementHandle);
     String_delete(sqlString);
     return error;
   }
 
   // free resources
-  finalizeStatement(&databaseStatementHandle);
   String_delete(sqlString);
 
   return ERROR_NONE;
@@ -11399,6 +11392,108 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
   String_delete(sqlString);
 
   return existsFlag;
+}
+
+Errors Database_get(DatabaseHandle      *databaseHandle,
+                    DatabaseRowFunction databaseRowFunction,
+                    void                *databaseRowUserData,
+                    ulong               *changedRowCount,
+                    const char          *tableName,
+// TODO: select value datatype: name, type
+                    DatabaseColumn      selectColumn[],
+                    uint                selectColumnCount,
+                    const char          *filter,
+                    DatabaseFilter      filterValues[],
+                    uint                filterValueCount
+                   )
+{
+  String            sqlString;
+  Errors            error;
+  DatabaseDataTypes selectDataTypes[DATABASE_MAX_TABLE_COLUMNS];
+  DatabaseStatementHandle databaseStatementHandle;
+
+  assert(databaseHandle != NULL);
+
+  // create SQL string
+  sqlString = String_newCString("SELECT ");
+  for (uint i = 0; i < selectColumnCount; i++)
+  {
+    if (i > 0) String_appendChar(sqlString,',');
+    String_formatAppend(sqlString,"%s",selectColumn[i].name);
+selectDataTypes[i] = selectColumn[i].type;
+  }
+  String_formatAppend(sqlString," FROM %s ",tableName);
+  if (filter != NULL)
+  {
+    String_formatAppend(sqlString," WHERE %s",filter);
+  }
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+
+  // prepare statement
+  error = prepareStatement2(&databaseStatementHandle,
+                           databaseHandle,
+                           String_cString(sqlString)
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  // bind values
+  if (filter != NULL)
+  {
+    error = bindFilters(&databaseStatementHandle,
+                        filterValues,
+                        filterValueCount
+                       );
+    if (error != ERROR_NONE)
+    {
+      finalizeStatement(&databaseStatementHandle);
+      String_delete(sqlString);
+      return error;
+    }
+  }
+  error = bindResults2(&databaseStatementHandle,
+// TODO: use selectColumn
+                      selectDataTypes,
+                      selectColumnCount
+                     );
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
+
+  // execute statement
+  error = executeStatement2(&databaseStatementHandle,
+                           databaseRowFunction,
+                           databaseRowUserData,
+                           changedRowCount,
+                           WAIT_FOREVER
+                          );
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
+
+  while (getNextRow(&databaseStatementHandle,NO_WAIT))
+  {
+    error = databaseRowFunction(databaseStatementHandle.results,
+                                databaseStatementHandle.resultCount,
+                                databaseRowUserData
+                               );
+    if (error != ERROR_NONE) break;
+  }
+
+  // free resources
+  finalizeStatement(&databaseStatementHandle);
+  String_delete(sqlString);
+
+  return error;
 }
 
 Errors Database_getId(DatabaseHandle *databaseHandle,
@@ -11694,7 +11789,7 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
 
 Errors Database_getInt(DatabaseHandle       *databaseHandle,
                        int                  *value,
-                       const char           *tableName,
+                       const char           *tables,
                        const char           *columnName,
                        const char           *filter,
                        const DatabaseFilter filterValues[],
@@ -11707,33 +11802,32 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
   assert(value != NULL);
-  assert(tableName != NULL);
+  assert(tables != NULL);
   assert(columnName != NULL);
 
-  return Database_select2(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(userData);
-                           UNUSED_VARIABLE(valueCount);
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-                           (*value) = values[0].i;
+                        (*value) = values[0].i;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         tableName,
-                         DATABASE_FLAG_NONE,
-                         DATABASE_COLUMNS
-                         (
-                           INT(columnName)
-                         ),
-                         filter,
-                         filterValues,
-                         filterValueCount
-                        );
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tables,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_INT(columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount
+                     );
 
   return error;
 }
@@ -11762,7 +11856,7 @@ Errors Database_setInt(DatabaseHandle       *databaseHandle,
                          flags,
                          DATABASE_VALUES2
                          (
-                           INT(columnName, value)
+                           DATABASE_VALUE_INT(columnName, value)
                          ),
                          filter,
                          filterValues,
@@ -11772,7 +11866,7 @@ Errors Database_setInt(DatabaseHandle       *databaseHandle,
 
 Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                         uint                 *value,
-                        const char           *tableName,
+                        const char           *tables,
                         const char           *columnName,
                         const char           *filter,
                         const DatabaseFilter filterValues[],
@@ -11785,35 +11879,32 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
   assert(value != NULL);
-  assert(tableName != NULL);
+  assert(tables != NULL);
   assert(columnName != NULL);
 
-  return Database_select2(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(userData);
-                           UNUSED_VARIABLE(valueCount);
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-                           (*value) = values[0].u;
+                        (*value) = values[0].u;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         tableName,
-                         DATABASE_FLAG_NONE,
-                         DATABASE_COLUMNS
-                         (
-                           UINT(columnName)
-                         ),
-                         filter,
-                         filterValues,
-                         filterValueCount
-                        );
-
-  return error;
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tables,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT(columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount
+                     );
 }
 
 Errors Database_setUInt(DatabaseHandle       *databaseHandle,
@@ -11840,7 +11931,7 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
                          flags,
                          DATABASE_VALUES2
                          (
-                           UINT(columnName, value)
+                           DATABASE_VALUE_UINT(columnName, value)
                          ),
                          filter,
                          filterValues,
@@ -11850,7 +11941,7 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
 
 Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                          int64                *value,
-                         const char           *tableName,
+                         const char           *tables,
                          const char           *columnName,
                          const char           *filter,
                          const DatabaseFilter filterValues[],
@@ -11863,35 +11954,32 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
   assert(value != NULL);
-  assert(tableName != NULL);
+  assert(tables != NULL);
   assert(columnName != NULL);
 
-  return Database_select2(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(userData);
-                           UNUSED_VARIABLE(valueCount);
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-                           (*value) = values[0].i64;
+                        (*value) = values[0].i64;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         tableName,
-                         DATABASE_FLAG_NONE,
-                         DATABASE_COLUMNS
-                         (
-                           INT64(columnName)
-                         ),
-                         filter,
-                         filterValues,
-                         filterValueCount
-                        );
-
-  return error;
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tables,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_INT64(columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount
+                     );
 }
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              int64          *value,
@@ -12013,7 +12101,7 @@ Errors Database_setInt64(DatabaseHandle       *databaseHandle,
                          flags,
                          DATABASE_VALUES2
                          (
-                           INT64(columnName, value)
+                           DATABASE_VALUE_INT64(columnName, value)
                          ),
                          filter,
                          filterValues,
@@ -12135,7 +12223,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
 
 Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                           uint64               *value,
-                          const char           *tableName,
+                          const char           *tables,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
@@ -12149,35 +12237,32 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
   assert(value != NULL);
-  assert(tableName != NULL);
+  assert(tables != NULL);
   assert(columnName != NULL);
 
-  return Database_select2(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(userData);
-                           UNUSED_VARIABLE(valueCount);
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-                           (*value) = values[0].u64;
+                        (*value) = values[0].u64;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         tableName,
-                         DATABASE_FLAG_NONE,
-                         DATABASE_COLUMNS
-                         (
-                           UINT64(columnName)
-                         ),
-                         filter,
-                         filterValues,
-                         filterValueCount
-                        );
-
-  return error;
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tables,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT64(columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount
+                     );
 }
 
 Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
@@ -12205,7 +12290,7 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
                          flags,
                          DATABASE_VALUES2
                          (
-                           UINT64(columnName, value)
+                           DATABASE_VALUE_UINT64(columnName, value)
                          ),
                          filter,
                          filterValues,

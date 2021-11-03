@@ -407,96 +407,79 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 //TODO: explain
       char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(KEY,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT,INT64,INT,INT64),
-                               stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "SELECT uuids.id, \
-                                                    (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?), \
-                                                    (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?), \
-                                                    (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?), \
-                                                    (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?), \
-                                                    (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?), \
-                                                    (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?), \
-                                                    (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?), \
-                                                    (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?), \
-                                                    (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?), \
-                                                    (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?), \
-                                                    COUNT(entities.id), \
-                                                    COUNT(storages.id), \
-                                                    SUM(storages.size), \
-                                                    SUM(storages.totalEntryCount) , \
-                                                    SUM(storages.totalEntrySize) \
-                                             FROM uuids \
-                                               LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                                               LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
-                                             WHERE %s \
-                                             GROUP BY uuids.id \
-                                            ",
-                                            String_cString(filterString)
-                                           ),
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(ARCHIVE_TYPE_NORMAL),
-                                 UINT(ARCHIVE_TYPE_FULL),
-                                 UINT(ARCHIVE_TYPE_INCREMENTAL),
-                                 UINT(ARCHIVE_TYPE_DIFFERENTIAL),
-                                 UINT(ARCHIVE_TYPE_CONTINUOUS),
-                                 UINT(ARCHIVE_TYPE_NORMAL),
-                                 UINT(ARCHIVE_TYPE_FULL),
-                                 UINT(ARCHIVE_TYPE_INCREMENTAL),
-                                 UINT(ARCHIVE_TYPE_DIFFERENTIAL),
-                                 UINT(ARCHIVE_TYPE_CONTINUOUS)
-                               )
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      #ifdef INDEX_DEBUG_LIST_INFO
-        Database_debugPrintQueryInfo(&databaseStatementHandle);
-      #endif
+      return Database_get(&indexHandle->databaseHandle,
+                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                          {
+                            assert(values != NULL);
+                            assert(valueCount == 16);
 
-      if (!Database_getNextRow(&databaseStatementHandle,
-                               "%lld %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %lf %lf %lf",
-                               &uuidDatabaseId,
-                               executionCountNormal,
-                               executionCountFull,
-                               executionCountIncremental,
-                               executionCountDifferential,
-                               executionCountContinuous,
-                               averageDurationNormal,
-                               averageDurationFull,
-                               averageDurationIncremental,
-                               averageDurationDifferential,
-                               averageDurationContinuous,
-                               totalEntityCount,
-                               totalStorageCount,
-                               &totalStorageSize_,
-                               &totalEntryCount_,
-                               &totalEntrySize_
-                              )
-         )
-      {
-        Database_finalize(&databaseStatementHandle);
-        return ERROR_DATABASE_INDEX_NOT_FOUND;
-      }
-      assert(totalStorageSize_ >= 0.0);
-      assert(totalEntryCount_ >= 0.0);
-      assert(totalEntrySize_ >= 0.0);
-      if (totalStorageSize != NULL) (*totalStorageSize) = (totalStorageSize_ >= 0.0) ? (uint64)totalStorageSize_ : 0LL;
-      if (totalEntryCount  != NULL) (*totalEntryCount ) = (totalEntryCount_  >= 0.0) ? (ulong)totalEntryCount_   : 0L;
-      if (totalEntrySize   != NULL) (*totalEntrySize  ) = (totalEntrySize_   >= 0.0) ? (uint64)totalEntrySize_   : 0LL;
+                            UNUSED_VARIABLE(userData);
+                            UNUSED_VARIABLE(valueCount);
 
-      Database_finalize(&databaseStatementHandle);
+                            if (uuidId                      != NULL) (*uuidId                     ) = INDEX_ID_UUID(values[0].id);
+                            if (executionCountNormal        != NULL) (*executionCountNormal       ) = values[ 1].u;
+                            if (executionCountFull          != NULL) (*executionCountFull         ) = values[ 2].u;
+                            if (executionCountIncremental   != NULL) (*executionCountIncremental  ) = values[ 3].u;
+                            if (executionCountDifferential  != NULL) (*executionCountDifferential ) = values[ 4].u;
+                            if (executionCountContinuous    != NULL) (*executionCountContinuous   ) = values[ 5].u;
+                            if (averageDurationNormal       != NULL) (*averageDurationNormal      ) = values[ 6].u;
+                            if (averageDurationFull         != NULL) (*averageDurationFull        ) = values[ 7].u;
+                            if (averageDurationIncremental  != NULL) (*averageDurationIncremental ) = values[ 8].u;
+                            if (averageDurationDifferential != NULL) (*averageDurationDifferential) = values[ 9].u;
+                            if (averageDurationContinuous   != NULL) (*averageDurationContinuous  ) = values[10].u;
+                            if (totalEntityCount            != NULL) (*totalEntityCount           ) = values[11].u;
+                            if (totalStorageCount           != NULL) (*totalStorageCount          ) = values[12].u;
+                            if (totalStorageSize            != NULL) (*totalStorageSize           ) = values[13].u64;
+                            if (totalEntryCount             != NULL) (*totalEntryCount            ) = values[14].u;
+                            if (totalEntrySize              != NULL) (*totalEntrySize             ) = values[15].u64;
 
-      return ERROR_NONE;
+                            return ERROR_NONE;
+                          },NULL),
+                          NULL,  // changedRowCount
+                          "uuids \
+                             LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                             LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
+                          ",
+                          DATABASE_COLUMNS
+                          (
+                            DATABASE_COLUMN_KEY   ("uuids.id"),
+                            DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("COUNT(entities.id)"),
+                            DATABASE_COLUMN_UINT  ("COUNT(storages.id)"),
+                            DATABASE_COLUMN_UINT64("SUM(storages.size)"),
+                            DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
+                            DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
+                          ),
+                          stringFormat(sqlCommand,sizeof(sqlCommand),
+                                       "%s \
+                                        GROUP BY uuids.id \
+                                       ",
+                                       String_cString(filterString)
+                                      ),
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_NORMAL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_FULL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_INCREMENTAL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_DIFFERENTIAL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_CONTINUOUS),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_NORMAL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_FULL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_INCREMENTAL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_DIFFERENTIAL),
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_CONTINUOUS)
+                          )
+                         );
     });
-
-    if (uuidId != NULL) (*uuidId) = INDEX_ID_UUID(uuidDatabaseId);
 
     String_delete(filterString);
   }
@@ -558,11 +541,11 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                            uint64        *totalEntrySize
                           )
 {
-  String              ftsName;
-  String              filterString;
+  String                  ftsName;
+  String                  filterString;
   DatabaseStatementHandle databaseStatementHandle;
-  Errors              error;
-  double              totalEntryCount_,totalEntrySize_;
+  Errors                  error;
+  double                  totalEntryCount_,totalEntrySize_;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
@@ -1245,8 +1228,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                              ),
                              DATABASE_FILTERS
                              (
-                               UINT64(offset),
-                               UINT64(limit)
+                               DATABASE_FILTER_UINT64(offset),
+                               DATABASE_FILTER_UINT64(limit)
                              )
                            );
   });
@@ -1341,7 +1324,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES2
                               (
-                                STRING("jobUUID", jobUUID),
+                                DATABASE_VALUE_STRING("jobUUID", jobUUID),
                               )
                              );
       if (error != ERROR_NONE)
@@ -1421,7 +1404,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                              ),
                              DATABASE_FILTERS
                              (
-                              KEY (Index_getDatabaseId(uuidId))
+                               DATABASE_FILTER_KEY (Index_getDatabaseId(uuidId))
                              )
                             );
     if (error != ERROR_NONE)

@@ -1899,9 +1899,9 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                          ),
                          DATABASE_FILTERS
                          (
-                           UINT  (globalOptions.continuousMinTimeDelta),
-                           STRING(jobUUID),
-                           STRING(scheduleUUID)
+                           DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
+                           DATABASE_FILTER_STRING(jobUUID),
+                           DATABASE_FILTER_STRING(scheduleUUID)
                          )
                         ) != ERROR_NONE
        )
@@ -1993,9 +1993,9 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                            ),
                            DATABASE_FILTERS
                            (
-                             UINT  (globalOptions.continuousMinTimeDelta),
-                             STRING(jobUUID),
-                             STRING(scheduleUUID)
+                             DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
+                             DATABASE_FILTER_STRING(jobUUID),
+                             DATABASE_FILTER_STRING(scheduleUUID)
                            )
                           );
   if (error != ERROR_NONE)
@@ -2056,8 +2056,8 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                          ),
                          DATABASE_FILTERS
                          (
-                           CSTRING(jobUUID),
-                           CSTRING(scheduleUUID)
+                           DATABASE_FILTER_CSTRING(jobUUID),
+                           DATABASE_FILTER_CSTRING(scheduleUUID)
                          )
                         );
   while (Database_getNextRow(&databaseStatementHandle,

@@ -642,41 +642,47 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 
 
 // column macros
-#define _DATABASE_COLUMNS_ITERATOR_ARRAY0(x,...) \
-  _ITERATOR_EVAL1(DATABASE_COLUMN_NAME_TYPE_##x), \
+#define _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE(x,...) \
+  _ITERATOR_EVAL01(DATABASE_COLUMN_##x), \
   _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
   ( \
-    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_ARRAY0)()(__VA_ARGS__) \
+    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE)()(__VA_ARGS__) \
   ) \
   ( \
     /* nothing to do */ \
   )
-#define __DATABASE_COLUMNS_ITERATOR_ARRAY0() _DATABASE_COLUMNS_ITERATOR_ARRAY0
+#define __DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE() _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE
 
-#define _DATABASE_COLUMNS_ITERATOR_ARRAY1(x,...) \
-  _ITERATOR_EVAL1(DATABASE_COLUMN_NAME_##x), \
+#define _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME(x,...) \
+  _ITERATOR_EVAL01(DATABASE_COLUMN_NAME_##x), \
   _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
   ( \
-    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_ARRAY1)()(__VA_ARGS__) \
+    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME)()(__VA_ARGS__) \
   ) \
   ( \
     /* nothing to do */ \
   )
-#define __DATABASE_COLUMNS_ITERATOR_ARRAY1() _DATABASE_COLUMNS_ITERATOR_ARRAY1
+#define __DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME() _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME
 
-#define DATABASE_COLUMNS(...) \
-  (DatabaseColumn[]){_ITERATOR_EVAL(_DATABASE_COLUMNS_ITERATOR_ARRAY0(__VA_ARGS__))}, \
+// <type>(<name>)
+// TODO: remove
+#define xxxDATABASE_COLUMNS(...) \
+  (DatabaseColumn[]){_ITERATOR_EVAL(_DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE(__VA_ARGS__))}, \
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
 
+#define DATABASE_COLUMNS(...) \
+  (DatabaseColumn[]){__VA_ARGS__}, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2
 
-#define DATABASE_COLUMN_NAME_TYPE_KEY(name)     { name, DATABASE_DATATYPE_KEY     }
-#define DATABASE_COLUMN_NAME_TYPE_BOOL(name)    { name, DATABASE_DATATYPE_BOOL    }
-#define DATABASE_COLUMN_NAME_TYPE_INT(name)     { name, DATABASE_DATATYPE_INT     }
-#define DATABASE_COLUMN_NAME_TYPE_INT64(name)   { name, DATABASE_DATATYPE_INT64   }
-#define DATABASE_COLUMN_NAME_TYPE_UINT(name)    { name, DATABASE_DATATYPE_UINT    }
-#define DATABASE_COLUMN_NAME_TYPE_UINT64(name)  { name, DATABASE_DATATYPE_UINT64  }
-#define DATABASE_COLUMN_NAME_TYPE_STRING(name)  { name, DATABASE_DATATYPE_STRING  }
-#define DATABASE_COLUMN_NAME_TYPE_CSTRING(name) { name, DATABASE_DATATYPE_CSTRING }
+
+#define DATABASE_COLUMN_KEY(name)     { name, DATABASE_DATATYPE_KEY     }
+#define DATABASE_COLUMN_BOOL(name)    { name, DATABASE_DATATYPE_BOOL    }
+#define DATABASE_COLUMN_INT(name)     { name, DATABASE_DATATYPE_INT     }
+#define DATABASE_COLUMN_INT64(name)   { name, DATABASE_DATATYPE_INT64   }
+#define DATABASE_COLUMN_UINT(name)    { name, DATABASE_DATATYPE_UINT    }
+#define DATABASE_COLUMN_UINT64(name)  { name, DATABASE_DATATYPE_UINT64  }
+#define DATABASE_COLUMN_STRING(name)  { name, DATABASE_DATATYPE_STRING  }
+#define DATABASE_COLUMN_CSTRING(name) { name, DATABASE_DATATYPE_CSTRING }
 
 #define DATABASE_COLUMN_NAME_KEY(name)     name
 #define DATABASE_COLUMN_NAME_BOOL(name)    name
@@ -689,7 +695,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 
 // value macros
 #define __DATABASE_ITERATOR_VALUES_TYPE_VALUE(x,...) \
-  _ITERATOR_EVAL1(DATABASE_VALUE_TYPE_VALUE_##x), \
+  _ITERATOR_EVAL01(DATABASE_VALUE_TYPE_VALUE_##x), \
   _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
   ( \
     _ITERATOR_DEFER2(___DATABASE_ITERATOR_VALUES_TYPE_VALUE)()(__VA_ARGS__) \
@@ -709,7 +715,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
   )
 
 #define __DATABASE_ITERATOR_VALUES_NAME(x,...) \
-  _ITERATOR_EVAL1(DATABASE_VALUE_NAME_##x), \
+  _ITERATOR_EVAL01(DATABASE_VALUE_NAME_##x), \
   _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
   ( \
     _ITERATOR_DEFER2(___DATABASE_ITERATOR_VALUES_NAME)()(__VA_ARGS__) \
@@ -728,11 +734,14 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
     /* nothing to do */ \
   )
 
-
-#define DATABASE_VALUES2(...) \
+// <type>(<name>,<value>)
+#define xxxDATABASE_VALUES2(...) \
   (const char*[]){_ITERATOR_EVAL(_DATABASE_ITERATOR_VALUES_NAME(__VA_ARGS__))}, \
   (DatabaseValue[]){_ITERATOR_EVAL(_DATABASE_ITERATOR_VALUES_TYPE_VALUE(__VA_ARGS__))}, \
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
+#define DATABASE_VALUES2(...) \
+  (DatabaseValue[]){__VA_ARGS__}, \
+  ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3)
 
 #define DATABASE_VALUE_TYPE_VALUE_KEY(name,value)      { name, DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
 #define DATABASE_VALUE_TYPE_VALUE_BOOL(name,value)     { name, DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
@@ -754,11 +763,21 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_VALUE_NAME_STRING(name,value)   name
 #define DATABASE_VALUE_NAME_CSTRING(name,value)  name
 
+#define DATABASE_VALUE_KEY(name,value)      { name, DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
+#define DATABASE_VALUE_BOOL(name,value)     { name, DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
+#define DATABASE_VALUE_INT(name,value)      { name, DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
+#define DATABASE_VALUE_UINT(name,value)     { name, DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
+#define DATABASE_VALUE_INT64(name,value)    { name, DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
+#define DATABASE_VALUE_UINT64(name,value)   { name, DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
+#define DATABASE_VALUE_DATETIME(name,value) { name, DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
+#define DATABASE_VALUE_STRING(name,value)   { name, DATABASE_DATATYPE_STRING,   { (intptr_t)(value) } }
+#define DATABASE_VALUE_CSTRING(name,value)  { name, DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
+
 #define DATABASE_VALUES2_NONE (const char**)NULL,(DatabaseValue*)NULL,0
 
 // filter macros
 #define __DATABASE_FILTERS_ITERATOR_ARRAY0(x,...) \
-  _ITERATOR_EVAL1(DATABASE_FILTER_TYPE_VALUE_##x), \
+  _ITERATOR_EVAL01(DATABASE_FILTER_TYPE_VALUE_##x), \
   _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
   ( \
     _ITERATOR_DEFER2(___DATABASE_FILTERS_ITERATOR_ARRAY0)()(__VA_ARGS__) \
@@ -776,9 +795,14 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
     /* nothing to do */ \
   )
 
-#define DATABASE_FILTERS(...) \
+// <type>(<value>)
+// TODO: remove
+#define xxxDATABASE_FILTERS(...) \
   (DatabaseFilter[]){_ITERATOR_EVAL(_DATABASE_FILTERS_ITERATOR_ARRAY0(__VA_ARGS__))}, \
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
+#define DATABASE_FILTERS(...) \
+  (DatabaseFilter[]){__VA_ARGS__}, \
+  ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2)
 
 #define DATABASE_FILTER_TYPE_VALUE_KEY(value)      { DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
 #define DATABASE_FILTER_TYPE_VALUE_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
@@ -789,6 +813,15 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_FILTER_TYPE_VALUE_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
 #define DATABASE_FILTER_TYPE_VALUE_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
 #define DATABASE_FILTER_TYPE_VALUE_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
+#define DATABASE_FILTER_KEY(value)      { DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
+#define DATABASE_FILTER_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
+#define DATABASE_FILTER_INT(value)      { DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
+#define DATABASE_FILTER_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
+#define DATABASE_FILTER_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
+#define DATABASE_FILTER_UINT64(value)   { DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
+#define DATABASE_FILTER_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
+#define DATABASE_FILTER_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
+#define DATABASE_FILTER_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
 
 #define DATABASE_FILTERS_NONE (const char*)NULL,(DatabaseFilter*)NULL,0
 
@@ -1723,14 +1756,12 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
 * Notes  : Database is locked until Database_finalize() is called
 \***********************************************************************/
 
-// TODO: comment
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
                           const DatabaseDataTypes *resultDataTypes,
                           uint                    resultDataTypeCount,
                           const char              *sqlCommand,
-                          const char              *names[],
                           const DatabaseValue     values[],
                           uint                    nameValueCount,
                           const DatabaseFilter    filters[],
@@ -1744,7 +1775,6 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
                             const DatabaseDataTypes *resultDataTypes,
                             uint                    resultDataTypeCount,
                             const char              *sqlCommand,
-                            const char              *names[],
                             const DatabaseValue     values[],
                             uint                    nameValueCount,
                             const DatabaseFilter    filters[],
@@ -1794,7 +1824,6 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
                        ulong               *changedRowCount,
                        const char          *tableName,
                        uint                flags,
-                       const char          *names[],
                        const DatabaseValue values[],
                        uint                nameValueCount
                       );
@@ -1819,7 +1848,6 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                        ulong                *changedRowCount,
                        const char           *tableName,
                        uint                 flags,
-                       const char           *names[],
                        const DatabaseValue  values[],
                        uint                 nameValueCount,
                        const char           *filter,
@@ -1884,18 +1912,16 @@ Errors Database_select(DatabaseHandle      *databaseHandle,
                        DatabaseValue       filterValues[],
                        uint                filterValueCount
                       );
-Errors Database_select2(DatabaseHandle      *databaseHandle,
-                       DatabaseRowFunction databaseRowFunction,
-                       void                *databaseRowUserData,
-                       ulong               *changedRowCount,
-                       const char          *tableName,
-                       uint                flags,
+Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
+                       DatabaseHandle          *databaseHandle,
+                       const char              *tables,
+                       uint                    flags,
 // TODO: select value datatype: name, type
-                       DatabaseColumn      selectColumn[],
-                       uint                selectColumnCount,
-                       const char          *filter,
-                       DatabaseFilter      filterValues[],
-                       uint                filterValueCount
+                       DatabaseColumn          selectColumns[],
+                       uint                    selectColumnCount,
+                       const char              *filter,
+                       DatabaseFilter          filterValues[],
+                       uint                    filterValueCount
                       );
 
 /***********************************************************************\
@@ -1936,6 +1962,33 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
                           const char     *additional,
                           ...
                          );
+
+/***********************************************************************\
+* Name   : Database_get
+* Purpose: get values from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - database id or DATABASE_ID_NONE
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_get(DatabaseHandle      *databaseHandle,
+                    DatabaseRowFunction databaseRowFunction,
+                    void                *databaseRowUserData,
+                    ulong               *changedRowCount,
+                    const char          *tableName,
+// TODO: select value datatype: name, type
+                    DatabaseColumn      selectColumn[],
+                    uint                selectColumnCount,
+                    const char          *filter,
+                    DatabaseFilter      filterValues[],
+                    uint                filterValueCount
+                   );
 
 /***********************************************************************\
 * Name   : Database_getId, Database_vgetId
@@ -2398,6 +2451,7 @@ INLINE DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->lastInsertId != DATABASE_ID_NONE);
 
   return databaseHandle->lastInsertId;
 }
