@@ -45,6 +45,7 @@ RUN apt-get -y install \
   libc6 \
   libc6-dev \
   libmysqlclient-dev \
+  libpq-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
   make \
