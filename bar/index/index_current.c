@@ -151,7 +151,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                                return ERROR_NONE;
                                              },NULL),
                                              NULL,  // changedRowCount
-                       //TODO newest
+//TODO newest
                                              "entryFragments \
                                              ",
                                              DATABASE_COLUMNS
@@ -222,102 +222,118 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
   int64               fragmentOffset;
   int64               fragmentSize;
 
-  error = Database_prepare(&databaseStatementHandle,
-                           oldDatabaseHandle,
-                           DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
-                           "SELECT imageEntries.size, \
-                                   entryFragments.storageId, \
-                                   entryFragments.offset AS fragmentOffset, \
-                                   entryFragments.size AS fragmentSize \
-                            FROM imageEntries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
-                            WHERE imageEntries.entryId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_COLUMN_KEY (fromEntryId)
-                           )
-                          );
-  if (error == ERROR_NONE)
-  {
-    if (Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
-    {
-      DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-      error = Database_execute(newDatabaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "INSERT INTO imageEntries \
-                                  ( \
-                                   entryId, \
-                                   size \
-                                  ) \
-                                VALUES \
-                                  ( \
-                                   %lld, \
-                                   %lld \
-                                  ); \
-                               ",
-                               toEntryId,
-                               size
-                              );
-      if (error == ERROR_NONE)
-      {
-        do
-        {
-          if (Dictionary_find(storageIdDictionary,
-                              &fromStorageId,
-                              sizeof(DatabaseId),
-                              &valueData.value,
-                              NULL
-                             )
-             )
-          {
-            toStorageId = *valueData.id;
-          }
-          else
-          {
-            toStorageId = DATABASE_ID_NONE;
-          }
+  return Database_get(oldDatabaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-          DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
-          error = Database_execute(newDatabaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "INSERT INTO entryFragments \
-                                      ( \
-                                       entryId, \
-                                       storageId, \
-                                       offset, \
-                                       size \
-                                      ) \
-                                    VALUES \
-                                      ( \
-                                       %lld, \
-                                       %lld, \
-                                       %lld, \
-                                       %lld \
-                                      ); \
-                                   ",
-                                   toEntryId,
-                                   toStorageId,
-                                   fragmentOffset,
-                                   fragmentSize
-                                  );
-         }
-         while (   (error == ERROR_NONE)
-                && Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
-               );
-       }
-    }
-    Database_finalize(&databaseStatementHandle);
-  }
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-  return error;
+                        size = values[0].u64;
+
+                        DIMPORT("import image entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        error = Database_insert(newDatabaseHandle,
+                                                NULL,  // changedRowCount
+                                                "imageEntries",
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_VALUES2
+                                                (
+                                                  DATABASE_VALUE_KEY   ("entryId", toEntryId),
+                                                  DATABASE_VALUE_UINT64("size",    size)
+                                                )
+                                               );
+                        if (error != ERROR_NONE)
+                        {
+                          return error;
+                        }
+
+                        error = Database_get(oldDatabaseHandle,
+                                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                             {
+                                               assert(values != NULL);
+                                               assert(valueCount == 3);
+
+                                               UNUSED_VARIABLE(userData);
+                                               UNUSED_VARIABLE(valueCount);
+
+                                               fromStorageId  = values[0].id;
+                                               fragmentOffset = values[1].u64;
+                                               fragmentSize   = values[2].u64;
+
+                                               if (Dictionary_find(storageIdDictionary,
+                                                                   &fromStorageId,
+                                                                   sizeof(DatabaseId),
+                                                                   &valueData.value,
+                                                                   NULL
+                                                                  )
+                                                  )
+                                               {
+                                                 toStorageId = *valueData.id;
+                                               }
+                                               else
+                                               {
+                                                 toStorageId = DATABASE_ID_NONE;
+                                               }
+
+                                               DIMPORT("import image fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
+                                               error = Database_insert(newDatabaseHandle,
+                                                                       NULL,  // changedRowCount
+                                                                       "entryFragments",
+                                                                       DATABASE_FLAG_NONE,
+                                                                       DATABASE_VALUES2
+                                                                       (
+                                                                         DATABASE_VALUE_KEY   ("entryId",  toEntryId),
+                                                                         DATABASE_VALUE_KEY   ("storageId",toStorageId),
+                                                                         DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                                                         DATABASE_VALUE_UINT64("size",     fragmentSize)
+                                                                       )
+                                                                      );
+                                               if (error != ERROR_NONE)
+                                               {
+                                                 return error;
+                                               }
+
+                                               return ERROR_NONE;
+                                             },NULL),
+                                             NULL,  // changedRowCount
+//TODO newest
+                                             "entryFragments \
+                                             ",
+                                             DATABASE_COLUMNS
+                                             (
+                                               DATABASE_COLUMN_KEY   ("storageId"),
+                                               DATABASE_COLUMN_UINT64("offset"),
+                                               DATABASE_COLUMN_UINT64("size"),
+                                             ),
+                                             "entryId=?",
+                                             DATABASE_FILTERS
+                                             (
+                                               DATABASE_FILTER_KEY (fromEntryId)
+                                             )
+                                           );
+                        if (error != ERROR_NONE)
+                        {
+                          return error;
+                        }
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+//TODO newest
+                      "imageEntries \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT64("size"),
+                      ),
+                      "entryId=?",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (fromEntryId)
+                      )
+                    );
 }
 
 /***********************************************************************\
@@ -353,102 +369,118 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
   int64               fragmentOffset;
   int64               fragmentSize;
 
-  error = Database_prepare(&databaseStatementHandle,
-                           oldDatabaseHandle,
-                           DATABASE_COLUMN_TYPES(INT64,INT,INT64,INT64),
-                           "SELECT hardlinkEntries.size, \
-                                   entryFragments.storageId, \
-                                   entryFragments.offset AS fragmentOffset, \
-                                   entryFragments.size AS fragmentSize \
-                            FROM hardlinkEntries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
-                            WHERE hardlinkEntries.entryId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_COLUMN_KEY (fromEntryId)
-                           )
-                          );
-  if (error == ERROR_NONE)
-  {
-    if (Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize))
-    {
-      DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-      error = Database_execute(newDatabaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "INSERT INTO hardlinkEntries \
-                                  ( \
-                                   entryId, \
-                                   size \
-                                  ) \
-                                VALUES \
-                                  ( \
-                                   %lld, \
-                                   %lld \
-                                  ); \
-                               ",
-                               toEntryId,
-                               size
-                              );
-      if (error == ERROR_NONE)
-      {
-        do
-        {
-          if (Dictionary_find(storageIdDictionary,
-                              &fromStorageId,
-                              sizeof(DatabaseId),
-                              &valueData.value,
-                              NULL
-                             )
-             )
-          {
-            toStorageId = *valueData.id;
-          }
-          else
-          {
-            toStorageId = DATABASE_ID_NONE;
-          }
+  return Database_get(oldDatabaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-          DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
-          error = Database_execute(newDatabaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "INSERT INTO entryFragments \
-                                      ( \
-                                       entryId, \
-                                       storageId, \
-                                       offset, \
-                                       size \
-                                      ) \
-                                    VALUES \
-                                      ( \
-                                       %lld, \
-                                       %lld, \
-                                       %lld, \
-                                       %lld \
-                                      ); \
-                                   ",
-                                   toEntryId,
-                                   toStorageId,
-                                   fragmentOffset,
-                                   fragmentSize
-                                  );
-         }
-         while (   (error == ERROR_NONE)
-                && Database_getNextRow(&databaseStatementHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
-               );
-       }
-    }
-    Database_finalize(&databaseStatementHandle);
-  }
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-  return error;
+                        size = values[0].u64;
+
+                        DIMPORT("import hardlink entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        error = Database_insert(newDatabaseHandle,
+                                                NULL,  // changedRowCount
+                                                "hardlinkEntries",
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_VALUES2
+                                                (
+                                                  DATABASE_VALUE_KEY   ("entryId", toEntryId),
+                                                  DATABASE_VALUE_UINT64("size",    size)
+                                                )
+                                               );
+                        if (error != ERROR_NONE)
+                        {
+                          return error;
+                        }
+
+                        error = Database_get(oldDatabaseHandle,
+                                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                             {
+                                               assert(values != NULL);
+                                               assert(valueCount == 3);
+
+                                               UNUSED_VARIABLE(userData);
+                                               UNUSED_VARIABLE(valueCount);
+
+                                               fromStorageId  = values[0].id;
+                                               fragmentOffset = values[1].u64;
+                                               fragmentSize   = values[2].u64;
+
+                                               if (Dictionary_find(storageIdDictionary,
+                                                                   &fromStorageId,
+                                                                   sizeof(DatabaseId),
+                                                                   &valueData.value,
+                                                                   NULL
+                                                                  )
+                                                  )
+                                               {
+                                                 toStorageId = *valueData.id;
+                                               }
+                                               else
+                                               {
+                                                 toStorageId = DATABASE_ID_NONE;
+                                               }
+
+                                               DIMPORT("import hardlink fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
+                                               error = Database_insert(newDatabaseHandle,
+                                                                       NULL,  // changedRowCount
+                                                                       "entryFragments",
+                                                                       DATABASE_FLAG_NONE,
+                                                                       DATABASE_VALUES2
+                                                                       (
+                                                                         DATABASE_VALUE_KEY   ("entryId",  toEntryId),
+                                                                         DATABASE_VALUE_KEY   ("storageId",toStorageId),
+                                                                         DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                                                         DATABASE_VALUE_UINT64("size",     fragmentSize)
+                                                                       )
+                                                                      );
+                                               if (error != ERROR_NONE)
+                                               {
+                                                 return error;
+                                               }
+
+                                               return ERROR_NONE;
+                                             },NULL),
+                                             NULL,  // changedRowCount
+//TODO newest
+                                             "entryFragments \
+                                             ",
+                                             DATABASE_COLUMNS
+                                             (
+                                               DATABASE_COLUMN_KEY   ("storageId"),
+                                               DATABASE_COLUMN_UINT64("offset"),
+                                               DATABASE_COLUMN_UINT64("size"),
+                                             ),
+                                             "entryId=?",
+                                             DATABASE_FILTERS
+                                             (
+                                               DATABASE_FILTER_KEY (fromEntryId)
+                                             )
+                                           );
+                        if (error != ERROR_NONE)
+                        {
+                          return error;
+                        }
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+//TODO newest
+                      "hardlinkEntries \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT64("size"),
+                      ),
+                      "entryId=?",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (fromEntryId)
+                      )
+                    );
 }
 
 /***********************************************************************\
