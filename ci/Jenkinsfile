@@ -105,6 +105,13 @@ def build()
               break;
           }
         }
+        else
+        {
+          docker.image(dockerImageName).inside
+          {
+            sh "make test_smoke-debug O='--verbose=1'"
+          }
+        }
       }
     }
 
