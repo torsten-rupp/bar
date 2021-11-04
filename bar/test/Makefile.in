@@ -1952,7 +1952,7 @@ test_all:
 
 test_smoke:
 	@$(MAKE) --no-print-directory -s \
-	  QUIET=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+	  QUIET=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
           test_basic \
           test_compress \
           test_crypt \
@@ -1961,6 +1961,22 @@ test_smoke:
           test_arguments \
           test_config \
           test_misc
+
+test_smoke-debug:  \
+  $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)"  test_smoke
+
+test_smoke-gcov:  \
+  $(TEST_BAR_GCOV)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)"  test_smoke
+
+test_smoke-gprof:  \
+  $(TEST_BAR_GPROF)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) test_smoke
+
+test_smoke-valgrind: \
+  $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_smoke
 
 test_arguments: \
   $(TEST_BAR) \
