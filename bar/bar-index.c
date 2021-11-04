@@ -621,6 +621,7 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
   Errors error;
 
   if (!quietFlag) printInfo("Drop indizes...");
+  error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     // drop indices
@@ -758,11 +759,14 @@ LOCAL Errors createTablesIndicesTriggers(DatabaseHandle *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: unused
+#ifndef WERROR
 LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 {
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(tableName);
 }
+#endif
 
 /***********************************************************************\
 * Name   : initProgress
@@ -773,11 +777,14 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: unused
+#ifndef WERROR
 LOCAL void initProgress(ProgressInfo *progressInfo, const char *text)
 {
   UNUSED_VARIABLE(progressInfo);
   UNUSED_VARIABLE(text);
 }
+#endif
 
 /***********************************************************************\
 * Name   : resetProgress
@@ -789,11 +796,14 @@ LOCAL void initProgress(ProgressInfo *progressInfo, const char *text)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: unused
+#ifndef WERROR
 LOCAL void resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
 {
   UNUSED_VARIABLE(progressInfo);
   UNUSED_VARIABLE(maxSteps);
 }
+#endif
 
 /***********************************************************************\
 * Name   : doneProgress
@@ -804,10 +814,13 @@ LOCAL void resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: unused
+#ifndef WERROR
 LOCAL void doneProgress(ProgressInfo *progressInfo)
 {
   UNUSED_VARIABLE(progressInfo);
 }
+#endif
 
 /***********************************************************************\
 * Name   : progressStep
@@ -953,6 +966,11 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
     {
       (*entityId) = Database_getLastRowId(newDatabaseHandle);
     }
+  }
+  else
+  {
+// TODO: error message UUID not found
+    error = ERROR_DATABASE_INVALID_INDEX;
   }
 
   return error;
@@ -1630,6 +1648,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   printInfo("Create triggers...");
 
   // delete all existing triggers
+  error = ERROR_UNKNOWN;
   INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TRIGGER_NAMES[Database_getType(databaseHandle)], triggerName)
   {
     error = Database_execute(databaseHandle,

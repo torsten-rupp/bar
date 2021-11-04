@@ -5770,11 +5770,11 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         }
       }
       break;
-    #ifndef NDEBUG
-      default:
-      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+    default:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+      #endif
       break;
-    #endif
   }
 
   return error;
