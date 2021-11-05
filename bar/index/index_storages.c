@@ -849,7 +849,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
                         assert(values != NULL);
-                        assert(valueCount == 4);
+                        assert(valueCount == 3);
 
                         UNUSED_VARIABLE(userData);
                         UNUSED_VARIABLE(valueCount);
@@ -3221,39 +3221,38 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
   Database_finalize(&databaseStatementHandle);
 #else
-  error = Database_select(&indexHandle->databaseHandle,
-                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                          {
-                            assert(values != NULL);
-                            assert(valueCount == 2);
+  error = Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                            UNUSED_VARIABLE(userData);
-                            UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
 
-                            totalFileCount = values[0].u;
-                            totalFileSize_ = values[1].u64;
+                         totalFileCount = values[0].u;
+                         totalFileSize  = values[1].u64;
 
-                            return ERROR_NONE;
-                          },NULL),
-                          NULL,  // changedRowCount
-                          "entryFragments \
-                             LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                          ",
-                          DATABASE_FLAG_NONE,
-                          DATABASE_VALUES
-                          (
-                            { "COUNT(DISTINCT entries.id)", DATABASE_DATATYPE_INT, {(intptr_t)0} },
-                            { "SUM(entryFragments.size)",   DATABASE_DATATYPE_INT, {(intptr_t)0} }
-                          ),
-                          "    entryFragments.storageId=? \
-                           AND entries.type=? \
-                          ",
-                          DATABASE_VALUES
-                          (
-                            { "entryFragments.storageId", DATABASE_DATATYPE_KEY,  {storageId }},
-                            { "entries.type",             DATABASE_DATATYPE_UINT, {(intptr_t)INDEX_TYPE_FILE }}
-                          )
-                         );
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       "entryFragments \
+                          LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                         DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                       ),
+                       "    entryFragments.storageId=? \
+                        AND entries.type=? \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_KEY (storageId),
+                         DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
+                       )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
@@ -3300,39 +3299,38 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
   Database_finalize(&databaseStatementHandle);
 #else
-  error = Database_select(&indexHandle->databaseHandle,
-                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                          {
-                            assert(values != NULL);
-                            assert(valueCount == 2);
+  error = Database_get(&indexHandle->databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 2);
 
-                            UNUSED_VARIABLE(userData);
-                            UNUSED_VARIABLE(valueCount);
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
 
-                            totalImageCount = values[0].u;
-                            totalImageSize_ = values[1].u64;
+                        totalImageCount = values[0].u;
+                        totalImageSize  = values[1].u64;
 
-                            return ERROR_NONE;
-                          },NULL),
-                          NULL,  // changedRowCount
-                          "entryFragments \
-                             LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                          ",
-                          DATABASE_FLAG_NONE,
-                          DATABASE_VALUES
-                          (
-                            { "COUNT(DISTINCT entries.id)", DATABASE_DATATYPE_INT, {(intptr_t)0} },
-                            { "SUM(entryFragments.size)",   DATABASE_DATATYPE_INT, {(intptr_t)0} }
-                          ),
-                          "    entryFragments.storageId=? \
-                           AND entries.type=? \
-                          ",
-                          DATABASE_VALUES
-                          (
-                            { "entryFragments.storageId", DATABASE_DATATYPE_KEY,  {storageId }},
-                            { "entries.type",             DATABASE_DATATYPE_UINT, {(intptr_t)INDEX_TYPE_IMAGE }}
-                          )
-                         );
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      "entryFragments \
+                          LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                        DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                      ),
+                      "    entryFragments.storageId=? \
+                        AND entries.type=? \
+                      ",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (storageId),
+                        DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
+                      )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
@@ -3340,136 +3338,141 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
 #endif
 
   // get directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
-                           "SELECT COUNT(DISTINCT entries.id) \
-                            FROM directoryEntries \
-                              LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                            WHERE directoryEntries.storageId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY (storageId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        totalDirectoryCount = values[0].u;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      "directoryEntries \
+                         LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)")
+                      ),
+                      "directoryEntries.storageId=?",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (storageId),
+                      )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu",
-                           &totalDirectoryCount
-                          )
-     )
-  {
-    totalDirectoryCount = 0L;
-  }
-  Database_finalize(&databaseStatementHandle);
 
   // get link aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
-                           "SELECT COUNT(DISTINCT entries.id) \
-                            FROM linkEntries \
-                              LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                            WHERE linkEntries.storageId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY (storageId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        totalLinkCount = values[0].u;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      "linkEntries \
+                         LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
+                      ),
+                      "linkEntries.storageId=?",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (storageId),
+                      )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu",
-                           &totalLinkCount
-                          )
-     )
-  {
-    totalLinkCount = 0L;
-  }
-  Database_finalize(&databaseStatementHandle);
 
   // get hardlink aggregate data
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
-//TODO: use entries.size?
-                           "SELECT COUNT(DISTINCT entries.id), \
-                                   SUM(entryFragments.size) \
-                            FROM entryFragments \
-                              LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                            WHERE     entryFragments.storageId=? \
-                                  AND entries.type=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY (storageId),
-                             DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 2);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        totalHardlinkCount = values[0].u;
+                        totalHardlinkSize  = values[1].u64;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      "entryFragments \
+                          LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                        DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                      ),
+                      "    entryFragments.storageId=? \
+                        AND entries.type=? \
+                      ",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (storageId),
+                        DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
+                      )
+                     );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu %lf",
-                           &totalHardlinkCount,
-                           &totalHardlinkSize_
-                          )
-     )
-  {
-    totalHardlinkCount = 0L;
-    totalHardlinkSize_ = 0.0;
-  }
-  assert(totalHardlinkSize_ >= 0.0);
-  totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
-  Database_finalize(&databaseStatementHandle);
 
   // get special aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
-                           "SELECT COUNT(DISTINCT entries.id) \
-                            FROM specialEntries \
-                              LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                            WHERE specialEntries.storageId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY (storageId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        totalSpecialCount = values[0].u;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      "specialEntries \
+                         LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                      ",
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
+                      ),
+                      "specialEntries.storageId=?",
+                      DATABASE_FILTERS
+                      (
+                        DATABASE_FILTER_KEY (storageId),
+                      )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu",
-                           &totalSpecialCount
-                          )
-     )
-  {
-    totalSpecialCount = 0L;
-  }
-  Database_finalize(&databaseStatementHandle);
 
   // update aggregate data
 fprintf(stderr,"%s:%d: totalFileCount=%lu\n",__FILE__,__LINE__,totalFileCount);
@@ -4430,17 +4433,16 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               uint64        *totalEntryContentSize
                              )
 {
-  String                  ftsName;
-  String                  filterString;
-  String                  uuidIdsString,entityIdsString,storageIdsString;
-  ulong                   i;
-  String                  filterIdsString;
-  String                  string;
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors                  error;
+  String ftsName;
+  String filterString;
+  String uuidIdsString,entityIdsString,storageIdsString;
+  ulong  i;
+  String filterIdsString;
+  String string;
+  Errors error;
 //  double                  totalStorageSize_,totalEntryCount_,totalEntrySize_,totalEntryContentSize_;
   #ifdef INDEX_DEBUG_LIST_INFO
-    uint64                  t0,t1;
+    uint64 t0,t1;
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   assert(indexHandle != NULL);
@@ -4531,7 +4533,6 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
     // get storage count, storage size, entry count, entry size
-//xxxxxxxx
     error = Database_get(&indexHandle->databaseHandle,
                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                             {
@@ -5009,7 +5010,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       Misc_getUUID(s);
 
       // insert storage
-fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
       error = Database_insert(&indexHandle->databaseHandle,
                               NULL,  // changedRowCount
                               "storages",
@@ -5056,9 +5056,9 @@ fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
                                   "storages",
                                   DATABASE_FLAG_NONE,
                                   "id=?",
-                                  DATABASE_VALUES
+                                  DATABASE_FILTERS
                                   (
-                                    { "id", DATABASE_DATATYPE_KEY, {(intptr_t)databaseId }}
+                                    DATABASE_FILTER_KEY(databaseId)
                                   ),
                                   0
                                  );
