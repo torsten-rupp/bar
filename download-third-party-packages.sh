@@ -45,7 +45,7 @@ OPENSSL_VERSION=1.1.1i
 LIBSSH2_VERSION=1.9.0
 C_ARES_VERSION=1.17.1
 CURL_VERSION=7.74.0
-PCRE_VERSION=8.44
+PCRE_VERSION=8.45
 #TODO: remove
 SQLITE_YEAR=2019
 SQLITE_YEAR=2020
@@ -1112,12 +1112,13 @@ if test $cleanFlag -eq 0; then
     $ECHO_NO_NEW_LINE "Get pcre..."
     (
      cd "$destination/extern"
-     fileName=pcre-$PCRE_VERSION.zip
+     fileName=pcre-$PCRE_VERSION.tar.bz2
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/pcre-$PCRE_VERSION.zip; then
          fileName=$localDirectory/pcre-$PCRE_VERSION.zip
        else
          url="https://ftp.pcre.org/pub/pcre/$fileName"
+         url="https://downloads.sourceforge.net/project/pcre/pcre/$PCRE_VERSION/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "$url -> $fileName"
@@ -1125,7 +1126,7 @@ if test $cleanFlag -eq 0; then
        fi
      fi
      if test $noDecompressFlag -eq 0; then
-       $UNZIP -q -o $fileName
+       $TAR xjf $fileName
      fi
     )
     if test $? -ne 0; then
