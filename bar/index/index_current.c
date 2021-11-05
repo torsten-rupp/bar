@@ -66,14 +66,13 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
     DatabaseId *id;
   } ValueData;
 
-  Errors                  error;
-  DatabaseStatementHandle databaseStatementHandle;
-  int64                   size;
-  DatabaseId              fromStorageId;
-  ValueData               valueData;
-  DatabaseId              toStorageId;
-  int64                   fragmentOffset;
-  int64                   fragmentSize;
+  Errors     error;
+  int64      size;
+  DatabaseId fromStorageId;
+  ValueData  valueData;
+  DatabaseId toStorageId;
+  int64      fragmentOffset;
+  int64      fragmentSize;
 
   return Database_get(oldDatabaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -213,14 +212,13 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
     DatabaseId *id;
   } ValueData;
 
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  int64               size;
-  DatabaseId          fromStorageId;
-  ValueData           valueData;
-  DatabaseId          toStorageId;
-  int64               fragmentOffset;
-  int64               fragmentSize;
+  Errors     error;
+  int64      size;
+  DatabaseId fromStorageId;
+  ValueData  valueData;
+  DatabaseId toStorageId;
+  int64      fragmentOffset;
+  int64      fragmentSize;
 
   return Database_get(oldDatabaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -360,14 +358,13 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
     DatabaseId *id;
   } ValueData;
 
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  int64               size;
-  DatabaseId          fromStorageId;
-  ValueData           valueData;
-  DatabaseId          toStorageId;
-  int64               fragmentOffset;
-  int64               fragmentSize;
+  Errors     error;
+  int64      size;
+  DatabaseId fromStorageId;
+  ValueData  valueData;
+  DatabaseId toStorageId;
+  int64      fragmentOffset;
+  int64      fragmentSize;
 
   return Database_get(oldDatabaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -910,6 +907,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
 
                                                             UNUSED_VARIABLE(fromColumnInfo);
                                                             UNUSED_VARIABLE(toColumnInfo);
+                                                            UNUSED_VARIABLE(userData);
 
                                                             (void)Database_setTableColumnId(toColumnInfo,"entityId",toEntityId);
 
