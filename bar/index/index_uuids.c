@@ -94,7 +94,6 @@ LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
   INDEX_DOX(error,
             indexHandle,
   {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     return Database_delete(&indexHandle->databaseHandle,
                             &n,
                             "uuids",
@@ -102,7 +101,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                             "uuids.jobUUID=''",
                             DATABASE_FILTERS
                             (
-                            )
+                            ),
+                            0
                            );
   });
 
@@ -212,7 +212,6 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
   if (isEmptyUUID(indexHandle,uuidId))
   {
     // delete UUID index
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = Database_delete(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
                             "uuids",
@@ -221,7 +220,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_KEY(uuidId)
-                            )
+                            ),
+                            0
                            );
     if (error != ERROR_NONE)
     {
@@ -1428,7 +1428,6 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     }
 
     // delete UUID index
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = Database_delete(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
                             "uuids",
@@ -1438,7 +1437,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
-                            )
+                            ),
+                            0
                            );
     if (error != ERROR_NONE)
     {

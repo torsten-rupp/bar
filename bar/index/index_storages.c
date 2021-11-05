@@ -5051,7 +5051,6 @@ fprintf(stderr,"%s:%d: *******************\n",__FILE__,__LINE__);
                                   );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             (void)Database_delete(&indexHandle->databaseHandle,
                                   NULL,  // changedRowCount
                                   "storages",
@@ -5060,7 +5059,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                   DATABASE_VALUES
                                   (
                                     { "id", DATABASE_DATATYPE_KEY, {(intptr_t)databaseId }}
-                                  )
+                                  ),
+                                  0
                                  );
             return error;
           }

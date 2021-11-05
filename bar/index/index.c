@@ -1187,7 +1187,8 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
                             "ROWID NOT IN (SELECT MIN(rowid) FROM meta GROUP BY name)",
                             DATABASE_VALUES
                             (
-                            )
+                            ),
+                            0
                            );
 #endif
 #if 0
