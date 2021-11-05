@@ -873,17 +873,14 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             uint64        *totalEntryContentSize
                            )
 {
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors              error;
-  String              ftsName;
-  String              uuidIdsString,entityIdsString;
-  String              entryIdsString;
-  ulong               i;
-  String              filterString;
-  int64               totalStorageCount_,totalEntryCount_;
-  double              totalStorageSize_,totalEntrySize_,totalEntryContentSize_;
+  Errors error;
+  String ftsName;
+  String uuidIdsString,entityIdsString;
+  String entryIdsString;
+  ulong  i;
+  String filterString;
   #ifdef INDEX_DEBUG_LIST_INFO
-    uint64              t0,t1;
+    uint64 t0,t1;
   #endif
 
   assert(indexHandle != NULL);
@@ -965,6 +962,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         // get total entry count, total fragment count, total entry size
         if (newestOnly)
         {
+fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
           // all newest entries
           if (String_isEmpty(entryIdsString))
           {
@@ -1293,6 +1291,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         else
         {
+fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
           // all entries
           if (String_isEmpty(entryIdsString))
           {
@@ -1579,6 +1578,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           }
           else
           {
+fprintf(stderr,"%s:%d: c33_\n",__FILE__,__LINE__);
             error = Database_get(&indexHandle->databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                  {
@@ -1629,12 +1629,13 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalStorageCount_=%"PRIi64" totalStorageSize_=%lf totalEntryCount_=%"PRIi64" totalEntrySize_=%lf\n",__FILE__,__LINE__,totalStorageCount_,totalStorageSize_,totalEntryCount_,totalEntrySize_);
+        fprintf(stderr,"%s, %d: totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount_=%lu totalEntrySize_=%"PRIu64"\n",__FILE__,__LINE__,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif
     }
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       #ifdef INDEX_DEBUG_LIST_INFO
@@ -1646,6 +1647,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
+#if 0
         // get entry content size
         if (newestOnly)
         {
@@ -1748,13 +1750,139 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 //        assert(totalEntryContentSize_ >= 0.0);
         if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         Database_finalize(&databaseStatementHandle);
+#else
+        // get entry content size
+        if (newestOnly)
+        {
+          error = Database_get(&indexHandle->databaseHandle,
+                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                               {
+                                 assert(values != NULL);
+                                 assert(valueCount == 1);
+
+                                 UNUSED_VARIABLE(userData);
+                                 UNUSED_VARIABLE(valueCount);
+
+                                 if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
+
+                                 return ERROR_NONE;
+                               },NULL),
+                               NULL,  // changedRowCount
+                               "entriesNewest \
+                                  LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
+                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                               ",
+                               DATABASE_COLUMNS
+                               (
+// TODO: directory correct?
+                                 DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "    entities.deletedFlag!=1 \
+                                             AND %s \
+                                            ",
+                                            String_cString(filterString)
+                                           ),
+                               DATABASE_FILTERS
+                               (
+                               )
+                              );
+        }
+        else
+        {
+          if (String_isEmpty(entryIdsString))
+          {
+            // no storages selected, no entries selected -> get aggregated data from entities
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+            error = Database_get(&indexHandle->databaseHandle,
+                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                  {
+                                    assert(values != NULL);
+                                    assert(valueCount == 1);
+
+                                    UNUSED_VARIABLE(userData);
+                                    UNUSED_VARIABLE(valueCount);
+
+                                    if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
+
+                                    return ERROR_NONE;
+                                  },NULL),
+                                  NULL,  // changedRowCount
+                                  "entities \
+                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  ",
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
+                                  ),
+                                  stringFormat(sqlCommand,sizeof(sqlCommand),
+                                               "    entities.deletedFlag!=1 \
+                                                AND %s \
+                                               ",
+                                               String_cString(filterString)
+                                              ),
+                                  DATABASE_FILTERS
+                                  (
+                                  )
+                                );
+          }
+          else
+          {
+            // entries selected -> get aggregated data from entries
+            error = Database_get(&indexHandle->databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
+
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
+
+                                   if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 "entries \
+                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
+                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                                    LEFT JOIN entities         ON entities.id=entries.entityId \
+                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                 ",
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
+                                 ),
+                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                              "    entities.deletedFlag!=1 \
+                                               AND %s \
+                                              ",
+                                              String_cString(filterString)
+                                             ),
+                                 DATABASE_FILTERS
+                                 (
+                                 )
+                                );
+          }
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+#endif
 
         return ERROR_NONE;
       });
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalEntryContentSize_=%lf\n",__FILE__,__LINE__,totalEntryContentSize_);
+        fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,totalEntryContentSize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif
@@ -1788,6 +1916,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
+#if 0
         // get entry count, entry size
         if (newestOnly)
         {
@@ -1858,17 +1987,101 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           Database_finalize(&databaseStatementHandle);
           return ERRORX_(DATABASE,0,"get entries count/size");
         }
-        assert(totalEntrySize_ >= 0.0);
-        if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
-        if (totalEntrySize  != NULL) (*totalEntrySize ) = (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         Database_finalize(&databaseStatementHandle);
+
+        return ERROR_NONE;
+#else
+        // get entry count, entry size
+        if (newestOnly)
+        {
+          error = Database_get(&indexHandle->databaseHandle,
+                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                               {
+                                 assert(values != NULL);
+                                 assert(valueCount == 2);
+
+                                 UNUSED_VARIABLE(userData);
+                                 UNUSED_VARIABLE(valueCount);
+
+                                 if (totalEntryCount != NULL) (*totalEntryCount) = values[0].u;
+                                 if (totalEntrySize  != NULL) (*totalEntrySize ) = values[1].u64;
+
+                                 return ERROR_NONE;
+                               },NULL),
+                               NULL,  // changedRowCount
+                               "FTS_entries \
+                                  LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
+                                  LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
+                                  LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
+                               ",
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT  ("COUNT(entriesNewest.id)"),
+                                 DATABASE_COLUMN_UINT64("SUM(entriesNewest.size)"),
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                "    entities.deletedFlag!=1 \
+                                                 AND entriesNewest.id IS NOT NULL \
+                                                 AND %s \
+                                                ",
+                                                String_cString(filterString)
+                                              ),
+                               DATABASE_FILTERS
+                               (
+                               )
+                              );
+        }
+        else
+        {
+          error = Database_get(&indexHandle->databaseHandle,
+                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                               {
+                                 assert(values != NULL);
+                                 assert(valueCount == 2);
+
+                                 UNUSED_VARIABLE(userData);
+                                 UNUSED_VARIABLE(valueCount);
+
+                                 if (totalEntryCount != NULL) (*totalEntryCount) = values[0].u;
+                                 if (totalEntrySize  != NULL) (*totalEntrySize ) = values[1].u64;
+
+                                 return ERROR_NONE;
+                               },NULL),
+                               NULL,  // changedRowCount
+                               "FTS_entries \
+                                  LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
+                                  LEFT JOIN entities ON entities.id=entries.entityId \
+                                  LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                              ",
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT  ("COUNT(entries.id)"),
+                                 DATABASE_COLUMN_UINT64("SUM(entries.size)")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                "    entities.deletedFlag!=1 \
+                                                 AND entries.id IS NOT NULL \
+                                                 AND %s \
+                                                ",
+                                                String_cString(filterString)
+                                              ),
+                               DATABASE_FILTERS
+                               (
+                               )
+                              );
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+#endif
 
         return ERROR_NONE;
       });
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalEntryCount_=%"PRIi64" totalEntrySize_=%lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
+        fprintf(stderr,"%s, %d: totalEntryCount=%lu totalEntrySize_=%"PRIu64"\n",__FILE__,__LINE__,totalEntryCount,totalEntrySize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif
@@ -1885,6 +2098,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
+#if 0
         // get entry content size
         if (newestOnly)
         {
@@ -1957,15 +2171,98 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
 //TODO: may happend?
 //        assert(totalEntryContentSize_ >= 0.0);
-        if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         Database_finalize(&databaseStatementHandle);
+#else
+        // get entry content size
+        if (newestOnly)
+        {
+          error = Database_get(&indexHandle->databaseHandle,
+                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                               {
+                                 assert(values != NULL);
+                                 assert(valueCount == 1);
+
+                                 UNUSED_VARIABLE(userData);
+                                 UNUSED_VARIABLE(valueCount);
+
+                                 if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
+
+                                 return ERROR_NONE;
+                               },NULL),
+                               NULL,  // changedRowCount
+                               "FTS_entries \
+                                                   LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
+                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                                   LEFT JOIN entries          ON entries.id=entriesNewest.entryId \
+                                                   LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
+                                                   LEFT JOIN entities         ON entities.id=storages.entityId \
+                                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                               ",
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "    storages.deletedFlag!=1 \
+                                             AND %s \
+                                            ",
+                                            String_cString(filterString)
+                                           ),
+                               DATABASE_FILTERS
+                               (
+                               )
+                              );
+        }
+        else
+        {
+          error = Database_get(&indexHandle->databaseHandle,
+                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                               {
+                                 assert(values != NULL);
+                                 assert(valueCount == 1);
+
+                                 UNUSED_VARIABLE(userData);
+                                 UNUSED_VARIABLE(valueCount);
+
+                                 if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
+
+                                 return ERROR_NONE;
+                               },NULL),
+                               NULL,  // changedRowCount
+                               "FTS_entries \
+                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
+                                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
+                                                   LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
+                                                   LEFT JOIN entities         ON entities.id=storages.entityId \
+                                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                               ",
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "    storages.deletedFlag!=1 \
+                                             AND %s \
+                                            ",
+                                            String_cString(filterString)
+                                           ),
+                               DATABASE_FILTERS
+                               (
+                               )
+                              );
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+#endif
 
         return ERROR_NONE;
       });
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalEntryContentSize_=%lf\n",__FILE__,__LINE__,totalEntryContentSize_);
+        fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,totalEntryContentSize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif
@@ -2569,6 +2866,7 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
+fprintf(stderr,"%s:%d: get next entry\n",__FILE__,__LINE__);
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
                            "%lld %S %llu %S %S %S %u %llu %u %S %llu %u %u %u %llu %u %llu %S %llu %llu %u %u %llu %S %llu",
                            &uuidDatabaseId,
@@ -3897,6 +4195,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
           if (error == ERROR_NONE)
           {
             entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+fprintf(stderr,"%s:%d: ibnsert %ld %ld\n",__FILE__,__LINE__,Index_getDatabaseId(entityId),entryId);
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
           }
 
           // add FTS entry
