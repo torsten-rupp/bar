@@ -10281,7 +10281,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_format(sqlString,"BEGIN DEFERRED TRANSACTION");
+        String_format(sqlString,"END TRANSACTION");
         break;
       case DATABASE_TYPE_MYSQL:
         String_format(sqlString,"COMMIT");
@@ -11752,6 +11752,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
     String_delete(sqlString);
     return error;
   }
+Database_debugPrintQueryInfo(&databaseStatementHandle);
 
   // bind values
   if (filter != NULL)
