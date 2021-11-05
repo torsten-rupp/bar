@@ -6078,7 +6078,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
   retryCount    = 0;
   do
   {
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlCommand);
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlCommand);
 // TODO: reactivate when each thread has his own index handle
 #if 0
     assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
@@ -11309,13 +11309,14 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   return ERROR_NONE;
 }
 
-Errors Database_delete(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       const char     *filter,
-                       DatabaseValue  filterValues[],
-                       uint           filterValueCount
+Errors Database_delete(DatabaseHandle       *databaseHandle,
+                       ulong                *changedRowCount,
+                       const char           *tableName,
+                       uint                 flags,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount,
+                       uint                 limit
                       )
 {
   String                  sqlString;
@@ -11333,6 +11334,17 @@ Errors Database_delete(DatabaseHandle *databaseHandle,
   if (filter != NULL)
   {
     String_formatAppend(sqlString," WHERE %s",filter);
+  }
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      if (limit > 0)
+      {
+        String_formatAppend(sqlString," LIMIT 0,%u",limit);
+      }
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
   }
 
   // prepare statement
@@ -11408,17 +11420,17 @@ Errors Database_delete(DatabaseHandle *databaseHandle,
   #endif /* not NDEBUG */
 }
 
-Errors Database_select(DatabaseHandle      *databaseHandle,
-                       DatabaseRowFunction databaseRowFunction,
-                       void                *databaseRowUserData,
-                       ulong               *changedRowCount,
-                       const char          *tableName,
-                       uint                flags,
-                       DatabaseValue       columns[],
-                       uint                columnCount,
-                       const char          *filter,
-                       DatabaseValue       filterValues[],
-                       uint                filterValueCount
+Errors Database_select(DatabaseHandle       *databaseHandle,
+                       DatabaseRowFunction  databaseRowFunction,
+                       void                 *databaseRowUserData,
+                       ulong                *changedRowCount,
+                       const char           *tableName,
+                       uint                 flags,
+                       DatabaseValue        columns[],
+                       uint                 columnCount,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
                       )
 {
   String                  sqlString;
@@ -11526,7 +11538,7 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseColumn          columns[],
                        uint                    columnCount,
                        const char              *filter,
-                       DatabaseFilter          filterValues[],
+                       const DatabaseFilter    filterValues[],
                        uint                    filterValueCount
                       )
 {
@@ -11696,17 +11708,17 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
   return existsFlag;
 }
 
-Errors Database_get(DatabaseHandle      *databaseHandle,
-                    DatabaseRowFunction databaseRowFunction,
-                    void                *databaseRowUserData,
-                    ulong               *changedRowCount,
-                    const char          *tableName,
+Errors Database_get(DatabaseHandle       *databaseHandle,
+                    DatabaseRowFunction  databaseRowFunction,
+                    void                 *databaseRowUserData,
+                    ulong                *changedRowCount,
+                    const char           *tableName,
 // TODO: select value datatype: name, type
-                    DatabaseColumn      columns[],
-                    uint                columnCount,
-                    const char          *filter,
-                    DatabaseFilter      filterValues[],
-                    uint                filterValueCount
+                    DatabaseColumn       columns[],
+                    uint                 columnCount,
+                    const char           *filter,
+                    const DatabaseFilter filterValues[],
+                    uint                 filterValueCount
                    )
 {
   String                  sqlString;
