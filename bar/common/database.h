@@ -1865,18 +1865,20 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
 *          filter           - SQL filter expression
 *          filterValues     - filter values
 *          filterValueCount - filter values count
+*          limit            - delete limit (if supported) or 0
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_delete(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       const char     *filter,
-                       DatabaseValue  filterValues[],
-                       uint           filterValueCount
+Errors Database_delete(DatabaseHandle       *databaseHandle,
+                       ulong                *changedRowCount,
+                       const char           *tableName,
+                       uint                 flags,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount,
+                       uint                 limit
                       );
 
 /***********************************************************************\
@@ -1899,18 +1901,18 @@ Errors Database_delete(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_select(DatabaseHandle      *databaseHandle,
-                       DatabaseRowFunction databaseRowFunction,
-                       void                *databaseRowUserData,
-                       ulong               *changedRowCount,
-                       const char          *tableName,
-                       uint                flags,
+Errors Database_select(DatabaseHandle       *databaseHandle,
+                       DatabaseRowFunction  databaseRowFunction,
+                       void                 *databaseRowUserData,
+                       ulong                *changedRowCount,
+                       const char           *tableName,
+                       uint                 flags,
 // TODO: select value datatype: name, type
-                       DatabaseValue       selectValues[],
-                       uint                selectValueCount,
-                       const char          *filter,
-                       DatabaseValue       filterValues[],
-                       uint                filterValueCount
+                       DatabaseValue        selectValues[],
+                       uint                 selectValueCount,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
                       ) ATTRIBUTE_DEPRECATED;
 Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseHandle          *databaseHandle,
@@ -1920,7 +1922,7 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseColumn          columns[],
                        uint                    columnCount,
                        const char              *filter,
-                       DatabaseFilter          filterValues[],
+                       const DatabaseFilter    filterValues[],
                        uint                    filterValueCount
                       );
 
@@ -1977,17 +1979,17 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_get(DatabaseHandle      *databaseHandle,
-                    DatabaseRowFunction databaseRowFunction,
-                    void                *databaseRowUserData,
-                    ulong               *changedRowCount,
-                    const char          *tableName,
+Errors Database_get(DatabaseHandle       *databaseHandle,
+                    DatabaseRowFunction  databaseRowFunction,
+                    void                 *databaseRowUserData,
+                    ulong                *changedRowCount,
+                    const char           *tableName,
 // TODO: select value datatype: name, type
-                    DatabaseColumn      selectColumn[],
-                    uint                selectColumnCount,
-                    const char          *filter,
-                    DatabaseFilter      filterValues[],
-                    uint                filterValueCount
+                    DatabaseColumn       selectColumn[],
+                    uint                 selectColumnCount,
+                    const char           *filter,
+                    const DatabaseFilter filterValues[],
+                    uint                 filterValueCount
                    );
 
 /***********************************************************************\
