@@ -11752,7 +11752,6 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
     String_delete(sqlString);
     return error;
   }
-Database_debugPrintQueryInfo(&databaseStatementHandle);
 
   // bind values
   if (filter != NULL)
