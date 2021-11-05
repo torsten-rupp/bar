@@ -1441,246 +1441,242 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   // get file aggregate data
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
-//TODO: use entries.size?
-                           "SELECT COUNT(DISTINCT entries.id), \
-                                   SUM(entryFragments.size) \
-                            FROM entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                            WHERE     entries.type=? \
-                                  AND entries.entityId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
-                             DATABASE_FILTER_KEY (entityId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
+
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         totalFileCount = values[0].u;
+                         totalFileSize  = values[1].u64;
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       "entries \
+                          LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                         DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                       ),
+                       "    entries.type=? \
+                        AND entries.entityId=? \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
+                         DATABASE_FILTER_KEY (entityId)
+                       )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu %lf",
-                           &totalFileCount,
-                           &totalFileSize_
-                          )
-     )
-  {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
-  }
-  assert(totalFileSize_ >= 0.0);
-  totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
-  Database_finalize(&databaseStatementHandle);
 
   // get image aggregate data
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
-//TODO: use entries.size?
-                           "SELECT COUNT(DISTINCT entries.id), \
-                                   SUM(entryFragments.size) \
-                            FROM entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                            WHERE     entries.type=? \
-                                  AND entries.entityId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
-                             DATABASE_FILTER_KEY (entityId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
+
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         totalImageCount = values[0].u;
+                         totalImageSize  = values[1].u64;
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       "entries \
+                          LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                         DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                       ),
+                       "    entries.type=? \
+                        AND entries.entityId=? \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
+                         DATABASE_FILTER_KEY (entityId)
+                       )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu %lf",
-                           &totalImageCount,
-                           &totalImageSize_
-                          )
-     )
-  {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
-  }
-  assert(totalImageSize_ >= 0.0);
-  totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
-  Database_finalize(&databaseStatementHandle);
 
   // get directory aggregate data
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
-                           "SELECT COUNT(DISTINCT entries.id) \
-                            FROM entries \
-                            WHERE     entries.type=? \
-                                  AND entries.entityId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY),
-                             DATABASE_FILTER_KEY (entityId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
+
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         totalDirectoryCount = values[0].u;
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       "entries \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
+                       ),
+                       "    entries.type=? \
+                        AND entries.entityId=? \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_UINT(totalLinkCount),
+                         DATABASE_FILTER_KEY (entityId)
+                       )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu",
-                           &totalDirectoryCount
-                          )
-     )
-  {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
-  }
-  Database_finalize(&databaseStatementHandle);
 
   // get link aggregate data
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
-                           "SELECT COUNT(DISTINCT entries.id) \
-                            FROM entries \
-                            WHERE     entries.type=? \
-                                  AND entries.entityId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
-                             DATABASE_FILTER_KEY (entityId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
+
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         totalLinkCount = values[0].u;
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       "entries \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
+                       ),
+                       "    entries.type=? \
+                        AND entries.entityId=? \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
+                         DATABASE_FILTER_KEY (entityId)
+                       )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu",
-                           &totalLinkCount
-                          )
-     )
-  {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
-  }
-  Database_finalize(&databaseStatementHandle);
 
   // get hardlink aggregate data
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
-//TODO: use entries.size?
-                           "SELECT COUNT(DISTINCT entries.id), \
-                                   SUM(entryFragments.size) \
-                            FROM entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                            WHERE     entries.type=? \
-                                  AND entries.entityId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
-                             DATABASE_FILTER_KEY (entityId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
+
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         totalHardlinkCount = values[0].u;
+                         totalHardlinkSize  = values[1].u64;
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       "entries \
+                          LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                         DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                       ),
+                       "    entries.type=? \
+                        AND entries.entityId=? \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
+                         DATABASE_FILTER_KEY (entityId)
+                       )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu %lf",
-                           &totalHardlinkCount,
-                           &totalHardlinkSize_
-                          )
-     )
-  {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
-  }
-  assert(totalHardlinkSize_ >= 0.0);
-  totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
-  Database_finalize(&databaseStatementHandle);
 
   // get special aggregate data
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
-                           "SELECT COUNT(DISTINCT entries.id) \
-                            FROM entries \
-                            WHERE     entries.type=? \
-                                  AND entries.entityId=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
-                             DATABASE_FILTER_KEY (entityId)
-                           )
-                          );
+  error = Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
+
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         totalSpecialCount = values[0].u;
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       "entries \
+                       ",
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
+                       ),
+                       "    entries.type=? \
+                        AND entries.entityId=? \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
+                         DATABASE_FILTER_KEY (entityId)
+                       )
+                      );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu",
-                           &totalSpecialCount
-                          )
-     )
-  {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
-  }
-  Database_finalize(&databaseStatementHandle);
 
   // update entity aggregate data
-#if 0
-(void)Database_update(&indexHandle->databaseHandle,
-                    NULL,  // changedRowCount
-                    "entities",
-                    DATABASE_FLAG_NONE,
-                    DATABASE_VALUES2
-                    (
-                      DATABASE_VALUE_UINT("lockedCount", 0),
-                    ),
-                    NULL,
-                    DATABASE_FILTERS
-                    (
-                    )
-                   );
-#endif
-
   error = Database_update(&indexHandle->databaseHandle,
                           NULL,  // changedRowCount
                           "entities",
                           DATABASE_FLAG_NONE,
                           DATABASE_VALUES2
                           (
-                            DATABASE_VALUE_UINT  ("totalEntryCount",     totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount),
-                            DATABASE_VALUE_UINT64("totalEntrySize",      totalFileSize+totalImageSize+totalHardlinkSize),
+                            DATABASE_VALUE_UINT  ("totalEntryCount",     totalFileCount+
+                                                                         totalImageCount+
+                                                                         totalDirectoryCount+
+                                                                         totalLinkCount+
+                                                                         totalHardlinkCount+
+                                                                         totalSpecialCount
+                                                 ),
+                            DATABASE_VALUE_UINT64("totalEntrySize",      totalFileSize+
+                                                                         totalImageSize+
+                                                                         totalHardlinkSize
+                                                 ),
                             DATABASE_VALUE_UINT  ("totalFileCount",      totalFileCount),
                             DATABASE_VALUE_UINT64("totalFileSize",       totalFileSize),
                             DATABASE_VALUE_UINT  ("totalImageCount",     totalImageCount),
