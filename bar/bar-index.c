@@ -1648,7 +1648,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   printInfo("Create triggers...");
 
   // delete all existing triggers
-  error = ERROR_UNKNOWN;
+  error = ERROR_NONE;
   INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TRIGGER_NAMES[Database_getType(databaseHandle)], triggerName)
   {
     error = Database_execute(databaseHandle,
@@ -1681,6 +1681,14 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
     printInfo("FAIL\n");
     printError("create triggers fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
+  }
+
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      break;
+    case DATABASE_TYPE_MYSQL:
+      break;
   }
 
   printInfo("OK\n");
@@ -1785,7 +1793,6 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
 LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  char   name[1024];
 
   /* manual forced delete
   PRAGMA writable_schema = ON;
@@ -1799,64 +1806,87 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     // drop all existing indizes
-    if (error == ERROR_NONE)
+    printInfo("  Discard indizes...");
+    switch (Database_getType(databaseHandle))
     {
-      printInfo("  Discard indizes...");
-      do
-      {
-        stringClear(name);
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 1);
-
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
-
-                                   stringSet(name,sizeof(name),values[0].text.data);
-
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(CSTRING),
-                                 "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
-                                );
-        if ((error == ERROR_NONE) && !stringIsEmpty(name))
+      case DATABASE_TYPE_SQLITE3:
         {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "DROP INDEX IF EXISTS %s",
-                                   name
-                                  );
+          char name[1024];
+          do
+          {
+            stringClear(name);
+// TODO: use Database_getString()
+            error = Database_execute(databaseHandle,
+                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                     {
+                                       assert(values != NULL);
+                                       assert(valueCount == 1);
+
+                                       UNUSED_VARIABLE(valueCount);
+                                       UNUSED_VARIABLE(userData);
+
+                                       stringSet(name,sizeof(name),values[0].text.data);
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(CSTRING),
+                                     "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
+                                    );
+            if ((error == ERROR_NONE) && !stringIsEmpty(name))
+            {
+              error = Database_execute(databaseHandle,
+                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                       NULL,  // changedRowCount
+                                       DATABASE_COLUMN_TYPES(),
+                                       "DROP INDEX IF EXISTS %s",
+                                       name
+                                      );
+            }
+          }
+          while ((error == ERROR_NONE) && !stringIsEmpty(name));
         }
-      }
-      while ((error == ERROR_NONE) && !stringIsEmpty(name));
-      if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+        break;
+      case DATABASE_TYPE_MYSQL:
+// TODO:
+        break;
+    }
+    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    if (error != ERROR_NONE)
+    {
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
     }
 
     // create new indizes (if not exists)
-    if (error == ERROR_NONE)
+    printInfo("  Collect indizes...");
+    switch (Database_getType(databaseHandle))
     {
-      const char *indexDefinition;
+      case DATABASE_TYPE_SQLITE3:
+        {
+          const char *indexDefinition;
 
-      printInfo("  Collect indizes...");
-      INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 indexDefinition
-                                );
-      }
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
+          {
+            error = Database_execute(databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     indexDefinition
+                                    );
+          }
+        }
+        break;
+      case DATABASE_TYPE_MYSQL:
+// TODO:
+        break;
     }
-
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    if (error != ERROR_NONE)
+    {
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
+    }
   }
   if (error != ERROR_NONE)
   {
@@ -1886,67 +1916,83 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     // drop FTS indizes
-    if (error == ERROR_NONE)
+    printInfo("  Discard FTS indizes...");
+    switch (Database_getType(databaseHandle))
     {
-      const char *name;
+      case DATABASE_TYPE_SQLITE3:
+        {
+          const char *name;
 
-      printInfo("  Discard FTS indizes...");
-      INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLE_NAMES[Database_getType(databaseHandle)], name, error == ERROR_NONE)
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DROP TABLE IF EXISTS %s",
-                                 name
-                                );
-      }
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLE_NAMES[Database_getType(databaseHandle)], name, error == ERROR_NONE)
+          {
+            error = Database_execute(databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     "DROP TABLE IF EXISTS %s",
+                                     name
+                                    );
+          }
+        }
+        break;
+      case DATABASE_TYPE_MYSQL:
+// TODO:
+        break;
+    }
+    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    if (error != ERROR_NONE)
+    {
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
     }
 
     // create new FTS tables (if not exists)
-    if (error == ERROR_NONE)
+    printInfo("  Create FTS indizes...");
+    switch (Database_getType(databaseHandle))
     {
-      const char *indexDefinition;
+      case DATABASE_TYPE_SQLITE3:
+        {
+          const char *indexDefinition;
 
-      printInfo("  Create FTS indizes...");
-      INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_MYSQL, indexDefinition, error == ERROR_NONE)
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 indexDefinition
-                                );
-      }
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_MYSQL, indexDefinition, error == ERROR_NONE)
+          {
+            error = Database_execute(databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     indexDefinition
+                                    );
+          }
+          if (error == ERROR_NONE)
+          {
+            error = Database_execute(databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     "INSERT INTO FTS_storages SELECT id,name FROM storages"
+                                    );
+          }
+          if (error == ERROR_NONE)
+          {
+            error = Database_execute(databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     DATABASE_COLUMN_TYPES(),
+                                     "INSERT INTO FTS_entries SELECT id,name FROM entries"
+                                    );
+          }
+        }
+        break;
+      case DATABASE_TYPE_MYSQL:
+// TODO:
+        break;
     }
-
-    // create FTS index
-    if (error == ERROR_NONE)
+    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+    if (error != ERROR_NONE)
     {
-      printInfo("  Collect storages FTS index...");
-      error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "INSERT INTO FTS_storages SELECT id,name FROM storages"
-                              );
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
+      DATABASE_TRANSACTION_ABORT(databaseHandle);
+      break;
     }
-    if (error == ERROR_NONE)
-    {
-      printInfo("  Collect entries FTS index...");
-      error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "INSERT INTO FTS_entries SELECT id,name FROM entries"
-                              );
-      printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
-    }
-
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   if (error != ERROR_NONE)
   {
@@ -2618,7 +2664,7 @@ LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId 
 LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 {
   Errors        error;
-  ulong         totalEntriesNewestCount;
+  uint          totalEntriesNewestCount;
   ulong         n,m;
   ArrayIterator arrayIterator;
   DatabaseId    storageId;
@@ -2647,23 +2693,11 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 
     // get total counts
     totalEntriesNewestCount = 0L;
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
-
-                               totalEntriesNewestCount = values[0].u;
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(UINT),
-                             "SELECT COUNT(id) FROM entriesNewest \
-                             "
+    error = Database_getUInt(databaseHandle,
+                             &totalEntriesNewestCount,
+                             "entriesNewest",
+                             "COUNT(id)",
+                             DATABASE_FILTERS_NONE
                             );
     if (error != ERROR_NONE)
     {
@@ -2683,12 +2717,13 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       do
       {
         m = 0L;
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 &m,
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM entriesNewest LIMIT 0,1000"
-                                );
+        error = Database_delete(databaseHandle,
+                                &m,
+                                "entriesNewest",
+                                DATABASE_FLAG_NONE,
+                                DATABASE_FILTERS_NONE,
+                                1000
+                               );
         n += m;
         printPercentage(n,totalEntriesNewestCount);
       }
