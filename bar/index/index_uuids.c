@@ -263,11 +263,11 @@ Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
+  error = Database_getIds2(&indexHandle->databaseHandle,
                           &uuidIds,
                           "uuids",
                           "id",
-                          ""
+                          DATABASE_FILTERS_NONE
                          );
   if (error != ERROR_NONE)
   {
@@ -483,7 +483,9 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_INCREMENTAL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_DIFFERENTIAL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_CONTINUOUS)
-                          )
+                          ),
+                          0LL,
+                          1LL
                          );
     });
 
@@ -617,7 +619,9 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                                    ),
                        DATABASE_FILTERS
                        (
-                       )
+                       ),
+                       0LL,
+                       1LL
                       );
   });
   if (error != ERROR_NONE)
@@ -666,235 +670,286 @@ UNUSED_VARIABLE(uuidId);
               indexHandle,
     {
       // get file aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT,UINT64),
-//TODO: use entries.size?
-                               "SELECT COUNT(DISTINCT entries.id), \
-                                       SUM(entryFragments.size) \
-                                FROM entries \
-                                  LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entries.jobUUID \
-                                WHERE     entries.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_FILE),
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalFileCount = values[0].u;
+                             totalFileSize  = values[0].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
+                             DATABASE_COLUMN_STRING("SUM(entryFragments.size)")
+                           ),
+                           "    entries.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu %lf",
-                          &totalFileCount,
-                          &totalFileSize_
-                         );
-      assert(totalFileSize_ >= 0.0);
-      totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
-      Database_finalize(&databaseStatementHandle);
 
       // get image aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT,UINT64),
-//TODO: use entries.size?
-                               "SELECT COUNT(DISTINCT entries.id), \
-                                       SUM(entryFragments.size) \
-                                FROM entries \
-                                  LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                  LEFT JOIN entities ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entries.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_IMAGE)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalImageCount = values[0].u;
+                             totalImageSize  = values[0].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
+                             DATABASE_COLUMN_STRING("SUM(entryFragments.size)")
+7                           ),
+                           "    entries.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu %lf",
-                          &totalImageCount,
-                          &totalImageSize_
-                         );
-      assert(totalImageSize_ >= 0.0);
-      totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
-      Database_finalize(&databaseStatementHandle);
 
       // get directory aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT),
-                               "SELECT COUNT(DISTINCT entries.id) \
-                                FROM entries \
-                                  LEFT JOIN entities ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entries.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_DIRECTORY)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 1);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalDirectoryCount = values[0].u;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
+                           ),
+                           "    entries.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu",
-                          &totalDirectoryCount
-                         );
-      Database_finalize(&databaseStatementHandle);
 
       // get link aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT),
-                               "SELECT COUNT(DISTINCT entries.id) \
-                                FROM entries \
-                                  LEFT JOIN entities ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entries.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_LINK)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 1);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalLinkCount = values[0].u;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)")
+                           ),
+                           "    entries.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu",
-                          &totalLinkCount
-                         );
-      Database_finalize(&databaseStatementHandle);
 
       // get hardlink aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT,UINT64),
-//TODO: use entries.size?
-                               "SELECT COUNT(DISTINCT entries.id), \
-                                       SUM(entryFragments.size) \
-                                FROM entries \
-                                  LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                  LEFT JOIN entities ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entries.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_HARDLINK)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalHardlinkCount = values[0].u;
+                             totalHardlinkSize  = values[0].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
+                             DATABASE_COLUMN_STRING("SUM(entryFragments.size)")
+                           ),
+                           "    entries.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu %lf",
-                          &totalHardlinkCount,
-                          &totalHardlinkSize_
-                         );
-      assert(totalHardlinkSize_ >= 0.0);
-      totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
-      Database_finalize(&databaseStatementHandle);
 
       // get special aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT),
-                               "SELECT COUNT(DISTINCT entries.id) \
-                                FROM entries \
-                                  LEFT JOIN entities ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entries.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_SPECIAL)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 1);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalSpecialCount = values[0].u;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
+                           ),
+                           "    entries.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu",
-                          &totalSpecialCount
-                         );
-      Database_finalize(&databaseStatementHandle);
 
       // update aggregate data
-//fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE uuids \
-                                SET totalEntryCount    =%llu, \
-                                    totalEntrySize     =%llu, \
-                                    totalFileCount     =%llu, \
-                                    totalFileSize      =%llu, \
-                                    totalImageCount    =%llu, \
-                                    totalImageSize     =%llu, \
-                                    totalDirectoryCount=%llu, \
-                                    totalLinkCount     =%llu, \
-                                    totalHardlinkCount =%llu, \
-                                    totalHardlinkSize  =%llu, \
-                                    totalSpecialCount  =%llu \
-                                WHERE id=%lld \
-                               ",
-                               totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
-                               totalFileSize+totalImageSize+totalHardlinkSize,
-                               totalFileCount,
-                               totalFileSize,
-                               totalImageCount,
-                               totalImageSize,
-                               totalDirectoryCount,
-                               totalLinkCount,
-                               totalHardlinkCount,
-                               totalHardlinkSize,
-                               totalSpecialCount,
-                               Index_getDatabaseId(uuidId)
-                              );
+fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "uuids",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE_UINT("totalEntryCount",      totalFileCount
+                                                                           +totalImageCount
+                                                                           +totalDirectoryCount
+                                                                           +totalLinkCount
+                                                                           +totalHardlinkCount
+                                                                           +totalSpecialCount
+                                                   ),
+                                DATABASE_VALUE_UINT("totalEntrySize",       totalFileSize
+                                                                           +totalImageSize
+                                                                           +totalHardlinkSize
+                                                   ),
+                                DATABASE_VALUE_UINT("totalFileCount",      totalFileCount),
+                                DATABASE_VALUE_UINT("totalFileSize",       totalFileSize),
+                                DATABASE_VALUE_UINT("totalImageCount",     totalImageCount),
+                                DATABASE_VALUE_UINT("totalImageSize",      totalImageSize),
+                                DATABASE_VALUE_UINT("totalDirectoryCount", totalDirectoryCount),
+                                DATABASE_VALUE_UINT("totalLinkCount",      totalLinkCount),
+                                DATABASE_VALUE_UINT("totalHardlinkCount",  totalHardlinkCount),
+                                DATABASE_VALUE_UINT("totalHardlinkSize",   totalHardlinkSize),
+                                DATABASE_VALUE_UINT("totalSpecialCount",   totalSpecialCount),
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
+                              )
+                             );
       if (error != ERROR_NONE)
       {
         return error;
@@ -903,233 +958,286 @@ UNUSED_VARIABLE(uuidId);
       // -----------------------------------------------------------------
 
       // get newest file aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT,UINT64),
-                               "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                       SUM(entryFragments.size) \
-                                FROM entriesNewest \
-                                  LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                                  LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entriesNewest.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_FILE)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalFileCount = values[0].u;
+                             totalFileSize  = values[0].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
+                             DATABASE_COLUMN_STRING("SUM(entryFragments.size)")
+                           ),
+                           "    entriesNewest.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu %lf",
-                          &totalFileCount,
-                          &totalFileSize_
-                         );
-      assert(totalFileSize_ >= 0.0);
-      totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
-      Database_finalize(&databaseStatementHandle);
 
       // get newest image aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT,UINT64),
-                               "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                       SUM(entryFragments.size) \
-                                FROM entriesNewest \
-                                  LEFT JOIN entities ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entriesNewest.type=? \
-                                      AND entriesNewest.entityId=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_IMAGE)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalImageCount = values[0].u;
+                             totalImageSize  = values[0].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
+                             DATABASE_COLUMN_STRING("SUM(entryFragments.size)")
+                           ),
+                           "    entriesNewest.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu %lf",
-                          &totalImageCount,
-                          &totalImageSize_
-                         );
-      assert(totalImageSize_ >= 0.0);
-      totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
-      Database_finalize(&databaseStatementHandle);
 
       // get newest directory aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT),
-                               "SELECT COUNT(DISTINCT entriesNewest.id) \
-                                FROM entriesNewest \
-                                  LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entriesNewest.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_DIRECTORY)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 1);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalDirectoryCount = values[0].u;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
+                           ),
+                           "    entriesNewest.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu",
-                          &totalDirectoryCount
-                         );
-      Database_finalize(&databaseStatementHandle);
 
       // get newest link aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT),
-                               "SELECT COUNT(DISTINCT entriesNewest.id) \
-                                FROM entriesNewest \
-                                  LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entriesNewest.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_LINK)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 1);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalLinkCount = values[0].u;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
+                           ),
+                           "    entriesNewest.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu",
-                          &totalLinkCount
-                         );
-      Database_finalize(&databaseStatementHandle);
 
       // get newest hardlink aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT,UINT64),
-//TODO: use entriesNewest.size?
-                               "SELECT COUNT(DISTINCT entriesNewest.id), \
-                                       SUM(entryFragments.size) \
-                                FROM entriesNewest \
-                                  LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                                  LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entriesNewest.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_HARDLINK)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalHardlinkCount = values[0].u;
+                             totalHardlinkSize  = values[0].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
+                             DATABASE_COLUMN_STRING("SUM(entryFragments.size)")
+                           ),
+                           "    entriesNewest.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu %lf",
-                          &totalHardlinkCount,
-                          &totalHardlinkSize_
-                         );
-      assert(totalHardlinkSize_ >= 0.0);
-      totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
-      Database_finalize(&databaseStatementHandle);
 
       // get newest special aggregate data
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(UINT),
-                               "SELECT COUNT(DISTINCT entriesNewest.id) \
-                                FROM entriesNewest \
-                                  LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                WHERE     entriesNewest.type=? \
-                                      AND uuids.id=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 UINT(INDEX_TYPE_SPECIAL)
-                                 KEY (Index_getDatabaseId(uuidId))
-                               )
-                              );
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 1);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             totalSpecialCount = values[0].u;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           ",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
+                           ),
+                           "    entriesNewest.type=? \
+                            AND uuids.id=?  \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
+                           ),
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      Database_getNextRow(&databaseStatementHandle,
-                          "%lu",
-                          &totalSpecialCount
-                         );
-      Database_finalize(&databaseStatementHandle);
 
       // update newest aggregate data
 //fprintf(stderr,"%s, %d: newest aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE uuids \
-                                SET totalEntryCountNewest    =%llu, \
-                                    totalEntrySizeNewest     =%llu, \
-                                    totalFileCountNewest     =%llu, \
-                                    totalFileSizeNewest      =%llu, \
-                                    totalImageCountNewest    =%llu, \
-                                    totalImageSizeNewest     =%llu, \
-                                    totalDirectoryCountNewest=%llu, \
-                                    totalLinkCountNewest     =%llu, \
-                                    totalHardlinkCountNewest =%llu, \
-                                    totalHardlinkSizeNewest  =%llu, \
-                                    totalSpecialCountNewest  =%llu \
-                                WHERE id=%lld \
-                               ",
-                               totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
-                               totalFileSize+totalImageSize+totalHardlinkSize,
-                               totalFileCount,
-                               totalFileSize,
-                               totalImageCount,
-                               totalImageSize,
-                               totalDirectoryCount,
-                               totalLinkCount,
-                               totalHardlinkCount,
-                               totalHardlinkSize,
-                               totalSpecialCount,
-                               Index_getDatabaseId(uuidId)
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "uuids",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE_UINT("totalEntryCountNewest",      totalFileCount
+                                                                                 +totalImageCount
+                                                                                 +totalDirectoryCount
+                                                                                 +totalLinkCount
+                                                                                 +totalHardlinkCount
+                                                                                 +totalSpecialCount
+                                                   ),
+                                DATABASE_VALUE_UINT("totalEntrySizeNewest",       totalFileSize
+                                                                                 +totalImageSize
+                                                                                 +totalHardlinkSize
+                                                   ),
+                                DATABASE_VALUE_UINT("totalFileCountNewest",      totalFileCount),
+                                DATABASE_VALUE_UINT("totalFileSizeNewest",       totalFileSize),
+                                DATABASE_VALUE_UINT("totalImageCountNewest",     totalImageCount),
+                                DATABASE_VALUE_UINT("totalImageSizeNewest",      totalImageSize),
+                                DATABASE_VALUE_UINT("totalDirectoryCountNewest", totalDirectoryCount),
+                                DATABASE_VALUE_UINT("totalLinkCountNewest",      totalLinkCount),
+                                DATABASE_VALUE_UINT("totalHardlinkCountNewest",  totalHardlinkCount),
+                                DATABASE_VALUE_UINT("totalHardlinkSizeNewest",   totalHardlinkSize),
+                                DATABASE_VALUE_UINT("totalSpecialCountNewest",   totalSpecialCount),
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))
+                              )
+                             );
       if (error != ERROR_NONE)
       {
         return error;
@@ -1201,36 +1309,38 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,STRING,UINT64,STRING,INT64,INT,INT64),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT uuids.id, \
-                                                 uuids.jobUUID, \
-                                                 (SELECT MAX(UNIX_TIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID), \
-                                                 (SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1), \
-                                                 SUM(storages.size), \
-                                                 SUM(storages.totalEntryCount), \
-                                                 SUM(storages.totalEntrySize) \
-                                          FROM uuids \
-                                            LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                                            LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
-                                          WHERE     %s \
-                                                AND uuids.jobUUID!='' \
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+//TODO newest
+                           "uuids \
+                              LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                              LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("uuids.id"),
+                             DATABASE_COLUMN_STRING("uuids.jobUUID"),
+                             DATABASE_COLUMN_UINT64("(SELECT MAX(UNIX_TIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID)"),
+                             DATABASE_COLUMN_STRING("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.size)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        "     %s \
+                                          AND uuids.jobUUID!='' \
                                           GROUP BY uuids.id \
                                           LIMIT ?,? \
-                                         ",
-                                         String_cString(filterString)
-                                        ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_UINT64(offset),
-                               DATABASE_FILTER_UINT64(limit)
-                             )
-                           );
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT64(offset),
+                             DATABASE_FILTER_UINT64(limit)
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -1372,9 +1482,8 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                         IndexId     uuidId
                        )
 {
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          entityId;
+  Errors     error;
+  DatabaseId entityId;
 
   assert(indexHandle != NULL);
 
@@ -1390,37 +1499,33 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     // delete entities
-    error = Database_prepare(&databaseStatementHandle,
-                             &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
-                             "SELECT entities.id \
-                              FROM entities \
-                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE uuids.id=? \
-                             ",
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY (Index_getDatabaseId(uuidId))
-                             )
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    while (   Database_getNextRow(&databaseStatementHandle,
-                                  "%lld",
-                                  &entityId
-                                 )
-           && (error == ERROR_NONE)
-          )
-    {
-      error = Index_deleteEntity(indexHandle,INDEX_ID_ENTITY(entityId));
-    }
-    Database_finalize(&databaseStatementHandle);
+    error = Database_get(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           assert(values != NULL);
+                           assert(valueCount == 1);
+
+                           UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+
+                           return Index_deleteEntity(indexHandle,INDEX_ID_ENTITY(values[0].id));
+                         },NULL),
+                         NULL,  // changedRowCount
+                         "entities \
+                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                         ",
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY  ("entities.id")
+                         ),
+                         "uuids.id=?",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_KEY (Index_getDatabaseId(uuidId))
+                         ),
+                         0,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE)
     {
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
