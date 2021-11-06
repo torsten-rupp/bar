@@ -105,6 +105,8 @@ typedef enum
 #define DATABASE_MAX_TABLE_COLUMNS      64
 #define DATABASE_MAX_COLUMN_NAME_LENGTH 63
 
+#define DATABASE_UNLIMITED 9223372036854775807LL
+
 // database datatypes
 typedef enum
 {
@@ -2068,11 +2070,17 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
 * Name   : Database_get
 * Purpose: get values from database table
 * Input  : databaseHandle - database handle
+*          databaseRowFunction
+*          databaseRowUserData
+*          changedRowCount
 *          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+*          selectColumn   - select columns
+*          selectColumnCount - select column count
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          offset            - offset or 0
+*          limit             - limit or 0
 * Output : value - database id or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2088,7 +2096,9 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     uint                 selectColumnCount,
                     const char           *filter,
                     const DatabaseFilter filterValues[],
-                    uint                 filterValueCount
+                    uint                 filterValueCount,
+                    uint64               offset,
+                    uint64               limit
                    );
 
 /***********************************************************************\
@@ -2111,44 +2121,60 @@ Errors Database_getId(DatabaseHandle *databaseHandle,
                       const char     *columnName,
                       const char     *additional,
                       ...
-                     );
+                     ) ATTRIBUTE_DEPRECATED;
 Errors Database_vgetId(DatabaseHandle *databaseHandle,
                        DatabaseId     *value,
                        const char     *tableName,
                        const char     *columnName,
                        const char     *additional,
                        va_list        arguments
-                      );
+                      ) ATTRIBUTE_DEPRECATED;
+Errors Database_getId2(DatabaseHandle       *databaseHandle,
+                      DatabaseId           *value,
+                      const char           *tableName,
+                      const char           *columnName,
+                      const char           *filter,
+                      const DatabaseFilter filterValues[],
+                      uint                 filterValueCount
+                     );
 
 /***********************************************************************\
 * Name   : Database_getIds, Database_vgetIds
 * Purpose: get database ids from database table
 * Input  : databaseHandle - database handle
-*          values         - database ids array
+*          ids            - database ids array
 *          tableName      - table name
 *          columnName     - column name
 *          additional     - additional string (e. g. WHERE...)
 *                           special functions:
 *                             REGEXP(pattern,case-flag,text)
-* Output : values - database ids array
+* Output : ids - database ids array
 * Return : ERROR_NONE or error code
 * Notes  : values are added to array!
 \***********************************************************************/
 
 Errors Database_getIds(DatabaseHandle *databaseHandle,
-                       Array          *values,
+                       Array          *ids,
                        const char     *tableName,
                        const char     *columnName,
                        const char     *additional,
                        ...
-                      );
+                      ) ATTRIBUTE_DEPRECATED;
 Errors Database_vgetIds(DatabaseHandle *databaseHandle,
-                        Array          *values,
+                        Array          *ids,
                         const char     *tableName,
                         const char     *columnName,
                         const char     *additional,
                         va_list        arguments
-                       );
+                       ) ATTRIBUTE_DEPRECATED;
+Errors Database_getIds2(DatabaseHandle       *databaseHandle,
+                      Array                *ids,
+                      const char           *tableName,
+                      const char           *columnName,
+                      const char           *filter,
+                      const DatabaseFilter filterValues[],
+                      uint                 filterValueCount
+                     );
 
 /***********************************************************************\
 * Name   : Database_getMaxId, Database_vgetMaxId
@@ -2170,14 +2196,22 @@ Errors Database_getMaxId(DatabaseHandle *databaseHandle,
                          const char     *columnName,
                          const char     *additional,
                          ...
-                        );
+                        ) ATTRIBUTE_DEPRECATED;
 Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
                           DatabaseId     *value,
                           const char     *tableName,
                           const char     *columnName,
                           const char     *additional,
                           va_list        arguments
-                         );
+                         ) ATTRIBUTE_DEPRECATED;
+Errors Database_getMaxId2(DatabaseHandle       *databaseHandle,
+                         DatabaseId           *value,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        );
 
 /***********************************************************************\
 * Name   : Database_getInt
@@ -2195,6 +2229,14 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
 
 Errors Database_getInt(DatabaseHandle       *databaseHandle,
                        int                 *value,
+                       const char           *tableName,
+                       const char           *columnName,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
+                      ) ATTRIBUTE_DEPRECATED;
+Errors Database_getInt2(DatabaseHandle       *databaseHandle,
+                       int                  *value,
                        const char           *tableName,
                        const char           *columnName,
                        const char           *filter,
@@ -2289,6 +2331,21 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
+// TODO: replace by Database_getInt64
+Errors Database_getInteger64(DatabaseHandle *databaseHandle,
+                             int64          *value,
+                             const char     *tableName,
+                             const char     *columnName,
+                             const char     *additional,
+                             ...
+                            ) ATTRIBUTE_DEPRECATED;
+Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
+                              int64          *value,
+                              const char     *tableName,
+                              const char     *columnName,
+                              const char     *additional,
+                              va_list        arguments
+                             ) ATTRIBUTE_DEPRECATED;
 Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                          int64                *value,
                          const char           *tableName,
@@ -2297,21 +2354,6 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                          const DatabaseFilter filterValues[],
                          uint                 filterValueCount
                         );
-// TODO: replace by Database_getInt64
-Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             int64          *value,
-                             const char     *tableName,
-                             const char     *columnName,
-                             const char     *additional,
-                             ...
-                            );
-Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
-                              int64          *value,
-                              const char     *tableName,
-                              const char     *columnName,
-                              const char     *additional,
-                              va_list        arguments
-                             );
 
 /***********************************************************************\
 * Name   : Database_setInteger64, Database_vsetInteger64
@@ -2421,14 +2463,22 @@ Errors Database_getDouble(DatabaseHandle *databaseHandle,
                           const char     *columnName,
                           const char     *additional,
                           ...
-                         );
+                         ) ATTRIBUTE_DEPRECATED;
 Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
                            double         *value,
                            const char     *tableName,
                            const char     *columnName,
                            const char     *additional,
                            va_list        arguments
-                          );
+                          ) ATTRIBUTE_DEPRECATED;
+Errors Database_getDouble2(DatabaseHandle       *databaseHandle,
+                          double               *value,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
+                         );
 
 /***********************************************************************\
 * Name   : Database_setDouble, Database_vsetDouble
@@ -2482,7 +2532,7 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
                           const char     *columnName,
                           const char     *additional,
                           ...
-                         );
+                         ) ATTRIBUTE_DEPRECATED;
 Errors Database_getCString(DatabaseHandle *databaseHandle,
                            char           *string,
                            uint           maxStringLength,
@@ -2490,7 +2540,7 @@ Errors Database_getCString(DatabaseHandle *databaseHandle,
                            const char     *columnName,
                            const char     *additional,
                            ...
-                          );
+                          ) ATTRIBUTE_DEPRECATED;
 Errors Database_vgetString(DatabaseHandle *databaseHandle,
                            String         string,
                            const char     *tableName,
@@ -2506,6 +2556,15 @@ Errors Database_vgetCString(DatabaseHandle *databaseHandle,
                             const char     *additional,
                             va_list        arguments
                            );
+Errors Database_getCString2(DatabaseHandle       *databaseHandle,
+                           char                 *string,
+                           uint                 maxStringLength,
+                           const char           *tableName,
+                           const char           *columnName,
+                           const char           *filter,
+                           const DatabaseFilter filterValues[],
+                           uint                 filterValueCount
+                          );
 
 /***********************************************************************\
 * Name   : Database_setString, Database_vsetString

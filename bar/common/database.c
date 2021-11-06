@@ -6111,9 +6111,6 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
   Errors                        error;
   uint                          maxRetryCount;
   uint                          retryCount;
-  DatabaseValue                 *values;
-  uint                          valueCount;
-  uint                          i;
   const DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -6191,15 +6188,15 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           {
             HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",
                                 mysqlResult,
-                                mysql_error(databaseHandle)
+                                mysql_error(databaseHandle->mysql.handle)
                                );
           }
           else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
           {
             error = ERRORX_(DATABASE_CONNECTION_LOST,
-                            mysql_errno(databaseHandle),
+                            mysql_errno(databaseHandle->mysql.handle),
                             "%s: %s",
-                            mysql_error(databaseHandle),
+                            mysql_error(databaseHandle->mysql.handle),
                             sqlCommand
                            );
             break;
@@ -6207,9 +6204,9 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           else if (mysqlResult != 0)
           {
             error = ERRORX_(DATABASE,
-                            mysql_errno(databaseHandle),
+                            mysql_errno(databaseHandle->mysql.handle),
                             "%s: %s",
-                            mysql_error(databaseHandle),
+                            mysql_error(databaseHandle->mysql.handle),
                             sqlCommand
                            );
             break;
@@ -6220,11 +6217,11 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           // get number of changes
           if (changedRowCount != NULL)
           {
-            (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle);
+            (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
           }
 
           // get last insert id
-          databaseHandle->lastInsertId = (DatabaseId)mysql_insert_id(databaseHandle);
+          databaseHandle->lastInsertId = (DatabaseId)mysql_insert_id(databaseHandle->mysql.handle);
         }
         break;
       default:
@@ -11782,7 +11779,9 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     uint                 columnCount,
                     const char           *filter,
                     const DatabaseFilter filterValues[],
-                    uint                 filterValueCount
+                    uint                 filterValueCount,
+                    uint64               offset,
+                    uint64               limit
                    )
 {
   String                  sqlString;
@@ -11803,6 +11802,14 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   if (filter != NULL)
   {
     String_formatAppend(sqlString," WHERE %s",filter);
+  }
+  if      (limit > 0LL)
+  {
+    String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,limit);
+  }
+  else if (offset > 0LL)
+  {
+    String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,DATABASE_UNLIMITED);
   }
 //fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
@@ -11968,6 +11975,47 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
 
   return error;
 }
+Errors Database_getId2(DatabaseHandle       *databaseHandle,
+                      DatabaseId           *value,
+                      const char           *tableName,
+                      const char           *columnName,
+                      const char           *filter,
+                      const DatabaseFilter filterValues[],
+                      uint                 filterValueCount
+                     )
+{
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(checkDatabaseInitialized(databaseHandle));
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        (*value) = values[0].id;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tableName,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_KEY   (columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount,
+                      0LL,
+                      1LL
+                     );
+}
 
 Errors Database_getIds(DatabaseHandle *databaseHandle,
                        Array          *values,
@@ -12060,6 +12108,41 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
   String_delete(sqlString);
 
   return error;
+}
+Errors Database_getIds2(DatabaseHandle      *databaseHandle,
+                      Array                *ids,
+                      const char           *tableName,
+                      const char           *columnName,
+                      const char           *filter,
+                      const DatabaseFilter filterValues[],
+                      uint                 filterValueCount
+                     )
+{
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        Array_append(ids,&values[0].id);
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tableName,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_KEY   (columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount,
+                      0,
+                      DATABASE_UNLIMITED
+                     );
 }
 
 Errors Database_getMaxId(DatabaseHandle *databaseHandle,
@@ -12162,6 +12245,47 @@ Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
 
   return error;
 }
+Errors Database_getMaxId2(DatabaseHandle       *databaseHandle,
+                         DatabaseId           *value,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        )
+{
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(checkDatabaseInitialized(databaseHandle));
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        (*value) = values[0].id;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tableName,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_KEY   (columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount,
+                      0LL,
+                      1LL
+                     );
+}
 
 Errors Database_getInt(DatabaseHandle       *databaseHandle,
                        int                  *value,
@@ -12202,10 +12326,53 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                       ),
                       filter,
                       filterValues,
-                      filterValueCount
+                      filterValueCount,
+                      0LL,
+                      1LL
                      );
 
   return error;
+}
+Errors Database_getInt2(DatabaseHandle       *databaseHandle,
+                       int                  *value,
+                       const char           *tableName,
+                       const char           *columnName,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
+                      )
+{
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(checkDatabaseInitialized(databaseHandle));
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        (*value) = values[0].i;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tableName,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_KEY   (columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount,
+                      0LL,
+                      1LL
+                     );
 }
 
 Errors Database_setInt(DatabaseHandle       *databaseHandle,
@@ -12218,8 +12385,6 @@ Errors Database_setInt(DatabaseHandle       *databaseHandle,
                        uint                 filterValueCount
                       )
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12249,8 +12414,6 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                         uint                 filterValueCount
                        )
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12279,7 +12442,9 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                       ),
                       filter,
                       filterValues,
-                      filterValueCount
+                      filterValueCount,
+                      0LL,
+                      1LL
                      );
 }
 
@@ -12293,8 +12458,6 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
                         uint                 filterValueCount
                        )
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12324,8 +12487,6 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                          uint                 filterValueCount
                         )
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12354,7 +12515,9 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                       ),
                       filter,
                       filterValues,
-                      filterValueCount
+                      filterValueCount,
+                      0LL,
+                      1LL
                      );
 }
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
@@ -12463,8 +12626,6 @@ Errors Database_setInt64(DatabaseHandle       *databaseHandle,
                          uint                 filterValueCount
                         )
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12606,9 +12767,6 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                           uint                 filterValueCount
                          )
 {
-  va_list arguments;
-  Errors  error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12637,7 +12795,9 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                       ),
                       filter,
                       filterValues,
-                      filterValueCount
+                      filterValueCount,
+                      0LL,
+                      1LL
                      );
 }
 
@@ -12651,9 +12811,6 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
                           uint                 filterValueCount
                          )
 {
-  va_list arguments;
-  Errors  error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12769,6 +12926,47 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
   String_delete(sqlString);
 
   return error;
+}
+Errors Database_getDouble2(DatabaseHandle       *databaseHandle,
+                          double               *value,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
+                         )
+{
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(checkDatabaseInitialized(databaseHandle));
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        (*value) = values[0].id;
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tableName,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_KEY   (columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount,
+                      0LL,
+                      1LL
+                     );
 }
 
 Errors Database_setDouble(DatabaseHandle *databaseHandle,
@@ -13080,6 +13278,48 @@ Errors Database_vgetCString(DatabaseHandle *databaseHandle,
   String_delete(sqlString);
 
   return error;
+}
+Errors Database_getCString2(DatabaseHandle       *databaseHandle,
+                           char                 *string,
+                           uint                 maxStringLength,
+                           const char           *tableName,
+                           const char           *columnName,
+                           const char           *filter,
+                           const DatabaseFilter filterValues[],
+                           uint                 filterValueCount
+                          )
+{
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(checkDatabaseInitialized(databaseHandle));
+  assert(string != NULL);
+  assert(tableName != NULL);
+
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
+
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        stringSet(string,maxStringLength,values[0].text.data);
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      tableName,
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_KEY   (columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount,
+                      0LL,
+                      1LL
+                     );
 }
 
 Errors Database_setString(DatabaseHandle *databaseHandle,
