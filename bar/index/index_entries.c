@@ -480,7 +480,9 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_STRING(name)
-                           )
+                           ),
+                           0LL,
+                           1LL
                           );
       if (error 1= ERROR_NONE)
       {
@@ -1035,7 +1037,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_FILE:
@@ -1074,7 +1078,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_IMAGE:
@@ -1113,7 +1119,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_DIRECTORY:
@@ -1152,7 +1160,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_LINK:
@@ -1191,7 +1201,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_HARDLINK:
@@ -1230,7 +1242,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_SPECIAL:
@@ -1269,7 +1283,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               default:
@@ -1315,7 +1331,9 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                              ),
                                  DATABASE_FILTERS
                                  (
-                                 )
+                                 ),
+                                 0LL,
+                                 1LL
                                 );
           }
         }
@@ -1364,7 +1382,9 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_FILE:
@@ -1403,7 +1423,9 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_IMAGE:
@@ -1442,7 +1464,9 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_DIRECTORY:
@@ -1481,7 +1505,9 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_LINK:
@@ -1520,7 +1546,9 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_HARDLINK:
@@ -1559,7 +1587,9 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               case INDEX_TYPE_SPECIAL:
@@ -1598,7 +1628,9 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                                  ),
                                      DATABASE_FILTERS
                                      (
-                                     )
+                                     ),
+                                     0LL,
+                                     1LL
                                     );
                 break;
               default:
@@ -1645,7 +1677,9 @@ fprintf(stderr,"%s:%d: c33_\n",__FILE__,__LINE__);
                                              ),
                                  DATABASE_FILTERS
                                  (
-                                 )
+                                 ),
+                                 0LL,
+                                 1LL
                                 );
           }
         }
@@ -1715,7 +1749,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                            ),
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               0LL,
+                               1LL
                               );
         }
         else
@@ -1725,36 +1761,38 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             // no storages selected, no entries selected -> get aggregated data from entities
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_get(&indexHandle->databaseHandle,
-                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                  {
-                                    assert(values != NULL);
-                                    assert(valueCount == 1);
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 1);
 
-                                    UNUSED_VARIABLE(userData);
-                                    UNUSED_VARIABLE(valueCount);
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
 
-                                    if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
+                                   if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
 
-                                    return ERROR_NONE;
-                                  },NULL),
-                                  NULL,  // changedRowCount
-                                  "entities \
-                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  ",
-                                  DATABASE_COLUMNS
-                                  (
-                                    DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
-                                  ),
-                                  stringFormat(sqlCommand,sizeof(sqlCommand),
-                                               "    entities.deletedFlag!=1 \
-                                                AND %s \
-                                               ",
-                                               String_cString(filterString)
-                                              ),
-                                  DATABASE_FILTERS
-                                  (
-                                  )
-                                );
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 "entities \
+                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                 ",
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
+                                 ),
+                                 stringFormat(sqlCommand,sizeof(sqlCommand),
+                                              "    entities.deletedFlag!=1 \
+                                               AND %s \
+                                              ",
+                                              String_cString(filterString)
+                                             ),
+                                 DATABASE_FILTERS
+                                 (
+                                 ),
+                                 0LL,
+                                 1LL
+                               );
           }
           else
           {
@@ -1793,7 +1831,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                              ),
                                  DATABASE_FILTERS
                                  (
-                                 )
+                                 ),
+                                 0LL,
+                                 1LL
                                 );
           }
         }
@@ -1878,7 +1918,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                               ),
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               0LL,
+                               1LL
                               );
         }
         else
@@ -1917,7 +1959,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                               ),
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               0LL,
+                               1LL
                               );
         }
         if (error != ERROR_NONE)
@@ -1984,7 +2028,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                            ),
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               0LL,
+                               1LL
                               );
         }
         else
@@ -2022,7 +2068,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                            ),
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               0LL,
+                               1LL
                               );
         }
         if (error != ERROR_NONE)

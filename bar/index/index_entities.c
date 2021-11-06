@@ -1471,7 +1471,9 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
                          DATABASE_FILTER_KEY (entityId)
-                       )
+                       ),
+                       0LL,
+                       1LL
                       );
   if (error != ERROR_NONE)
   {
@@ -1509,7 +1511,9 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
                          DATABASE_FILTER_KEY (entityId)
-                       )
+                       ),
+                       0LL,
+                       1LL
                       );
   if (error != ERROR_NONE)
   {
@@ -1544,7 +1548,9 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_UINT(totalLinkCount),
                          DATABASE_FILTER_KEY (entityId)
-                       )
+                       ),
+                       0LL,
+                       1LL
                       );
   if (error != ERROR_NONE)
   {
@@ -1579,7 +1585,9 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
                          DATABASE_FILTER_KEY (entityId)
-                       )
+                       ),
+                       0LL,
+                       1LL
                       );
   if (error != ERROR_NONE)
   {
@@ -1617,7 +1625,9 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
                          DATABASE_FILTER_KEY (entityId)
-                       )
+                       ),
+                       0LL,
+                       1LL
                       );
   if (error != ERROR_NONE)
   {
@@ -1652,7 +1662,9 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
                          DATABASE_FILTER_KEY (entityId)
-                       )
+                       ),
+                       0LL,
+                       1LL
                       );
   if (error != ERROR_NONE)
   {
