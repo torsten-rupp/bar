@@ -626,6 +626,9 @@ LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseDataTypes dat
     case DATABASE_DATATYPE_NONE:
       return FALSE;
 
+    case DATABASE_DATATYPE:
+      return (dataType1 == DATABASE_DATATYPE);
+
     case DATABASE_DATATYPE_PRIMARY_KEY:
       return (dataType1 == DATABASE_DATATYPE_PRIMARY_KEY);
     case DATABASE_DATATYPE_KEY:
@@ -3943,6 +3946,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 
           switch (results[i].type)
           {
+            case DATABASE_DATATYPE:
+              break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
               break;
@@ -3987,6 +3992,8 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
           switch (results[i].type)
           {
             case DATABASE_DATATYPE_NONE:
+              break;
+            case DATABASE_DATATYPE:
               break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
@@ -4082,6 +4089,8 @@ LOCAL Errors bindResults2(DatabaseStatementHandle *databaseStatementHandle,
           databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = columns[i].type;
           switch (columns[i].type)
           {
+            case DATABASE_DATATYPE:
+              break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
               break;
@@ -4126,6 +4135,8 @@ LOCAL Errors bindResults2(DatabaseStatementHandle *databaseStatementHandle,
           switch (columns[i].type)
           {
             case DATABASE_DATATYPE_NONE:
+              break;
+            case DATABASE_DATATYPE:
               break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
@@ -4364,6 +4375,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
             {
               case DATABASE_DATATYPE_NONE:
                 break;
+              case DATABASE_DATATYPE:
+                break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
                 databaseStatementHandle->results[i].id = sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
@@ -4458,6 +4471,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
               switch (databaseStatementHandle->results[i].type)
               {
                 case DATABASE_DATATYPE_NONE:
+                  break;
+                case DATABASE_DATATYPE:
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
@@ -4578,6 +4593,8 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
           {
             case DATABASE_DATATYPE_NONE:
               break;
+            case DATABASE_DATATYPE:
+              break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
               sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,i,databaseValue->id);
@@ -4652,6 +4669,8 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
           switch (databaseValue->type)
           {
             case DATABASE_DATATYPE_NONE:
+              break;
+            case DATABASE_DATATYPE:
               break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
@@ -4967,6 +4986,8 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                   {
                     case DATABASE_DATATYPE_NONE:
                       break;
+                    case DATABASE_DATATYPE:
+                      break;
                     case DATABASE_DATATYPE_PRIMARY_KEY:
                     case DATABASE_DATATYPE_KEY:
                       values[i].id = sqlite3_column_int64(statementHandle,i);
@@ -5014,6 +5035,8 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
               {
                 case DATABASE_DATATYPE_NONE:
+                  break;
+                case DATABASE_DATATYPE:
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
@@ -5174,6 +5197,8 @@ debugPrintStackTrace();
             {
               case DATABASE_DATATYPE_NONE:
                 break;
+              case DATABASE_DATATYPE:
+                break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
                 values[i].id = DATABASE_ID_NONE;
@@ -5307,6 +5332,8 @@ abort();
                   {
                     case DATABASE_DATATYPE_NONE:
                       break;
+                    case DATABASE_DATATYPE:
+                      break;
                     case DATABASE_DATATYPE_PRIMARY_KEY:
                     case DATABASE_DATATYPE_KEY:
                       break;
@@ -5356,6 +5383,8 @@ abort();
             switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
             {
               case DATABASE_DATATYPE_NONE:
+                break;
+              case DATABASE_DATATYPE:
                 break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
@@ -5584,42 +5613,50 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
           {
             case DATABASE_DATATYPE_NONE:
               break;
+            case DATABASE_DATATYPE:
+              break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].id
                                                );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_BOOL:
               sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
                                               1+databaseStatementHandle->valueIndex,
                                               values[i].b ? 1 : 0
                                              );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].i
                                                );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT64:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].i64
                                                );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_DOUBLE:
               sqliteResult = sqlite3_bind_double(databaseStatementHandle->sqlite.statementHandle,
                                                  1+databaseStatementHandle->valueIndex,
                                                  values[i].d
                                                 );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_DATETIME:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].dateTime
                                                );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_STRING:
               sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
@@ -5627,6 +5664,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                                                String_cString(values[i].string),
                                                String_length(values[i].string),NULL
                                               );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_CSTRING:
               sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
@@ -5635,6 +5673,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                                                values[i].text.length,
                                                NULL
                                               );
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -5662,7 +5701,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
             break;
           }
 
-          databaseStatementHandle->valueIndex++;
+
         }
       }
       break;
@@ -5676,18 +5715,22 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
           {
             case DATABASE_DATATYPE_NONE:
               break;
+            case DATABASE_DATATYPE:
+              break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONG;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].id;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_BOOL:
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_TINY;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].b;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT:
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONG;
@@ -5695,6 +5738,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT64:
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
@@ -5702,12 +5746,14 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_DOUBLE:
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].d;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_DATETIME:
               {
@@ -5740,6 +5786,8 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&databaseStatementHandle->mysql.values.time[databaseStatementHandle->valueIndex];
                 databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
                 databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+
+                databaseStatementHandle->valueIndex++;
               }
               break;
             case DATABASE_DATATYPE_STRING:
@@ -5748,6 +5796,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_length = String_length(values[i].string);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = 0;
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_CSTRING:
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_STRING;
@@ -5755,6 +5804,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_length = stringLength(values[i].s);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = 0;
+              databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -5765,8 +5815,6 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               #endif /* NDEBUG */
               break;
           }
-
-          databaseStatementHandle->valueIndex++;
         }
       }
       break;
@@ -5826,6 +5874,8 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
           switch (filters[i].type)
           {
             case DATABASE_DATATYPE_NONE:
+              break;
+            case DATABASE_DATATYPE:
               break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
@@ -5918,6 +5968,8 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
           switch (filters[i].type)
           {
             case DATABASE_DATATYPE_NONE:
+              break;
+            case DATABASE_DATATYPE:
               break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
@@ -9832,6 +9884,9 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
   columnTypeString = NULL;
   switch (columnDataType)
   {
+    case DATABASE_DATATYPE:
+      columnTypeString = "";
+      break;
     case DATABASE_DATATYPE_PRIMARY_KEY:
       columnTypeString = "INT PRIMARY KEY";
       break;
@@ -10475,6 +10530,9 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
 
   switch (databaseValue->type)
   {
+    case DATABASE_DATATYPE:
+      String_format(string,"");
+      break;
     case DATABASE_DATATYPE_PRIMARY_KEY:
     case DATABASE_DATATYPE_KEY:
       String_format(string,"%lld",databaseValue->id);
@@ -10516,6 +10574,9 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
 
   switch (databaseValue->type)
   {
+    case DATABASE_DATATYPE:
+      stringFormat(buffer,bufferSize,"");
+      break;
     case DATABASE_DATATYPE_PRIMARY_KEY:
     case DATABASE_DATATYPE_KEY:
       stringFormat(buffer,bufferSize,"%lld",databaseValue->id);
@@ -11030,6 +11091,8 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
       {
         case DATABASE_DATATYPE_NONE:
           break;
+        case DATABASE_DATATYPE:
+          break;
         case DATABASE_DATATYPE_PRIMARY_KEY:
         case DATABASE_DATATYPE_KEY:
           value.i64 = va_arg(arguments,int64*);
@@ -11163,7 +11226,7 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
   for (uint i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_appendChar(sqlString,'?');
+    String_formatAppend(sqlString,"%s",values[i].value);
   }
   String_appendChar(sqlString,')');
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
@@ -11217,7 +11280,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                        const char           *tableName,
                        uint                 flags,
                        const DatabaseValue  values[],
-                       uint                 nameValueCount,
+                       uint                 valueCount,
                        const char           *filter,
                        const DatabaseFilter filterValues[],
                        uint                 filterValueCount
@@ -11242,15 +11305,16 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
     }
   }
   String_formatAppend(sqlString,"%s SET ",tableName);
-  for (uint i = 0; i < nameValueCount; i++)
+  for (uint i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_formatAppend(sqlString,"%s=?",values[i].name);
+    String_formatAppend(sqlString,"%s=%s",values[i].name,values[i].value);
   }
   if (filter != NULL)
   {
     String_formatAppend(sqlString," WHERE %s",filter);
   }
+fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement2(&databaseStatementHandle,
@@ -11266,7 +11330,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   // bind values, filters
   error = bindValues(&databaseStatementHandle,
                      values,
-                     nameValueCount
+                     valueCount
                     );
   if (error != ERROR_NONE)
   {

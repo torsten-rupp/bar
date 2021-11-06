@@ -110,6 +110,8 @@ typedef enum
 {
   DATABASE_DATATYPE_NONE,
 
+  DATABASE_DATATYPE,
+
   DATABASE_DATATYPE_PRIMARY_KEY,
   DATABASE_DATATYPE_KEY,
 
@@ -438,7 +440,8 @@ typedef struct
 // database value
 typedef struct
 {
-  const char        *name;
+  const char        *name;   // column name
+  const char        *value;  // value, e. g. <column name>+?
   DatabaseDataTypes type;
   union
   {
@@ -741,7 +744,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
 #define DATABASE_VALUES2(...) \
   (DatabaseValue[]){__VA_ARGS__}, \
-  ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3)
+  ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/4)
 
 #define DATABASE_VALUE_TYPE_VALUE_KEY(name,value)      { name, DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
 #define DATABASE_VALUE_TYPE_VALUE_BOOL(name,value)     { name, DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
@@ -763,17 +766,113 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_VALUE_NAME_STRING(name,value)   name
 #define DATABASE_VALUE_NAME_CSTRING(name,value)  name
 
-#define DATABASE_VALUE_KEY(name,value)      { name, DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
-#define DATABASE_VALUE_BOOL(name,value)     { name, DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
-#define DATABASE_VALUE_INT(name,value)      { name, DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
-#define DATABASE_VALUE_UINT(name,value)     { name, DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
-#define DATABASE_VALUE_INT64(name,value)    { name, DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
-#define DATABASE_VALUE_UINT64(name,value)   { name, DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
-#define DATABASE_VALUE_DATETIME(name,value) { name, DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
-#define DATABASE_VALUE_STRING(name,value)   { name, DATABASE_DATATYPE_STRING,   { (intptr_t)(value) } }
-#define DATABASE_VALUE_CSTRING(name,value)  { name, DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
+#if 0
+#define DATABASE_VALUE(name,value)          { name, value, DATABASE_DATATYPE,          { (intptr_t)(0) } }
+#define DATABASE_VALUE_KEY(name,data)      { name, NULL, DATABASE_DATATYPE_KEY,      { (intptr_t)(data) } }
+#define DATABASE_VALUE_BOOL(name,data)     { name, NULL, DATABASE_DATATYPE_BOOL,     { (intptr_t)((data)==true) } }
+#define DATABASE_VALUE_INT(name,data)      { name, NULL, DATABASE_DATATYPE_INT,      { (intptr_t)(data) } }
+#define DATABASE_VALUE_UINT(name,data)     { name, NULL, DATABASE_DATATYPE_UINT,     { (intptr_t)(data) } }
+#define DATABASE_VALUE_INT64(name,data)    { name, NULL, DATABASE_DATATYPE_INT64,    { (intptr_t)(data) } }
+#define DATABASE_VALUE_UINT64(name,data)   { name, "?", DATABASE_DATATYPE_UINT64,   { (intptr_t)(data) } }
+#define DATABASE_VALUE_DATETIME(name,data) { name, NULL, DATABASE_DATATYPE_DATETIME, { (intptr_t)(data) } }
+#define DATABASE_VALUE_STRING(name,data)   { name, NULL, DATABASE_DATATYPE_STRING,   { (intptr_t)(data) } }
+#define DATABASE_VALUE_CSTRING(name,data)  { name, NULL, DATABASE_DATATYPE_CSTRING,  { (intptr_t)(data) } }
+#endif
 
-#define DATABASE_VALUES2_NONE (const char**)NULL,(DatabaseValue*)NULL,0
+#define DATABASE_VALUE(name,value) \
+  { name, value, DATABASE_DATATYPE, { (intptr_t)(0) } }
+#define DATABASE_VALUE_KEY(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_KEY, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_KEY, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_BOOL(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_BOOL, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_BOOL, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_INT(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_INT, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_INT, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_UINT(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_UINT, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_UINT, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_INT64(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_INT64, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_INT64, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_UINT64(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_UINT64, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_UINT64, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_DATETIME(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_DATETIME, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_DATETIME, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_STRING(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_STRING, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_STRING, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_CSTRING(name,data,...)  \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_CSTRING, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_CSTRING, { (intptr_t)(data) } \
+    ) \
+  }
+
+#define DATABASE_VALUES2_NONE (DatabaseValue*)NULL,0
 
 // filter macros
 #define __DATABASE_FILTERS_ITERATOR_ARRAY0(x,...) \
