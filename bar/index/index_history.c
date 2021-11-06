@@ -99,44 +99,46 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,KEY,STRING,STRING,STRING,STRING,INT,UINT64,STRING,INT,INT,INT64,INT,INT64,INT,INT64),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT history.id, \
-                                                 IFNULL(uuids.id,0), \
-                                                 history.jobUUID, \
-                                                 history.scheduleUUID, \
-                                                 history.hostName, \
-                                                 history.userName, \
-                                                 history.type, \
-                                                 UNIX_TIMESTAMP(history.created), \
-                                                 history.errorMessage, \
-                                                 history.duration, \
-                                                 history.totalEntryCount, \
-                                                 history.totalEntrySize, \
-                                                 history.skippedEntryCount, \
-                                                 history.skippedEntrySize, \
-                                                 history.errorEntryCount, \
-                                                 history.errorEntrySize \
-                                          FROM history \
-                                            LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
-                                          WHERE %s \
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+//TODO newest
+                           "history \
+                              LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("history.id"),
+                             DATABASE_COLUMN_KEY   ("IFNULL(uuids.id,0)"),
+                             DATABASE_COLUMN_STRING("history.jobUUID"),
+                             DATABASE_COLUMN_STRING("history.scheduleUUID"),
+                             DATABASE_COLUMN_STRING("history.hostName"),
+                             DATABASE_COLUMN_STRING("history.userName"),
+                             DATABASE_COLUMN_STRING("history.type"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(history.created)"),
+                             DATABASE_COLUMN_STRING("history.errorMessage"),
+                             DATABASE_COLUMN_UINT  ("history.duration"),
+                             DATABASE_COLUMN_UINT  ("history.totalEntryCount"),
+                             DATABASE_COLUMN_UINT64("history.totalEntrySize"),
+                             DATABASE_COLUMN_UINT  ("history.skippedEntryCount"),
+                             DATABASE_COLUMN_UINT64("history.skippedEntrySize"),
+                             DATABASE_COLUMN_UINT  ("history.errorEntryCount"),
+                             DATABASE_COLUMN_UINT64("history.errorEntrySize")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        " %s \
                                           %s \
                                           LIMIT ?,? \
-                                         ",
-                                         String_cString(filterString),
-                                         String_cString(orderString)
-                                        ),
-                            DATABASE_VALUES2
-                            (
-                            ),
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_UINT64(offset),
-                              DATABASE_FILTER_UINT64(limit)
-                            )
-                           );
+                                        ",
+                                        String_cString(filterString),
+                                        String_cString(orderString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT64(offset),
+                             DATABASE_FILTER_UINT64(limit)
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {
