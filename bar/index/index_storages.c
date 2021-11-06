@@ -4235,28 +4235,6 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
               return error;
             }
           }
-
-          if (errorText != NULL)
-          {
-            error = Database_update(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
-                                    "storages",
-                                    DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
-                                    (
-                                      DATABASE_VALUE_STRING("errorMessage", errorText)
-                                    ),
-                                    "entityId=?",
-                                    DATABASE_FILTERS
-                                    (
-                                      DATABASE_FILTER_KEY(Index_getDatabaseId(indexId))
-                                    )
-                                   );
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-          }
           break;
         case INDEX_TYPE_STORAGE:
           error = Database_update(&indexHandle->databaseHandle,
@@ -4288,28 +4266,6 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                     DATABASE_VALUES2
                                     (
                                       DATABASE_VALUE_UINT64("lastChecked", lastCheckedDateTime)
-                                    ),
-                                    "id=?",
-                                    DATABASE_FILTERS
-                                    (
-                                      DATABASE_FILTER_KEY(Index_getDatabaseId(indexId)),
-                                    )
-                                   );
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-          }
-
-          if (errorText != NULL)
-          {
-            error = Database_update(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
-                                    "storages",
-                                    DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
-                                    (
-                                      DATABASE_VALUE_STRING("errorMessage", errorText)
                                     ),
                                     "id=?",
                                     DATABASE_FILTERS

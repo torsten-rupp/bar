@@ -99,28 +99,32 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
   // purge FTS entry
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+    error = Database_delete(&indexHandle->databaseHandle,
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM FTS_entries \
-                              WHERE entryId=%lld \
-                             ",
-                             entryId
+                             "FTS_entries"
+                             DATABASE_FLAG_NONE,
+                             "entryId=%?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(entryId)
+                             ),
+                             0
                             );
   }
 
   // update newest entries
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+    error = Database_delete(&indexHandle->databaseHandle,
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM entriesNewest \
-                              WHERE entryId=%lld \
-                             ",
-                             entryId
+                             "entriesNewest"
+                             DATABASE_FLAG_NONE,
+                             "entryId=%?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(entryId)
+                             ),
+                             0
                             );
 //TODO
 #if 0
@@ -168,13 +172,15 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
   if (error == ERROR_NONE)
   {
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM entries \
-                              WHERE id=%lld \
-                             ",
-                             entryId
+                             "entries"
+                             DATABASE_FLAG_NONE,
+                             "id=%?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(entryId)
+                             ),
+                             0
                             );
   }
 
@@ -431,7 +437,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                      uint32      userId,
                                      uint32      groupId,
                                      uint32      permission
-                                    )
+                             3478       )
 {
   Errors              error;
   DatabaseStatementHandle databaseStatementHandle;
@@ -449,35 +455,37 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
     DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // get existing newest entry
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(KEY,UINT64),
-                               "SELECT id, \
-                                       UNIX_TIMESTAMP(timeLastChanged) \
-                                FROM entriesNewest\
-                                WHERE name=? \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 STRING(name)
-                               )
-                              );
-      if (error == ERROR_NONE)
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 3);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             newestEntryId         = values[0].id;
+                             newestTimeLastChanged = values[1].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "storages",
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(timeLastChanged)")
+                           ),
+                           "name=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_STRING(name)
+                           )
+                          );
+      if (error 1= ERROR_NONE)
       {
-        if (!Database_getNextRow(&databaseStatementHandle,
-                                 "%lld %llu",
-                                 &newestEntryId,
-                                 &newestTimeLastChanged
-                                )
-           )
-        {
-          newestEntryId         = DATABASE_ID_NONE;
-          newestTimeLastChanged = 0LL;
-        }
-        Database_finalize(&databaseStatementHandle);
+        newestEntryId         = DATABASE_ID_NONE;
+        newestTimeLastChanged = 0LL;
       }
 
       // insert/update newest
@@ -488,31 +496,27 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           if (newestEntryId != DATABASE_ID_NONE)
           {
             // update
-            error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "UPDATE entriesNewest \
-                                      SET entryId=%lld, \
-                                          uuidId=%lld, \
-                                          entityId=%lld, \
-                                          type=%u, \
-                                          timeLastChanged=%lld, \
-                                          userId=%u, \
-                                          groupId=%u, \
-                                          permission=%u \
-                                      WHERE id=%lld \
-                                     ",
-                                     entryId,
-                                     uuidId,
-                                     entityId,
-                                     indexType,
-                                     timeLastChanged,
-                                     userId,
-                                     groupId,
-                                     permission,
-                                     newestEntryId
-                                    );
+            error = Database_update(&indexHandle->databaseHandle,
+                                    NULL,  // changedRowCount
+                                    DATABASE_COLUMN_TYPES(),
+                                    "entriesNewest",
+                                    DATABASE_VALUES2
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId",         entryId),
+                                      DATABASE_VALUE_KEY   ("uuidId",          uuidId),
+                                      DATABASE_VALUE_KEY   ("entityId",        entityId),
+                                      DATABASE_VALUE_UINT  ("type",            indexType),
+                                      DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                      DATABASE_VALUE_UINT  ("userId",          userId),
+                                      DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                      DATABASE_VALUE_UINT  ("permission",      permission),
+                                    ),
+                                    "id=%lld",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(newestEntryId)
+                                    )
+                                   );
           }
           else
           {
@@ -573,20 +577,41 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM entriesNewest \
-                              WHERE id=%lld \
-                             ",
-                             entryId
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entriesNewest",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            0
+                           );
     if (error != ERROR_NONE)
     {
       return error;
     }
 
+// TODO:
+    error = Database_insert(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entriesNewest",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              KEY   ("entryId",         entryId),
+                              KEY   ("uuidId",          uuidId),
+                              KEY   ("entityId",        entityId),
+                              UINT  ("type",            indexType),
+                              STRING("name",            name),
+                              UINT64("timeLastChanged", timeLastChanged),
+                              UINT  ("userId",          userId),
+                              UINT  ("groupId",         groupId),
+                              UINT  ("permission",      permission)
+                            )
+                           );
+// TODO: insertSelect
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -677,21 +702,24 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   error = ERROR_NONE;
   while ((error == ERROR_NONE) && !String_isEmpty(directoryName))
   {
-//fprintf(stderr,"%s, %d: directoryName=%s %llu\n",__FILE__,__LINE__,String_cString(directoryName),size);
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE directoryEntries \
-                              SET totalEntryCount=totalEntryCount+1, \
-                                  totalEntrySize =totalEntrySize +%llu \
-                              WHERE     storageId=%lld \
-                                    AND name=%'S \
-                             ",
-                             size,
-                             storageId,
-                             directoryName
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "directoryEntries",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE       ("totalEntryCount", "totalEntryCount+1"),
+                              DATABASE_VALUE_UINT64("totalEntrySize",  "totalEntrySize+?", size)
+                            ),
+                            "    storageId=? \
+                             AND name=? \
+                            ",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY   (storageId),
+                              DATABASE_FILTER_STRING(directoryName)
+                            )
+                           );
     if (error != ERROR_NONE)
     {
       break;
@@ -700,20 +728,22 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
     if (databaseId != DATABASE_ID_NONE)
     {
 // TODO:
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE directoryEntries \
-                                SET totalEntryCountNewest=totalEntryCountNewest+1, \
-                                    totalEntrySizeNewest =totalEntrySizeNewest +%llu \
-                                WHERE     storageId=%lld \
-                                      AND name=%'S \
-                               ",
-                               size,
-                               storageId,
-                               directoryName
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "directoryEntries",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE       ("totalEntryCountNewest", "totalEntryCountNewest+1"),
+                                DATABASE_VALUE_UINT64("totalEntrySizeNewest",  "totalEntrySizeNewest+?", size),
+                              ),
+                              NULL,
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY   (storageId),
+                                DATABASE_FILTER_STRING(directoryName)
+                              )
+                             );
       if (error != ERROR_NONE)
       {
         break;
@@ -1647,110 +1677,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-#if 0
-        // get entry content size
-        if (newestOnly)
-        {
-          error = Database_prepare(&databaseStatementHandle,
-                                   &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT),
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "SELECT SUM(directoryEntries.totalEntrySize) \
-                                                 FROM entriesNewest \
-                                                   LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
-                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                                   LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
-                                                   LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
-                                                   LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
-                                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                 WHERE     entities.deletedFlag!=1 \
-                                                       AND %s \
-                                                ",
-                                                String_cString(filterString)
-                                               ),
-                                   DATABASE_VALUES2
-                                   (
-                                   ),
-                                   DATABASE_FILTERS
-                                   (
-                                   )
-                                  );
-        }
-        else
-        {
-          if (String_isEmpty(entryIdsString))
-          {
-            // no storages selected, no entries selected -> get aggregated data from entities
-            error = Database_prepare(&databaseStatementHandle,
-                                     &indexHandle->databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "SELECT SUM(entities.totalEntrySize) \
-                                                   FROM entities \
-                                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                                   WHERE     entities.deletedFlag!=1 \
-                                                         AND %s \
-                                                  ",
-                                                  String_cString(filterString)
-                                                 ),
-                                     DATABASE_VALUES2
-                                     (
-                                     ),
-                                     DATABASE_FILTERS
-                                     (
-                                     )
-                                    );
-          }
-          else
-          {
-            // entries selected -> get aggregated data from entries
-            error = Database_prepare(&databaseStatementHandle,
-                                     &indexHandle->databaseHandle,
-                                     DATABASE_COLUMN_TYPES(INT64),
-                                     stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "SELECT SUM(directoryEntries.totalEntrySize) \
-                                                   FROM entries \
-                                                     LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
-                                                     LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                                     LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                                     LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                                     LEFT JOIN entities         ON entities.id=entries.entityId \
-                                                     LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                   WHERE     entities.deletedFlag!=1 \
-                                                         AND %s \
-                                                  ",
-                                                  String_cString(filterString)
-                                                 ),
-                                     DATABASE_VALUES2
-                                     (
-                                     ),
-                                     DATABASE_FILTERS
-                                     (
-                                     )
-                                    );
-          }
-        }
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-        #ifdef INDEX_DEBUG_LIST_INFO
-          Database_debugPrintQueryInfo(&databaseStatementHandle);
-        #endif
-        if (!Database_getNextRow(&databaseStatementHandle,
-                                 "%lf",
-                                 &totalEntryContentSize_
-                                )
-           )
-        {
-          Database_finalize(&databaseStatementHandle);
-          return ERRORX_(DATABASE,0,"get entries content size");
-        }
-//TODO: may happend?
-//        assert(totalEntryContentSize_ >= 0.0);
-        if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
-        Database_finalize(&databaseStatementHandle);
-#else
         // get entry content size
         if (newestOnly)
         {
@@ -1875,7 +1801,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         {
           return error;
         }
-#endif
 
         return ERROR_NONE;
       });
@@ -1916,81 +1841,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-#if 0
-        // get entry count, entry size
-        if (newestOnly)
-        {
-          error = Database_prepare(&databaseStatementHandle,
-                                   &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT,INT64),
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "SELECT COUNT(entriesNewest.id), \
-                                                        SUM(entriesNewest.size) \
-                                                 FROM FTS_entries \
-                                                   LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
-                                                   LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
-                                                   LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
-                                                 WHERE     entities.deletedFlag!=1 \
-                                                       AND entriesNewest.id IS NOT NULL \
-                                                       AND %s \
-                                                ",
-                                                String_cString(filterString)
-                                               ),
-                                   DATABASE_VALUES2
-                                   (
-                                   ),
-                                   DATABASE_FILTERS
-                                   (
-                                   )
-                                  );
-        }
-        else
-        {
-          error = Database_prepare(&databaseStatementHandle,
-                                   &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT,INT64),
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "SELECT COUNT(entries.id), \
-                                                        SUM(entries.size) \
-                                                 FROM FTS_entries \
-                                                   LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
-                                                   LEFT JOIN entities ON entities.id=entries.entityId \
-                                                   LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                                 WHERE     entities.deletedFlag!=1 \
-                                                       AND entries.id IS NOT NULL \
-                                                       AND %s \
-                                                ",
-                                                String_cString(filterString)
-                                              ),
-                                   DATABASE_VALUES2
-                                   (
-                                   ),
-                                   DATABASE_FILTERS
-                                   (
-                                   )
-                                  );
-        }
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-        #ifdef INDEX_DEBUG_LIST_INFO
-          Database_debugPrintQueryInfo(&databaseStatementHandle);
-        #endif
-        if (!Database_getNextRow(&databaseStatementHandle,
-                                 "%lld %lf",
-                                 &totalEntryCount_,
-                                 &totalEntrySize_
-                                )
-           )
-        {
-          Database_finalize(&databaseStatementHandle);
-          return ERRORX_(DATABASE,0,"get entries count/size");
-        }
-        Database_finalize(&databaseStatementHandle);
-
-        return ERROR_NONE;
-#else
         // get entry count, entry size
         if (newestOnly)
         {
@@ -2074,7 +1924,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         {
           return error;
         }
-#endif
 
         return ERROR_NONE;
       });
@@ -2098,81 +1947,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-#if 0
-        // get entry content size
-        if (newestOnly)
-        {
-          error = Database_prepare(&databaseStatementHandle,
-                                   &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT64),
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "SELECT SUM(directoryEntries.totalEntrySize) \
-                                                 FROM FTS_entries \
-                                                   LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
-                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                                   LEFT JOIN entries          ON entries.id=entriesNewest.entryId \
-                                                   LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                                   LEFT JOIN entities         ON entities.id=storages.entityId \
-                                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                 WHERE     storages.deletedFlag!=1 \
-                                                       AND %s \
-                                                ",
-                                                String_cString(filterString)
-                                               ),
-                                   DATABASE_VALUES2
-                                   (
-                                   ),
-                                   DATABASE_FILTERS
-                                   (
-                                   )
-                                  );
-        }
-        else
-        {
-          error = Database_prepare(&databaseStatementHandle,
-                                   &indexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT64),
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "SELECT SUM(directoryEntries.totalEntrySize) \
-                                                 FROM FTS_entries \
-                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
-                                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
-                                                   LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                                   LEFT JOIN entities         ON entities.id=storages.entityId \
-                                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                 WHERE     storages.deletedFlag!=1 \
-                                                       AND %s \
-                                                ",
-                                                String_cString(filterString)
-                                               ),
-                                   DATABASE_VALUES2
-                                   (
-                                   ),
-                                   DATABASE_FILTERS
-                                   (
-                                   )
-                                  );
-        }
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-        #ifdef INDEX_DEBUG_LIST_INFO
-          Database_debugPrintQueryInfo(&databaseStatementHandle);
-        #endif
-        if (!Database_getNextRow(&databaseStatementHandle,
-                                 "%lf",
-                                 &totalEntryContentSize_
-                                )
-           )
-        {
-          Database_finalize(&databaseStatementHandle);
-          return ERRORX_(DATABASE,0,"get entries content size");
-        }
-//TODO: may happend?
-//        assert(totalEntryContentSize_ >= 0.0);
-        Database_finalize(&databaseStatementHandle);
-#else
         // get entry content size
         if (newestOnly)
         {
@@ -2255,7 +2029,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         {
           return error;
         }
-#endif
 
         return ERROR_NONE;
       });
@@ -2866,7 +2639,6 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
     return FALSE;
   }
 
-fprintf(stderr,"%s:%d: get next entry\n",__FILE__,__LINE__);
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
                            "%lld %S %llu %S %S %S %u %llu %u %S %llu %u %u %u %llu %u %llu %S %llu %llu %u %u %llu %S %llu",
                            &uuidDatabaseId,
@@ -2948,33 +2720,33 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,KEY,STRING,UINT64,INT64,INT64),
-                            "SELECT entryFragments.id, \
-                                    storages.id, \
-                                    storages.name, \
-                                    UNIX_TIMESTAMP(storages.created), \
-                                    entryFragments.offset, \
-                                    entryFragments.size \
-                             FROM entryFragments \
-                               LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                             WHERE     storages.deletedFlag!=1 \
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "entryFragments \
+                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entryFragments.id"),
+                             DATABASE_COLUMN_KEY   ("storages.id"),
+                             DATABASE_COLUMN_STRING("storages.name"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
+                             DATABASE_COLUMN_UINT64("entryFragments.offset"),
+                             DATABASE_COLUMN_UINT64("entryFragments.size ")
+                           ),
+                           "storages.deletedFlag!=1 \
                                    AND entryFragments.entryId=? \
                              ORDER BY offset ASC \
                              LIMIT ?,? \
-                            ",
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId)),
-                               DATABASE_FILTER_UINT64(offset),
-                               DATABASE_FILTER_UINT64(limit)
-
-                             )
-                           );
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId)),
+                             DATABASE_FILTER_UINT64(offset),
+                             DATABASE_FILTER_UINT64(limit)
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -3066,58 +2838,82 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM fileEntries WHERE entryId=%lld",
-                                 Index_getDatabaseId(entryId)
-                                );
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "fileEntries",
+                                DATABASE_FLAG_NONE,
+                                "entryId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                ),
+                                0
+                               );
         break;
       case INDEX_TYPE_IMAGE:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM imageEntries WHERE entryId=%lld",
-                                 Index_getDatabaseId(entryId)
-                                );
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "imageEntries",
+                                DATABASE_FLAG_NONE,
+                                "entryId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                ),
+                                0
+                               );
         break;
       case INDEX_TYPE_DIRECTORY:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM directoryEntries WHERE entryId=%lld",
-                                 Index_getDatabaseId(entryId)
-                                );
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "directoryEntries",
+                                DATABASE_FLAG_NONE,
+                                "entryId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                ),
+                                0
+                               );
         break;
       case INDEX_TYPE_LINK:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM linkEntries WHERE entryId=%lld",
-                                 Index_getDatabaseId(entryId)
-                                );
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "linkEntries",
+                                DATABASE_FLAG_NONE,
+                                "entryId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                ),
+                                0
+                               );
         break;
       case INDEX_TYPE_HARDLINK:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM hardlinkEntries WHERE entryId=%lld",
-                                 Index_getDatabaseId(entryId)
-                                );
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "hardlinkEntries",
+                                DATABASE_FLAG_NONE,
+                                "entryId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                ),
+                                0
+                               );
         break;
       case INDEX_TYPE_SPECIAL:
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM specialEntries WHERE entryId=%lld",
-                                 Index_getDatabaseId(entryId)
-                                );
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "specialEntries",
+                                DATABASE_FLAG_NONE,
+                                "entryId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                                ),
+                                0
+                               );
         break;
       default:
         #ifndef NDEBUG
@@ -3131,25 +2927,33 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
       return error;
     }
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM entriesNewest WHERE entryId=%lld",
-                             Index_getDatabaseId(entryId)
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entriesNewest",
+                            DATABASE_FLAG_NONE,
+                            "entryId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                            ),
+                            0
+                           );
     if (error != ERROR_NONE)
     {
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
       return error;
     }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM entries WHERE id=%lld",
-                             Index_getDatabaseId(entryId)
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entries",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(Index_getDatabaseId(entryId))
+                            ),
+                            0
+                           );
     if (error != ERROR_NONE)
     {
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
@@ -3246,32 +3050,33 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,UINT64,STRING,INT64,UINT64,INT,INT,INT),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT entries.id, \
-                                                 UNIX_TIMESTAMP(entities.created), \
-                                                 entries.name, \
-                                                 entries.size, \
-                                                 entries.timeModified, \
-                                                 entries.userId, \
-                                                 entries.groupId, \
-                                                 entries.permission \
-                                          FROM entries \
-                                            LEFT JOIN entities ON entities.id=entries.entityId \
-                                          WHERE     entities.deletedFlag!=1 \
-                                                AND %s \
-                                         ",
-                                         String_cString(filterString)
-                                        ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                           );
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "entries \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
+                             DATABASE_COLUMN_STRING("entries.name"),
+                             DATABASE_COLUMN_UINT64("entries.size"),
+                             DATABASE_COLUMN_UINT64("entries.timeModified"),
+                             DATABASE_COLUMN_UINT  ("entries.userId"),
+                             DATABASE_COLUMN_UINT  ("entries.groupId"),
+                             DATABASE_COLUMN_UINT  ("entries.permission")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        "    entities.deletedFlag!=1 \
+                                         AND %s \
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -3401,30 +3206,31 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,UINT64,STRING,INT,INT,INT64),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT entries.id, \
-                                                 UNIX_TIMESTAMP(entities.created), \
-                                                 entries.name, \
-                                                 imageEntries.fileSystemType, \
-                                                 imageEntries.blockSize, \
-                                                 entries.size \
-                                          FROM entries \
-                                            LEFT JOIN entities ON entities.id=entries.entityId \
-                                          WHERE     entities.deletedFlag!=1 \
-                                                AND %s \
-                                         ",
-                                         String_cString(filterString)
-                                        ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                           );
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "entries \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
+                             DATABASE_COLUMN_STRING("entries.name"),
+                             DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType,"),
+                             DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
+                             DATABASE_COLUMN_UINT64("entries.size")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        "    entities.deletedFlag!=1 \
+                                         AND %s \
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -3565,31 +3371,32 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,UINT64,STRING,UINT64,INT,INT,INT),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT entries.id, \
-                                                 UNIX_TIMESTAMP(entities.created), \
-                                                 entries.name, \
-                                                 entries.timeModified, \
-                                                 entries.userId, \
-                                                 entries.groupId, \
-                                                 entries.permission \
-                                          FROM entries \
-                                            LEFT JOIN entities ON entities.id=entries.entityId \
-                                          WHERE     entities.deletedFlag!=1 \
-                                                AND %s \
-                                         ",
-                                         String_cString(filterString)
-                                        ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                           );
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "entries \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
+                             DATABASE_COLUMN_STRING("entries.name"),
+                             DATABASE_COLUMN_UINT64("entries.timeModified"),
+                             DATABASE_COLUMN_UINT  ("entries.userId"),
+                             DATABASE_COLUMN_UINT  ("entries.groupId"),
+                             DATABASE_COLUMN_UINT  ("entries.permission")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        "    entities.deletedFlag!=1 \
+                                         AND %s \
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   });
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
@@ -3719,32 +3526,34 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,UINT64,STRING,STRING,UINT64,INT,INT,INT),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT entries.id, \
-                                                 UNIX_TIMESTAMP(entities.created), \
-                                                 entries.name, \
-                                                 linkEntries.destinationName, \
-                                                 entries.timeModified, \
-                                                 entries.userId, \
-                                                 entries.groupId, \
-                                                 entries.permission \
-                                          FROM entries \
-                                            LEFT JOIN entities ON entities.id=entries.entityId \
-                                          WHERE     storages.deletedFlag!=1 \
-                                                AND %s \
-                                         ",
-                                         String_cString(filterString)
-                                        ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                           );
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "entries \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
+                             DATABASE_COLUMN_STRING("entries.name"),
+                             DATABASE_COLUMN_STRING("linkEntries.destinationName"),
+                             DATABASE_COLUMN_UINT64("entries.size"),
+                             DATABASE_COLUMN_UINT64("entries.timeModified"),
+                             DATABASE_COLUMN_UINT  ("entries.userId"),
+                             DATABASE_COLUMN_UINT  ("entries.groupId"),
+                             DATABASE_COLUMN_UINT  ("entries.permission")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        "    entities.deletedFlag!=1 \
+                                         AND %s \
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -3874,32 +3683,33 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,UINT64,STRING,INT64,UINT64,INT,INT,INT),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT entries.id, \
-                                                 UNIX_TIMESTAMP(entities.created), \
-                                                 entries.name, \
-                                                 entries.size, \
-                                                 entries.timeModified, \
-                                                 entries.userId, \
-                                                 entries.groupId, \
-                                                 entries.permission \
-                                          FROM entries \
-                                            LEFT JOIN entities ON entities.id=entries.entityId \
-                                          WHERE     entities.deletedFlag!=1 \
-                                                AND %s \
-                                         ",
-                                         String_cString(filterString)
-                                        ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                           );
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "entries \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
+                             DATABASE_COLUMN_STRING("entries.name"),
+                             DATABASE_COLUMN_UINT64("entries.size"),
+                             DATABASE_COLUMN_UINT64("entries.timeModified"),
+                             DATABASE_COLUMN_UINT  ("entries.userId"),
+                             DATABASE_COLUMN_UINT  ("entries.groupId"),
+                             DATABASE_COLUMN_UINT  ("entries.permission")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        "    entities.deletedFlag!=1 \
+                                         AND %s \
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {
@@ -4029,31 +3839,32 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                            &indexHandle->databaseHandle,
-                            DATABASE_COLUMN_TYPES(KEY,UINT64,STRING,UINT64,INT,INT,INT),
-                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                         "SELECT entries.id, \
-                                                 UNIX_TIMESTAMP(entities.created), \
-                                                 entries.name, \
-                                                 entries.timeModified, \
-                                                 entries.userId, \
-                                                 entries.groupId, \
-                                                 entries.permission \
-                                          FROM entries \
-                                            LEFT JOIN entities ON entities.id=entries.entityId \
-                                          WHERE     entities.deletedFlag!=1 \
-                                                AND %s \
-                                         ",
-                                         String_cString(filterString)
-                                        ),
-                             DATABASE_VALUES2
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                           );
+    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "entries \
+                              LEFT JOIN entities ON entities.id=entries.entityId \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
+                             DATABASE_COLUMN_STRING("entries.name"),
+                             DATABASE_COLUMN_UINT64("entries.timeModified"),
+                             DATABASE_COLUMN_UINT  ("entries.userId"),
+                             DATABASE_COLUMN_UINT  ("entries.groupId"),
+                             DATABASE_COLUMN_UINT  ("entries.permission")
+                           ),
+                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                                        "    entities.deletedFlag!=1 \
+                                         AND %s \
+                                        ",
+                                        String_cString(filterString)
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   });
   if (error != ERROR_NONE)
   {

@@ -37,7 +37,7 @@
 #define INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
-  #define _INDEX_DEBUG_LIST_INFO  // enable to output list info
+  #define INDEX_DEBUG_LIST_INFO  // enable to output list info
   #define _INDEX_DEBUG_PURGE      // enable to output purge info
 #endif
 
