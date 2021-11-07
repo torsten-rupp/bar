@@ -126,45 +126,51 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                              ),
                              0
                             );
-//TODO: insertSelect
 #if 0
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "INSERT OR IGNORE INTO entriesNewest \
-                                ( \
-                                 uuidId,\
-                                 entityId, \
-                                 type, \
-                                 name, \
-                                 timeLastAccess, \
-                                 timeModified, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission \
-                                ) \
-                              SELECT \
-                                uuidId,\
-                                entityId, \
-                                type, \
-                                name, \
-                                timeLastAccess, \
-                                timeModified, \
-                                timeLastChanged, \
-                                userId, \
-                                groupId, \
-                                permission \
-                              FROM entries \
-                              WHERE id!=%lld AND name=%'S \
-                              ORDER BY timeModified DESC \
-                              LIMIT 0,1 \
-                              WHERE name \
-                             ",
-                             entryId,
-                             name
-                            );
+    error = Database_insertSelect(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entriesNewest",
+                                  DATABASE_FLAG_IGNORE,
+                                  DATABASE_VALUES2
+                                  (
+                                    DATABASE_VALUE_KEY   ("uuidId")
+                                    DATABASE_VALUE_KEY   ("entityId")
+                                    DATABASE_VALUE_UINT  ("type")
+                                    DATABASE_VALUE_STRING("name")
+                                    DATABASE_VALUE_UINT64("timeLastAccess")
+                                    DATABASE_VALUE_UINT64("timeModified")
+                                    DATABASE_VALUE_UINT64("timeLastChanged")
+                                    DATABASE_VALUE_UINT  ("userId")
+                                    DATABASE_VALUE_UINT  ("groupId")
+                                    DATABASE_VALUE_UINT  ("permission")
+                                  ),
+                                  DATABASE_TABLES
+                                  (
+                                    "entries"
+                                  ),
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_KEY   ("uuidId"),
+                                    DATABASE_COLUMN_KEY   ("entityId"),
+                                    DATABASE_COLUMN_UINT  ("type"),
+                                    DATABASE_COLUMN_STRING("name"),
+                                    DATABASE_COLUMN_UINT64("timeLastAccess"),
+                                    DATABASE_COLUMN_UINT64("timeModified"),
+                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT  ("userId"),
+                                    DATABASE_COLUMN_UINT  ("groupId"),
+                                    DATABASE_COLUMN_UINT  ("permission")
+                                  ),
+                                  "id!=? AND name=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY   (entryId),
+                                    DATABASE_FILTER_STRING(name)
+                                  ),
+                                  "ORDER BY timeModified DESC",
+                                  0LL,
+                                  DATABASE_UNLIMITED
+                                 );
 #endif
   }
 
@@ -616,39 +622,92 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                               UINT  ("permission",      permission)
                             )
                            );
-// TODO: insertSelect
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "INSERT OR IGNORE INTO entriesNewest \
-                                ( \
-                                 entryId, \
-                                 uuidId, \
-                                 entityId, \
-                                 type, \
-                                 name, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission, \
-                                ) \
-                              SELECT id, \
-                                     uuidId, \
-                                     entityId, \
-                                     type, \
-                                     name, \
-                                     timeLastChanged, \
-                                     userId, \
-                                     groupId, \
-                                     permission \
-                               FROM entries \
-                               WHERE name=%'S \
-                               ORDER BY timeLastChanged DESC \
-                               LIMIT 0,1 \
-                             ",
-                             name
-                            );
+fprintf(stderr,"%s:%d: -----------------------\n",__FILE__,__LINE__);
+#if 0
+    error = Database_insertSelect(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entriesNewest",
+                                  DATABASE_FLAG_IGNORE,
+                                  DATABASE_VALUES2
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId")
+                                    DATABASE_VALUE_KEY   ("uuidId")
+                                    DATABASE_VALUE_KEY   ("entityId")
+                                    DATABASE_VALUE_UINT  ("type")
+                                    DATABASE_VALUE_STRING("name")
+                                    DATABASE_VALUE_UINT64("timeLastChanged")
+                                    DATABASE_VALUE_UINT  ("userId")
+                                    DATABASE_VALUE_UINT  ("groupId")
+                                    DATABASE_VALUE_UINT  ("permission")
+                                  ),
+                                  DATABASE_TABLES
+                                  (
+                                    "entries"
+                                  ),
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_KEY   ("id"),
+                                    DATABASE_COLUMN_KEY   ("uuidId"),
+                                    DATABASE_COLUMN_KEY   ("entityId"),
+                                    DATABASE_COLUMN_UINT  ("type"),
+                                    DATABASE_COLUMN_STRING("name"),
+                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT  ("userId"),
+                                    DATABASE_COLUMN_UINT  ("groupId"),
+                                    DATABASE_COLUMN_UINT  ("permission")
+                                  ),
+                                  "name=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(name)
+                                  ),
+                                  "ORDER BY timeLastChanged DESC",
+                                  0LL,
+                                  1LL
+                                 );
+#else
+    error = Database_insertSelect(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entriesNewest",
+                                  DATABASE_FLAG_IGNORE,
+                                  DATABASE_VALUES2
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId")
+                                    DATABASE_VALUE_KEY   ("uuidId")
+                                    DATABASE_VALUE_KEY   ("entityId")
+                                    DATABASE_VALUE_UINT  ("type")
+                                    DATABASE_VALUE_STRING("name")
+                                    DATABASE_VALUE_UINT64("timeLastChanged")
+                                    DATABASE_VALUE_UINT  ("userId")
+                                    DATABASE_VALUE_UINT  ("groupId")
+                                    DATABASE_VALUE_UINT  ("permission")
+                                  ),
+                                  DATABASE_TABLES
+                                  (
+                                    "entries"
+                                  ),
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_KEY   ("id"),
+                                    DATABASE_COLUMN_KEY   ("uuidId"),
+                                    DATABASE_COLUMN_KEY   ("entityId"),
+                                    DATABASE_COLUMN_UINT  ("type"),
+                                    DATABASE_COLUMN_STRING("name"),
+                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT  ("userId"),
+                                    DATABASE_COLUMN_UINT  ("groupId"),
+                                    DATABASE_COLUMN_UINT  ("permission")
+                                  ),
+                                  "name=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(name)
+                                  ),
+                                  "ORDER BY timeLastChanged DESC",
+                                  0LL,
+                                  1LL
+                                 );
+#endif
     if (error != ERROR_NONE)
     {
       return error;
@@ -1044,6 +1103,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1088,6 +1148,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1132,6 +1193,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1176,6 +1238,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1220,6 +1283,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1264,6 +1328,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1308,6 +1373,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1359,6 +1425,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_FILTERS
                                  (
                                  ),
+                                 NULL,  // orderGroup
                                  0LL,
                                  1LL
                                 );
@@ -1413,6 +1480,7 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1457,6 +1525,7 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1501,6 +1570,7 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1545,6 +1615,7 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1589,6 +1660,7 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1633,6 +1705,7 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1677,6 +1750,7 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                      DATABASE_FILTERS
                                      (
                                      ),
+                                     NULL,  // orderGroup
                                      0LL,
                                      1LL
                                     );
@@ -1729,6 +1803,7 @@ fprintf(stderr,"%s:%d: c33_\n",__FILE__,__LINE__);
                                  DATABASE_FILTERS
                                  (
                                  ),
+                                 NULL,  // orderGroup
                                  0LL,
                                  1LL
                                 );
@@ -1804,6 +1879,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
+                               NULL,  // orderGroup
                                0LL,
                                1LL
                               );
@@ -1847,6 +1923,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  DATABASE_FILTERS
                                  (
                                  ),
+                                 NULL,  // orderGroup
                                  0LL,
                                  1LL
                                );
@@ -1892,6 +1969,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  DATABASE_FILTERS
                                  (
                                  ),
+                                 NULL,  // orderGroup
                                  0LL,
                                  1LL
                                 );
@@ -1982,6 +2060,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
+                               NULL,  // orderGroup
                                0LL,
                                1LL
                               );
@@ -2026,6 +2105,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
+                               NULL,  // orderGroup
                                0LL,
                                1LL
                               );
@@ -2098,6 +2178,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
+                               NULL,  // orderGroup
                                0LL,
                                1LL
                               );
@@ -2141,6 +2222,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
+                               NULL,  // orderGroup
                                0LL,
                                1LL
                               );

@@ -888,7 +888,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       (
                         DATABASE_FILTER_KEY (storageId)
                       ),
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -1356,7 +1356,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // order
+                             NULL, // orderGroup
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -1403,7 +1403,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // order
+                             NULL, // orderGroup
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -1450,7 +1450,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // order
+                             NULL, // orderGroup
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -1497,7 +1497,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // order
+                             NULL, // orderGroup
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -1527,123 +1527,6 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-#if 0
-        return Database_execute(&indexHandle->databaseHandle,
-                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                {
-                                  assert(values != NULL);
-                                  assert(valueCount == 9);
-
-                                  UNUSED_VARIABLE(userData);
-                                  UNUSED_VARIABLE(valueCount);
-
-                                  entryNode->newest.entryId         = values[0].id;
-                                  entryNode->newest.uuidId          = values[1].id;
-                                  entryNode->newest.entityId        = values[2].id;
-                                  entryNode->newest.indexType       = (IndexTypes)values[3].u;
-                                  entryNode->newest.timeLastChanged = values[4].dateTime;
-                                  entryNode->newest.userId          = values[5].u;
-                                  entryNode->newest.groupId         = values[6].u;
-                                  entryNode->newest.permission      = values[7].u;
-                                  entryNode->newest.size            = values[8].u64;
-
-                                  return ERROR_NONE;
-                                },NULL),
-                                NULL,  // changedRowCount
-                                DATABASE_COLUMN_TYPES(KEY,KEY,KEY,INT,UINT64,INT,INT,INT,INT64),
-                                "      SELECT entries.id, \
-                                              entries.uuidId, \
-                                              entries.entityId, \
-                                              entries.type, \
-                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                              entries.userId, \
-                                              entries.groupId, \
-                                              entries.permission, \
-                                              entries.size \
-                                       FROM entryFragments \
-                                         LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                                         LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                                       WHERE     storages.deletedFlag!=1 \
-                                             AND entries.name=%'S \
-                                 UNION SELECT entries.id, \
-                                              entries.uuidId, \
-                                              entries.entityId, \
-                                              entries.type, \
-                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                              entries.userId, \
-                                              entries.groupId, \
-                                              entries.permission, \
-                                              entries.size \
-                                       FROM directoryEntries \
-                                         LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                                         LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                                       WHERE     storages.deletedFlag!=1 \
-                                             AND entries.name=%'S \
-                                 UNION SELECT entries.id, \
-                                              entries.uuidId, \
-                                              entries.entityId, \
-                                              entries.type, \
-                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                              entries.userId, \
-                                              entries.groupId, \
-                                              entries.permission, \
-                                              entries.size \
-                                       FROM linkEntries \
-                                         LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                                         LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                                       WHERE     storages.deletedFlag!=1 \
-                                             AND entries.name=%'S \
-                                 UNION SELECT entries.id, \
-                                              entries.uuidId, \
-                                              entries.entityId, \
-                                              entries.type, \
-                                              UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                              entries.userId, \
-                                              entries.groupId, \
-                                              entries.permission, \
-                                              entries.size \
-                                       FROM specialEntries \
-                                         LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                                         LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                                       WHERE     storages.deletedFlag!=1 \
-                                             AND entries.name=%'S \
-                                 ORDER BY timeLastChanged DESC \
-                                 LIMIT 0,1 \
-                                ",
-                                entryNode->name,
-                                entryNode->name,
-                                entryNode->name,
-                                entryNode->name
-                               );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        while (Database_getNextRow(&databaseStatementHandle,
-                                   "%lld %S",
-                                   &entryId,
-                                   entryName
-                                  )
-              )
-        {
-          entryNode = LIST_NEW_NODE(EntryNode);
-          if (entryNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-
-          entryNode->entryId        = entryId;
-          entryNode->name           = String_duplicate(entryName);
-          entryNode->newest.entryId = DATABASE_ID_NONE;
-
-          List_append(&entryList,entryNode);
-        }
-
-        Database_finalize(&databaseStatementHandle);
-
-        return ERROR_NONE;
-#else
         return Database_get(&indexHandle->databaseHandle,
                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                             {
@@ -1706,7 +1589,6 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                             0LL,
                             1LL
                            );
-#endif
       });
     }
     IndexCommon_progressStep(progressInfo);
@@ -2930,7 +2812,7 @@ LOCAL Errors purgeStorage(IndexHandle  *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId)
                        ),
-                       NULL, // order
+                       NULL, // orderGroup
                        0LL,
                        1LL
                       );
@@ -3398,7 +3280,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
                        ),
-                       NULL, // order
+                       NULL, // orderGroup
                        0LL,
                        1LL
                       );
@@ -3482,7 +3364,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
                        ),
-                       NULL, // order
+                       NULL, // orderGroup
                        0LL,
                        1LL
                       );
@@ -3522,7 +3404,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId),
                        ),
-                       NULL, // order
+                       NULL, // orderGroup
                        0LL,
                        1LL
                       );
@@ -3561,7 +3443,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId),
                        ),
-                       NULL, // order
+                       NULL, // orderGroup
                        0LL,
                        1LL
                       );
@@ -3605,7 +3487,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
                        ),
-                       NULL, // order
+                       NULL, // orderGroup
                        0LL,
                        1LL
                       );
@@ -3644,7 +3526,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId),
                        ),
-                       NULL, // order
+                       NULL, // orderGroup
                        0LL,
                        1LL
                       );
@@ -4712,7 +4594,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                          DATABASE_FILTERS
                          (
                          ),
-                         NULL, // order
+                         NULL, // orderGroup
                          0LL,
                          1LL
                         );

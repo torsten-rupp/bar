@@ -1918,9 +1918,8 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 *          changedRowCount  - row count variable (can be NULL)
 *          tableName        - table name,
 *          flags            - insert flags; see DATABASE_FLAGS_...
-*          filter           - SQL filter expression
-*          filterValues     - filter values
-*          filterValueCount - filter values count
+*          values           - values to insert
+*          valueCount       - value count
 * Output : -
 * Return : -
 * Notes  : -
@@ -1931,12 +1930,54 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
                        const char          *tableName,
                        uint                flags,
                        const DatabaseValue values[],
-                       uint                nameValueCount
+                       uint                valueCount
                       );
 
 /***********************************************************************\
-* Name   : Database_insert
-* Purpose: insert row into database table
+* Name   : Database_insertSelect
+* Purpose: insert row into database table from seledt
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAGS_...
+*          values           - values to insert
+*          valueCount       - value count
+*          tableNames       - select table names
+*          tableNameCount   - select table names count
+*          columns          - select columns
+*          columnCount      - select columns couont
+*          filter           - SQL filter expression
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+*          orderGroup       - order/group SQL string or NULL
+*          offset           - offset or 0
+*          limit            - limit or 0
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
+                             ulong                *changedRowCount,
+                             const char           *tableName,
+                             uint                 flags,
+                             const DatabaseValue  values[],
+                             uint                 valueCount,
+                             const char           *tableNames[],
+                             uint                 tableNameCount,
+                             DatabaseColumn       columns[],
+                             uint                 columnCount,
+                             const char           *filter,
+                             const DatabaseFilter filterValues[],
+                             uint                 filterValueCount,
+                             const char           *orderGroup,
+                             uint64               offset,
+                             uint64               limit
+                            );
+
+/***********************************************************************\
+* Name   : Database_update
+* Purpose: update row in database table
 * Input  : databaseHandle   - database handle
 *          changedRowCount  - row count variable (can be NULL)
 *          flags            - insert flags; see DATABASE_FLAGS_...
@@ -1955,7 +1996,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                        const char           *tableName,
                        uint                 flags,
                        const DatabaseValue  values[],
-                       uint                 nameValueCount,
+                       uint                 valueCount,
                        const char           *filter,
                        const DatabaseFilter filterValues[],
                        uint                 filterValueCount
@@ -1997,8 +2038,8 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 *          changedRowCount     - number of changd rows (can be NULL)
 *          tableName           - table name,
 *          flags               - insert flags; see DATABASE_FLAGS_...
-*          values              - values
-*          valueCount          - values couont
+*          columns             - select columns
+*          columnCount         - select columns couont
 *          filter              - SQL filter expression
 *          filterValues        - filter values
 *          filterValueCount    - filter values count
@@ -2077,14 +2118,16 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
 * Input  : databaseHandle - database handle
 *          databaseRowFunction
 *          databaseRowUserData
+// TODO:
 *          changedRowCount
-*          tableName      - table name
-*          selectColumn   - select columns
-*          selectColumnCount - select column count
+*          tableNames        - table names
+*          tableNameCount    - table names count
+*          selectColumns     - select columns
+*          selectColumnCount - select columns count
 *          filter            - filter string
 *          filterValues      - filter values
 *          filterValueCount  - filter values count
-*          order             - order SQL string or NULL
+*          orderGroup        - order/group SQL string or NULL
 *          offset            - offset or 0
 *          limit             - limit or 0
 * Output : value - database id or DATABASE_ID_NONE
@@ -2099,12 +2142,12 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     const char           *tableNames[],
                     uint                 tableNameCount,
 // TODO: select value datatype: name, type
-                    DatabaseColumn       selectColumn[],
+                    DatabaseColumn       selectColumns[],
                     uint                 selectColumnCount,
                     const char           *filter,
                     const DatabaseFilter filterValues[],
                     uint                 filterValueCount,
-                    const char           *order,
+                    const char           *orderGroup,
                     uint64               offset,
                     uint64               limit
                    );

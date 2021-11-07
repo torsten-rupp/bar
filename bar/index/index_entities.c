@@ -682,39 +682,47 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
       return error;
     }
 
-//// TODO: insertSelect
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "INSERT OR IGNORE INTO entriesNewest \
-                                ( \
-                                 entryId, \
-                                 uuidId, \
-                                 entityId, \
-                                 type, \
-                                 name, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission, \
-                                ) \
-                              SELECT id, \
-                                     uuidId, \
-                                     entityId, \
-                                     type, \
-                                     name, \
-                                     timeLastChanged, \
-                                     userId, \
-                                     groupId, \
-                                     permission \
-                               FROM entries \
-                               WHERE name=%'S \
-                               ORDER BY timeLastChanged DESC \
-                               LIMIT 0,1 \
-                             ",
-                             name
-                            );
+    error = Database_insertSelect(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entriesNewest",
+                                  DATABASE_FLAG_IGNORE,
+                                  DATABASE_VALUES2
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId")
+                                    DATABASE_VALUE_KEY   ("uuidId")
+                                    DATABASE_VALUE_KEY   ("entityId")
+                                    DATABASE_VALUE_UINT  ("type")
+                                    DATABASE_VALUE_STRING("name")
+                                    DATABASE_VALUE_UINT64("timeLastChanged")
+                                    DATABASE_VALUE_UINT  ("userId")
+                                    DATABASE_VALUE_UINT  ("groupId")
+                                    DATABASE_VALUE_UINT  ("permission")
+                                  ),
+                                  DATABASE_TABLES
+                                  (
+                                    "entries"
+                                  ),
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_KEY   ("id"),
+                                    DATABASE_COLUMN_KEY   ("uuidId"),
+                                    DATABASE_COLUMN_KEY   ("entityId"),
+                                    DATABASE_COLUMN_UINT  ("type"),
+                                    DATABASE_COLUMN_STRING("name"),
+                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT  ("userId"),
+                                    DATABASE_COLUMN_UINT  ("groupId"),
+                                    DATABASE_COLUMN_UINT  ("permission")
+                                  ),
+                                  "name=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(name)
+                                  ),
+                                  "ORDER BY timeLastChanged DESC",
+                                  0LL,
+                                  1LL
+                                 );
     if (error != ERROR_NONE)
     {
       return error;
@@ -1503,6 +1511,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
                          DATABASE_FILTER_KEY (entityId)
                        ),
+                       NULL,  // orderGroup
                        0LL,
                        1LL
                       );
@@ -1546,6 +1555,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
                          DATABASE_FILTER_KEY (entityId)
                        ),
+                       NULL,  // orderGroup
                        0LL,
                        1LL
                       );
@@ -1585,6 +1595,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(totalLinkCount),
                          DATABASE_FILTER_KEY (entityId)
                        ),
+                       NULL,  // orderGroup
                        0LL,
                        1LL
                       );
@@ -1624,6 +1635,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
                          DATABASE_FILTER_KEY (entityId)
                        ),
+                       NULL,  // orderGroup
                        0LL,
                        1LL
                       );
@@ -1667,6 +1679,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
                          DATABASE_FILTER_KEY (entityId)
                        ),
+                       NULL,  // orderGroup
                        0LL,
                        1LL
                       );
@@ -1706,6 +1719,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
                          DATABASE_FILTER_KEY (entityId)
                        ),
+                       NULL,  // orderGroup
                        0LL,
                        1LL
                       );

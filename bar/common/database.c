@@ -11272,6 +11272,155 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
   return ERROR_NONE;
 }
 
+Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
+                             ulong                *changedRowCount,
+                             const char           *tableName,
+                             uint                 flags,
+                             const DatabaseValue  values[],
+                             uint                 valueCount,
+                             const char           *tableNames[],
+                             uint                 tableNameCount,
+                             DatabaseColumn       columns[],
+                             uint                 columnCount,
+                             const char           *filter,
+                             const DatabaseFilter filterValues[],
+                             uint                 filterValueCount,
+                             const char           *orderGroup,
+                             uint64               offset,
+                             uint64               limit
+                            )
+{
+  String                  sqlString;
+  DatabaseStatementHandle databaseStatementHandle;
+  Errors                  error;
+
+  assert(databaseHandle != NULL);
+  assert(values != NULL);
+  assert(valueCount > 0);
+  assert(tableName != NULL);
+  assert(columns != NULL);
+  assert(columnCount > 0);
+  assert(valueCount == columnCount);
+
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+
+  // create SQL string
+  sqlString = String_new();
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      String_setCString(sqlString,"INSERT ");
+      if      (IS_SET(flags,DATABASE_FLAG_IGNORE))
+      {
+        String_appendCString(sqlString," OR IGNORE ");
+      }
+      else if (IS_SET(flags,DATABASE_FLAG_REPLACE))
+      {
+        String_appendCString(sqlString," OR IGNORE ");
+      }
+      break;
+    case DATABASE_TYPE_MYSQL:
+      if      (IS_SET(flags,DATABASE_FLAG_IGNORE))
+      {
+        String_setCString(sqlString,"INSERT IGNORE ");
+      }
+      else if (IS_SET(flags,DATABASE_FLAG_REPLACE))
+      {
+        String_setCString(sqlString,"REPLACE ");
+      }
+      else
+      {
+        String_setCString(sqlString,"INSERT ");
+      }
+      break;
+  }
+  String_formatAppend(sqlString,"INTO %s (",tableName);
+  for (uint i = 0; i < valueCount; i++)
+  {
+    if (i > 0) String_appendChar(sqlString,',');
+    String_appendCString(sqlString,values[i].name);
+  }
+  String_appendCString(sqlString,") ");
+
+  for (uint i = 0; i < tableNameCount; i++)
+  {
+    if (i > 0)
+    {
+      String_appendCString(sqlString," UNION SELECT ");
+    }
+    else
+    {
+      String_appendCString(sqlString,"SELECT ");
+    }
+    for (uint j = 0; j < columnCount; j++)
+    {
+      if (j > 0) String_appendChar(sqlString,',');
+      String_formatAppend(sqlString,"%s",columns[j].name);
+    }
+    String_formatAppend(sqlString," FROM %s ",tableNames[i]);
+    if (filter != NULL)
+    {
+      String_formatAppend(sqlString," WHERE %s",filter);
+    }
+  }
+  if (orderGroup != NULL)
+  {
+    String_formatAppend(sqlString," %s",orderGroup);
+  }
+  if      (limit > 0LL)
+  {
+    String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,limit);
+  }
+  else if (offset > 0LL)
+  {
+    String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,DATABASE_UNLIMITED);
+  }
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+
+  // prepare statement
+  error = prepareStatement2(&databaseStatementHandle,
+                           databaseHandle,
+                           String_cString(sqlString)
+                          );
+  if (error != ERROR_NONE)
+  {
+    String_delete(sqlString);
+    return error;
+  }
+
+  // bind values
+  error = bindValues(&databaseStatementHandle,
+                     values,
+                     valueCount
+                    );
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
+
+  // execute statement
+  error = executePreparedQuery(&databaseStatementHandle,
+                               changedRowCount,
+                               WAIT_FOREVER
+                              );
+  if (error != ERROR_NONE)
+  {
+    finalizeStatement(&databaseStatementHandle);
+    String_delete(sqlString);
+    return error;
+  }
+
+  // finalize statementHandle
+  finalizeStatement(&databaseStatementHandle);
+
+  // free resources
+  String_delete(sqlString);
+
+  return ERROR_NONE;
+}
+
 Errors Database_update(DatabaseHandle       *databaseHandle,
                        ulong                *changedRowCount,
                        const char           *tableName,
@@ -11593,7 +11742,7 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
 
 Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseHandle          *databaseHandle,
-                       const char              *tables,
+                       const char              *tableName,
                        uint                    flags,
 // TODO: select value datatype: name, type
                        DatabaseColumn          columns[],
@@ -11608,6 +11757,7 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
+  assert(tableName != NULL);
   assert((columnCount == 0) || (columns != NULL));
 
   // create SQL string
@@ -11633,7 +11783,7 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
     if (i > 0) String_appendChar(sqlString,',');
     String_formatAppend(sqlString,"%s",columns[i].name);
   }
-  String_formatAppend(sqlString," FROM %s ",tables);
+  String_formatAppend(sqlString," FROM %s ",tableName);
   if (filter != NULL)
   {
     String_formatAppend(sqlString," WHERE %s",filter);
@@ -11781,7 +11931,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     const char           *filter,
                     const DatabaseFilter filterValues[],
                     uint                 filterValueCount,
-                    const char           *order,
+                    const char           *orderGroup,
                     uint64               offset,
                     uint64               limit
                    )
@@ -11816,9 +11966,9 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
       String_formatAppend(sqlString," WHERE %s",filter);
     }
   }
-  if (order != NULL)
+  if (orderGroup != NULL)
   {
-    String_formatAppend(sqlString," %s",order);
+    String_formatAppend(sqlString," %s",orderGroup);
   }
   if      (limit > 0LL)
   {
@@ -12035,7 +12185,7 @@ Errors Database_getId2(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -12167,7 +12317,7 @@ Errors Database_getIds2(DatabaseHandle      *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0,
                       DATABASE_UNLIMITED
                      );
@@ -12313,7 +12463,7 @@ Errors Database_getMaxId2(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -12362,7 +12512,7 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -12409,7 +12559,7 @@ Errors Database_getInt2(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -12486,7 +12636,7 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -12563,7 +12713,7 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -12847,7 +12997,7 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -13019,7 +13169,7 @@ Errors Database_getDouble2(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );
@@ -13376,7 +13526,7 @@ Errors Database_getCString2(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // order
+                      NULL,  // orderGroup
                       0LL,
                       1LL
                      );

@@ -626,7 +626,7 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                        DATABASE_FILTERS
                        (
                        ),
-                       NULL,  // order
+                       NULL,  // orderGroup
                        0LL,
                        1LL
                       );
@@ -713,7 +713,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -759,7 +759,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -803,7 +803,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -847,7 +847,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -893,7 +893,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -937,7 +937,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -1025,7 +1025,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -1071,7 +1071,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -1115,7 +1115,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -1159,7 +1159,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -1205,7 +1205,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -1249,7 +1249,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
-                           NULL,  // order
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -1581,7 +1581,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                          (
                            DATABASE_FILTER_KEY (Index_getDatabaseId(uuidId))
                          ),
-                         NULL,  // order
+                         NULL,  // orderGroup
                          0,
                          DATABASE_UNLIMITED
                         );
