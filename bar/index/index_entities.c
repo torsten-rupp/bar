@@ -174,17 +174,20 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
             {
               // assign entity id
 // TODO:
-              (void)Database_execute(&newIndexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "UPDATE storages \
-                                      SET entityId=%lld \
-                                      WHERE id=%lld \
-                                     ",
-                                     entityDatabaseId,
-                                     storageDatabaseId
-                                    );
+              (void)Database_update(&newIndexHandle->databaseHandle,
+                                    NULL,  // changedRowCount
+                                    "storages",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES2
+                                    (
+                                      DATABASE_VALUE_KEY("entityId", entityDatabaseId),
+                                    ),
+                                    "id=?",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(storageDatabaseId)
+                                    )
+                                  );
             }
           }
           Database_finalize(&databaseStatementHandle2);
@@ -248,17 +251,20 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
               {
                 // assign entity id
 // TODO:
-                (void)Database_execute(&newIndexHandle->databaseHandle,
-                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                       NULL,  // changedRowCount
-                                       DATABASE_COLUMN_TYPES(),
-                                       "UPDATE storages \
-                                        SET entityId=%lld \
-                                        WHERE id=%lld \
-                                       ",
-                                       entityId,
-                                       storageId
-                                      );
+                (void)Database_update(&newIndexHandle->databaseHandle,
+                                      NULL,  // changedRowCount
+                                      "storages",
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_VALUES2
+                                      (
+                                        DATABASE_VALUE_UINT("entityId", entityId),
+                                      ),
+                                      "id=?"
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(storageId)
+                                      )
+                                     );
               }
             }
             Database_finalize(&databaseStatementHandle2);
@@ -579,31 +585,27 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           if (newestEntryId != DATABASE_ID_NONE)
           {
             // update
-            error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "UPDATE entriesNewest \
-                                      SET entryId=%lld, \
-                                          uuidId=%lld, \
-                                          entityId=%lld, \
-                                          type=%u, \
-                                          timeLastChanged=%lld, \
-                                          userId=%u, \
-                                          groupId=%u, \
-                                          permission=%u \
-                                      WHERE id=%lld \
-                                     ",
-                                     entryId,
-                                     uuidId,
-                                     entityId,
-                                     indexType,
-                                     timeLastChanged,
-                                     userId,
-                                     groupId,
-                                     permission,
-                                     newestEntryId
-                                    );
+            error = Database_update(&indexHandle->databaseHandle,
+                                    NULL,  // changedRowCount
+                                    "entriesNewest",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES2
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId",         entryId),
+                                      DATABASE_VALUE_KEY   ("uuidId",          uuidId),
+                                      DATABASE_VALUE_KEY   ("entityId",        entityId),
+                                      DATABASE_VALUE_UINT  ("type",            indexType),
+                                      DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                      DATABASE_VALUE_UINT  ("userId",          userId),
+                                      DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                      DATABASE_VALUE_UINT  ("permission",      permission)
+                                    ),
+                                    "id=?",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(newestEntryId)
+                                    )
+                                   );
           }
           else
           {
@@ -680,6 +682,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
       return error;
     }
 
+//// TODO: insertSelect
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -749,19 +752,21 @@ LOCAL Errors assignEntityStoragesToEntity(IndexHandle *indexHandle,
   // set uuid/entity id of all storages of entity
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE storages \
-                              SET uuidId  =%lld, \
-                                  entityId=%lld \
-                              WHERE entityId=%lld \
-                             ",
-                             toUUIDId,
-                             toEntityId,
-                             entityId
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "storages",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE_KEY("uuidId",   toUUIDId),
+                              DATABASE_VALUE_KEY("entityId", toEntityId)
+                            ),
+                            "entityId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entityId)
+                            )
+                           );
   }
 
   return error;
@@ -791,35 +796,39 @@ LOCAL Errors assignEntityEntriesToEntity(IndexHandle *indexHandle,
 
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE entries \
-                              SET uuidId  =%lld, \
-                                  entityId=%lld \
-                              WHERE entityId=%lld \
-                             ",
-                             toUUIDId,
-                             toEntityId,
-                             entityId
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entries",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE_KEY("uuidId",   toUUIDId),
+                              DATABASE_VALUE_KEY("entityId", toEntityId)
+                            ),
+                            "entityId=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entityId)
+                            )
+                           );
   }
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE entriesNewest \
-                              SET uuidId  =%lld, \
-                                  entityId=%lld \
-                              WHERE entryId IN (SELECT entries.id FROM entries LEFT JOIN entriesNewest ON entriesNewest.entryId=entries.id WHERE entries.entityId=%lld) \
-                             ",
-                             toUUIDId,
-                             toEntityId,
-                             entityId
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entriesNewest",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE_KEY("uuidId",   toUUIDId),
+                              DATABASE_VALUE_KEY("entityId", toEntityId)
+                            ),
+                            "entryId IN (SELECT entries.id FROM entries LEFT JOIN entriesNewest ON entriesNewest.entryId=entries.id WHERE entries.entityId=?)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entityId)
+                            )
+                           );
   }
 
   return error;
@@ -917,44 +926,49 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   // assign storage to new entity
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE storages \
-                              SET uuidId  =%lld, \
-                                  entityId=%lld \
-                              WHERE id=%lld \
-                             ",
-                             toUUIDId,
-                             toEntityId,
-                             storageId
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "storages",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE_KEY("uuidId",   toUUIDId),
+                              DATABASE_VALUE_KEY("entityId", toEntityId)
+                            ),
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(storageId)
+                            )
+                           );
   }
 
   // assign entries of storage to new entity
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE entries \
-                              SET uuidId  =%lld, \
-                                  entityId=%lld \
-                              WHERE id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
-                                           UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
-                                           UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
-                                           UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
-                                          ) \
-                             ",
-                             toUUIDId,
-                             toEntityId,
-                             storageId,
-                             storageId,
-                             storageId,
-                             storageId
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entries",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE_KEY("uuidId",   toUUIDId),
+                              DATABASE_VALUE_KEY("entityId", toEntityId)
+                            ),
+                            "id IN (      SELECT entryId FROM entryFragments   WHERE storageId=? \
+                                    UNION SELECT entryId FROM directoryEntries WHERE storageId=? \
+                                    UNION SELECT entryId FROM linkEntries      WHERE storageId=? \
+                                    UNION SELECT entryId FROM specialEntries   WHERE storageId=? \
+                                   ) \
+                            ",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(storageId),
+                              DATABASE_FILTER_KEY(storageId),
+                              DATABASE_FILTER_KEY(storageId),
+                              DATABASE_FILTER_KEY(storageId)
+                            )
+                          );
   }
 
   // update entity aggregates
@@ -1074,17 +1088,20 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   {
     if (error == ERROR_NONE)
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET type=%d \
-                                WHERE id=%lld \
-                               ",
-                               toArchiveType,
-                               toEntityId
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE_UINT("type", toArchiveType),
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(toEntityId)
+                              )
+                             );
     }
   }
 
@@ -1175,19 +1192,21 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // assign entity to job
     if (error == ERROR_NONE)
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET uuidId =%lld, \
-                                    jobUUID=%'S \
-                                WHERE id=%lld \
-                               ",
-                               toUUIDId,
-                               toJobUUID,
-                               entityId
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE_KEY   ("uuidId",  toUUIDId),
+                                DATABASE_VALUE_STRING("jobUUID", toJobUUID)
+                              ),
+                              "entityId=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entityId)
+                              )
+                            );
     }
 
     // prune UUID
@@ -1206,17 +1225,20 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // set entity type
     if (error == ERROR_NONE)
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET type=%d \
-                                WHERE id=%lld \
-                               ",
-                               toArchiveType,
-                               entityId
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE_UINT("type", toArchiveType)
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entityId)
+                              )
+                             );
     }
   }
 
@@ -1934,37 +1956,39 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
 
   // update newest aggregate data
 // TODO:
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(),
-                           "UPDATE entities \
-                            SET totalEntryCountNewest    =%llu, \
-                                totalEntrySizeNewest     =%llu, \
-                                totalFileCountNewest     =%llu, \
-                                totalFileSizeNewest      =%llu, \
-                                totalImageCountNewest    =%llu, \
-                                totalImageSizeNewest     =%llu, \
-                                totalDirectoryCountNewest=%llu, \
-                                totalLinkCountNewest     =%llu, \
-                                totalHardlinkCountNewest =%llu, \
-                                totalHardlinkSizeNewest  =%llu, \
-                                totalSpecialCountNewest  =%llu \
-                            WHERE id=%lld \
-                           ",
-                           totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
-                           totalFileSize+totalImageSize+totalHardlinkSize,
-                           totalFileCount,
-                           totalFileSize,
-                           totalImageCount,
-                           totalImageSize,
-                           totalDirectoryCount,
-                           totalLinkCount,
-                           totalHardlinkCount,
-                           totalHardlinkSize,
-                           totalSpecialCount,
-                           entityId
-                          );
+  error = Database_update(&indexHandle->databaseHandle,
+                          NULL,  // changedRowCount
+                          "entities",
+                          DATABASE_FLAG_NONE,
+                          DATABASE_VALUES2
+                          (
+                            DATABASE_VALUE_UINT  ("totalEntryCountNewest",      totalFileCount
+                                                                               +totalImageCount
+                                                                               +totalDirectoryCount
+                                                                               +totalLinkCount
+                                                                               +totalHardlinkCount
+                                                                               +totalSpecialCount
+                                                 ),
+                            DATABASE_VALUE_UINT64("totalEntrySizeNewest",       totalFileSize
+                                                                               +totalImageSize
+                                                                               +totalHardlinkSize
+                                                 ),
+                            DATABASE_VALUE_UINT  ("totalFileCountNewest",      totalFileCount),
+                            DATABASE_VALUE_UINT64("totalFileSizeNewest",       totalFileSize),
+                            DATABASE_VALUE_UINT  ("totalImageCountNewest",     totalImageCount),
+                            DATABASE_VALUE_UINT64("totalImageSizeNewest",      totalImageSize),
+                            DATABASE_VALUE_UINT  ("totalDirectoryCountNewest", totalDirectoryCount),
+                            DATABASE_VALUE_UINT  ("totalLinkCountNewest",      totalLinkCount),
+                            DATABASE_VALUE_UINT  ("totalHardlinkCountNewest",  totalHardlinkCount),
+                            DATABASE_VALUE_UINT64("totalHardlinkSizeNewest",   totalHardlinkSize),
+                            DATABASE_VALUE_UINT  ("totalSpecialCountNewest",   totalSpecialCount)
+                          ),
+                          "id=?",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_KEY(entityId)
+                          )
+                        );
   if (error != ERROR_NONE)
   {
     return error;
@@ -2486,27 +2510,25 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET jobUUID=%'S, \
-                                    scheduleUUID=%'S, \
-                                    hostName=%'S, \
-                                    userName=%'S, \
-                                    created=%llu, \
-                                    type=%u \
-                                WHERE id=%lld \
-                               ",
-                               jobUUID,
-                               scheduleUUID,
-                               hostName,
-                               userName,
-                               (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime(),
-                               archiveType,
-                               Index_getDatabaseId(entityId)
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE_STRING("jobUUID",      jobUUID),
+                                DATABASE_VALUE_STRING("scheduleUUID", scheduleUUID),
+                                DATABASE_VALUE_STRING("hostName",     hostName),
+                                DATABASE_VALUE_STRING("userName",     userName),
+                                DATABASE_VALUE_UINT64("created",      (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime()),
+                                DATABASE_VALUE_UINT  ("type",         archiveType)
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                              )
+                            );
       if (error != ERROR_NONE)
       {
         return error;
@@ -2556,13 +2578,20 @@ Errors Index_lockEntity(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE entities SET lockedCount=lockedCount+1 WHERE id=%lld",
-                             Index_getDatabaseId(entityId)
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entities",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE("lockedCount", "lockedCount+1"),
+                            ),
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                            )
+                           );
     if (error != ERROR_NONE)
     {
       return error;
@@ -2592,13 +2621,20 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE entities SET lockedCount=lockedCount-1 WHERE id=%lld AND lockedCount>0;",
-                             Index_getDatabaseId(entityId)
-                            );
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entities",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES2
+                            (
+                              DATABASE_VALUE("lockedCount", "lockedCount-1"),
+                            ),
+                            "id=? AND lockedCount>0",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                            )
+                           );
     if (error != ERROR_NONE)
     {
       return error;
@@ -2692,16 +2728,20 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
               indexHandle,
     {
       // set deleted flag
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET deletedFlag=1 \
-                                WHERE id=%lld \
-                               ",
-                               Index_getDatabaseId(entityId)
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES2
+                              (
+                                DATABASE_VALUE_BOOL("deletedFlag", TRUE),
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                              )
+                             );
       if (error == ERROR_NONE)
       {
         return error;
