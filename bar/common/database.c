@@ -11844,15 +11844,18 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
   // bind values
   if (filter != NULL)
   {
-    error = bindFilters(&databaseStatementHandle,
-                        filterValues,
-                        filterValueCount
-                       );
-    if (error != ERROR_NONE)
+    for (uint i = 0; i < tableNameCount; i++)
     {
-      finalizeStatement(&databaseStatementHandle);
-      String_delete(sqlString);
-      return error;
+      error = bindFilters(&databaseStatementHandle,
+                          filterValues,
+                          filterValueCount
+                         );
+      if (error != ERROR_NONE)
+      {
+        finalizeStatement(&databaseStatementHandle);
+        String_delete(sqlString);
+        return error;
+      }
     }
   }
   error = bindResults2(&databaseStatementHandle,

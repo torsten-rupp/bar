@@ -1159,9 +1159,6 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
                           ",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_STRING(entryNode->name),
-                            DATABASE_FILTER_STRING(entryNode->name),
-                            DATABASE_FILTER_STRING(entryNode->name),
                             DATABASE_FILTER_STRING(entryNode->name)
                           ),
                           "ORDER BY timeLastChanged DESC",
@@ -1530,6 +1527,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
+#if 0
         return Database_execute(&indexHandle->databaseHandle,
                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                 {
@@ -1645,6 +1643,70 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
         Database_finalize(&databaseStatementHandle);
 
         return ERROR_NONE;
+#else
+        return Database_get(&indexHandle->databaseHandle,
+                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                            {
+                              assert(values != NULL);
+                              assert(valueCount == 9);
+
+                              UNUSED_VARIABLE(userData);
+                              UNUSED_VARIABLE(valueCount);
+
+                              entryNode->newest.entryId         = values[0].id;
+                              entryNode->newest.uuidId          = values[1].id;
+                              entryNode->newest.entityId        = values[2].id;
+                              entryNode->newest.indexType       = (IndexTypes)values[3].u;
+                              entryNode->newest.timeLastChanged = values[4].dateTime;
+                              entryNode->newest.userId          = values[5].u;
+                              entryNode->newest.groupId         = values[6].u;
+                              entryNode->newest.permission      = values[7].u;
+                              entryNode->newest.size            = values[8].u64;
+
+                              return ERROR_NONE;
+                            },NULL),
+                            NULL,  // changedRowCount
+                            DATABASE_TABLES
+                            (
+                              "entryFragments \
+                                 LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                 LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                              ",
+                              "directoryEntries \
+                                 LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                              ",
+                              "linkEntries \
+                                 LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                              ",
+                              "specialEntries \
+                                 LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                              "
+                            ),
+                            DATABASE_COLUMNS
+                            (
+                              DATABASE_COLUMN_KEY   ("entries.id"),
+                              DATABASE_COLUMN_KEY   ("entries.uuidId"),
+                              DATABASE_COLUMN_UINT  ("entries.type"),
+                              DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged"),
+                              DATABASE_COLUMN_UINT  ("entries.userId"),
+                              DATABASE_COLUMN_UINT  ("entries.groupId"),
+                              DATABASE_COLUMN_UINT  ("entries.permission"),
+                              DATABASE_COLUMN_UINT64("entries.size")
+                            ),
+                            "    storages.deletedFlag!=1 \
+                             AND entries.name=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_STRING(entryNode->name)
+                            ),
+                            "ORDER BY timeLastChanged DESC",
+                            0LL,
+                            1LL
+                           );
+#endif
       });
     }
     IndexCommon_progressStep(progressInfo);
