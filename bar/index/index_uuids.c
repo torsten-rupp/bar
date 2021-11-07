@@ -1537,8 +1537,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "uuids",
                             DATABASE_FLAG_NONE,
-                            "id=? \
-                            ",
+                            "id=?",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_KEY(Index_getDatabaseId(uuidId))

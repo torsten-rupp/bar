@@ -3110,15 +3110,18 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM entriesNewest \
-                                  WHERE entryId=%lld \
-                                 ",
-                                 entryNode->entryId
-                                );
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "entriesNewest",
+                                DATABASE_FLAG_NONE,
+                                "entryId=? \
+                                ",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(entryNode->entryId)
+                                ),
+                                0
+                               );
         if (error != ERROR_NONE)
         {
           return error;

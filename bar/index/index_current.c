@@ -163,7 +163,9 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                              DATABASE_FILTERS
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
-                                             )
+                                             ),
+                                             0LL,
+                                             DATABASE_UNLIMITED
                                            );
                         if (error != ERROR_NONE)
                         {
@@ -184,7 +186,9 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                       DATABASE_FILTERS
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
-                      )
+                      ),
+                      0LL,
+                      DATABASE_UNLIMITED
                     );
 }
 
@@ -309,7 +313,9 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                              DATABASE_FILTERS
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
-                                             )
+                                             ),
+                                             0LL,
+                                             DATABASE_UNLIMITED
                                            );
                         if (error != ERROR_NONE)
                         {
@@ -330,7 +336,9 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                       DATABASE_FILTERS
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
-                      )
+                      ),
+                      0LL,
+                      DATABASE_UNLIMITED
                     );
 }
 
@@ -455,7 +463,9 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                              DATABASE_FILTERS
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
-                                             )
+                                             ),
+                                             0LL,
+                                             DATABASE_UNLIMITED
                                            );
                         if (error != ERROR_NONE)
                         {
@@ -476,7 +486,9 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                       DATABASE_FILTERS
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
-                      )
+                      ),
+                      0LL,
+                      DATABASE_UNLIMITED
                     );
 }
 

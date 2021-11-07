@@ -246,15 +246,17 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
   // delete storage index
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM storages \
-                              WHERE id=%lld \
-                             ",
-                             storageId
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "storages",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(storageId)
+                            ),
+                            0
+                           );
   }
 
   // free resources

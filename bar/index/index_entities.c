@@ -664,15 +664,17 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM entriesNewest \
-                              WHERE id=%lld \
-                             ",
-                             entryId
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entriesNewest",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            0
+                           );
     if (error != ERROR_NONE)
     {
       return error;
@@ -1303,13 +1305,17 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
       Database_finalize(&databaseStatementHandle);
 
       // delete entity from index
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM entities WHERE id=%lld",
-                               entityId
-                              );
+      error = Database_delete(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entityId)
+                              ),
+                              0
+                             );
       if (error != ERROR_NONE)
       {
         String_delete(string);

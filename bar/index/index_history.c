@@ -348,13 +348,17 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM history WHERE id=%lld",
-                             Index_getDatabaseId(historyId)
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "history",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(Index_getDatabaseId(historyId))
+                            ),
+                            0
+                           );
     if (error != ERROR_NONE)
     {
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);

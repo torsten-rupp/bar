@@ -4079,7 +4079,9 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                          (
                            DATABASE_FILTER_BOOL   (String_isEmpty(entityIdsString)),
                            DATABASE_FILTER_CSTRING(!String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0")
-                         )
+                         ),
+                         0LL,
+                         DATABASE_UNLIMITED
                         );
 #endif
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);

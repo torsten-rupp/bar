@@ -103,7 +103,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                              NULL,  // changedRowCount
                              "FTS_entries"
                              DATABASE_FLAG_NONE,
-                             "entryId=%?",
+                             "entryId=?",
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY(entryId)
@@ -119,14 +119,14 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                              NULL,  // changedRowCount
                              "entriesNewest"
                              DATABASE_FLAG_NONE,
-                             "entryId=%?",
+                             "entryId=?",
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY(entryId)
                              ),
                              0
                             );
-//TODO
+//TODO: insertSelect
 #if 0
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -171,17 +171,17 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
   // delete entry
   if (error == ERROR_NONE)
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             NULL,  // changedRowCount
-                             "entries"
-                             DATABASE_FLAG_NONE,
-                             "id=%?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(entryId)
-                             ),
-                             0
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entries"
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            0
+                           );
   }
 
   // free resources
@@ -5107,12 +5107,16 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+    error = Database_delete(&indexHandle->databaseHandle,
                              NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM skippedEntries WHERE id=%lld",
-                             Index_getDatabaseId(indexId)
+                             "skippedEntries",
+                             DATABASE_FLAG_NONE,
+                             "id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(Index_getDatabaseId(indexId))
+                             ),
+                             0
                             );
     if (error != ERROR_NONE)
     {
