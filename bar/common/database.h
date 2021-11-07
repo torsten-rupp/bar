@@ -636,6 +636,11 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 
 /****************************** Macros *********************************/
 
+#define DATABASE_TABLES(...) \
+  (const char*[]){__VA_ARGS__}, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/1
+
+
 #define __DATABASE_COLUMN_TYPE(type) DATABASE_DATATYPE_ ## type,
 #define DATABASE_COLUMN_TYPES(...) \
   (DatabaseDataTypes[]){_ITERATOR_EVAL(_ITERATOR_MAP(__DATABASE_COLUMN_TYPE, __VA_ARGS__))}, \
@@ -2079,6 +2084,7 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
 *          filter            - filter string
 *          filterValues      - filter values
 *          filterValueCount  - filter values count
+*          order             - order SQL string or NULL
 *          offset            - offset or 0
 *          limit             - limit or 0
 * Output : value - database id or DATABASE_ID_NONE
@@ -2090,13 +2096,15 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     DatabaseRowFunction  databaseRowFunction,
                     void                 *databaseRowUserData,
                     ulong                *changedRowCount,
-                    const char           *tableName,
+                    const char           *tableNames[],
+                    uint                 tableNameCount,
 // TODO: select value datatype: name, type
                     DatabaseColumn       selectColumn[],
                     uint                 selectColumnCount,
                     const char           *filter,
                     const DatabaseFilter filterValues[],
                     uint                 filterValueCount,
+                    const char           *order,
                     uint64               offset,
                     uint64               limit
                    );

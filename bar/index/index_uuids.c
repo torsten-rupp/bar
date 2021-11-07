@@ -442,10 +442,13 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                             return ERROR_NONE;
                           },NULL),
                           NULL,  // changedRowCount
-                          "uuids \
-                             LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                             LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
-                          ",
+                          DATABASE_TABLES
+                          (
+                            "uuids \
+                               LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                               LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
+                            "
+                          ),
                           DATABASE_COLUMNS
                           (
                             DATABASE_COLUMN_KEY   ("uuids.id"),
@@ -467,7 +470,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                           ),
                           stringFormat(sqlCommand,sizeof(sqlCommand),
                                        "%s \
-                                        GROUP BY uuids.id \
                                        ",
                                        String_cString(filterString)
                                       ),
@@ -484,6 +486,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_DIFFERENTIAL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_CONTINUOUS)
                           ),
+                          "GROUP BY uuids.id",
                           0LL,
                           1LL
                          );
@@ -602,10 +605,13 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                        },NULL),
                        NULL,  // changedRowCount
 //TODO newest
-                       "uuids \
-                         LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                         LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
-                       ",
+                       DATABASE_TABLES
+                       (
+                         "uuids \
+                           LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                           LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
+                         "
+                       ),
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT64("MAX(UNIX_TIMESTAMP(entities.created))"),
@@ -620,6 +626,7 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                        DATABASE_FILTERS
                        (
                        ),
+                       NULL,  // order
                        0LL,
                        1LL
                       );
@@ -685,11 +692,14 @@ UNUSED_VARIABLE(uuidId);
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              LEFT JOIN entities ON entities.id=entries.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                LEFT JOIN entities ON entities.id=entries.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
@@ -703,6 +713,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -727,11 +738,14 @@ UNUSED_VARIABLE(uuidId);
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              LEFT JOIN entities ON entities.id=entries.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                LEFT JOIN entities ON entities.id=entries.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           )
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
@@ -745,6 +759,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -768,11 +783,14 @@ UNUSED_VARIABLE(uuidId);
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              LEFT JOIN entities ON entities.id=entries.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                LEFT JOIN entities ON entities.id=entries.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
@@ -785,6 +803,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -808,11 +827,14 @@ UNUSED_VARIABLE(uuidId);
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              LEFT JOIN entities ON entities.id=entries.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                LEFT JOIN entities ON entities.id=entries.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)")
@@ -825,6 +847,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -849,11 +872,14 @@ UNUSED_VARIABLE(uuidId);
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              LEFT JOIN entities ON entities.id=entries.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                LEFT JOIN entities ON entities.id=entries.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
@@ -867,6 +893,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -890,11 +917,14 @@ UNUSED_VARIABLE(uuidId);
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entries \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              LEFT JOIN entities ON entities.id=entries.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                LEFT JOIN entities ON entities.id=entries.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entries.id)"),
@@ -907,6 +937,7 @@ UNUSED_VARIABLE(uuidId);
                              DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -973,11 +1004,14 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entriesNewest \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entriesNewest \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
@@ -991,6 +1025,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -1015,11 +1050,14 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entriesNewest \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entriesNewest \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
@@ -1033,6 +1071,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -1056,11 +1095,14 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entriesNewest \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entriesNewest \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
@@ -1073,6 +1115,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -1096,11 +1139,14 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entriesNewest \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entriesNewest \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
@@ -1113,6 +1159,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -1137,11 +1184,14 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entriesNewest \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entriesNewest \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
@@ -1155,6 +1205,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -1178,11 +1229,14 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "entriesNewest \
-                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                              LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           ",
+                           DATABASE_TABLES
+                           (
+                             "entriesNewest \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             "
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("COUNT(DISTINCT entriesNewest.id)"),
@@ -1195,6 +1249,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                              DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
                              DATABASE_FILTER_KEY   (Index_getDatabaseId(uuidId))
                            ),
+                           NULL,  // order
                            0LL,
                            1LL
                           );
@@ -1511,9 +1566,12 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                            return Index_deleteEntity(indexHandle,INDEX_ID_ENTITY(values[0].id));
                          },NULL),
                          NULL,  // changedRowCount
-                         "entities \
-                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                         ",
+                         DATABASE_TABLES
+                         (
+                           "entities \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                           "
+                         ),
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY  ("entities.id")
@@ -1523,6 +1581,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                          (
                            DATABASE_FILTER_KEY (Index_getDatabaseId(uuidId))
                          ),
+                         NULL,  // order
                          0,
                          DATABASE_UNLIMITED
                         );

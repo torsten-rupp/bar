@@ -4067,7 +4067,10 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                            return ERROR_NONE;
                          },NULL),
                          NULL,  // changedRowCount
-                         "entities",
+                         DATABASE_TABLES
+                         (
+                           "entities"
+                         ),
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY("id")
@@ -4080,6 +4083,7 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                            DATABASE_FILTER_BOOL   (String_isEmpty(entityIdsString)),
                            DATABASE_FILTER_CSTRING(!String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0")
                          ),
+                         NULL,  // order
                          0LL,
                          DATABASE_UNLIMITED
                         );

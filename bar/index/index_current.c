@@ -151,8 +151,10 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                              },NULL),
                                              NULL,  // changedRowCount
 //TODO newest
-                                             "entryFragments \
-                                             ",
+                                             DATABASE_TABLES
+                                             (
+                                               "entryFragments"
+                                             ),
                                              DATABASE_COLUMNS
                                              (
                                                DATABASE_COLUMN_KEY   ("storageId"),
@@ -164,6 +166,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
                                              ),
+                                             NULL, // order
                                              0LL,
                                              DATABASE_UNLIMITED
                                            );
@@ -176,8 +179,10 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                       },NULL),
                       NULL,  // changedRowCount
 //TODO newest
-                      "fileEntries \
-                      ",
+                      DATABASE_TABLES
+                      (
+                        "fileEntries"
+                      ),
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_UINT64("size"),
@@ -187,6 +192,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
                       ),
+                      NULL,  // order
                       0LL,
                       DATABASE_UNLIMITED
                     );
@@ -301,8 +307,10 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                              },NULL),
                                              NULL,  // changedRowCount
 //TODO newest
-                                             "entryFragments \
-                                             ",
+                                             DATABASE_TABLES
+                                             (
+                                               "entryFragments"
+                                             ),
                                              DATABASE_COLUMNS
                                              (
                                                DATABASE_COLUMN_KEY   ("storageId"),
@@ -314,6 +322,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
                                              ),
+                                             NULL, // order
                                              0LL,
                                              DATABASE_UNLIMITED
                                            );
@@ -326,8 +335,10 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                       },NULL),
                       NULL,  // changedRowCount
 //TODO newest
-                      "imageEntries \
-                      ",
+                      DATABASE_TABLES
+                      (
+                        "imageEntries"
+                      ),
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_UINT64("size"),
@@ -337,6 +348,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
                       ),
+                      NULL,  // order
                       0LL,
                       DATABASE_UNLIMITED
                     );
@@ -451,8 +463,10 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                              },NULL),
                                              NULL,  // changedRowCount
 //TODO newest
-                                             "entryFragments \
-                                             ",
+                                             DATABASE_TABLES
+                                             (
+                                               "entryFragments"
+                                             ),
                                              DATABASE_COLUMNS
                                              (
                                                DATABASE_COLUMN_KEY   ("storageId"),
@@ -464,6 +478,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
                                              ),
+                                             NULL, // order
                                              0LL,
                                              DATABASE_UNLIMITED
                                            );
@@ -476,8 +491,10 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                       },NULL),
                       NULL,  // changedRowCount
 //TODO newest
-                      "hardlinkEntries \
-                      ",
+                      DATABASE_TABLES
+                      (
+                        "hardlinkEntries"
+                      ),
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_UINT64("size"),
@@ -487,6 +504,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
                       ),
+                      NULL,  // order
                       0LL,
                       DATABASE_UNLIMITED
                     );

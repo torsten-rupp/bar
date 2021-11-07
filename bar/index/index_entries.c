@@ -470,7 +470,10 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "storages",
+                           DATABASE_TABLES
+                           (
+                             "storages"
+                           ),
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("id"),
@@ -1019,9 +1022,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1060,9 +1066,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1101,9 +1110,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1142,9 +1154,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1183,9 +1198,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1224,9 +1242,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1265,9 +1286,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1312,10 +1336,13 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                    return ERROR_NONE;
                                  },NULL),
                                  NULL,  // changedRowCount
-                                 "entriesNewest \
-                                    LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                    LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                 ",
+                                 DATABASE_TABLES
+                                 (
+                                   "entriesNewest \
+                                      LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                      LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                   "
+                                 ),
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT  ("0"),
@@ -1364,9 +1391,12 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1405,9 +1435,12 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1446,9 +1479,12 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1487,9 +1523,12 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1528,9 +1567,12 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1569,9 +1611,12 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1610,9 +1655,12 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
                                        return ERROR_NONE;
                                      },NULL),
                                      NULL,  // changedRowCount
-                                     "entities \
-                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                     ",
+                                     DATABASE_TABLES
+                                     (
+                                       "entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                       "
+                                     ),
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1658,10 +1706,13 @@ fprintf(stderr,"%s:%d: c33_\n",__FILE__,__LINE__);
                                    return ERROR_NONE;
                                  },NULL),
                                  NULL,  // changedRowCount
-                                 "entries \
-                                    LEFT JOIN entities ON entities.id=entries.entityId \
-                                    LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                 ",
+                                 DATABASE_TABLES
+                                 (
+                                   "entries \
+                                      LEFT JOIN entities ON entities.id=entries.entityId \
+                                      LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                   "
+                                 ),
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT  ("0"),
@@ -1728,14 +1779,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               "entriesNewest \
-                                  LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
-                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
-                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
-                                  LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                               ",
+                               DATABASE_TABLES
+                               (
+                                 "entriesNewest \
+                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
+                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
+                                    LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
+                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                 "
+                               ),
                                DATABASE_COLUMNS
                                (
 // TODO: directory correct?
@@ -1774,9 +1828,12 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                    return ERROR_NONE;
                                  },NULL),
                                  NULL,  // changedRowCount
-                                 "entities \
-                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                 ",
+                                 DATABASE_TABLES
+                                 (
+                                   "entities \
+                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                   "
+                                 ),
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
@@ -1811,14 +1868,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                    return ERROR_NONE;
                                  },NULL),
                                  NULL,  // changedRowCount
-                                 "entries \
-                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
-                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                    LEFT JOIN entities         ON entities.id=entries.entityId \
-                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                 ",
+                                 DATABASE_TABLES
+                                 (
+                                   "entries \
+                                      LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
+                                      LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                      LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
+                                      LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                                      LEFT JOIN entities         ON entities.id=entries.entityId \
+                                      LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                   "
+                                 ),
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
@@ -1899,11 +1959,14 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               "FTS_entries \
-                                  LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
-                                  LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
-                               ",
+                               DATABASE_TABLES
+                               (
+                                 "FTS_entries \
+                                    LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
+                                    LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
+                                    LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
+                                 "
+                               ),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT  ("COUNT(entriesNewest.id)"),
@@ -1940,11 +2003,14 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               "FTS_entries \
-                                  LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
-                                  LEFT JOIN entities ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                              ",
+                               DATABASE_TABLES
+                               (
+                                 "FTS_entries \
+                                    LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
+                                    LEFT JOIN entities ON entities.id=entries.entityId \
+                                    LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                 "
+                               ),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT  ("COUNT(entries.id)"),
@@ -2008,14 +2074,17 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               "FTS_entries \
-                                                   LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
-                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                                   LEFT JOIN entries          ON entries.id=entriesNewest.entryId \
-                                                   LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                                   LEFT JOIN entities         ON entities.id=storages.entityId \
-                                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                               ",
+                               DATABASE_TABLES
+                               (
+                                 "FTS_entries \
+                                    LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                    LEFT JOIN entries          ON entries.id=entriesNewest.entryId \
+                                    LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
+                                    LEFT JOIN entities         ON entities.id=storages.entityId \
+                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                 "
+                               ),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
@@ -2049,13 +2118,16 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                  return ERROR_NONE;
                                },NULL),
                                NULL,  // changedRowCount
-                               "FTS_entries \
-                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
-                                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
-                                                   LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                                   LEFT JOIN entities         ON entities.id=storages.entityId \
-                                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                               ",
+                               DATABASE_TABLES
+                               (
+                                 "FTS_entries \
+                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
+                                    LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
+                                    LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
+                                    LEFT JOIN entities         ON entities.id=storages.entityId \
+                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                 "
+                               ),
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")

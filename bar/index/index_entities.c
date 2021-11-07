@@ -1484,9 +1484,12 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount
-                       "entries \
-                          LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                       ",
+                       DATABASE_TABLES
+                       (
+                         "entries \
+                            LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                         "
+                       ),
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -1524,9 +1527,12 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount
-                       "entries \
-                          LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                       ",
+                       DATABASE_TABLES
+                       (
+                         "entries \
+                            LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                         "
+                       ),
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -1563,8 +1569,10 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount
-                       "entries \
-                       ",
+                       DATABASE_TABLES
+                       (
+                         "entries"
+                       ),
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
@@ -1600,8 +1608,10 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount
-                       "entries \
-                       ",
+                       DATABASE_TABLES
+                       (
+                         "entries"
+                       ),
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
@@ -1638,9 +1648,12 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount
-                       "entries \
-                          LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                       ",
+                       DATABASE_TABLES
+                       (
+                         "entries \
+                            LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                        "
+                       ),
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -1677,8 +1690,10 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          return ERROR_NONE;
                        },NULL),
                        NULL,  // changedRowCount
-                       "entries \
-                       ",
+                       DATABASE_TABLES
+                       (
+                         "entries"
+                       ),
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
