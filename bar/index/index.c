@@ -730,13 +730,19 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
   assert(indexHandle != NULL);
   assert(tableName != NULL);
 
-  (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(),
-                         "UPDATE %s SET id=rowId WHERE id IS NULL",
-                         tableName
-                        );
+  (void)Database_update(&indexHandle->databaseHandle,
+                        NULL,  // changedRowCount
+                        tableName,
+                        DATABASE_FLAG_NONE,
+                        DATABASE_VALUES2
+                        (
+                          DATABASE_VALUE("id", "rowId"),
+                        ),
+                        "id IS NULL",
+                        DATABASE_FILTERS
+                        (
+                        )
+                      );
 }
 
 /***********************************************************************\
@@ -1224,17 +1230,20 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
                                 )
             )
       {
-        (void)Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM meta \
-                                WHERE     name=%'S \
-                                      AND (rowid NOT IN (SELECT rowid FROM meta WHERE name=%'S ORDER BY rowId DESC LIMIT 0,1)) \
-                               ",
-                               name,
-                               name
-                              );
+        (void)Database_delete(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "meta",
+                              DATABASE_FLAG_NONE,
+                              "    name=? \
+                               AND (rowid NOT IN (SELECT rowid FROM meta WHERE name=? ORDER BY rowId DESC LIMIT 0,1)) \
+                              ",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_STRING(name)
+                                DATABASE_FILTER_STRING(name)
+                              ),
+                              0
+                             );
       }
       Database_finalize(&databaseStatementHandle);
     }
@@ -1754,17 +1763,21 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
             {
               // assign entity id
 // TODO:
-              (void)Database_execute(&newIndexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "UPDATE storages \
-                                      SET entityId=%lld \
-                                      WHERE id=%lld \
-                                     ",
-                                     entityDatabaseId,
-                                     storageDatabaseId
-                                    );
+              (void)Database_update(&newIndexHandle->databaseHandle,
+                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                    NULL,  // changedRowCount
+                                    "storages",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES2
+                                    (
+                                      DATABASE_VALUE_KEY("entityId", entityDatabaseId),
+                                    ),
+                                    NULL,
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(storageDatabaseId)
+                                    )
+                                   );
             }
           }
           Database_finalize(&databaseStatementHandle2);
@@ -1828,17 +1841,20 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
               {
                 // assign entity id
 // TODO:
-                (void)Database_execute(&newIndexHandle->databaseHandle,
-                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                       NULL,  // changedRowCount
-                                       DATABASE_COLUMN_TYPES(),
-                                       "UPDATE storages \
-                                        SET entityId=%lld \
-                                        WHERE id=%lld \
-                                       ",
-                                       entityId,
-                                       storageId
-                                      );
+                (void)Database_update(&newIndexHandle->databaseHandle,
+                                      NULL,  // changedRowCount
+                                      "storages",
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_VALUES2
+                                      (
+                                        DATABASE_VALUE_KEY("entityId", entityId),
+                                      ),
+                                      NULL,
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(storageId)
+                                      )
+                                     );
               }
             }
             Database_finalize(&databaseStatementHandle2);
@@ -2074,17 +2090,20 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
             {
               // assign entity id
 // TODO:
-              (void)Database_execute(&newIndexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "UPDATE storages \
-                                      SET entityId=%lld \
-                                      WHERE id=%lld \
-                                     ",
-                                     entityDatabaseId,
-                                     storageDatabaseId
-                                    );
+              (void)Database_update(&newIndexHandle->databaseHandle,
+                                    NULL,  // changedRowCount
+                                    "storages",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES2
+                                    (
+                                      DATABASE_VALUE_UINT("entityId", entityDatabaseId),
+                                    ),
+                                    NULL,
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(storageDatabaseId)
+                                    )
+                                   );
             }
           }
           Database_finalize(&databaseStatementHandle2);
@@ -2172,14 +2191,17 @@ LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
   INDEX_DOX(error,
             indexHandle,
   {
-    return Database_execute(&indexHandle->databaseHandle,
-                            CALLBACK_(NULL,NULL),  // databaseRowFunction
-                            &n,
-                            DATABASE_COLUMN_TYPES(),
-                            "DELETE FROM uuids \
-                             WHERE uuids.jobUUID='' \
-                            "
-                           );
+    return Database_delete(&indexHandle->databaseHandle,
+                           &n,
+                           "uuids",
+                           DATABASE_FLAG_NONE,
+                           "uuids.jobUUID='' \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           0
+                          );
   });
 
   // free resource
@@ -2374,31 +2396,27 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           if (newestEntryId != DATABASE_ID_NONE)
           {
             // update
-            error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "UPDATE entriesNewest \
-                                      SET entryId=%lld, \
-                                          uuidId=%lld, \
-                                          entityId=%lld, \
-                                          type=%u, \
-                                          timeLastChanged=%lld, \
-                                          userId=%u, \
-                                          groupId=%u, \
-                                          permission=%u \
-                                      WHERE id=%lld \
-                                     ",
-                                     entryId,
-                                     uuidId,
-                                     entityId,
-                                     indexType,
-                                     timeLastChanged,
-                                     userId,
-                                     groupId,
-                                     permission,
-                                     newestEntryId
-                                    );
+            error = Database_update(&indexHandle->databaseHandle,
+                                    NULL,  // changedRowCount
+                                    "entriesNewest",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES2
+                                    (
+                                      DATABASE_VALUE_UINT("entryId",         entryId),
+                                      DATABASE_VALUE_UINT("uuidId",          uuidId),
+                                      DATABASE_VALUE_UINT("entityId",        entityId),
+                                      DATABASE_VALUE_UINT("type",            indexType),
+                                      DATABASE_VALUE_UINT("timeLastChanged", timeLastChanged),
+                                      DATABASE_VALUE_UINT("userId",          userId),
+                                      DATABASE_VALUE_UINT("groupId",         groupId),
+                                      DATABASE_VALUE_UINT("permission",      permission),
+                                    ),
+                                    "id=?",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_KEY(newestEntryId)
+                                    )
+                                   );
           }
           else
           {
@@ -2409,15 +2427,15 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES2
                                     (
-                                      KEY   ("entryId",         entryId),
-                                      KEY   ("uuidId",          uuidId),
-                                      KEY   ("entityId",        entityId),
-                                      UINT  ("type",            indexType),
-                                      STRING("name",            name),
-                                      UINT64("timeLastChanged", timeLastChanged),
-                                      UINT  ("userId",          userId),
-                                      UINT  ("groupId",         groupId),
-                                      UINT  ("permission",      permission)
+                                      DATABASE_VALUE_KEY   ("entryId",         entryId),
+                                      DATABASE_VALUE_KEY   ("uuidId",          uuidId),
+                                      DATABASE_VALUE_KEY   ("entityId",        entityId),
+                                      DATABASE_VALUE_UINT  ("type",            indexType),
+                                      DATABASE_VALUE_STRING("name",            name),
+                                      DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
+                                      DATABASE_VALUE_UINT  ("userId",          userId),
+                                      DATABASE_VALUE_UINT  ("groupId",         groupId),
+                                      DATABASE_VALUE_UINT  ("permission",      permission)
                                     )
                                    );
           }
@@ -2459,52 +2477,64 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM entriesNewest \
-                              WHERE id=%lld \
-                             ",
-                             entryId
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entriesNewest",
+                            DATABASE_FLAG_NONE,
+                            "entryId=? \
+                            ",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            0
+                           );
     if (error != ERROR_NONE)
     {
       return error;
     }
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "INSERT OR IGNORE INTO entriesNewest \
-                                ( \
-                                 entryId, \
-                                 uuidId, \
-                                 entityId, \
-                                 type, \
-                                 name, \
-                                 timeLastChanged, \
-                                 userId, \
-                                 groupId, \
-                                 permission, \
-                                ) \
-                              SELECT id, \
-                                     uuidId, \
-                                     entityId, \
-                                     type, \
-                                     name, \
-                                     timeLastChanged, \
-                                     userId, \
-                                     groupId, \
-                                     permission \
-                               FROM entries \
-                               WHERE name=%'S \
-                               ORDER BY timeLastChanged DESC \
-                               LIMIT 0,1 \
-                             ",
-                             name
-                            );
+    error = Database_insertSelect(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entriesNewest",
+                                  DATABASE_FLAG_IGNORE,
+                                  DATABASE_VALUES2
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId")
+                                    DATABASE_VALUE_KEY   ("uuidId")
+                                    DATABASE_VALUE_KEY   ("entityId")
+                                    DATABASE_VALUE_UINT  ("type")
+                                    DATABASE_VALUE_STRING("name")
+                                    DATABASE_VALUE_UINT64("timeLastChanged")
+                                    DATABASE_VALUE_UINT  ("userId")
+                                    DATABASE_VALUE_UINT  ("groupId")
+                                    DATABASE_VALUE_UINT  ("permission")
+                                  ),
+                                  DATABASE_TABLES
+                                  (
+                                    "entries"
+                                  ),
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_KEY   ("id"),
+                                    DATABASE_COLUMN_KEY   ("uuidId"),
+                                    DATABASE_COLUMN_KEY   ("entityId"),
+                                    DATABASE_COLUMN_UINT  ("type"),
+                                    DATABASE_COLUMN_STRING("name"),
+                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT  ("userId"),
+                                    DATABASE_COLUMN_UINT  ("groupId"),
+                                    DATABASE_COLUMN_UINT  ("permission")
+                                  ),
+                                  "name=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(name)
+                                  ),
+                                  "ORDER BY timeLastChanged DESC",
+                                  0LL,
+                                  1LL
+                                 );
     if (error != ERROR_NONE)
     {
       return error;
