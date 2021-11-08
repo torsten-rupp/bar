@@ -4450,10 +4450,6 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
 
           result = TRUE;
         }
-        else
-        {
-          result = FALSE;
-        }
       }
       break;
     case DATABASE_TYPE_MYSQL:
@@ -4537,13 +4533,10 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
           case 1:
 fprintf(stderr,"%s:%d: error\n",__FILE__,__LINE__);
 abort();
-            result = FALSE;
             break;
           case MYSQL_NO_DATA:
-            result = FALSE;
             break;
           case MYSQL_DATA_TRUNCATED:
-            result = FALSE;
             break;
         }
       }
@@ -9042,7 +9035,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 //fprintf(stderr,"%s:%d: toTableName=%s toColumns=",__FILE__,__LINE__,toTableName); for (int i = 0; i < toColumnCount;i++) fprintf(stderr,"%s %s, ",toColumnNames[i],DATABASE_DATATYPE_NAMES[toColumnTypes[i]]); fprintf(stderr,"\n");
   END_TIMER();
 
-  // get column mappings
+  // get column mapping: toColumn[toColumnMap[i]] -> fromColumn[i]
   toColumnMapCount = 0;
   for (i = 0; i < toColumnCount; i++)
   {
@@ -9056,6 +9049,9 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
   }
 //fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCount,fromTableName,toTableName); for (int i = 0; i < toColumnMapCount;i++) { fprintf(stderr,"%d->%d, ",toColumnMap[i],i); } fprintf(stderr,"\n");
+
+  // get parameter mapping/to-table primary key column index
+  toColumnPrimaryKeyIndex = UNUSED;
   parameterMapCount = 0;
   for (i = 0; i < toColumnCount; i++)
   {
@@ -9064,19 +9060,12 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       parameterMap[parameterMapCount] = i;
       parameterMapCount++;
     }
-  }
-//fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCount,fromTableName,toTableName); for (int i = 0; i < parameterMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",parameterMap[i],i,toColumnNames[parameterMap[i]],toColumnTypes[parameterMap[i]]); } fprintf(stderr,"\n");
-
-  // get to-table primary key column index
-  toColumnPrimaryKeyIndex = UNUSED;
-  for (i = 0; i < toColumnCount; i++)
-  {
-    if (toColumnTypes[i] == DATABASE_DATATYPE_PRIMARY_KEY)
+    else
     {
       toColumnPrimaryKeyIndex = i;
-      break;
     }
   }
+//fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCount,fromTableName,toTableName); for (int i = 0; i < parameterMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",parameterMap[i],i,toColumnNames[parameterMap[i]],toColumnTypes[parameterMap[i]]); } fprintf(stderr,"\n");
 
   // init from/to values
   for (i = 0; i < fromColumnCount; i++)
@@ -9143,13 +9132,12 @@ fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sq
                           );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
+//fprintf(stderr,"%s:%d: bind from results %d\n",__FILE__,__LINE__,fromColumnCount);
   error = bindResults2(&fromDatabaseStatementHandle,fromColumns,fromColumnCount);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
@@ -9163,15 +9151,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                           );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-    finalizeStatement(&fromDatabaseStatementHandle);
-    return error;
-  }
-  error = bindValues(&toDatabaseStatementHandle,parameterValues,parameterValueCount);
-  if (error != ERROR_NONE)
-  {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-    finalizeStatement(&toDatabaseStatementHandle);
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
@@ -9216,11 +9195,21 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       // set to values
       for (i = 0; i < parameterMapCount; i++)
       {
+#if 0
         memCopyFast(&toValues[parameterMap[i]].data,
                     sizeof(toValues[parameterMap[i]].data),
                     &fromValues[toColumnMap[parameterMap[i]]].data,
                     sizeof(fromValues[parameterMap[i]].data)
                    );
+#else
+//fprintf(stderr,"%s:%d: map from %d -> to %d -> parameter %d\n",__FILE__,__LINE__,parameterMap[toColumnMap[i]],toColumnMap[i],i);
+        memCopyFast(&parameterValues[i].data,
+                    sizeof(parameterValues[i].data),
+                    &fromDatabaseStatementHandle.results[parameterMap[toColumnMap[i]]].data,
+                    sizeof(fromDatabaseStatementHandle.results[parameterMap[toColumnMap[i]]].data)
+                   );
+#endif
+
 #if 0
 fprintf(stderr,"%s:%d: index: f=%d->t=%d->p=%d name: f=%s->t=%s types: f=%s->t=%s values: f=%s->t=%s\n",__FILE__,__LINE__,
 (i < parameterMapCount) ? toColumnMap[parameterMap[i]] : -1,
@@ -9234,6 +9223,14 @@ debugDatabaseValueToString(buffer1,sizeof(buffer1),&fromValues[toColumnMap[param
 debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 );
 #endif
+      }
+      for (i = 0; i < toColumnMapCount; i++)
+      {
+        memCopyFast(&toValues[i].data,
+                    sizeof(toValues[i].data),
+                    &fromDatabaseStatementHandle.results[toColumnMap[i]].data,
+                    sizeof(fromDatabaseStatementHandle.results[toColumnMap[i]].data)
+                   );
       }
 
       // call pre-copy callback (if defined)
@@ -9261,6 +9258,20 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
       }
 
       // insert row
+//fprintf(stderr,"%s:%d: bind insert parameter values %d\n",__FILE__,__LINE__,parameterValueCount);
+/// TODO: implement resetBindValues()
+toDatabaseStatementHandle.valueIndex=0;
+      error = bindValues(&toDatabaseStatementHandle,parameterValues,parameterValueCount);
+      if (error != ERROR_NONE)
+      {
+        finalizeStatement(&toDatabaseStatementHandle);
+        finalizeStatement(&fromDatabaseStatementHandle);
+        if (transactionFlag)
+        {
+          (void)Database_rollbackTransaction(toDatabaseHandle);
+        }
+        return error;
+      }
 //fprintf(stderr,"%s:%d: b\n",__FILE__,__LINE__); dumpStatementHandle(&toDatabaseStatementHandle);
       error = executePreparedQuery(&toDatabaseStatementHandle,
                                    NULL,  // changeRowCount
@@ -12021,11 +12032,11 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
 
   // execute statement
   error = executePreparedStatement(&databaseStatementHandle,
-                           databaseRowFunction,
-                           databaseRowUserData,
-                           changedRowCount,
-                           WAIT_FOREVER
-                          );
+                                   databaseRowFunction,
+                                   databaseRowUserData,
+                                   changedRowCount,
+                                   WAIT_FOREVER
+                                  );
   if (error != ERROR_NONE)
   {
     finalizeStatement(&databaseStatementHandle);
@@ -12033,14 +12044,18 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
     return error;
   }
 
+#if 0
+fprintf(stderr,"%s:%d: do rows\n",__FILE__,__LINE__);
   while (getNextRow(&databaseStatementHandle,NO_WAIT))
   {
+fprintf(stderr,"%s:%d: goooo row\n",__FILE__,__LINE__);
     error = databaseRowFunction(databaseStatementHandle.results,
                                 databaseStatementHandle.resultCount,
                                 databaseRowUserData
                                );
     if (error != ERROR_NONE) break;
   }
+#endif
 
   // free resources
   finalizeStatement(&databaseStatementHandle);
