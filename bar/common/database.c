@@ -4436,6 +4436,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                                                                                              i
                                                                                             );
                 databaseStatementHandle->results[i].text.length = stringLength(databaseStatementHandle->results[i].text.data);
+fprintf(stderr,"%s:%d: i=%d p=%p: %s %d\n",__FILE__,__LINE__,i,databaseStatementHandle->results[i].text.data,databaseStatementHandle->results[i].text.data,databaseStatementHandle->results[i].text.length);
                 break;
               case DATABASE_DATATYPE_BLOB:
                 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -9198,8 +9199,14 @@ fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sq
 #if 0
         memCopyFast(&toValues[parameterMap[i]].data,
                     sizeof(toValues[parameterMap[i]].data),
-                    &fromValues[toColumnMap[parameterMap[i]]].data,
-                    sizeof(fromValues[parameterMap[i]].data)
+                    &fromDatabaseStatementHandle.results[toColumnMap[parameterMap[i]]].data,
+                    sizeof(fromDatabaseStatementHandle.results[toColumnMap[parameterMap[i]]].data)
+                   );
+#elif 0
+        memCopyFast(&toValues[parameterMap[i]].data,
+                    sizeof(toValues[parameterMap[i]].data),
+                    &fromDatabaseStatementHandle.results[i].data,
+                    sizeof(fromDatabaseStatementHandle.results[i].data)
                    );
 #else
 //fprintf(stderr,"%s:%d: map from %d -> to %d -> parameter %d\n",__FILE__,__LINE__,parameterMap[toColumnMap[i]],toColumnMap[i],i);
