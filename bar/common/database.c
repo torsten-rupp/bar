@@ -3914,159 +3914,14 @@ UNUSED_VARIABLE(databaseStatementHandle);
 * Name   : bindResults
 * Purpose: bind SQL result values
 * Input  : databaseStatementHandle - database statement query handle variable
-*          columnTypes             - column result data types
+*          columns                 - result columns
+*          columnsCount            - result columns count
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-#if 0
-        // bind results
-#endif
-
 LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
-                         DatabaseValue           results[],
-                         uint                    resultCount
-                        )
-{
-  assert(databaseStatementHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
-  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
-  assert((databaseStatementHandle->resultIndex+resultCount) <= databaseStatementHandle->resultCount);
-
-  switch (Database_getType(databaseStatementHandle->databaseHandle))
-  {
-    case DATABASE_TYPE_SQLITE3:
-      {
-        uint i;
-
-        for (i = 0; i < resultCount; i++)
-        {
-          databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = results[i].type;
-
-          switch (results[i].type)
-          {
-            case DATABASE_DATATYPE:
-              break;
-            case DATABASE_DATATYPE_PRIMARY_KEY:
-            case DATABASE_DATATYPE_KEY:
-              break;
-            case DATABASE_DATATYPE_BOOL:
-              break;
-            case DATABASE_DATATYPE_INT:
-              break;
-            case DATABASE_DATATYPE_INT64:
-              break;
-            case DATABASE_DATATYPE_DOUBLE:
-              break;
-            case DATABASE_DATATYPE_DATETIME:
-              break;
-            case DATABASE_DATATYPE_STRING:
-              break;
-            case DATABASE_DATATYPE_CSTRING:
-              break;
-            case DATABASE_DATATYPE_BLOB:
-              HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-              break;
-            #ifndef NDEBUG
-              default:
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
-          }
-
-          databaseStatementHandle->resultIndex++;
-        }
-      }
-      break;
-    case DATABASE_TYPE_MYSQL:
-      {
-        const uint MAX_TEXT_LENGTH = 4096;
-
-        uint i;
-
-        for (i = 0; i < resultCount; i++)
-        {
-          databaseStatementHandle->results[databaseStatementHandle->resultIndex].type = results[i].type;
-
-          switch (results[i].type)
-          {
-            case DATABASE_DATATYPE_NONE:
-              break;
-            case DATABASE_DATATYPE:
-              break;
-            case DATABASE_DATATYPE_PRIMARY_KEY:
-            case DATABASE_DATATYPE_KEY:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&results[i].id;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-              break;
-            case DATABASE_DATATYPE_BOOL:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_TINY;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&results[i].b;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-              break;
-            case DATABASE_DATATYPE_INT:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&results[i].i;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
-              break;
-            case DATABASE_DATATYPE_INT64:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&results[i].i64;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
-              break;
-            case DATABASE_DATATYPE_DOUBLE:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_DOUBLE;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&results[i].d;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-              break;
-            case DATABASE_DATATYPE_DATETIME:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_DATETIME;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->mysql.results.time[databaseStatementHandle->resultIndex];
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
-              break;
-            case DATABASE_DATATYPE_STRING:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_STRING;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_length = MAX_TEXT_LENGTH;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = &results[i].text.length;
-              break;
-            case DATABASE_DATATYPE_CSTRING:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_STRING;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_length = MAX_TEXT_LENGTH;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = &results[i].text.length;
-              break;
-            case DATABASE_DATATYPE_BLOB:
-              HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break;
-          }
-
-          databaseStatementHandle->resultIndex++;
-        }
-      }
-      break;
-  }
-
-  return ERROR_NONE;
-}
-LOCAL Errors bindResults2(DatabaseStatementHandle *databaseStatementHandle,
                          const DatabaseColumn    columns[],
                          uint                    columnsCount
                         )
@@ -9136,7 +8991,7 @@ fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sq
     return error;
   }
 //fprintf(stderr,"%s:%d: bind from results %d\n",__FILE__,__LINE__,fromColumnCount);
-  error = bindResults2(&fromDatabaseStatementHandle,fromColumns,fromColumnCount);
+  error = bindResults(&fromDatabaseStatementHandle,fromColumns,fromColumnCount);
   if (error != ERROR_NONE)
   {
     finalizeStatement(&fromDatabaseStatementHandle);
@@ -10765,7 +10620,7 @@ for (uint i = 0; i < resultDataTypeCount; i++) {
   }
   if (error == ERROR_NONE)
   {
-    error = bindResults2(databaseStatementHandle,columns,resultDataTypeCount);
+    error = bindResults(databaseStatementHandle,columns,resultDataTypeCount);
   }
 
   if (error == ERROR_NONE)
@@ -11726,7 +11581,7 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
       return error;
     }
   }
-  error = bindResults2(&databaseStatementHandle,
+  error = bindResults(&databaseStatementHandle,
                       columns,
                       columnCount
                      );
@@ -11833,7 +11688,7 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
       return error;
     }
   }
-  error = bindResults2(databaseStatementHandle,
+  error = bindResults(databaseStatementHandle,
                       columns,
                       columnCount
                      );
@@ -12026,7 +11881,7 @@ fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlStrin
       }
     }
   }
-  error = bindResults2(&databaseStatementHandle,
+  error = bindResults(&databaseStatementHandle,
                       columns,
                       columnCount
                      );
