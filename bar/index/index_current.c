@@ -85,7 +85,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
 
                         size = values[0].u64;
 
-                        DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
                         error = Database_insert(newDatabaseHandle,
                                                 NULL,  // changedRowCount
                                                 "fileEntries",
@@ -129,7 +129,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                                  toStorageId = DATABASE_ID_NONE;
                                                }
 
-                                               DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
+                                               DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                                                error = Database_insert(newDatabaseHandle,
                                                                        NULL,  // changedRowCount
                                                                        "entryFragments",
@@ -241,7 +241,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
 
                         size = values[0].u64;
 
-                        DIMPORT("import image entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
                         error = Database_insert(newDatabaseHandle,
                                                 NULL,  // changedRowCount
                                                 "imageEntries",
@@ -285,7 +285,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                                  toStorageId = DATABASE_ID_NONE;
                                                }
 
-                                               DIMPORT("import image fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
+                                               DIMPORT("import image fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                                                error = Database_insert(newDatabaseHandle,
                                                                        NULL,  // changedRowCount
                                                                        "entryFragments",
@@ -397,7 +397,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
 
                         size = values[0].u64;
 
-                        DIMPORT("import hardlink entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
                         error = Database_insert(newDatabaseHandle,
                                                 NULL,  // changedRowCount
                                                 "hardlinkEntries",
@@ -441,7 +441,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                                  toStorageId = DATABASE_ID_NONE;
                                                }
 
-                                               DIMPORT("import hardlink fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
+                                               DIMPORT("import hardlink fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                                                error = Database_insert(newDatabaseHandle,
                                                                        NULL,  // changedRowCount
                                                                        "entryFragments",
@@ -838,7 +838,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                assert(fromEntityId != DATABASE_ID_NONE);
                                toEntityId = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                assert(toEntityId != DATABASE_ID_NONE);
-fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,fromEntityId,toEntityId);
 
                                // transfer storages of entity
                                t0 = Misc_getTimestamp();
@@ -967,8 +966,6 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
-#if 1
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
@@ -988,6 +985,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                                             );
                                                                 break;
                                                               case INDEX_TYPE_DIRECTORY:
+                                                                DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                                 error = Database_copyTable(oldDatabaseHandle,
                                                                                            newDatabaseHandle,
                                                                                            "directoryEntries",
@@ -1038,6 +1036,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                           );
                                                                 break;
                                                               case INDEX_TYPE_LINK:
+                                                                DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                                 error = Database_copyTable(oldDatabaseHandle,
                                                                                            newDatabaseHandle,
                                                                                            "linkEntries",
@@ -1096,6 +1095,7 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                                                                );
                                                                 break;
                                                               case INDEX_TYPE_SPECIAL:
+                                                                DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                                 error = Database_copyTable(oldDatabaseHandle,
                                                                                            newDatabaseHandle,
                                                                                            "specialEntries",
@@ -1152,9 +1152,6 @@ fprintf(stderr,"%s:%d: fromEntityId=%ld toEntityId=%ld\n",__FILE__,__LINE__,from
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
-#else
-error = ERROR_NONE;
-#endif
 
                                                             return error;
                                                           },NULL),
@@ -1285,7 +1282,6 @@ error = ERROR_NONE;
 
                                                             error = ERROR_NONE;
 
-                                                            DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
 // TODO:
 #if 0
                                                             switch (type)
@@ -1307,6 +1303,7 @@ error = ERROR_NONE;
                                                                                                             );
                                                                 break;
                                                               case INDEX_TYPE_DIRECTORY:
+                                                                DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                                 error = Database_copyTable(oldDatabaseHandle,
                                                                                            newDatabaseHandle,
                                                                                            "directoryEntries",
@@ -1358,6 +1355,7 @@ error = ERROR_NONE;
                                                                                           );
                                                                 break;
                                                               case INDEX_TYPE_LINK:
+                                                                DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                                 error = Database_copyTable(oldDatabaseHandle,
                                                                                            newDatabaseHandle,
                                                                                            "linkEntries",
@@ -1417,6 +1415,7 @@ error = ERROR_NONE;
                                                                                                                );
                                                                 break;
                                                               case INDEX_TYPE_SPECIAL:
+                                                                DIMPORT("import entry %ld -> %ld: %s",fromEntryId,toEntryId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                                 error = Database_copyTable(oldDatabaseHandle,
                                                                                            newDatabaseHandle,
                                                                                            "specialEntries",

@@ -203,6 +203,7 @@ LOCAL ProgressInfo importProgressInfo;
   #define DIMPORT(format,...) \
     do \
     { \
+      fprintf(stderr,"DEBUG IMPORT: "); \
       fprintf(stderr,format, ## __VA_ARGS__); \
       fprintf(stderr,"\n"); \
     } \
@@ -1009,6 +1010,8 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriS
   Errors            error;
   DatabaseHandle    oldDatabaseHandle;
 
+  printInfo("Import database '%s':\n",uriString);
+
   // parse URI and fill int default values
   Database_parseSpecifier(&databaseSpecifier,uriString);
   switch (databaseSpecifier.type)
@@ -1029,6 +1032,11 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriS
   {
     error = importIndexVersion7XXX(&oldDatabaseHandle, databaseHandle);
     Database_close(&oldDatabaseHandle);
+  }
+
+  if (error != ERROR_NONE)
+  {
+    printError("Import database fail: %s!\n",Error_getText(error));
   }
 
   // free resources
