@@ -108,7 +108,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
                                 LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                               WHERE storages.id=? \
                              ",
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                              ),
                              DATABASE_FILTERS
@@ -417,7 +417,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                                 LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                               WHERE storages.id=? \
                              ",
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                              ),
                              DATABASE_FILTERS

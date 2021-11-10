@@ -955,7 +955,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                               NULL,  // changedRowCount
                               "uuids",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_UINT("totalEntryCount",      totalFileCount
                                                                            +totalImageCount
@@ -1267,7 +1267,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
                               NULL,  // changedRowCount
                               "uuids",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_UINT("totalEntryCountNewest",      totalFileCount
                                                                                  +totalImageCount
@@ -1489,7 +1489,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "uuids",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_STRING("jobUUID", jobUUID),
                               )

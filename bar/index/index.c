@@ -735,7 +735,7 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
                         NULL,  // changedRowCount
                         tableName,
                         DATABASE_FLAG_NONE,
-                        DATABASE_VALUES2
+                        DATABASE_VALUES
                         (
                           DATABASE_VALUE("id", "rowId"),
                         ),
@@ -1325,7 +1325,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           NULL,  // changedRowCount
                           "entities",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT("lockedCount", 0),
                           ),
@@ -1340,7 +1340,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           NULL,  // changedRowCount
                           "storages",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT("state", INDEX_STATE_NONE),
                           ),
@@ -1773,7 +1773,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                     NULL,  // changedRowCount
                                     "storages",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY("entityId", entityDatabaseId),
                                     ),
@@ -1792,7 +1792,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                 NULL,  // changedRowCount
                                 "entities",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   STRING("jobUUID", uuid),
                                   UINT64("created", createdDateTime),
@@ -1850,7 +1850,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                       NULL,  // changedRowCount
                                       "storages",
                                       DATABASE_FLAG_NONE,
-                                      DATABASE_VALUES2
+                                      DATABASE_VALUES
                                       (
                                         DATABASE_VALUE_KEY("entityId", entityId),
                                       ),
@@ -2102,7 +2102,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                     NULL,  // changedRowCount
                                     "storages",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_UINT("entityId", entityDatabaseId),
                                     ),
@@ -2373,7 +2373,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                 FROM entriesNewest\
                                 WHERE name=? \
                                ",
-                               DATABASE_VALUES2
+                               DATABASE_VALUES
                                (
                                ),
                                DATABASE_FILTERS
@@ -2408,7 +2408,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_UINT("entryId",         entryId),
                                       DATABASE_VALUE_UINT("uuidId",          uuidId),
@@ -2433,7 +2433,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId",         entryId),
                                       DATABASE_VALUE_KEY   ("uuidId",          uuidId),
@@ -2506,7 +2506,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "entriesNewest",
                                   DATABASE_FLAG_IGNORE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId")
                                     DATABASE_VALUE_KEY   ("uuidId")
@@ -2748,7 +2748,7 @@ LOCAL void indexThreadCode(void)
                                             AND deletedFlag=1 \
                                       LIMIT 0,1 \
                                      ",
-                                     DATABASE_VALUES2
+                                     DATABASE_VALUES
                                      (
                                      ),
                                      DATABASE_FILTERS
@@ -3722,7 +3722,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                 FROM entities \
                                 WHERE deletedFlag!=1 \
                                ",
-                               DATABASE_VALUES2
+                               DATABASE_VALUES
                                (
                                ),
                                DATABASE_FILTERS
@@ -3754,7 +3754,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                 FROM entities \
                                 WHERE deletedFlag=1 \
                                ",
-                               DATABASE_VALUES2
+                               DATABASE_VALUES
                                (
                                ),
                                DATABASE_FILTERS
@@ -3785,7 +3785,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                "SELECT COUNT(id) \
                                 FROM skippedEntries \
                                ",
-                               DATABASE_VALUES2
+                               DATABASE_VALUES
                                (
                                ),
                                DATABASE_FILTERS
@@ -3852,7 +3852,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                 FROM storages \
                                 WHERE deletedFlag!=1 \
                                ",
-                               DATABASE_VALUES2
+                               DATABASE_VALUES
                                (
                                ),
                                DATABASE_FILTERS
@@ -3934,7 +3934,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                 FROM storages \
                                 WHERE deletedFlag=1 \
                                ",
-                               DATABASE_VALUES2
+                               DATABASE_VALUES
                                (
                                ),
                                DATABASE_FILTERS

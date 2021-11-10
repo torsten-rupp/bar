@@ -1898,7 +1898,7 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                                 AND scheduleUUID=? \
                           LIMIT 0,1 \
                          ",
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                          ),
                          DATABASE_FILTERS
@@ -1995,7 +1995,7 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                                   AND jobUUID=? \
                                   AND scheduleUUID=? \
                            ",
-                           DATABASE_VALUES2
+                           DATABASE_VALUES
                            (
                            ),
                            DATABASE_FILTERS
@@ -2058,7 +2058,7 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                           WHERE     jobUUID=? \
                                 AND scheduleUUID=? \
                          ",
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                          ),
                          DATABASE_FILTERS

@@ -3730,7 +3730,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                          NULL,  // changedRowCount
                                                          "entities",
                                                          DATABASE_FLAG_NONE,
-                                                         DATABASE_VALUES2
+                                                         DATABASE_VALUES
                                                          (
                                                            DATABASE_VALUE?UINT64("totalFileCount",      totalFileCount),
                                                            DATABASE_VALUE?UINT64("totalImageCount",     totalImageCount),
@@ -3761,7 +3761,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                        NULL,  // changedRowCount
                                                        "entities",
                                                        DATABASE_FLAG_NONE,
-                                                       DATABASE_VALUES2
+                                                       DATABASE_VALUES
                                                        (
                                                          UINT64("totalEntryCount",  totalFileCount
                                                                                    +totalImageCount
@@ -3873,7 +3873,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                        NULL,  // changedRowCount
                                                        "entities",
                                                        DATABASE_FLAG_NONE,
-                                                       DATABASE_VALUES2
+                                                       DATABASE_VALUES
                                                        (
                                                          UINT64("totalEntryCountNewest",  totalFileCount
                                                                                          +totalImageCount
@@ -3962,7 +3962,7 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                                                      NULL,  // changedRowCount
                                                      "entities",
                                                      DATABASE_FLAG_NONE,
-                                                     DATABASE_VALUES2
+                                                     DATABASE_VALUES
                                                      (
                                                        DATABASE_VALUE_INT64("totalFileCount",      totalFileCount),
                                                        DATABASE_VALUE_INT64("totalImageCount",     totalImageCount),
@@ -3993,7 +3993,7 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                                                    NULL,  // changedRowCount
                                                    "entities",
                                                    DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES2
+                                                   DATABASE_VALUES
                                                    (
                                                      DATABASE_VALUE_UINT64("totalEntryCount", totalFileCount
                                                                                              +totalImageCount
@@ -4105,7 +4105,7 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                                                    NULL,  // changedRowCount
                                                    "entities",
                                                    DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES2
+                                                   DATABASE_VALUES
                                                    (
                                                      DATABASE_VALUE_UINT64("totalEntryCountNewest", totalFileCount
                                                                                                    +totalImageCount

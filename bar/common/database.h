@@ -666,7 +666,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_COLUMN_CSTRING(name) { name, DATABASE_DATATYPE_CSTRING }
 
 // value macros
-#define DATABASE_VALUES2(...) \
+#define DATABASE_VALUES(...) \
   (DatabaseValue[]){__VA_ARGS__}, \
   ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/4)
 
@@ -773,7 +773,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
     ) \
   }
 
-#define DATABASE_VALUES2_NONE (DatabaseValue*)NULL,0
+#define DATABASE_VALUES_NONE (DatabaseValue*)NULL,0
 
 // filter macros
 #define DATABASE_FILTERS(...) \

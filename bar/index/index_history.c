@@ -250,7 +250,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "history",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_STRING ("jobUUID",           jobUUID),
                                 DATABASE_VALUE_STRING ("scheduleUUID",      scheduleUUID),

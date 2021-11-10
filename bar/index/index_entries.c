@@ -131,7 +131,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "entriesNewest",
                                   DATABASE_FLAG_IGNORE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("uuidId")
                                     DATABASE_VALUE_KEY   ("entityId")
@@ -520,7 +520,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     DATABASE_COLUMN_TYPES(),
                                     "entriesNewest",
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId",         entryId),
                                       DATABASE_VALUE_KEY   ("uuidId",          uuidId),
@@ -545,7 +545,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       KEY   ("entryId",         entryId),
                                       KEY   ("uuidId",          uuidId),
@@ -618,7 +618,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "entriesNewest",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               KEY   ("entryId",         entryId),
                               KEY   ("uuidId",          uuidId),
@@ -637,7 +637,7 @@ fprintf(stderr,"%s:%d: -----------------------\n",__FILE__,__LINE__);
                                   NULL,  // changedRowCount
                                   "entriesNewest",
                                   DATABASE_FLAG_IGNORE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId")
                                     DATABASE_VALUE_KEY   ("uuidId")
@@ -679,7 +679,7 @@ fprintf(stderr,"%s:%d: -----------------------\n",__FILE__,__LINE__);
                                   NULL,  // changedRowCount
                                   "entriesNewest",
                                   DATABASE_FLAG_IGNORE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId")
                                     DATABASE_VALUE_KEY   ("uuidId")
@@ -782,7 +782,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "directoryEntries",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE       ("totalEntryCount", "totalEntryCount+1"),
                               DATABASE_VALUE_UINT64("totalEntrySize",  "totalEntrySize+?", size)
@@ -808,7 +808,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "directoryEntries",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE       ("totalEntryCountNewest", "totalEntryCountNewest+1"),
                                 DATABASE_VALUE_UINT64("totalEntrySizeNewest",  "totalEntrySizeNewest+?", size),
@@ -2481,7 +2481,7 @@ fprintf(stderr,"%s:%d: 1\n",__FILE__,__LINE__);
                                              String_cString(filterString),
                                              String_cString(orderString)
                                             ),
-                                 DATABASE_VALUES2
+                                 DATABASE_VALUES
                                  (
                                  ),
                                  DATABASE_FILTERS
@@ -2686,7 +2686,7 @@ fprintf(stderr,"%s:%d: 3\n",__FILE__,__LINE__);
                                              String_cString(filterString),
                                              String_cString(orderString)
                                             ),
-                                 DATABASE_VALUES2
+                                 DATABASE_VALUES
                                  (
                                  ),
                                  DATABASE_FILTERS
@@ -2783,7 +2783,7 @@ fprintf(stderr,"%s:%d: 4\n",__FILE__,__LINE__);
                                              String_cString(filterString),
                                              String_cString(orderString)
                                             ),
-                                 DATABASE_VALUES2
+                                 DATABASE_VALUES
                                  (
                                  ),
                                  DATABASE_FILTERS
@@ -4210,7 +4210,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "entries",
                                   DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
                                     DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_FILE),
@@ -4244,7 +4244,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                           NULL,  // changedRowCount
                                           "FTS_entries",
                                           DATABASE_FLAG_NONE,
-                                          DATABASE_VALUES2
+                                          DATABASE_VALUES
                                           (
                                             DATABASE_VALUE_KEY   ("entryId", entryId),
                                             DATABASE_VALUE_STRING("name",    name)
@@ -4263,7 +4263,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "fileEntries",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId", entryId),
                                       DATABASE_VALUE_UINT64("size",    size)
@@ -4282,7 +4282,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "entryFragments",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
@@ -4403,7 +4403,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   NULL,  // changedRowCount
                                   "entries",
                                   DATABASE_FLAG_IGNORE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
                                     DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_IMAGE),
@@ -4435,7 +4435,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                         NULL,  // changedRowCount
                                         "FTS_entries",
                                         DATABASE_FLAG_NONE,
-                                        DATABASE_VALUES2
+                                        DATABASE_VALUES
                                         (
                                           DATABASE_VALUE_KEY   ("entryId", entryId),
                                           DATABASE_VALUE_STRING("name",    name)
@@ -4454,7 +4454,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     NULL,  // changedRowCount
                                     "imageEntries",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId",        entryId),
                                       DATABASE_VALUE_UINT  ("fileSystemType", fileSystemType),
@@ -4475,7 +4475,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                               NULL,  // changedRowCount
                               "entryFragments",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
@@ -4555,7 +4555,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "entries",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
                                 DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_DIRECTORY),
@@ -4588,7 +4588,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "FTS_entries",
                                   DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId", entryId),
                                     DATABASE_VALUE_STRING("name",    name)
@@ -4608,7 +4608,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "directoryEntries",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
@@ -4707,7 +4707,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "entries",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
                                 DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_LINK),
@@ -4740,7 +4740,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "FTS_entries",
                                   DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId", entryId),
                                     DATABASE_VALUE_STRING("name",    linkName)
@@ -4760,7 +4760,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "linkEntries",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",         entryId),
                                 DATABASE_VALUE_KEY   ("storageId",       Index_getDatabaseId(storageId)),
@@ -4872,7 +4872,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "entries",
                                   DATABASE_FLAG_IGNORE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
                                     DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_HARDLINK),
@@ -4906,7 +4906,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                           NULL,  // changedRowCount
                                           "FTS_entries",
                                           DATABASE_FLAG_NONE,
-                                          DATABASE_VALUES2
+                                          DATABASE_VALUES
                                           (
                                             DATABASE_VALUE_KEY   ("entryId", entryId),
                                             DATABASE_VALUE_STRING("name",    name)
@@ -4925,7 +4925,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "hardlinkEntries",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId", entryId),
                                       DATABASE_VALUE_UINT64("size",    size)
@@ -4944,7 +4944,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "entryFragments",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
@@ -5048,7 +5048,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               NULL,  // changedRowCount
                               "entries",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
                                 DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_SPECIAL),
@@ -5080,7 +5080,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                   NULL,  // changedRowCount
                                   "FTS_entries",
                                   DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId", entryId),
                                     DATABASE_VALUE_STRING("name",    name)
@@ -5100,7 +5100,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               NULL,  // changedRowCount
                               "specialEntries",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("entryId",     entryId),
                                 DATABASE_VALUE_KEY   ("storageId",   Index_getDatabaseId(storageId)),
@@ -5244,7 +5244,7 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE_KEY   ("entityId", Index_getDatabaseId(entityId)),
                               DATABASE_VALUE_UINT  ("type",     indexType),

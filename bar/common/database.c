@@ -6704,7 +6704,7 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
                                                 "PRAGMA table_info(%s)",
                                                 tableName
                                                ),
-                                   DATABASE_VALUES2
+                                   DATABASE_VALUES
                                    (
                                    ),
                                    DATABASE_FILTERS
@@ -11980,7 +11980,7 @@ Errors Database_setInt(DatabaseHandle       *databaseHandle,
                          NULL,  // changedRowCount
                          tableName,
                          flags,
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                            DATABASE_VALUE_INT(columnName, value)
                          ),
@@ -12058,7 +12058,7 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
                          NULL,  // changedRowCount
                          tableName,
                          flags,
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                            DATABASE_VALUE_UINT(columnName, value)
                          ),
@@ -12136,7 +12136,7 @@ Errors Database_setInt64(DatabaseHandle       *databaseHandle,
                          NULL,  // changedRowCount
                          tableName,
                          flags,
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                            DATABASE_VALUE_INT64(columnName, value)
                          ),
@@ -12214,7 +12214,7 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
                          NULL,  // changedRowCount
                          tableName,
                          flags,
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                            DATABASE_VALUE_UINT64(columnName, value)
                          ),
@@ -12292,7 +12292,7 @@ Errors Database_setDouble(DatabaseHandle       *databaseHandle,
                          NULL,  // changedRowCount
                          tableName,
                          flags,
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                            DATABASE_VALUE_DOUBLE(columnName, value)
                          ),
@@ -12417,7 +12417,7 @@ Errors Database_setString(DatabaseHandle       *databaseHandle,
                          NULL,  // changedRowCount
                          tableName,
                          flags,
-                         DATABASE_VALUES2
+                         DATABASE_VALUES
                          (
                            DATABASE_VALUE_STRING(columnName, value)
                          ),

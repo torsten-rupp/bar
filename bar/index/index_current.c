@@ -90,7 +90,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                                 NULL,  // changedRowCount
                                                 "fileEntries",
                                                 DATABASE_FLAG_NONE,
-                                                DATABASE_VALUES2
+                                                DATABASE_VALUES
                                                 (
                                                   DATABASE_VALUE_KEY   ("entryId", toEntryId),
                                                   DATABASE_VALUE_UINT64("size",    size)
@@ -134,7 +134,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                                                        NULL,  // changedRowCount
                                                                        "entryFragments",
                                                                        DATABASE_FLAG_NONE,
-                                                                       DATABASE_VALUES2
+                                                                       DATABASE_VALUES
                                                                        (
                                                                          DATABASE_VALUE_KEY   ("entryId",  toEntryId),
                                                                          DATABASE_VALUE_KEY   ("storageId",toStorageId),
@@ -246,7 +246,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                                 NULL,  // changedRowCount
                                                 "imageEntries",
                                                 DATABASE_FLAG_NONE,
-                                                DATABASE_VALUES2
+                                                DATABASE_VALUES
                                                 (
                                                   DATABASE_VALUE_KEY   ("entryId", toEntryId),
                                                   DATABASE_VALUE_UINT64("size",    size)
@@ -290,7 +290,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                                                        NULL,  // changedRowCount
                                                                        "entryFragments",
                                                                        DATABASE_FLAG_NONE,
-                                                                       DATABASE_VALUES2
+                                                                       DATABASE_VALUES
                                                                        (
                                                                          DATABASE_VALUE_KEY   ("entryId",  toEntryId),
                                                                          DATABASE_VALUE_KEY   ("storageId",toStorageId),
@@ -402,7 +402,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                                 NULL,  // changedRowCount
                                                 "hardlinkEntries",
                                                 DATABASE_FLAG_NONE,
-                                                DATABASE_VALUES2
+                                                DATABASE_VALUES
                                                 (
                                                   DATABASE_VALUE_KEY   ("entryId", toEntryId),
                                                   DATABASE_VALUE_UINT64("size",    size)
@@ -446,7 +446,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                                                        NULL,  // changedRowCount
                                                                        "entryFragments",
                                                                        DATABASE_FLAG_NONE,
-                                                                       DATABASE_VALUES2
+                                                                       DATABASE_VALUES
                                                                        (
                                                                          DATABASE_VALUE_KEY   ("entryId",  toEntryId),
                                                                          DATABASE_VALUE_KEY   ("storageId",toStorageId),

@@ -104,7 +104,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           NULL,  // changedRowCount
                           "entities",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT("lockedCount", 0),
                           ),
@@ -119,7 +119,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           NULL,  // changedRowCount
                           "storages",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT("state", INDEX_STATE_NONE),
                           ),
@@ -446,7 +446,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                     NULL,  // changedRowCount
                                     "storages",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY("entityId", entityDatabaseId),
                                     ),
@@ -465,7 +465,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                 NULL,  // changedRowCount
                                 "entities",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   STRING("jobUUID", uuid),
                                   UINT64("created", createdDateTime),
@@ -523,7 +523,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                       NULL,  // changedRowCount
                                       "storages",
                                       DATABASE_FLAG_NONE,
-                                      DATABASE_VALUES2
+                                      DATABASE_VALUES
                                       (
                                         DATABASE_VALUE_KEY("entityId", entityId),
                                       ),
@@ -775,7 +775,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                     NULL,  // changedRowCount
                                     "storages",
                                     DATABASE_COLUMN_TYPES(),
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY("entityId", entityDatabaseId),
                                     ),
@@ -1169,7 +1169,7 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
                                  NULL,  // changedRowCount
                                  "entriesNewest",
                                  DATABASE_FLAG_REPLACE,
-                                 DATABASE_VALUES2
+                                 DATABASE_VALUES
                                  (
                                    DATABASE_VALUE_KEY   ("entryId",         entryNode->entryId),
                                    DATABASE_VALUE_KEY   ("uuidId",          entryNode->uuidId),
@@ -1612,7 +1612,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                                   NULL,  // changedRowCount
                                   "entriesNewest",
                                   DATABASE_FLAG_REPLACE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_STRING("entryId",        entryNode->newest.entryId),
                                     DATABASE_VALUE_KEY   ("uuidId",         entryNode->newest.uuidId),
@@ -2289,7 +2289,7 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
                              NULL,  // changedRowCount
                              "storages",
                              DATABASE_FLAG_NONE,
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                                DATABASE_VALUE_UINT("totalEntryCount",           0),
                                DATABASE_VALUE_UINT("totalEntrySize",            0),
@@ -3454,7 +3454,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                           NULL,  // changedRowCount
                           "storages",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT  ("totalEntryCount",     totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount),
                             DATABASE_VALUE_UINT64("totalEntrySize",      totalFileSize+totalImageSize+totalHardlinkSize),
@@ -3492,7 +3492,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                             WHERE     entryFragments.storageId=? \
                                   AND entriesNewest.type=? \
                            ",
-                           DATABASE_VALUES2
+                           DATABASE_VALUES
                            (
                            ),
                            DATABASE_FILTERS
@@ -3530,7 +3530,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                             WHERE     entryFragments.storageId=? \
                                   AND entriesNewest.type=? \
                            ",
-                           DATABASE_VALUES2
+                           DATABASE_VALUES
                            (
                            ),
                            DATABASE_FILTERS
@@ -3566,7 +3566,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
                             WHERE directoryEntries.storageId=? \
                            ",
-                           DATABASE_VALUES2
+                           DATABASE_VALUES
                            (
                            ),
                            DATABASE_FILTERS
@@ -3597,7 +3597,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
                             WHERE linkEntries.storageId=? \
                            ",
-                           DATABASE_VALUES2
+                           DATABASE_VALUES
                            (
                            ),
                            DATABASE_FILTERS
@@ -3631,7 +3631,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                             WHERE     entryFragments.storageId=? \
                                   AND entriesNewest.type=? \
                            ",
-                           DATABASE_VALUES2
+                           DATABASE_VALUES
                            (
                            ),
                            DATABASE_FILTERS
@@ -3667,7 +3667,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
                             WHERE specialEntries.storageId=? \
                            ",
-                           DATABASE_VALUES2
+                           DATABASE_VALUES
                            (
                            ),
                            DATABASE_FILTERS
@@ -3695,7 +3695,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                           NULL,  // changedRowCount
                           "storages",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT64("totalEntryCountNewest",      totalFileCount
                                                                                +totalImageCount
@@ -3813,7 +3813,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                               GROUP BY storages.id \
                               LIMIT 0,1 \
                              ",
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                              ),
                              DATABASE_FILTERS
@@ -3922,7 +3922,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                               WHERE storages.deletedFlag!=1 \
                               GROUP BY storages.id \
                              ",
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                              ),
                              DATABASE_FILTERS
@@ -4047,7 +4047,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                                     AND (storages.state IN (?)) \
                               LIMIT 0,1 \
                              ",
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                              ),
                              DATABASE_FILTERS
@@ -4174,7 +4174,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "storages",
                                   DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_UINT   ("state",        indexState),
                                     DATABASE_VALUE_CSTRING("errorMessage", "")
@@ -4196,7 +4196,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "storages",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_UINT64("lastChecked", lastCheckedDateTime)
                                     ),
@@ -4217,7 +4217,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "storages",
                                   DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_UINT   ("state",        indexState),
                                     DATABASE_VALUE_CSTRING("errorMessage", "")
@@ -4239,7 +4239,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "storages",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_UINT64("lastChecked", lastCheckedDateTime)
                                     ),
@@ -4316,7 +4316,7 @@ long Index_countStorageState(IndexHandle *indexHandle,
                               FROM storages \
                               WHERE state=? \
                              ",
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                              ),
                              DATABASE_FILTERS
@@ -4955,7 +4955,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "storages",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("uuidId",      Index_getDatabaseId(uuidId)),
                                 DATABASE_VALUE_KEY   ("entityId",    Index_getDatabaseId(entityId)),
@@ -4984,7 +4984,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                    NULL,  // changedRowCount
                                    "FTS_storages",
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_VALUES2
+                                   DATABASE_VALUES
                                    (
                                      DATABASE_VALUE_KEY   ("storageId", databaseId),
                                      DATABASE_VALUE_STRING("name",      storageName)
@@ -5103,7 +5103,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                 NULL,  // changedRowCount
                                 "storages",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   DATABASE_VALUE_STRING("hostName", hostName),
                                 ),
@@ -5125,7 +5125,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                 NULL,  // changedRowCount
                                 "storages",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   DATABASE_VALUE_STRING("userName", userName),
                                 ),
@@ -5147,7 +5147,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                 NULL,  // changedRowCount
                                 "storages",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   DATABASE_VALUE_STRING("name", storageName),
                                 ),
@@ -5169,7 +5169,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                     NULL,  // changedRowCount
                                     "FTS_storages",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_STRING("name", storageName),
                                     ),
@@ -5195,7 +5195,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                 NULL,  // changedRowCount
                                 "storages",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   DATABASE_VALUE_DATETIME("created", dateTime),
                                 ),
@@ -5215,7 +5215,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "storages",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_UINT64("size", size),
                               ),
@@ -5236,7 +5236,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                 NULL,  // changedRowCount
                                 "storages",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   DATABASE_VALUE_STRING("comment", comment),
                                 ),
@@ -5356,7 +5356,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                 WHERE     deletedFlag!=1 \
                                       AND id=? \
                                ",
-                               DATABASE_VALUES2
+                               DATABASE_VALUES
                                (
                                ),
                                DATABASE_FILTERS
@@ -5403,7 +5403,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "storages",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_BOOL("deletedFlag", TRUE),
                               ),
@@ -5463,7 +5463,7 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_UINT  ("totalEntryCount",      "totalEntryCount-?",     totalEntryCount),
                                 DATABASE_VALUE_UINT64("totalEntrySize",       "totalEntrySize-?",      totalEntrySize),
@@ -5681,7 +5681,7 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE id=? \
                              ",
-                             DATABASE_VALUES2
+                             DATABASE_VALUES
                              (
                              ),
                              DATABASE_FILTERS

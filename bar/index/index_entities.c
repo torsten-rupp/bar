@@ -178,7 +178,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                     NULL,  // changedRowCount
                                     "storages",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY("entityId", entityDatabaseId),
                                     ),
@@ -197,7 +197,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                 NULL,  // changedRowCount
                                 "entities",
                                 DATABASE_FLAG_NONE,
-                                DATABASE_VALUES2
+                                DATABASE_VALUES
                                 (
                                   DATABASE_VALUE_STRING("jobUUID", uuid),
                                   DATABASE_VALUE_UINT64("created", createdDateTime),
@@ -255,7 +255,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                       NULL,  // changedRowCount
                                       "storages",
                                       DATABASE_FLAG_NONE,
-                                      DATABASE_VALUES2
+                                      DATABASE_VALUES
                                       (
                                         DATABASE_VALUE_UINT("entityId", entityId),
                                       ),
@@ -606,7 +606,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId",         entryId),
                                       DATABASE_VALUE_KEY   ("uuidId",          uuidId),
@@ -631,7 +631,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                     NULL,  // changedRowCount
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES2
+                                    DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId",         entryId),
                                       DATABASE_VALUE_KEY   ("uuidId",          uuidId),
@@ -703,7 +703,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                                   NULL,  // changedRowCount
                                   "entriesNewest",
                                   DATABASE_FLAG_IGNORE,
-                                  DATABASE_VALUES2
+                                  DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId")
                                     DATABASE_VALUE_KEY   ("uuidId")
@@ -781,7 +781,7 @@ LOCAL Errors assignEntityStoragesToEntity(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "storages",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE_KEY("uuidId",   toUUIDId),
                               DATABASE_VALUE_KEY("entityId", toEntityId)
@@ -825,7 +825,7 @@ LOCAL Errors assignEntityEntriesToEntity(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "entries",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE_KEY("uuidId",   toUUIDId),
                               DATABASE_VALUE_KEY("entityId", toEntityId)
@@ -843,7 +843,7 @@ LOCAL Errors assignEntityEntriesToEntity(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "entriesNewest",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE_KEY("uuidId",   toUUIDId),
                               DATABASE_VALUE_KEY("entityId", toEntityId)
@@ -963,7 +963,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "storages",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE_KEY("uuidId",   toUUIDId),
                               DATABASE_VALUE_KEY("entityId", toEntityId)
@@ -983,7 +983,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "entries",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE_KEY("uuidId",   toUUIDId),
                               DATABASE_VALUE_KEY("entityId", toEntityId)
@@ -1128,7 +1128,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_UINT("type", toArchiveType),
                               ),
@@ -1237,7 +1237,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("uuidId",  toUUIDId),
                                 DATABASE_VALUE_STRING("jobUUID", toJobUUID)
@@ -1270,7 +1270,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_UINT("type", toArchiveType)
                               ),
@@ -1776,7 +1776,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                           NULL,  // changedRowCount
                           "entities",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT  ("totalEntryCount",     totalFileCount+
                                                                          totalImageCount+
@@ -2076,7 +2076,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                           NULL,  // changedRowCount
                           "entities",
                           DATABASE_FLAG_NONE,
-                          DATABASE_VALUES2
+                          DATABASE_VALUES
                           (
                             DATABASE_VALUE_UINT  ("totalEntryCountNewest",      totalFileCount
                                                                                +totalImageCount
@@ -2512,7 +2512,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "uuids",
                               DATABASE_FLAG_IGNORE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_STRING("jobUUID", jobUUID)
                               )
@@ -2544,7 +2544,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY   ("uuidId",       uuidId),
                                 DATABASE_VALUE_STRING("jobUUID",      jobUUID),
@@ -2634,7 +2634,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_STRING("jobUUID",      jobUUID),
                                 DATABASE_VALUE_STRING("scheduleUUID", scheduleUUID),
@@ -2702,7 +2702,7 @@ Errors Index_lockEntity(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "entities",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE("lockedCount", "lockedCount+1"),
                             ),
@@ -2745,7 +2745,7 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
                             NULL,  // changedRowCount
                             "entities",
                             DATABASE_FLAG_NONE,
-                            DATABASE_VALUES2
+                            DATABASE_VALUES
                             (
                               DATABASE_VALUE("lockedCount", "lockedCount-1"),
                             ),
@@ -2859,7 +2859,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
-                              DATABASE_VALUES2
+                              DATABASE_VALUES
                               (
                                 DATABASE_VALUE_BOOL("deletedFlag", TRUE),
                               ),
