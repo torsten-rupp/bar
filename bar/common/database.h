@@ -2111,6 +2111,13 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
                           const char     *additional,
                           ...
                          );
+bool Database_existsValue2(DatabaseHandle      *databaseHandle,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        );
 
 /***********************************************************************\
 * Name   : Database_get

@@ -11775,6 +11775,49 @@ bool Database_existsValue(DatabaseHandle *databaseHandle,
 
   return existsFlag;
 }
+bool Database_existsValue2(DatabaseHandle      *databaseHandle,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        )
+{
+  bool existsFlag;
+
+  existsFlag = FALSE;
+
+  return    (Database_get(databaseHandle,
+                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                          {
+                            assert(values != NULL);
+                            assert(valueCount == 1);
+
+                            UNUSED_VARIABLE(userData);
+                            UNUSED_VARIABLE(valueCount);
+
+                            existsFlag = TRUE;
+
+                            return ERROR_NONE;
+                          },NULL),
+                          NULL,  // changedRowCount
+                          DATABASE_TABLES
+                          (
+                            tableName
+                          ),
+                          DATABASE_COLUMNS
+                          (
+                            DATABASE_COLUMN_KEY   (columnName)
+                          ),
+                          filter,
+                          filterValues,
+                          filterValueCount,
+                          NULL,  // orderGroup
+                          0LL,
+                          1LL
+                         ) == ERROR_NONE)
+         && existsFlag;
+}
 
 Errors Database_get(DatabaseHandle       *databaseHandle,
                     DatabaseRowFunction  databaseRowFunction,
