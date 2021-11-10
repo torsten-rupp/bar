@@ -1299,13 +1299,17 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
   if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
   {
     // get locked count
-    error = Database_getInteger64(&indexHandle->databaseHandle,
-                                  &lockedCount,
-                                  "entities",
-                                  "lockedCount",
-                                  "WHERE id=%lld",
-                                  entityId
-                                 );
+    error = Database_getInt64(&indexHandle->databaseHandle,
+                              &lockedCount,
+                              "entities",
+                              "lockedCount",
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entityId)
+                              ),
+                              NULL  // group
+                             );
     if (error != ERROR_NONE)
     {
       String_delete(string);

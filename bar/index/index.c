@@ -887,12 +887,16 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   }
 
   // get index version
-  error = Database_getInteger64(&oldIndexHandle.databaseHandle,
-                                &indexVersion,
-                                "meta",
-                                "value",
-                                "WHERE name='version'"
-                               );
+  error = Database_getInt64(&oldIndexHandle.databaseHandle,
+                            &indexVersion,
+                            "meta",
+                            "value",
+                            "name='version'",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            NULL  // group
+                           );
   if (error != ERROR_NONE)
   {
     (void)closeIndex(&oldIndexHandle);

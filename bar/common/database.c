@@ -12510,7 +12510,8 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                          const char           *columnName,
                          const char           *filter,
                          const DatabaseFilter filterValues[],
-                         uint                 filterValueCount
+                         uint                 filterValueCount,
+                         const char           *group
                         )
 {
   assert(databaseHandle != NULL);
@@ -12545,105 +12546,10 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // orderGroup
+                      group,
                       0LL,
                       1LL
                      );
-}
-Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             int64          *value,
-                             const char     *tableName,
-                             const char     *columnName,
-                             const char     *additional,
-                             ...
-                            )
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(value != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  va_start(arguments,additional);
-  error = Database_vgetInteger64(databaseHandle,value,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
-}
-Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
-                              int64          *value,
-                              const char     *tableName,
-                              const char     *columnName,
-                              const char     *additional,
-                              va_list        arguments
-                             )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(value != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  // format SQL command string
-  sqlString = formatSQLString(String_new(),
-                              "SELECT %s \
-                               FROM %s \
-                              ",
-                              columnName,
-                              tableName
-                             );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-  String_appendCString(sqlString," LIMIT 0,1");
-
-  // execute SQL command
-  (*value) = 0LL;
-  DATABASE_DEBUG_SQLX(databaseHandle,"get integer",sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    return executeStatement(databaseHandle,
-                            CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                            {
-                              assert(values != NULL);
-                              assert(valueCount == 1);
-
-                              UNUSED_VARIABLE(valueCount);
-                              UNUSED_VARIABLE(userData);
-
-                              (*value) = values[0].i64;
-
-                              return ERROR_NONE;
-                            },NULL),
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout,
-                            DATABASE_COLUMN_TYPES(INT64),
-                            "%s",
-                            String_cString(sqlString)
-                           );
-  });
-
-  // free resources
-  String_delete(sqlString);
-
-  return error;
 }
 
 Errors Database_setInt64(DatabaseHandle       *databaseHandle,

@@ -2223,39 +2223,26 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
 /***********************************************************************\
 * Name   : Database_getInt64
 * Purpose: get int64 value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle    - database handle
+*          tableName         - table name
+*          columnName        - column name
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          group             - group SQL string or NULL
 * Output : value - int64 value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-// TODO: replace by Database_getInt64
-Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             int64          *value,
-                             const char     *tableName,
-                             const char     *columnName,
-                             const char     *additional,
-                             ...
-                            ) ATTRIBUTE_DEPRECATED;
-Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
-                              int64          *value,
-                              const char     *tableName,
-                              const char     *columnName,
-                              const char     *additional,
-                              va_list        arguments
-                             ) ATTRIBUTE_DEPRECATED;
 Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                          int64                *value,
                          const char           *tableName,
                          const char           *columnName,
                          const char           *filter,
                          const DatabaseFilter filterValues[],
-                         uint                 filterValueCount
+                         uint                 filterValueCount,
+                         const char           *group
                         );
 
 /***********************************************************************\

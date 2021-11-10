@@ -543,12 +543,16 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   maxSteps += 6;
 
   // get max. steps (entities+storages+entries)
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &uuidCount,
-                                "uuids",
-                                "COUNT(id)",
-                                "WHERE id!=0"
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &uuidCount,
+                            "uuids",
+                            "COUNT(id)",
+                            "WHERE id!=0",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += uuidCount*(ulong)uuidCountFactor;
@@ -557,12 +561,16 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     uuidCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &entityCount,
-                                "entities",
-                                "COUNT(id)",
-                                "WHERE id!=0"
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &entityCount,
+                            "entities",
+                            "COUNT(id)",
+                            "WHERE id!=0",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += entityCount*(ulong)entityCountFactor;
@@ -571,12 +579,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     entityCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &storageCount,
-                                "storages",
-                                "COUNT(id)",
-                                ""
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &storageCount,
+                            "storages",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += storageCount*(ulong)storageCountFactor;
@@ -585,12 +594,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     storageCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &entriesCount,
-                                "entries",
-                                "COUNT(id)",
-                                ""
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &entriesCount,
+                            "entries",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += entriesCount;
@@ -599,12 +609,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     entriesCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &fileEntryCount,
-                                "fileEntries",
-                                "COUNT(id)",
-                                "GROUP BY entryId"
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &fileEntryCount,
+                            "fileEntries",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            "GROUP BY entryId"
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += fileEntryCount;
@@ -613,12 +624,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     fileEntryCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &imageEntryCount,
-                                "imageEntries",
-                                "COUNT(id)",
-                                "GROUP BY entryId"
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &imageEntryCount,
+                            "imageEntries",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            "GROUP BY entryId"
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += imageEntryCount;
@@ -627,12 +639,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     imageEntryCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &directoryEntryCount,
-                                "directoryEntries",
-                                "COUNT(id)",
-                                ""
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &directoryEntryCount,
+                            "directoryEntries",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += directoryEntryCount;
@@ -641,13 +654,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     directoryEntryCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &linkEntryCount,
-                                "linkEntries",
-                                "COUNT(id)",
-                                "GROUP BY entryId"
-                                ""
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &linkEntryCount,
+                            "linkEntries",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            "GROUP BY entryId"
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += linkEntryCount;
@@ -656,12 +669,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     linkEntryCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &hardlinkEntryCount,
-                                "hardlinkEntries",
-                                "COUNT(id)",
-                                ""
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &hardlinkEntryCount,
+                            "hardlinkEntries",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += hardlinkEntryCount;
@@ -670,13 +684,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     hardlinkEntryCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &specialEntryCount,
-                                "specialEntries",
-                                "COUNT(id)",
-                                "GROUP BY entryId"
-                                ""
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &specialEntryCount,
+                            "specialEntries",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            "GROUP BY entryId"
+                           );
   if (error == ERROR_NONE)
   {
     maxSteps += specialEntryCount;
@@ -685,12 +699,13 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     specialEntryCount = 0LL;
   }
-  error = Database_getInteger64(oldDatabaseHandle,
-                                &entryFragmentsCount,
-                                "entryFragments",
-                                "COUNT(id)",
-                                ""
-                               );
+  error = Database_getInt64(oldDatabaseHandle,
+                            &entryFragmentsCount,
+                            "entryFragments",
+                            "COUNT(id)",
+                            DATABASE_FILTERS_NONE,
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     // nothing to do

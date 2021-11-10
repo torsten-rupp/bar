@@ -393,7 +393,7 @@ LOCAL void printNotifies(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getContinuousVersion(int64 *continuousVersion, const DatabaseSpecifier *databaseSpecifier)
+LOCAL Errors getContinuousVersion(uint *continuousVersion, const DatabaseSpecifier *databaseSpecifier)
 {
   Errors         error;
   DatabaseHandle databaseHandle;
@@ -406,12 +406,15 @@ LOCAL Errors getContinuousVersion(int64 *continuousVersion, const DatabaseSpecif
   }
 
   // get database version
-  error = Database_getInteger64(&databaseHandle,
-                                continuousVersion,
-                                "meta",
-                                "value",
-                                "WHERE name='version'"
-                               );
+  error = Database_getUInt(&databaseHandle,
+                           continuousVersion,
+                           "meta",
+                           "value",
+                           "name='version'",
+                           DATABASE_FILTERS
+                           (
+                           )
+                          );
   if (error != ERROR_NONE)
   {
     (void)closeContinuous(&databaseHandle);
@@ -1651,7 +1654,7 @@ bool Continuous_isAvailable(void)
 Errors Continuous_init(const char *uriString)
 {
   Errors error;
-  int64  continuousVersion;
+  uint   continuousVersion;
 
   if (initFlag)
   {

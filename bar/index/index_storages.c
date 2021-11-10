@@ -5534,12 +5534,16 @@ bool Index_hasDeletedStorages(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      return Database_getInteger64(&indexHandle->databaseHandle,
-                                   &n,
-                                   "storages",
-                                   "COUNT(id)",
-                                   "WHERE deletedFlag=1"
-                                  );
+      return Database_getInt64(&indexHandle->databaseHandle,
+                               &n,
+                               "storages",
+                               "COUNT(id)",
+                               "deletedFlag=1",
+                               DATABASE_FILTERS
+                               (
+                               ),
+                               NULL  // group
+                              );
     });
     if (error != ERROR_NONE)
     {

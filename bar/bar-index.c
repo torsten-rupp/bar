@@ -1118,12 +1118,16 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // check entries without fragments
   printInfo("  file entries without fragments...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "fileEntries",
-                                "COUNT(id)",
-                                "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)"
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "fileEntries",
+                            "COUNT(id)",
+                            "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1135,12 +1139,16 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
   printInfo("  image entries without fragments...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "imageEntries",
-                                "COUNT(id)",
-                                "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)"
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "imageEntries",
+                            "COUNT(id)",
+                            "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1152,12 +1160,16 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (uint64)n;
   printInfo("  hardlink entries without fragments...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "hardlinkEntries",
-                                "COUNT(id)",
-                                "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)"
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "hardlinkEntries",
+                            "COUNT(id)",
+                            "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1171,13 +1183,17 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // check entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entries",
-                                "COUNT(id)",
-                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1)",
-                                INDEX_CONST_TYPE_FILE
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "entries",
+                            "COUNT(id)",
+                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_UINT(INDEX_CONST_TYPE_FILE)
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1189,13 +1205,17 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
   printInfo("  entries without image entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entries",
-                                "COUNT(id)",
-                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1)",
-                                INDEX_CONST_TYPE_IMAGE
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "entries",
+                            "COUNT(id)",
+                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_UINT(INDEX_CONST_TYPE_IMAGE)
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1207,13 +1227,17 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
   printInfo("  entries without directory entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entries",
-                                "COUNT(id)",
-                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1)",
-                                INDEX_CONST_TYPE_DIRECTORY
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "entries",
+                            "COUNT(id)",
+                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_UINT(INDEX_CONST_TYPE_DIRECTORY)
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1225,13 +1249,17 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
   printInfo("  entries without link entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entries",
-                                "COUNT(id)",
-                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1)",
-                                INDEX_CONST_TYPE_LINK
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "entries",
+                            "COUNT(id)",
+                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_UINT(INDEX_CONST_TYPE_LINK)
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1243,13 +1271,17 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
   printInfo("  entries without hardlink entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entries",
-                                "COUNT(id)",
-                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1)",
-                                INDEX_CONST_TYPE_HARDLINK
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "entries",
+                            "COUNT(id)",
+                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_UINT(INDEX_CONST_TYPE_HARDLINK)
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1261,13 +1293,17 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (ulong)n;
   printInfo("  entries without special entry...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entries",
-                                "COUNT(id)",
-                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1)",
-                                INDEX_CONST_TYPE_SPECIAL
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "entries",
+                            "COUNT(id)",
+                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_UINT(INDEX_CONST_TYPE_SPECIAL)
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1281,12 +1317,16 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // check storages without name
   printInfo("  storages without name...");
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "storages",
-                                "COUNT(id)",
-                                "WHERE name IS NULL OR name=''"
-                               );
+  error = Database_getInt64(databaseHandle,
+                            &n,
+                            "storages",
+                            "COUNT(id)",
+                            "WHERE name IS NULL OR name=''",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            NULL  // group
+                           );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1303,12 +1343,16 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
     case DATABASE_TYPE_SQLITE3:
       // check FTS entries without entry
       printInfo("  FTS entries without entry...");
-      error = Database_getInteger64(databaseHandle,
-                                    &n,
-                                    "FTS_entries",
-                                    "COUNT(entryId)",
-                                    "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)"
-                                   );
+      error = Database_getInt64(databaseHandle,
+                                &n,
+                                "FTS_entries",
+                                "COUNT(entryId)",
+                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
+                                DATABASE_FILTERS
+                                (
+                                ),
+                                NULL  // group
+                               );
       if (error == ERROR_NONE)
       {
         printInfo("%lld\n",n);
@@ -1322,12 +1366,16 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 
       // check FTS storages without storage
       printInfo("  FTS storages without storage...");
-      error = Database_getInteger64(databaseHandle,
-                                    &n,
-                                    "FTS_storages",
-                                    "COUNT(storageId)",
-                                    "WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)"
-                                   );
+      error = Database_getInt64(databaseHandle,
+                                &n,
+                                "FTS_storages",
+                                "COUNT(storageId)",
+                                "WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
+                                DATABASE_FILTERS
+                                (
+                                ),
+                                NULL  // group
+                               );
       if (error == ERROR_NONE)
       {
         printInfo("%lld\n",n);
@@ -1341,12 +1389,16 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 
       // check newest entries without entry
       printInfo("  newest entries without entry...");
-      error = Database_getInteger64(databaseHandle,
-                                    &n,
-                                    "entriesNewest",
-                                    "COUNT(id)",
-                                    "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)"
-                                   );
+      error = Database_getInt64(databaseHandle,
+                                &n,
+                                "entriesNewest",
+                                "COUNT(id)",
+                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
+                                DATABASE_FILTERS
+                                (
+                                ),
+                                NULL  // group
+                               );
       if (error == ERROR_NONE)
       {
         printInfo("%lld\n",n);
@@ -3881,16 +3933,16 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                            int64 totalImageSize;
                            int64 totalHardlinkSize;
 
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,     entityId);
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageCount,    "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,    entityId);
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalDirectoryCount,"entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_DIRECTORY,entityId);
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalLinkCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_LINK,     entityId);
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkCount, "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK, entityId);
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalSpecialCount,  "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_SPECIAL,  entityId);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalFileCount,     "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalImageCount,    "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalDirectoryCount,"entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_DIRECTORY),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalLinkCount,     "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_LINK     ),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalHardlinkCount, "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalSpecialCount,  "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),DATABASE_FILTER_KEY(entityId)),NULL);
 
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileSize,    "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,    entityId);
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageSize,   "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,   entityId);
-                           if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkSize,"entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK,entityId);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalFileSize,    "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalImageSize,   "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalHardlinkSize,"entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),DATABASE_FILTER_KEY(entityId)),NULL);
 
                            if (error == ERROR_NONE)
                            {
@@ -5756,12 +5808,16 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (verboseFlag)
   {
     // show number of entities
-    error = Database_getInteger64(databaseHandle,
-                                  &n,
-                                  "entities",
-                                  "COUNT(id)",
-                                  "WHERE id!=0 AND deletedFlag!=1"
-                                 );
+    error = Database_getInt64(databaseHandle,
+                              &n,
+                              "entities",
+                              "COUNT(id)",
+                              "id!=0 AND deletedFlag!=1",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              NULL  // group
+                             );
     if (error != ERROR_NONE)
     {
       printError("get entities data fail (error: %s)!",Error_getText(error));
@@ -5905,12 +5961,16 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (verboseFlag)
   {
     // show number of storages
-    error = Database_getInteger64(databaseHandle,
-                                  &n,
-                                  "storages",
-                                  "COUNT(id)",
-                                  "WHERE deletedFlag!=1"
-                                 );
+    error = Database_getInt64(databaseHandle,
+                              &n,
+                              "storages",
+                              "COUNT(id)",
+                              "deletedFlag!=1",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              NULL  // group
+                             );
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
@@ -6027,12 +6087,13 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (verboseFlag)
   {
     // show number of entries
-    error = Database_getInteger64(databaseHandle,
-                                  &n,
-                                  "entries",
-                                  "COUNT(id)",
-                                  ""
-                                 );
+    error = Database_getInt64(databaseHandle,
+                              &n,
+                              "entries",
+                              "COUNT(id)",
+                              DATABASE_FILTERS_NONE,
+                              NULL  // group
+                             );
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
@@ -6249,12 +6310,13 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (verboseFlag)
   {
     // show number of newest entries
-    error = Database_getInteger64(databaseHandle,
-                                  &n,
-                                  "entriesNewest",
-                                  "COUNT(id)",
-                                  ""
-                                 );
+    error = Database_getInt64(databaseHandle,
+                              &n,
+                              "entriesNewest",
+                              "COUNT(id)",
+                              DATABASE_FILTERS_NONE,
+                              NULL  // group
+                             );
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
