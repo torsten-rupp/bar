@@ -11895,6 +11895,7 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
   assert(checkDatabaseInitialized(databaseHandle));
   assert(value != NULL);
   assert(tableName != NULL);
+  assert(columnName != NULL);
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -11936,6 +11937,13 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                        uint                 filterValueCount
                       )
 {
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(checkDatabaseInitialized(databaseHandle));
+  assert(ids != NULL);
+  assert(tableName != NULL);
+  assert(columnName != NULL);
+
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
@@ -11967,107 +11975,7 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                      );
 }
 
-Errors Database_getMaxId(DatabaseHandle *databaseHandle,
-                         DatabaseId     *value,
-                         const char     *tableName,
-                         const char     *columnName,
-                         const char     *additional,
-                         ...
-                        )
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(value != NULL);
-  assert(tableName != NULL);
-
-  va_start(arguments,additional);
-  error = Database_vgetMaxId(databaseHandle,value,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
-}
-
-Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
-                          DatabaseId     *value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          va_list        arguments
-                         )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(value != NULL);
-  assert(tableName != NULL);
-
-  // init variables
-  (*value) = DATABASE_ID_NONE;
-
-  // format SQL command string
-  sqlString = formatSQLString(String_new(),
-                              "SELECT %s \
-                               FROM %s \
-                              ",
-                              columnName,
-                              tableName
-                             );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-  formatSQLString(sqlString,
-                  " ORDER BY %s DESC LIMIT 0,1",
-                  columnName
-                 );
-
-  // execute SQL command
-  (*value) = 0LL;
-  DATABASE_DEBUG_SQLX(databaseHandle,"get max. id",sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    return executeStatement(databaseHandle,
-                            CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                            {
-                              assert(values != NULL);
-                              assert(valueCount == 1);
-
-                              UNUSED_VARIABLE(valueCount);
-                              UNUSED_VARIABLE(userData);
-
-                              (*value) = values[0].i;
-
-                              return ERROR_NONE;
-                            },NULL),
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout,
-                            DATABASE_COLUMN_TYPES(INT),
-                            "%s",
-                            String_cString(sqlString)
-                           );
-  });
-
-  // free resources
-  String_delete(sqlString);
-
-  return error;
-}
-Errors Database_getMaxId2(DatabaseHandle       *databaseHandle,
+Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
                          DatabaseId           *value,
                          const char           *tableName,
                          const char           *columnName,
@@ -12081,6 +11989,7 @@ Errors Database_getMaxId2(DatabaseHandle       *databaseHandle,
   assert(checkDatabaseInitialized(databaseHandle));
   assert(value != NULL);
   assert(tableName != NULL);
+  assert(columnName != NULL);
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -12552,6 +12461,7 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
   assert(checkDatabaseInitialized(databaseHandle));
   assert(value != NULL);
   assert(tableName != NULL);
+  assert(columnName != NULL);
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -12909,6 +12819,7 @@ Errors Database_getCString2(DatabaseHandle       *databaseHandle,
   assert(checkDatabaseInitialized(databaseHandle));
   assert(string != NULL);
   assert(tableName != NULL);
+  assert(columnName != NULL);
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),

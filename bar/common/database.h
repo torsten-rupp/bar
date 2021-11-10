@@ -2052,34 +2052,20 @@ Errors Database_getIds(DatabaseHandle       *databaseHandle,
                       );
 
 /***********************************************************************\
-* Name   : Database_getMaxId, Database_vgetMaxId
+* Name   : Database_getMaxId
 * Purpose: get max. database id of value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : value - max. database id or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getMaxId(DatabaseHandle *databaseHandle,
-                         DatabaseId     *value,
-                         const char     *tableName,
-                         const char     *columnName,
-                         const char     *additional,
-                         ...
-                        ) ATTRIBUTE_DEPRECATED;
-Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
-                          DatabaseId     *value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          va_list        arguments
-                         ) ATTRIBUTE_DEPRECATED;
-Errors Database_getMaxId2(DatabaseHandle       *databaseHandle,
+Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
                          DatabaseId           *value,
                          const char           *tableName,
                          const char           *columnName,
