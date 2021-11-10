@@ -266,7 +266,7 @@ Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  error = Database_getIds2(&indexHandle->databaseHandle,
+  error = Database_getIds(&indexHandle->databaseHandle,
                           &uuidIds,
                           "uuids",
                           "id",

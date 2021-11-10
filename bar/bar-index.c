@@ -894,12 +894,15 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
                              storageId
                             ) != ERROR_NONE
          )
-      || (Database_getId(oldDatabaseHandle,
+      || (Database_getId2(oldDatabaseHandle,
                          entityId,
                          "entities",
                          "id",
-                         "jobUUID=%'S",
-                         jobUUID
+                         "jobUUID=?",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_STRING(jobUUID)
+                         )
                         ) != ERROR_NONE
          )
      )
@@ -924,13 +927,15 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
     // get uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId(newDatabaseHandle,
+      error = Database_getId2(newDatabaseHandle,
                              &uuidId,
                              "uuids",
                              "id",
-                             "WHERE jobUUID=%'S \
-                             ",
-                             jobUUID
+                             "jobUUID=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_STRING(jobUUID)
+                             )
                             );
     }
 
@@ -2741,7 +2746,10 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                             &storageIds,
                             "storages",
                             "id",
-                            "WHERE deletedFlag!=1"
+                            "deletedFlag!=1",
+                            DATABASE_FILTERS
+                            (
+                            )
                            );
     if (error != ERROR_NONE)
     {
@@ -4636,9 +4644,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &entryIds,
                           "entries",
                           "id",
-                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                          "entries.type=? AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
                           ",
-                          INDEX_CONST_TYPE_FILE
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_CONST_TYPE_FILE)
+                          )
                          );
   if (error == ERROR_NONE)
   {
@@ -4672,9 +4683,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &entryIds,
                           "entries",
                           "id",
-                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                          "entries.type=? AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
                           ",
-                          INDEX_CONST_TYPE_IMAGE
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_CONST_TYPE_IMAGE)
+                          )
                          );
   if (error == ERROR_NONE)
   {
@@ -4709,9 +4723,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &entryIds,
                           "entries",
                           "id",
-                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                          "entries.type=? AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
                           ",
-                          INDEX_CONST_TYPE_DIRECTORY
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_CONST_TYPE_DIRECTORY)
+                          )
                          );
   if (error == ERROR_NONE)
   {
@@ -4746,9 +4763,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &entryIds,
                           "entries",
                           "id",
-                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                          "entries.type=? AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
                           ",
-                          INDEX_CONST_TYPE_LINK
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_CONST_TYPE_LINK)
+                          )
                          );
   if (error == ERROR_NONE)
   {
@@ -4782,9 +4802,12 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           &entryIds,
                           "entries",
                           "id",
-                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                          "entries.type=? AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
                           ",
-                          INDEX_CONST_TYPE_HARDLINK
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_CONST_TYPE_HARDLINK)
+                          )
                          );
   if (error == ERROR_NONE)
   {
@@ -4820,7 +4843,10 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           "id",
                           "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
                           ",
-                          INDEX_CONST_TYPE_SPECIAL
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_CONST_TYPE_SPECIAL)
+                          )
                          );
   if (error == ERROR_NONE)
   {
@@ -5291,11 +5317,14 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       // get storage to purge
-      error = Database_getId(databaseHandle,
+      error = Database_getId2(databaseHandle,
                              &storageId,
                              "storages",
                              "id",
-                             "WHERE deletedFlag=1"
+                             "deletedFlag=1",
+                             DATABASE_FILTERS
+                             (
+                             )
                             );
       if ((error == ERROR_NONE) && (storageId != DATABASE_ID_NONE))
       {
@@ -5309,9 +5338,11 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    &entryIds,
                                    "entryFragments",
                                    "entryId",
-                                   "WHERE storageId=%lld \
-                                   ",
-                                   storageId
+                                   "WHERE storageId=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(storageId)
+                                   )
                                   );
         }
 
@@ -5322,9 +5353,11 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    &entryIds,
                                    "directoryEntries",
                                    "entryId",
-                                   "WHERE storageId=%lld \
-                                   ",
-                                   storageId
+                                   "storageId=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(storageId)
+                                   )
                                   );
         }
         if (error == ERROR_NONE)
@@ -5333,9 +5366,11 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    &entryIds,
                                    "linkEntries",
                                    "entryId",
-                                   "WHERE storageId=%lld \
-                                   ",
-                                   storageId
+                                   "WHERE storageId=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(storageId)
+                                   )
                                   );
         }
         if (error == ERROR_NONE)
@@ -5344,9 +5379,11 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    &entryIds,
                                    "specialEntries",
                                    "entryId",
-                                   "WHERE storageId=%lld \
-                                   ",
-                                   storageId
+                                   "storageId=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(storageId)
+                                   )
                                   );
         }
 
@@ -5355,15 +5392,17 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
         // purge fragments
         if (error == ERROR_NONE)
         {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount,
-                                   DATABASE_COLUMN_TYPES(),
-                                   "DELETE FROM entryFragments \
-                                    WHERE storageId=%lld \
-                                   ",
-                                   storageId
-                                  );
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "entryFragments",
+                                  DATABASE_FLAG_NONE,
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  ),
+                                  0
+                                 );
         }
 
         // purge FTS entries

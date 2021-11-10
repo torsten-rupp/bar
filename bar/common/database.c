@@ -11881,7 +11881,7 @@ fprintf(stderr,"%s:%d: goooo row\n",__FILE__,__LINE__);
   return error;
 }
 
-Errors Database_getId(DatabaseHandle *databaseHandle,
+Errors xxxDatabase_getId(DatabaseHandle *databaseHandle,
                       DatabaseId     *value,
                       const char     *tableName,
                       const char     *columnName,
@@ -12023,106 +12023,14 @@ Errors Database_getId2(DatabaseHandle       *databaseHandle,
                      );
 }
 
-Errors Database_getIds(DatabaseHandle *databaseHandle,
-                       Array          *values,
-                       const char     *tableName,
-                       const char     *columnName,
-                       const char     *additional,
-                       ...
+Errors Database_getIds(DatabaseHandle      *databaseHandle,
+                       Array                *ids,
+                       const char           *tableName,
+                       const char           *columnName,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
                       )
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(values != NULL);
-  assert(tableName != NULL);
-
-  va_start(arguments,additional);
-  error = Database_vgetIds(databaseHandle,values,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
-}
-
-Errors Database_vgetIds(DatabaseHandle *databaseHandle,
-                        Array          *idArray,
-                        const char     *tableName,
-                        const char     *columnName,
-                        const char     *additional,
-                        va_list        arguments
-                       )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(idArray != NULL);
-  assert(tableName != NULL);
-
-  // format SQL command string
-  sqlString = formatSQLString(String_new(),
-                              "SELECT DISTINCT %s \
-                               FROM %s \
-                              ",
-                              columnName,
-                              tableName
-                             );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-
-  // execute SQL command
-  DATABASE_DEBUG_SQLX(databaseHandle,"get id",sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ,
-               databaseHandle->timeout,
-  {
-    return executeStatement(databaseHandle,
-                            CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                            {
-                              assert(values != NULL);
-                              assert(valueCount == 1);
-
-                              UNUSED_VARIABLE(valueCount);
-                              UNUSED_VARIABLE(userData);
-
-                              Array_append(idArray,&values[0].id);
-
-                              return ERROR_NONE;
-                            },NULL),
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout,
-                            DATABASE_COLUMN_TYPES(KEY),
-                            "%s",
-                            String_cString(sqlString)
-                           );
-  });
-
-  // free resources
-  String_delete(sqlString);
-
-  return error;
-}
-Errors Database_getIds2(DatabaseHandle      *databaseHandle,
-                      Array                *ids,
-                      const char           *tableName,
-                      const char           *columnName,
-                      const char           *filter,
-                      const DatabaseFilter filterValues[],
-                      uint                 filterValueCount
-                     )
 {
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),

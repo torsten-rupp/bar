@@ -443,14 +443,17 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   // get to-uuid id
   if (error == ERROR_NONE)
   {
-    error = Database_getId(&indexHandle->databaseHandle,
+    error = Database_getId2(&indexHandle->databaseHandle,
                            &toUUIDId,
-                           "entities",
-                           "uuids.id",
-                           "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE entities.id=%lld \
+                           "entities \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                            ",
-                           toEntityId
+                           "uuids.id",
+                           "entities.id=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(toEntityId)
+                           )
                           );
   }
 
@@ -557,14 +560,17 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
     // get to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &toUUIDId,
-                             "entities",
-                             "uuids.id",
-                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE entities.id=%lld \
+                             "entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                              ",
-                             toEntityId
+                             "uuids.id",
+                             "entities.id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(toEntityId)
+                             )
                             );
     }
 
@@ -670,25 +676,30 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // get uuid id, to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &uuidId,
-                             "entities",
-                             "uuids.id",
-                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE entities.id=%lld \
+                             "entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                              ",
-                             entityId
+                             "uuids.id",
+                             "entities.id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(entityId)
+                             )
                             );
     }
     if (error == ERROR_NONE)
     {
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "uuids",
                              "id",
-                             "WHERE jobUUID=%'S \
-                             ",
-                             toJobUUID
+                             "jobUUID=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_STRING(toJobUUID)
+                             )
                             );
     }
 
@@ -799,13 +810,15 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
   // get to-uuid id
   if (error == ERROR_NONE)
   {
-    error = Database_getId(&indexHandle->databaseHandle,
+    error = Database_getId2(&indexHandle->databaseHandle,
                            &toUUIDId,
                            "uuids",
                            "id",
-                           "WHERE jobUUID=%'S \
-                           ",
-                           toJobUUID
+                           "jobUUID=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_STRING(toJobUUID)
+                           )
                           );
   }
 

@@ -2419,7 +2419,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      return Database_getIds2(&indexHandle->databaseHandle,
+      return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
                              "entries \
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
@@ -2445,7 +2445,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      return Database_getIds2(&indexHandle->databaseHandle,
+      return Database_getIds(&indexHandle->databaseHandle,
                              &entryIds,
                              "entries \
                                 LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
@@ -2998,7 +2998,7 @@ LOCAL Errors pruneStorages(IndexHandle  *indexHandle,
   Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   // get all storage ids
-  error = Database_getIds2(&indexHandle->databaseHandle,
+  error = Database_getIds(&indexHandle->databaseHandle,
                           &storageIds,
                           "storages",
                           "id",
@@ -4533,7 +4533,8 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                                ),
                                    DATABASE_FILTERS
                                    (
-                                   )
+                                   ),
+                                   NULL  // group
                                   );
       }
       else if (   !String_isEmpty(entityIdsString)
@@ -4556,7 +4557,8 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                                ),
                                    DATABASE_FILTERS
                                    (
-                                   )
+                                   ),
+                                   NULL  // group
                                   );
       }
       else
@@ -4573,7 +4575,8 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                                ),
                                    DATABASE_FILTERS
                                    (
-                                   )
+                                   ),
+                                   NULL  // group
                                   );
       }
       if (error != ERROR_NONE)

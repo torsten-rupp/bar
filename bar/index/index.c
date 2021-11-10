@@ -701,7 +701,8 @@ LOCAL Errors getIndexVersion(uint *indexVersion, const DatabaseSpecifier *databa
                            "name='version'",
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
@@ -1936,15 +1937,18 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
   {
     do
     {
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &storageId,
                              "storages",
                              "id",
-                             "WHERE     ((state<%u) OR (state>%u)) \
-                                    AND deletedFlag!=1 \
+                             "    ((state<?) OR (state>?)) \
+                              AND deletedFlag!=1 \
                              ",
-                             INDEX_STATE_MIN,
-                             INDEX_STATE_MAX
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT(INDEX_STATE_MIN),
+                               DATABASE_FILTER_UINT(INDEX_STATE_MAX)
+                             )
                             );
       if ((error == ERROR_NONE) && (storageId != DATABASE_ID_NONE))
       {

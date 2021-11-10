@@ -230,11 +230,14 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
   Array_clear(&databaseIds);
   error = Database_getIds(&indexHandle->databaseHandle,
                           &databaseIds,
-                          "fileEntries",
+                          "fileEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id \
+                          ",
                           "fileEntries.id",
-                          "LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id \
-                           WHERE entryFragments.id IS NULL \
-                          "
+                          "entryFragments.id IS NULL",
+                          DATABASE_FILTERS
+                          (
+                          )
                          );
   if (error != ERROR_NONE)
   {
@@ -263,11 +266,14 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
   Array_clear(&databaseIds);
   error = Database_getIds(&indexHandle->databaseHandle,
                           &databaseIds,
-                          "imageEntries",
+                          "imageEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id \
+                          ",
                           "imageEntries.id",
-                          "LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id \
-                           WHERE entryFragments.id IS NULL \
-                          "
+                          "entryFragments.id IS NULL",
+                          DATABASE_FILTERS
+                          (
+                          )
                          );
   if (error != ERROR_NONE)
   {
@@ -296,11 +302,14 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
   Array_clear(&databaseIds);
   error = Database_getIds(&indexHandle->databaseHandle,
                           &databaseIds,
-                          "hardlinkEntries",
+                          "hardlinkEntries \
+                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id \
+                          ",
                           "hardlinkEntries.id",
-                          "LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id \
-                           WHERE entryFragments.id IS NULL \
-                          "
+                          "entryFragments.id IS NULL",
+                          DATABASE_FILTERS
+                          (
+                          )
                          );
   if (error != ERROR_NONE)
   {
@@ -750,12 +759,15 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   assert(fileName != NULL);
 
   // get newest id
-  error = Database_getId(&indexHandle->databaseHandle,
+  error = Database_getId2(&indexHandle->databaseHandle,
                          &databaseId,
                          "entriesNewest",
                          "id",
-                         "WHERE entryId=%lld",
-                         entryId
+                         "entryId=?",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_KEY(entryId)
+                         )
                         );
   if (error != ERROR_NONE)
   {
@@ -866,8 +878,11 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              entryIds,
                              "entryFragments",
                              "entryId",
-                             "WHERE storageId=%lld",
-                             storageId
+                             "storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
                             );
     });
   }
@@ -888,8 +903,11 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              entryIds,
                              "directoryEntries",
                              "entryId",
-                             "WHERE storageId=%lld",
-                             storageId
+                             "storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
                             );
     });
   }
@@ -908,8 +926,11 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              entryIds,
                              "linkEntries",
                              "entryId",
-                             "WHERE storageId=%lld",
-                             storageId
+                             "storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
                             );
     });
   }
@@ -928,8 +949,11 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              entryIds,
                              "specialEntries",
                              "entryId",
-                             "WHERE storageId=%lld",
-                             storageId
+                             "WHERE storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
                             );
     });
   }
@@ -4164,17 +4188,20 @@ Errors Index_addFile(IndexHandle *indexHandle,
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
-        error = Database_getId(&indexHandle->databaseHandle,
+        error = Database_getId2(&indexHandle->databaseHandle,
                                &entryId,
                                "entries",
                                "id",
-                               "WHERE     entityId=%lld \
-                                      AND type=%u \
-                                      AND name=%'S \
+                               "    entityId=? \
+                                AND type=? \
+                                AND name=? \
                                ",
-                               Index_getDatabaseId(entityId),
-                               INDEX_TYPE_FILE,
-                               name
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_STRING(name)
+                               )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
         {
@@ -4354,17 +4381,20 @@ Errors Index_addImage(IndexHandle     *indexHandle,
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
-        error = Database_getId(&indexHandle->databaseHandle,
+        error = Database_getId2(&indexHandle->databaseHandle,
                                &entryId,
                                "entries",
                                "id",
-                               "WHERE     entityId=%lld \
-                                      AND type=%u \
-                                      AND name=%'S \
+                               "    entityId=? \
+                                AND type=?\
+                                AND name=? \
                                ",
-                               Index_getDatabaseId(entityId),
-                               INDEX_TYPE_IMAGE,
-                               name
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_STRING(name)
+                               )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
         {
@@ -4820,17 +4850,20 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
-        error = Database_getId(&indexHandle->databaseHandle,
+        error = Database_getId2(&indexHandle->databaseHandle,
                                &entryId,
                                "entries",
                                "id",
-                               "WHERE     entityId=%lld \
-                                      AND type=%u \
-                                      AND name=%'S \
+                               "    entityId=? \
+                                AND type=? \
+                                AND name=? \
                                ",
-                               Index_getDatabaseId(entityId),
-                               INDEX_TYPE_HARDLINK,
-                               name
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_STRING(name)
+                               )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
         {

@@ -2042,42 +2042,28 @@ Errors Database_getId2(DatabaseHandle       *databaseHandle,
                      );
 
 /***********************************************************************\
-* Name   : Database_getIds, Database_vgetIds
+* Name   : Database_getIds
 * Purpose: get database ids from database table
-* Input  : databaseHandle - database handle
-*          ids            - database ids array
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle   - database handle
+*          ids              - database ids array
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : ids - database ids array
 * Return : ERROR_NONE or error code
 * Notes  : values are added to array!
 \***********************************************************************/
 
-Errors Database_getIds(DatabaseHandle *databaseHandle,
-                       Array          *ids,
-                       const char     *tableName,
-                       const char     *columnName,
-                       const char     *additional,
-                       ...
-                      ) ATTRIBUTE_DEPRECATED;
-Errors Database_vgetIds(DatabaseHandle *databaseHandle,
-                        Array          *ids,
-                        const char     *tableName,
-                        const char     *columnName,
-                        const char     *additional,
-                        va_list        arguments
-                       ) ATTRIBUTE_DEPRECATED;
-Errors Database_getIds2(DatabaseHandle       *databaseHandle,
-                      Array                *ids,
-                      const char           *tableName,
-                      const char           *columnName,
-                      const char           *filter,
-                      const DatabaseFilter filterValues[],
-                      uint                 filterValueCount
-                     );
+Errors Database_getIds(DatabaseHandle       *databaseHandle,
+                       Array                *ids,
+                       const char           *tableName,
+                       const char           *columnName,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
+                      );
 
 /***********************************************************************\
 * Name   : Database_getMaxId, Database_vgetMaxId

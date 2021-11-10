@@ -942,14 +942,17 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   // get to-uuid id
   if (error == ERROR_NONE)
   {
-    error = Database_getId(&indexHandle->databaseHandle,
+    error = Database_getId2(&indexHandle->databaseHandle,
                            &toUUIDId,
-                           "entities",
-                           "uuids.id",
-                           "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE entities.id=%lld \
+                           "entities \
+                              LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                            ",
-                           toEntityId
+                           "uuids.id",
+                           "entities.id=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(toEntityId)
+                           )
                           );
   }
 
@@ -1061,14 +1064,17 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
     // get to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &toUUIDId,
-                             "entities",
-                             "uuids.id",
-                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE entities.id=%lld \
+                             "entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                              ",
-                             toEntityId
+                             "uuids.id",
+                             "entities.id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(toEntityId)
+                             )
                             );
     }
 
@@ -1177,25 +1183,30 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // get uuid id, to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &uuidId,
-                             "entities",
-                             "uuids.id",
-                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE entities.id=%lld \
+                             "entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                              ",
-                             entityId
+                             "uuids.id",
+                             "entities.id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(entityId)
+                             )
                             );
     }
     if (error == ERROR_NONE)
     {
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "uuids",
                              "id",
-                             "WHERE jobUUID=%'S \
-                             ",
-                             toJobUUID
+                             "jobUUID=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_STRING(toJobUUID)
+                             )
                             );
     }
 
@@ -1451,9 +1462,12 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
                           &entityIds,
                           "entities",
                           "id",
-                          "WHERE id!=%lld \
+                          "id!=? \
                           ",
-                          INDEX_DEFAULT_ENTITY_DATABASE_ID
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                          )
                          );
   if (error != ERROR_NONE)
   {
@@ -2509,13 +2523,15 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       }
 
       // get uuid id
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &uuidId,
                              "uuids",
                              "id",
-                             "WHERE jobUUID=%'S \
-                             ",
-                             jobUUID
+                             "jobUUID=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_STRING(jobUUID)
+                             )
                             );
       if (error != ERROR_NONE)
       {
@@ -2778,13 +2794,17 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
               indexHandle,
     {
       // get UUID id
-      error = Database_getId(&indexHandle->databaseHandle,
+      error = Database_getId2(&indexHandle->databaseHandle,
                              &uuidId,
-                             "entities LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID",
-                             "uuids.id",
-                             "WHERE entities.id=%lld \
+                             "entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                              ",
-                             Index_getDatabaseId(entityId)
+                             "uuids.id",
+                             "entities.id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                             )
                             );
       if (error != ERROR_NONE)
       {
@@ -2794,12 +2814,15 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
       // get storages to delete
       error = Database_getIds(&indexHandle->databaseHandle,
                               &storageIds,
-                              "storages",
-                              "storages.id",
-                              "LEFT JOIN entities ON entities.id=storages.entityId \
-                               WHERE entities.id=%lld \
+                              "storages \
+                                 LEFT JOIN entities ON entities.id=storages.entityId \
                               ",
-                              Index_getDatabaseId(entityId)
+                              "storages.id",
+                              "entities.id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                              )
                              );
       if (error != ERROR_NONE)
       {
