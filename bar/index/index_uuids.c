@@ -171,12 +171,15 @@ LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
 
   return    (uuidId != DATABASE_ID_NONE)
          && !Database_existsValue(&indexHandle->databaseHandle,
-                                  "entities",
-                                  "entities.id",
-                                  "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                   WHERE uuids.id=%lld \
+                                  "entities \
+                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   ",
-                                  uuidId
+                                  "entities.id",
+                                  "uuids.id=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(uuidId)
+                                  )
                                  );
 }
 

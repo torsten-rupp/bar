@@ -2092,26 +2092,20 @@ Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Database_exists
-* Purpose: check if value exists database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Name   : Database_existsValue
+* Purpose: check if value exists in database table
+* Input  : databaseHandle    - database handle
+*          tableName         - table name
+*          columnName        - column name
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
 * Output : -
 * Return : TRUE iff value exists
-* Notes  : -
+* Notes  : use DATABASE_FILTERS() for filters
 \***********************************************************************/
 
-bool Database_existsValue(DatabaseHandle *databaseHandle,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
-                         );
-bool Database_existsValue2(DatabaseHandle      *databaseHandle,
+bool Database_existsValue(DatabaseHandle      *databaseHandle,
                          const char           *tableName,
                          const char           *columnName,
                          const char           *filter,
@@ -2139,7 +2133,7 @@ bool Database_existsValue2(DatabaseHandle      *databaseHandle,
 *          limit             - limit or 0
 * Output : value - database id or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : use DATABASE_FILTERS() for filters
 \***********************************************************************/
 
 Errors Database_get(DatabaseHandle       *databaseHandle,

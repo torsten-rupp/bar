@@ -3137,35 +3137,48 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
   return    (storageId != DATABASE_ID_NONE)
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entryFragments",
-                                   "id",
-                                   "WHERE storageId=%lld",
-                                   storageId
+                                  "id",
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
                                   )
+                                 )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "directoryEntries",
                                   "id",
-                                  "WHERE storageId=%lld",
-                                  storageId
-                                 )
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
+                                )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "linkEntries",
                                   "id",
-                                  "WHERE storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "specialEntries",
                                   "id",
-                                  "WHERE storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
 }
 
 Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
-                                            DatabaseId  storageId
-                                           )
+                                     DatabaseId  storageId
+                                    )
 {
   Errors                  error;
+// TODO: remove
   DatabaseStatementHandle databaseStatementHandle;
   ulong                   totalFileCount;
   double                  totalFileSize_;
@@ -3185,45 +3198,6 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   assert(storageId != DATABASE_ID_NONE);
 
   // get file aggregate data
-#if 0
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
-//TODO: use entries.size?
-                           "SELECT COUNT(DISTINCT entries.id), \
-                                   SUM(entryFragments.size) \
-                            FROM entryFragments \
-                              LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                            WHERE     entryFragments.storageId=? \
-                                  AND entries.type=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             KEY (storageId)
-                             UINT(INDEX_TYPE_FILE),
-                           )
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu %lf",
-                           &totalFileCount,
-                           &totalFileSize_
-                          )
-     )
-  {
-    totalFileCount = 0L;
-    totalFileSize_ = 0.0;
-  }
-  assert(totalFileSize_ >= 0.0);
-  totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
-  Database_finalize(&databaseStatementHandle);
-#else
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -3266,48 +3240,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-#endif
 
   // get image aggregate data
-#if 0
-  error = Database_prepare(&databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
-//TODO: use entries.size?
-                           "SELECT COUNT(DISTINCT entries.id), \
-                                   SUM(entryFragments.size) \
-                            FROM entryFragments \
-                              LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                            WHERE     entryFragments.storageId=? \
-                                  AND entries.type=? \
-                           ",
-                           DATABASE_VALUES2
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             KEY (storageId),
-                             UINT(INDEX_TYPE_IMAGE)
-                           )
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  if (!Database_getNextRow(&databaseStatementHandle,
-                           "%lu %lf",
-                           &totalImageCount,
-                           &totalImageSize_
-                          )
-     )
-  {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
-  }
-  assert(totalImageSize_ >= 0.0);
-  totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
-  Database_finalize(&databaseStatementHandle);
-#else
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -3350,7 +3284,6 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-#endif
 
   // get directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_get(&indexHandle->databaseHandle,
@@ -5640,8 +5573,11 @@ bool Index_isDeletedStorage(IndexHandle *indexHandle,
       return !Database_existsValue(&indexHandle->databaseHandle,
                                    "storages",
                                    "id",
-                                   "WHERE id=%lld AND deletedFlag!=1",
-                                   Index_getDatabaseId(storageId)
+                                   "id=? AND deletedFlag!=1",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(Index_getDatabaseId(storageId))
+                                   )
                                   );
     });
   }

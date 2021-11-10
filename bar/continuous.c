@@ -1952,14 +1952,17 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
   return Database_existsValue(databaseHandle,
                               "names",
                               "id",
-                              "WHERE     DATETIME('now','-%u seconds')>=dateTime \
-                                     AND jobUUID=%'S \
-                                     AND scheduleUUID=%'S \
-                                     AND storedFlag=0 \
+                              "    DATETIME('now','-? seconds')>=dateTime \
+                               AND jobUUID=? \
+                               AND scheduleUUID=? \
+                               AND storedFlag=0 \
                               ",
-                              globalOptions.continuousMinTimeDelta,
-                              jobUUID,
-                              scheduleUUID
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
+                                DATABASE_FILTER_STRING(jobUUID),
+                                DATABASE_FILTER_STRING(scheduleUUID)
+                              )
                              );
 }
 

@@ -5319,7 +5319,16 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           printPercentage(0*Array_length(&entryIds),2*Array_length(&entryIds));
           ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
           {
-            if (!Database_existsValue(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
+            if (!Database_existsValue(databaseHandle,
+                                      "entryFragments",
+                                      "id",
+                                      "entryId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(entryId)
+                                      )
+                                     )
+               )
             {
               error = Database_execute(databaseHandle,
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -5410,7 +5419,16 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
           ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
           {
-            if (!Database_existsValue(databaseHandle,"entryFragments","id","entryId=%lld",entryId))
+            if (!Database_existsValue(databaseHandle,
+                                      "entryFragments",
+                                      "id",
+                                      "entryId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(entryId)
+                                      )
+                                     )
+               )
             {
               error = Database_execute(databaseHandle,
                                        CALLBACK_(NULL,NULL),  // databaseRowFunction

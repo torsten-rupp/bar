@@ -324,20 +324,29 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "storages",
                                   "id",
-                                  "WHERE entityId=%lld",
-                                  entityId
+                                  "entityId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(entityId)
+                                  )
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entries",
                                   "id",
-                                  "WHERE entityId=%lld",
-                                  entityId
+                                  "entityId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(entityId)
+                                  )
                                  )
          && !Database_existsValue(&indexHandle->databaseHandle,
                                   "entriesNewest",
                                   "id",
-                                  "WHERE entityId=%lld",
-                                  entityId
+                                  "entityId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(entityId)
+                                  )
                                  );
 }
 
@@ -2897,8 +2906,11 @@ bool Index_isDeletedEntity(IndexHandle *indexHandle,
       return !Database_existsValue(&indexHandle->databaseHandle,
                                    "entities",
                                    "id",
-                                   "WHERE id=%lld AND deletedFlag!=1",
-                                   Index_getDatabaseId(entityId)
+                                   "id=? AND deletedFlag!=1",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(Index_getDatabaseId(entityId))
+                                   )
                                   );
     });
   }
