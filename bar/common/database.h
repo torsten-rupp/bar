@@ -1909,20 +1909,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_select(DatabaseHandle       *databaseHandle,
-                       DatabaseRowFunction  databaseRowFunction,
-                       void                 *databaseRowUserData,
-                       ulong                *changedRowCount,
-                       const char           *tableName,
-                       uint                 flags,
-// TODO: select value datatype: name, type
-                       DatabaseValue        selectValues[],
-                       uint                 selectValueCount,
-                       const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
-                      ) ATTRIBUTE_DEPRECATED;
-Errors Database_select2(DatabaseStatementHandle *databaseStatementHandle,
+Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseHandle          *databaseHandle,
                        const char              *tables,
                        uint                    flags,

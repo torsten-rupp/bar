@@ -2493,7 +2493,7 @@ fprintf(stderr,"%s:%d: 1\n",__FILE__,__LINE__);
       }
       else
       {
-        return Database_select2(&indexQueryHandle->databaseStatementHandle,
+        return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
                                "entries \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
@@ -2942,7 +2942,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entryFragments \
                               LEFT JOIN storages ON storages.id=entryFragments.storageId \
@@ -3272,7 +3272,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entries \
                               LEFT JOIN entities ON entities.id=entries.entityId \
@@ -3428,7 +3428,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entries \
                               LEFT JOIN entities ON entities.id=entries.entityId \
@@ -3593,7 +3593,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entries \
                               LEFT JOIN entities ON entities.id=entries.entityId \
@@ -3748,7 +3748,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entries \
                               LEFT JOIN entities ON entities.id=entries.entityId \
@@ -3905,7 +3905,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entries \
                               LEFT JOIN entities ON entities.id=entries.entityId \
@@ -4061,7 +4061,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entries \
                               LEFT JOIN entities ON entities.id=entries.entityId \

@@ -2362,7 +2362,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
                            "entities \
                               LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \

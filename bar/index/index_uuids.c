@@ -1367,7 +1367,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   {
     char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-    return Database_select2(&indexQueryHandle->databaseStatementHandle,
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
 //TODO newest
                            "uuids \
