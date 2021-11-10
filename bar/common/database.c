@@ -12255,118 +12255,6 @@ Errors Database_setInt64(DatabaseHandle       *databaseHandle,
                          filterValueCount
                         );
 }
-Errors Database_setInteger64(DatabaseHandle *databaseHandle,
-                             int64          value,
-                             const char     *tableName,
-                             const char     *columnName,
-                             const char     *additional,
-                             ...
-                            )
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  va_start(arguments,additional);
-  error = Database_vsetInteger64(databaseHandle,value,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
-}
-
-Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
-                              int64          value,
-                              const char     *tableName,
-                              const char     *columnName,
-                              const char     *additional,
-                              va_list        arguments
-                             )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  sqlString = String_new();
-
-  // try update
-  String_clear(sqlString);
-  formatSQLString(sqlString,
-                  "UPDATE %s \
-                   SET %s=%ld \
-                  ",
-                  tableName,
-                  columnName,
-                  value
-                 );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-  DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    error = executeStatement(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             databaseHandle->timeout,
-                             DATABASE_COLUMN_TYPES(),
-                             "%s",
-                             String_cString(sqlString)
-                            );
-    if (error != ERROR_NONE)
-    {
-      // insert
-      String_clear(sqlString);
-      formatSQLString(sqlString,
-                      "INSERT INTO %s \
-                       (%s) VALUES (%ld) \
-                      ",
-                      tableName,
-                      columnName,
-                      value
-                     );
-      DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
-      error = executeStatement(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               databaseHandle->timeout,
-                               DATABASE_COLUMN_TYPES(),
-                               "%s",
-                               String_cString(sqlString)
-                              );
-    }
-
-    return error;
-  });
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
-  }
-
-  // free resources
-  String_delete(sqlString);
-
-  return ERROR_NONE;
-}
 
 Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                           uint64               *value,
@@ -12449,6 +12337,7 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
 Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                           double               *value,
                           const char           *tableName,
+                          uint                 flags,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
@@ -12494,119 +12383,34 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                      );
 }
 
-Errors Database_setDouble(DatabaseHandle *databaseHandle,
-                          double         value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_setDouble(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          double               value,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
                          )
 {
-  va_list arguments;
-  Errors  error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  va_start(arguments,additional);
-  error = Database_vsetDouble(databaseHandle,value,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
-}
-
-Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
-                           double         value,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          )
-{
-  String  sqlString;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  sqlString = String_new();
-
-  // try update
-  String_clear(sqlString);
-  formatSQLString(sqlString,
-                  "UPDATE %s \
-                   SET %s=%lf \
-                  ",
-                  tableName,
-                  columnName,
-                  value
-                 );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-
-  // execute SQL command
-  DATABASE_DEBUG_SQLX(databaseHandle,"set double",sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    error = executeStatement(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             databaseHandle->timeout,
-                             DATABASE_COLUMN_TYPES(),
-                             "%s",
-                             String_cString(sqlString)
-                            );
-    if (error != ERROR_NONE)
-    {
-      // insert
-      String_clear(sqlString);
-      formatSQLString(sqlString,
-                      "INSERT INTO %s \
-                       (%s) VALUES (%lf) \
-                      ",
-                      tableName,
-                      columnName,
-                      value
-                     );
-      DATABASE_DEBUG_SQLX(databaseHandle,"set double",sqlString);
-      error = executeStatement(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               databaseHandle->timeout,
-                               DATABASE_COLUMN_TYPES(),
-                               "%s",
-                               String_cString(sqlString)
-                              );
-    }
-
-    return error;
-  });
-  if (error != ERROR_NONE)
-  {
-    String_delete(sqlString);
-    return error;
-  }
-
-  // free resources
-  String_delete(sqlString);
-
-  return ERROR_NONE;
+  return Database_update(databaseHandle,
+                         NULL,  // changedRowCount
+                         tableName,
+                         flags,
+                         DATABASE_VALUES2
+                         (
+                           DATABASE_VALUE_DOUBLE(columnName, value)
+                         ),
+                         filter,
+                         filterValues,
+                         filterValueCount
+                        );
 }
 
 Errors Database_getString(DatabaseHandle *databaseHandle,
