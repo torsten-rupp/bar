@@ -652,38 +652,9 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 
 
 // column macros
-#define _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE(x,...) \
-  _ITERATOR_EVAL01(DATABASE_COLUMN_##x), \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE)()(__VA_ARGS__) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-#define __DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE() _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE
-
-#define _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME(x,...) \
-  _ITERATOR_EVAL01(DATABASE_COLUMN_NAME_##x), \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_DEFER2(__DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME)()(__VA_ARGS__) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-#define __DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME() _DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME
-
-// <type>(<name>)
-// TODO: remove
-#define xxxDATABASE_COLUMNS(...) \
-  (DatabaseColumn[]){_ITERATOR_EVAL(_DATABASE_COLUMNS_ITERATOR_COLUMNS_NAME_TYPE(__VA_ARGS__))}, \
-  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
-
 #define DATABASE_COLUMNS(...) \
   (DatabaseColumn[]){__VA_ARGS__}, \
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2
-
 
 #define DATABASE_COLUMN_KEY(name)     { name, DATABASE_DATATYPE_KEY     }
 #define DATABASE_COLUMN_BOOL(name)    { name, DATABASE_DATATYPE_BOOL    }
@@ -694,97 +665,10 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_COLUMN_STRING(name)  { name, DATABASE_DATATYPE_STRING  }
 #define DATABASE_COLUMN_CSTRING(name) { name, DATABASE_DATATYPE_CSTRING }
 
-#define DATABASE_COLUMN_NAME_KEY(name)     name
-#define DATABASE_COLUMN_NAME_BOOL(name)    name
-#define DATABASE_COLUMN_NAME_INT(name)     name
-#define DATABASE_COLUMN_NAME_INT64(name)   name
-#define DATABASE_COLUMN_NAME_UINT(name)    name
-#define DATABASE_COLUMN_NAME_UINT64(name)  name
-#define DATABASE_COLUMN_NAME_STRING (name) name
-#define DATABASE_COLUMN_NAME_CSTRING(name) name
-
 // value macros
-#define __DATABASE_ITERATOR_VALUES_TYPE_VALUE(x,...) \
-  _ITERATOR_EVAL01(DATABASE_VALUE_TYPE_VALUE_##x), \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_DEFER2(___DATABASE_ITERATOR_VALUES_TYPE_VALUE)()(__VA_ARGS__) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-#define ___DATABASE_ITERATOR_VALUES_TYPE_VALUE() __DATABASE_ITERATOR_VALUES_TYPE_VALUE
-
-#define _DATABASE_ITERATOR_VALUES_TYPE_VALUE(...) \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_EVAL(__DATABASE_ITERATOR_VALUES_TYPE_VALUE(__VA_ARGS__)) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-
-#define __DATABASE_ITERATOR_VALUES_NAME(x,...) \
-  _ITERATOR_EVAL01(DATABASE_VALUE_NAME_##x), \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_DEFER2(___DATABASE_ITERATOR_VALUES_NAME)()(__VA_ARGS__) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-#define ___DATABASE_ITERATOR_VALUES_NAME() __DATABASE_ITERATOR_VALUES_NAME
-
-#define _DATABASE_ITERATOR_VALUES_NAME(...) \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_EVAL(__DATABASE_ITERATOR_VALUES_NAME(__VA_ARGS__)) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-
-// <type>(<name>,<value>)
-#define xxxDATABASE_VALUES2(...) \
-  (const char*[]){_ITERATOR_EVAL(_DATABASE_ITERATOR_VALUES_NAME(__VA_ARGS__))}, \
-  (DatabaseValue[]){_ITERATOR_EVAL(_DATABASE_ITERATOR_VALUES_TYPE_VALUE(__VA_ARGS__))}, \
-  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
 #define DATABASE_VALUES2(...) \
   (DatabaseValue[]){__VA_ARGS__}, \
   ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/4)
-
-#define DATABASE_VALUE_TYPE_VALUE_KEY(name,value)      { name, DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
-#define DATABASE_VALUE_TYPE_VALUE_BOOL(name,value)     { name, DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
-#define DATABASE_VALUE_TYPE_VALUE_INT(name,value)      { name, DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
-#define DATABASE_VALUE_TYPE_VALUE_UINT(name,value)     { name, DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
-#define DATABASE_VALUE_TYPE_VALUE_INT64(name,value)    { name, DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
-#define DATABASE_VALUE_TYPE_VALUE_UINT64(name,value)   { name, DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
-#define DATABASE_VALUE_TYPE_VALUE_DATETIME(name,value) { name, DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
-#define DATABASE_VALUE_TYPE_VALUE_STRING(name,value)   { name, DATABASE_DATATYPE_STRING,   { (intptr_t)(value) } }
-#define DATABASE_VALUE_TYPE_VALUE_CSTRING(name,value)  { name, DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
-
-#define DATABASE_VALUE_NAME_KEY(name,value)      name
-#define DATABASE_VALUE_NAME_BOOL(name,value)     name
-#define DATABASE_VALUE_NAME_INT(name,value)      name
-#define DATABASE_VALUE_NAME_INT64(name,value)    name
-#define DATABASE_VALUE_NAME_UINT(name,value)     name
-#define DATABASE_VALUE_NAME_UINT64(name,value)   name
-#define DATABASE_VALUE_NAME_DATETIME(name,value) name
-#define DATABASE_VALUE_NAME_STRING(name,value)   name
-#define DATABASE_VALUE_NAME_CSTRING(name,value)  name
-
-#if 0
-#define DATABASE_VALUE(name,value)          { name, value, DATABASE_DATATYPE,          { (intptr_t)(0) } }
-#define DATABASE_VALUE_KEY(name,data)      { name, NULL, DATABASE_DATATYPE_KEY,      { (intptr_t)(data) } }
-#define DATABASE_VALUE_BOOL(name,data)     { name, NULL, DATABASE_DATATYPE_BOOL,     { (intptr_t)((data)==true) } }
-#define DATABASE_VALUE_INT(name,data)      { name, NULL, DATABASE_DATATYPE_INT,      { (intptr_t)(data) } }
-#define DATABASE_VALUE_UINT(name,data)     { name, NULL, DATABASE_DATATYPE_UINT,     { (intptr_t)(data) } }
-#define DATABASE_VALUE_INT64(name,data)    { name, NULL, DATABASE_DATATYPE_INT64,    { (intptr_t)(data) } }
-#define DATABASE_VALUE_UINT64(name,data)   { name, "?", DATABASE_DATATYPE_UINT64,   { (intptr_t)(data) } }
-#define DATABASE_VALUE_DATETIME(name,data) { name, NULL, DATABASE_DATATYPE_DATETIME, { (intptr_t)(data) } }
-#define DATABASE_VALUE_STRING(name,data)   { name, NULL, DATABASE_DATATYPE_STRING,   { (intptr_t)(data) } }
-#define DATABASE_VALUE_CSTRING(name,data)  { name, NULL, DATABASE_DATATYPE_CSTRING,  { (intptr_t)(data) } }
-#endif
 
 #define DATABASE_VALUE(name,value) \
   { name, value, DATABASE_DATATYPE, { (intptr_t)(0) } }
@@ -882,45 +766,12 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 #define DATABASE_VALUES2_NONE (DatabaseValue*)NULL,0
 
 // filter macros
-#define __DATABASE_FILTERS_ITERATOR_ARRAY0(x,...) \
-  _ITERATOR_EVAL01(DATABASE_FILTER_TYPE_VALUE_##x), \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_DEFER2(___DATABASE_FILTERS_ITERATOR_ARRAY0)()(__VA_ARGS__) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-#define ___DATABASE_FILTERS_ITERATOR_ARRAY0() __DATABASE_FILTERS_ITERATOR_ARRAY0
-#define _DATABASE_FILTERS_ITERATOR_ARRAY0(...) \
-  _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
-  ( \
-    _ITERATOR_EVAL(__DATABASE_FILTERS_ITERATOR_ARRAY0(__VA_ARGS__)) \
-  ) \
-  ( \
-    /* nothing to do */ \
-  )
-
-// <type>(<value>)
-// TODO: remove
-#define xxxDATABASE_FILTERS(...) \
-  (DatabaseFilter[]){_ITERATOR_EVAL(_DATABASE_FILTERS_ITERATOR_ARRAY0(__VA_ARGS__))}, \
-  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)
 #define DATABASE_FILTERS(...) \
   (DatabaseFilter[]){__VA_ARGS__}, \
   ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2)
 
-#define DATABASE_FILTER_TYPE_VALUE_KEY(value)      { DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
-#define DATABASE_FILTER_TYPE_VALUE_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
-#define DATABASE_FILTER_TYPE_VALUE_INT(value)      { DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
-#define DATABASE_FILTER_TYPE_VALUE_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
-#define DATABASE_FILTER_TYPE_VALUE_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
-#define DATABASE_FILTER_TYPE_VALUE_UINT64(value)   { DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
-#define DATABASE_FILTER_TYPE_VALUE_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
-#define DATABASE_FILTER_TYPE_VALUE_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
-#define DATABASE_FILTER_TYPE_VALUE_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
 #define DATABASE_FILTER_KEY(value)      { DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
-#define DATABASE_FILTER_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value)==true) } }
+#define DATABASE_FILTER_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value) == true) } }
 #define DATABASE_FILTER_INT(value)      { DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
 #define DATABASE_FILTER_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
 #define DATABASE_FILTER_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
