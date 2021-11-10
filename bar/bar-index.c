@@ -2757,7 +2757,8 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                              &totalEntriesNewestCount,
                              "entriesNewest",
                              "COUNT(id)",
-                             DATABASE_FILTERS_NONE
+                             DATABASE_FILTERS_NONE,
+                             NULL  // group
                             );
     if (error != ERROR_NONE)
     {

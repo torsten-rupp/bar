@@ -12307,11 +12307,10 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                        const char           *columnName,
                        const char           *filter,
                        const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
+                       uint                 filterValueCount,
+                       const char           *group
                       )
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12339,59 +12338,12 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                       ),
                       DATABASE_COLUMNS
                       (
-                        DATABASE_COLUMN_INT(columnName)
-                      ),
-                      filter,
-                      filterValues,
-                      filterValueCount,
-                      NULL,  // orderGroup
-                      0LL,
-                      1LL
-                     );
-
-  return error;
-}
-Errors Database_getInt2(DatabaseHandle       *databaseHandle,
-                       int                  *value,
-                       const char           *tableName,
-                       const char           *columnName,
-                       const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
-                      )
-{
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(value != NULL);
-  assert(tableName != NULL);
-
-  return Database_get(databaseHandle,
-                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                      {
-                        assert(values != NULL);
-                        assert(valueCount == 1);
-
-                        UNUSED_VARIABLE(userData);
-                        UNUSED_VARIABLE(valueCount);
-
-                        (*value) = values[0].i;
-
-                        return ERROR_NONE;
-                      },NULL),
-                      NULL,  // changedRowCount
-                      DATABASE_TABLES
-                      (
-                        tableName
-                      ),
-                      DATABASE_COLUMNS
-                      (
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // orderGroup
+                      group,
                       0LL,
                       1LL
                      );
@@ -12433,7 +12385,8 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                         const char           *columnName,
                         const char           *filter,
                         const DatabaseFilter filterValues[],
-                        uint                 filterValueCount
+                        uint                 filterValueCount,
+                        const char           *group
                        )
 {
   assert(databaseHandle != NULL);
@@ -12468,7 +12421,7 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // orderGroup
+                      group,
                       0LL,
                       1LL
                      );
@@ -12700,7 +12653,8 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          uint                 filterValueCount,
+                          const char           *group
                          )
 {
   assert(databaseHandle != NULL);
@@ -12735,7 +12689,7 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // orderGroup
+                      group,
                       0LL,
                       1LL
                      );
@@ -12771,109 +12725,14 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
                         );
 }
 
-Errors Database_getDouble(DatabaseHandle *databaseHandle,
-                          double         *value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
-                         )
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(value != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  va_start(arguments,additional);
-  error = Database_vgetDouble(databaseHandle,value,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
-}
-
-Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
-                           double         *value,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(value != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  // format SQL command string
-  sqlString = formatSQLString(String_new(),
-                              "SELECT %s \
-                               FROM %s \
-                              ",
-                              columnName,
-                              tableName
-                             );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-  String_appendCString(sqlString," LIMIT 0,1");
-
-  // execute SQL command
-  (*value) = 0.0;
-  DATABASE_DEBUG_SQLX(databaseHandle,"get double",sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    return executeStatement(databaseHandle,
-                            CALLBACK_INLINE(Errors,(const  DatabaseValue values[], uint valueCount, void *userData),
-                            {
-                              assert(values != NULL);
-                              assert(valueCount == 1);
-
-                              UNUSED_VARIABLE(valueCount);
-                              UNUSED_VARIABLE(userData);
-
-                              (*value) = values[0].d;
-
-                              return ERROR_NONE;
-                            },NULL),
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout,
-                            DATABASE_COLUMN_TYPES(DOUBLE),
-                            "%s",
-                            String_cString(sqlString)
-                           );
-  });
-
-  // free resources
-  String_delete(sqlString);
-
-  return error;
-}
-Errors Database_getDouble2(DatabaseHandle       *databaseHandle,
+Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                           double               *value,
                           const char           *tableName,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          uint                 filterValueCount,
+                          const char           *group
                          )
 {
   assert(databaseHandle != NULL);
@@ -12907,7 +12766,7 @@ Errors Database_getDouble2(DatabaseHandle       *databaseHandle,
                       filter,
                       filterValues,
                       filterValueCount,
-                      NULL,  // orderGroup
+                      group,
                       0LL,
                       1LL
                      );

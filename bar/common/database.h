@@ -2122,29 +2122,23 @@ Errors Database_getMaxId2(DatabaseHandle       *databaseHandle,
 * Input  : databaseHandle - database handle
 *          tableName      - table name
 *          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
-* Output : value - int64 value
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          group             - group SQL string or NULL
+* Output : value - int value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_getInt(DatabaseHandle       *databaseHandle,
-                       int                 *value,
-                       const char           *tableName,
-                       const char           *columnName,
-                       const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
-                      ) ATTRIBUTE_DEPRECATED;
-Errors Database_getInt2(DatabaseHandle       *databaseHandle,
                        int                  *value,
                        const char           *tableName,
                        const char           *columnName,
                        const char           *filter,
                        const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
+                       uint                 filterValueCount,
+                       const char           *group
                       );
 
 /***********************************************************************\
@@ -2192,7 +2186,8 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                         const char           *columnName,
                         const char           *filter,
                         const DatabaseFilter filterValues[],
-                        uint                 filterValueCount
+                        uint                 filterValueCount,
+                        const char           *group
                        );
 
 /***********************************************************************\
@@ -2288,12 +2283,13 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
 /***********************************************************************\
 * Name   : Database_getUInt64
 * Purpose: get uint64 value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle    - database handle
+*          tableName         - table name
+*          columnName        - column name
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          group             - group SQL string or NULL
 * Output : value - int64 value
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2305,7 +2301,8 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          uint                 filterValueCount,
+                          const char           *group
                          );
 
 /***********************************************************************\
@@ -2336,38 +2333,26 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
 /***********************************************************************\
 * Name   : Database_getDouble, Database_vgetDouble
 * Purpose: get int64 value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle    - database handle
+*          tableName         - table name
+*          columnName        - column name
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          group             - group SQL string or NULL
 * Output : value - double value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getDouble(DatabaseHandle *databaseHandle,
-                          double         *value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
-                         ) ATTRIBUTE_DEPRECATED;
-Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
-                           double         *value,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          ) ATTRIBUTE_DEPRECATED;
-Errors Database_getDouble2(DatabaseHandle       *databaseHandle,
+Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                           double               *value,
                           const char           *tableName,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          uint                 filterValueCount,
+                          const char           *group
                          );
 
 /***********************************************************************\

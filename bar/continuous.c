@@ -413,7 +413,8 @@ LOCAL Errors getContinuousVersion(uint *continuousVersion, const DatabaseSpecifi
                            "name='version'",
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
