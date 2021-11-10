@@ -984,117 +984,95 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(KEY,KEY,KEY,INT,STRING,UINT64,INT,INT,INT,INT64),
-                               "      SELECT entries.id, \
-                                             entries.uuidId, \
-                                             entries.entityId, \
-                                             entries.type, \
-                                             entries.name, \
-                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                             entries.userId, \
-                                             entries.groupId, \
-                                             entries.permission, \
-                                             entries.size \
-                                      FROM entryFragments \
-                                        LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                                      WHERE entryFragments.storageId=? \
-                                UNION SELECT entries.id, \
-                                             entries.uuidId, \
-                                             entries.entityId, \
-                                             entries.type, \
-                                             entries.name, \
-                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                             entries.userId, \
-                                             entries.groupId, \
-                                             entries.permission, \
-                                             entries.size \
-                                      FROM directoryEntries \
-                                        LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                                      WHERE directoryEntries.storageId=? \
-                                UNION SELECT entries.id, \
-                                             entries.uuidId, \
-                                             entries.entityId, \
-                                             entries.type, \
-                                             entries.name, \
-                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                             entries.userId, \
-                                             entries.groupId, \
-                                             entries.permission, \
-                                             entries.size \
-                                      FROM linkEntries \
-                                        LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                                      WHERE linkEntries.storageId=? \
-                                UNION SELECT entries.id, \
-                                             entries.uuidId, \
-                                             entries.entityId, \
-                                             entries.type, \
-                                             entries.name, \
-                                             UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                             entries.userId, \
-                                             entries.groupId, \
-                                             entries.permission, \
-                                             entries.size \
-                                      FROM specialEntries \
-                                        LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                                      WHERE specialEntries.storageId=? \
-                                GROUP BY entries.name \
-                               ",
-                               DATABASE_VALUES2
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 DATABASE_FILTER_KEY(storageId),
-                                 DATABASE_FILTER_KEY(storageId),
-                                 DATABASE_FILTER_KEY(storageId),
-                                 DATABASE_FILTER_KEY(storageId)
-                               )
-                              );
+      return Database_get(&indexHandle->databaseHandle,
+                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                          {
+                            assert(values != NULL);
+                            assert(valueCount == 10);
+
+                            UNUSED_VARIABLE(userData);
+                            UNUSED_VARIABLE(valueCount);
+
+                            entryId         = values[0].id;
+                            uuidId          = values[1].id;
+                            entityId        = values[2].id;
+                            indexType       = values[3].id;
+                            String_setBuffer(entryName,values[4].text.data,values[4].text.length);
+                            timeLastChanged = values[5].dateTime;
+                            userId          = values[6].u;
+                            groupId         = values[7].u;
+                            permission      = values[8].u;
+                            size            = values[9].u64;
+
+                            return ERROR_NONE;
+                          },NULL),
+                          NULL,  // changedRowCount
+                          DATABASE_TABLES
+                          (
+                            "entryFragments \
+                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                              LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                            ",
+                            "directoryEntries \
+                              LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                              LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                            ",
+                            "linkEntries \
+                              LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                              LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                            ",
+                            "specialEntries \
+                              LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                              LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                            "
+                          ),
+                          DATABASE_COLUMNS
+                          (
+                            DATABASE_COLUMN_KEY   ("entries.id"),
+                            DATABASE_COLUMN_KEY   ("entries.uuidId"),
+                            DATABASE_COLUMN_KEY   ("entries.entityId"),
+                            DATABASE_COLUMN_UINT  ("entries.type"),
+                            DATABASE_COLUMN_STRING("entries.name"),
+                            DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged"),
+                            DATABASE_COLUMN_UINT  ("entries.userId"),
+                            DATABASE_COLUMN_UINT  ("entries.groupId"),
+                            DATABASE_COLUMN_UINT  ("entries.permission"),
+                            DATABASE_COLUMN_UINT64("entries.size")
+                          ),
+                          "storageId=?",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_KEY(storageId)
+                          ),
+                          "ORDER BY timeLastChanged DESC",
+                          0LL,
+                          1LL
+                         );
       if (error != ERROR_NONE)
       {
         return error;
       }
 
-      while (Database_getNextRow(&databaseStatementHandle,
-                                 "%lld %lld %lld %u %S %llu %u %u %u %llu",
-                                 &entryId,
-                                 &uuidId,
-                                 &entityId,
-                                 &indexType,
-                                 entryName,
-                                 &timeLastChanged,
-                                 &userId,
-                                 &groupId,
-                                 &permission,
-                                 &size
-                                )
-            )
+      entryNode = LIST_NEW_NODE(EntryNode);
+      if (entryNode == NULL)
       {
-        entryNode = LIST_NEW_NODE(EntryNode);
-        if (entryNode == NULL)
-        {
-          HALT_INSUFFICIENT_MEMORY();
-        }
-
-        entryNode->entryId                = entryId;
-        entryNode->uuidId                 = uuidId;
-        entryNode->entityId               = entityId;
-        entryNode->indexType              = (IndexTypes)indexType;
-        entryNode->name                   = String_duplicate(entryName);
-        entryNode->timeLastChanged        = timeLastChanged;
-        entryNode->userId                 = (uint32)userId;
-        entryNode->groupId                = (uint32)groupId;
-        entryNode->permission             = (uint32)permission;
-        entryNode->size                   = (uint64)size;
-        entryNode->newest.entryId         = DATABASE_ID_NONE;
-        entryNode->newest.timeLastChanged = 0LL;
-
-        List_append(&entryList,entryNode);
+        HALT_INSUFFICIENT_MEMORY();
       }
 
-      Database_finalize(&databaseStatementHandle);
+      entryNode->entryId                = entryId;
+      entryNode->uuidId                 = uuidId;
+      entryNode->entityId               = entityId;
+      entryNode->indexType              = (IndexTypes)indexType;
+      entryNode->name                   = String_duplicate(entryName);
+      entryNode->timeLastChanged        = timeLastChanged;
+      entryNode->userId                 = (uint32)userId;
+      entryNode->groupId                = (uint32)groupId;
+      entryNode->permission             = (uint32)permission;
+      entryNode->size                   = (uint64)size;
+      entryNode->newest.entryId         = DATABASE_ID_NONE;
+      entryNode->newest.timeLastChanged = 0LL;
+
+      List_append(&entryList,entryNode);
 
       return ERROR_NONE;
     });
