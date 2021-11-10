@@ -2306,7 +2306,6 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
 Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                           double               *value,
                           const char           *tableName,
-                          uint                 flags,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
@@ -2319,6 +2318,7 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
 * Purpose: insert or update double value in database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
+*          flags            - flags; see DATABASE_FLAGS_...
 *          columnName       - column name
 *          value            - double value
 *          filter           - filter string
@@ -2340,52 +2340,30 @@ Errors Database_setDouble(DatabaseHandle       *databaseHandle,
                          );
 
 /***********************************************************************\
-* Name   : Database_getString, Database_vgetString
+* Name   : Database_getString, Database_getCString
 * Purpose: get string value from database table
 * Input  : databaseHandle  - database handle
 *          tableName       - table name
 *          string          - string variable
 *          maxStringLength - max. length of string
 *          columnName      - column name
-*          additional      - additional string (e. g. WHERE...)
-*                            special functions:
-*                              REGEXP(pattern,case-flag,text)
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : string - string value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         string,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
-                         ) ATTRIBUTE_DEPRECATED;
-Errors Database_getCString(DatabaseHandle *databaseHandle,
-                           char           *string,
-                           uint           maxStringLength,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           ...
-                          ) ATTRIBUTE_DEPRECATED;
-Errors Database_vgetString(DatabaseHandle *databaseHandle,
-                           String         string,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          );
-Errors Database_vgetCString(DatabaseHandle *databaseHandle,
-                            char           *string,
-                            uint           maxStringLength,
-                            const char     *tableName,
-                            const char     *columnName,
-                            const char     *additional,
-                            va_list        arguments
-                           );
-Errors Database_getCString2(DatabaseHandle       *databaseHandle,
+Errors Database_getString(DatabaseHandle       *databaseHandle,
+                          String               string,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
+                         );
+Errors Database_getCString(DatabaseHandle       *databaseHandle,
                            char                 *string,
                            uint                 maxStringLength,
                            const char           *tableName,
@@ -2396,34 +2374,30 @@ Errors Database_getCString2(DatabaseHandle       *databaseHandle,
                           );
 
 /***********************************************************************\
-* Name   : Database_setString, Database_vsetString
+* Name   : Database_setString
 * Purpose: insert or update string value in database table
-* Input  : databaseHandle - database handle
-*          string         - string value
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAGS_...
+*          columnName       - column name
+*          value            - string value
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_setString(DatabaseHandle *databaseHandle,
-                          const String   string,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_setString(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          const String         value,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
                          );
-Errors Database_vsetString(DatabaseHandle *databaseHandle,
-                           const String   string,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          );
 
 /***********************************************************************\
 * Name   : Database_getLastRowId

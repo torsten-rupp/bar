@@ -890,8 +890,11 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
                              jobUUID,
                              "storages",
                              "jobUUID",
-                             "id=%lld",
-                             storageId
+                             "id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             )
                             ) != ERROR_NONE
          )
       || (Database_getId(oldDatabaseHandle,

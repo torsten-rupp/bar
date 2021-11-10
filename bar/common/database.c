@@ -12337,7 +12337,6 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
 Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                           double               *value,
                           const char           *tableName,
-                          uint                 flags,
                           const char           *columnName,
                           const char           *filter,
                           const DatabaseFilter filterValues[],
@@ -12413,17 +12412,15 @@ Errors Database_setDouble(DatabaseHandle       *databaseHandle,
                         );
 }
 
-Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         string,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_getString(DatabaseHandle      *databaseHandle,
+                          String               string,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
                          )
 {
-  va_list arguments;
-  Errors  error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
@@ -12431,184 +12428,38 @@ Errors Database_getString(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  va_start(arguments,additional);
-  error = Database_vgetString(databaseHandle,string,tableName,columnName,additional,arguments);
-  va_end(arguments);
+  return Database_get(databaseHandle,
+                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                      {
+                        assert(values != NULL);
+                        assert(valueCount == 1);
 
-  return error;
+                        UNUSED_VARIABLE(userData);
+                        UNUSED_VARIABLE(valueCount);
+
+                        String_setBuffer(string,values[0].text.data,values[0].text.length);
+
+                        return ERROR_NONE;
+                      },NULL),
+                      NULL,  // changedRowCount
+                      DATABASE_TABLES
+                      (
+                        tableName
+                      ),
+                      DATABASE_COLUMNS
+                      (
+                        DATABASE_COLUMN_KEY   (columnName)
+                      ),
+                      filter,
+                      filterValues,
+                      filterValueCount,
+                      NULL,  // orderGroup
+                      0LL,
+                      1LL
+                     );
 }
 
-Errors Database_getCString(DatabaseHandle *databaseHandle,
-                           char           *string,
-                           uint           maxStringLength,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           ...
-                          )
-{
-  va_list arguments;
-  Errors  error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(string != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  va_start(arguments,additional);
-  error = Database_vgetCString(databaseHandle,string,maxStringLength,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
-}
-
-Errors Database_vgetString(DatabaseHandle *databaseHandle,
-                           String         string,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(string != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  // format SQL command string
-  sqlString = formatSQLString(String_new(),
-                              "SELECT %s \
-                               FROM %s \
-                              ",
-                              columnName,
-                              tableName
-                             );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-  String_appendCString(sqlString," LIMIT 0,1");
-
-  // execute SQL command
-  String_clear(string);
-  DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    return executeStatement(databaseHandle,
-                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                            {
-                              assert(values != NULL);
-                              assert(valueCount == 1);
-
-                              UNUSED_VARIABLE(valueCount);
-                              UNUSED_VARIABLE(userData);
-
-                              String_setBuffer(string, values[0].text.data, values[0].text.length);
-
-                              return ERROR_NONE;
-                            },NULL),
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout,
-                            DATABASE_COLUMN_TYPES(CSTRING),
-                            "%s",
-                            String_cString(sqlString)
-                           );
-  });
-
-  // free resources
-  String_delete(sqlString);
-
-  return error;
-}
-
-Errors Database_vgetCString(DatabaseHandle *databaseHandle,
-                            char           *string,
-                            uint           maxStringLength,
-                            const char     *tableName,
-                            const char     *columnName,
-                            const char     *additional,
-                            va_list        arguments
-                           )
-{
-  String sqlString;
-  Errors error;
-
-  assert(databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-  assert(checkDatabaseInitialized(databaseHandle));
-  assert(string != NULL);
-  assert(tableName != NULL);
-  assert(columnName != NULL);
-
-  // format SQL command string
-  sqlString = formatSQLString(String_new(),
-                              "SELECT %s \
-                               FROM %s \
-                              ",
-                              columnName,
-                              tableName
-                             );
-  if (additional != NULL)
-  {
-    String_appendChar(sqlString,' ');
-    vformatSQLString(sqlString,
-                     additional,
-                     arguments
-                    );
-  }
-  String_appendCString(sqlString," LIMIT 0,1");
-
-  // execute SQL command
-  stringClear(string);
-  DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
-  DATABASE_DOX(error,
-               ERRORX_(DATABASE_TIMEOUT,0,""),
-               databaseHandle,
-               DATABASE_LOCK_TYPE_READ_WRITE,
-               databaseHandle->timeout,
-  {
-    return executeStatement(databaseHandle,
-                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                            {
-                              assert(values != NULL);
-                              assert(valueCount == 1);
-
-                              UNUSED_VARIABLE(valueCount);
-                              UNUSED_VARIABLE(userData);
-
-                              stringSet(string,maxStringLength,values[0].text.data);
-
-                              return ERROR_NONE;
-                            },NULL),
-                            NULL,  // changedRowCount
-                            databaseHandle->timeout,
-                            DATABASE_COLUMN_TYPES(CSTRING),
-                            "%s",
-                            String_cString(sqlString)
-                           );
-  });
-
-  // free resources
-  String_delete(sqlString);
-
-  return error;
-}
-Errors Database_getCString2(DatabaseHandle       *databaseHandle,
+Errors Database_getCString(DatabaseHandle       *databaseHandle,
                            char                 *string,
                            uint                 maxStringLength,
                            const char           *tableName,
@@ -12656,29 +12507,34 @@ Errors Database_getCString2(DatabaseHandle       *databaseHandle,
                      );
 }
 
-Errors Database_setString(DatabaseHandle *databaseHandle,
-                          const String   string,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_setString(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          const String         value,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
                          )
 {
-  va_list arguments;
-  Errors  error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(checkDatabaseInitialized(databaseHandle));
-  assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  va_start(arguments,additional);
-  error = Database_vsetString(databaseHandle,string,tableName,columnName,additional,arguments);
-  va_end(arguments);
-
-  return error;
+  return Database_update(databaseHandle,
+                         NULL,  // changedRowCount
+                         tableName,
+                         flags,
+                         DATABASE_VALUES2
+                         (
+                           DATABASE_VALUE_STRING(columnName, value)
+                         ),
+                         filter,
+                         filterValues,
+                         filterValueCount
+                        );
 }
 
 Errors Database_vsetString(DatabaseHandle *databaseHandle,
