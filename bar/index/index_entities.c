@@ -942,7 +942,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   // get to-uuid id
   if (error == ERROR_NONE)
   {
-    error = Database_getId2(&indexHandle->databaseHandle,
+    error = Database_getId(&indexHandle->databaseHandle,
                            &toUUIDId,
                            "entities \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -1064,7 +1064,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
     // get to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -1183,7 +1183,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // get uuid id, to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &uuidId,
                              "entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -1198,7 +1198,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     }
     if (error == ERROR_NONE)
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "uuids",
                              "id",
@@ -2523,7 +2523,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       }
 
       // get uuid id
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &uuidId,
                              "uuids",
                              "id",
@@ -2794,7 +2794,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
               indexHandle,
     {
       // get UUID id
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &uuidId,
                              "entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \

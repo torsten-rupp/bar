@@ -610,7 +610,7 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
   {
     do
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &storageId,
                              "storages",
                              "id",
@@ -2325,7 +2325,7 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
   if (error == ERROR_NONE)
   {
     // update entity aggregates
-    error = Database_getId2(&indexHandle->databaseHandle,
+    error = Database_getId(&indexHandle->databaseHandle,
                            &entityId,
                            "storages",
                            "entityId",
@@ -2925,7 +2925,7 @@ LOCAL Errors pruneStorage(IndexHandle  *indexHandle,
   if ((indexState == INDEX_STATE_OK) && IndexStorage_isEmpty(indexHandle,storageId))
   {
     // get entity id
-    error = Database_getId2(&indexHandle->databaseHandle,
+    error = Database_getId(&indexHandle->databaseHandle,
                            &entityId,
                            "storages",
                            "entityId",
@@ -3730,7 +3730,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
   }
 
   // update entity aggregates
-  error = Database_getId2(&indexHandle->databaseHandle,
+  error = Database_getId(&indexHandle->databaseHandle,
                          &entityId,
                          "storages",
                          "entityId",
@@ -5322,7 +5322,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
               indexHandle,
     {
       // get entity id
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &entityId,
                              "storages",
                              "entityId",

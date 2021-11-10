@@ -1937,7 +1937,7 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
   {
     do
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &storageId,
                              "storages",
                              "id",

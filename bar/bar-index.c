@@ -894,7 +894,7 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
                              storageId
                             ) != ERROR_NONE
          )
-      || (Database_getId2(oldDatabaseHandle,
+      || (Database_getId(oldDatabaseHandle,
                          entityId,
                          "entities",
                          "id",
@@ -927,7 +927,7 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
     // get uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId2(newDatabaseHandle,
+      error = Database_getId(newDatabaseHandle,
                              &uuidId,
                              "uuids",
                              "id",
@@ -5317,7 +5317,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       // get storage to purge
-      error = Database_getId2(databaseHandle,
+      error = Database_getId(databaseHandle,
                              &storageId,
                              "storages",
                              "id",

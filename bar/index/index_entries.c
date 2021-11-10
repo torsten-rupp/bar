@@ -759,7 +759,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   assert(fileName != NULL);
 
   // get newest id
-  error = Database_getId2(&indexHandle->databaseHandle,
+  error = Database_getId(&indexHandle->databaseHandle,
                          &databaseId,
                          "entriesNewest",
                          "id",
@@ -4188,7 +4188,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
-        error = Database_getId2(&indexHandle->databaseHandle,
+        error = Database_getId(&indexHandle->databaseHandle,
                                &entryId,
                                "entries",
                                "id",
@@ -4381,7 +4381,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
-        error = Database_getId2(&indexHandle->databaseHandle,
+        error = Database_getId(&indexHandle->databaseHandle,
                                &entryId,
                                "entries",
                                "id",
@@ -4850,7 +4850,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
-        error = Database_getId2(&indexHandle->databaseHandle,
+        error = Database_getId(&indexHandle->databaseHandle,
                                &entryId,
                                "entries",
                                "id",

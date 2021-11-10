@@ -2005,34 +2005,20 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                    );
 
 /***********************************************************************\
-* Name   : Database_getId, Database_vgetId
+* Name   : Database_getId
 * Purpose: get database id of value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : value - database id or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getId(DatabaseHandle *databaseHandle,
-                      DatabaseId     *value,
-                      const char     *tableName,
-                      const char     *columnName,
-                      const char     *additional,
-                      ...
-                     ) ATTRIBUTE_DEPRECATED;
-Errors Database_vgetId(DatabaseHandle *databaseHandle,
-                       DatabaseId     *value,
-                       const char     *tableName,
-                       const char     *columnName,
-                       const char     *additional,
-                       va_list        arguments
-                      ) ATTRIBUTE_DEPRECATED;
-Errors Database_getId2(DatabaseHandle       *databaseHandle,
+Errors Database_getId(DatabaseHandle       *databaseHandle,
                       DatabaseId           *value,
                       const char           *tableName,
                       const char           *columnName,

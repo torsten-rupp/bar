@@ -443,7 +443,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   // get to-uuid id
   if (error == ERROR_NONE)
   {
-    error = Database_getId2(&indexHandle->databaseHandle,
+    error = Database_getId(&indexHandle->databaseHandle,
                            &toUUIDId,
                            "entities \
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -560,7 +560,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
     // get to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -676,7 +676,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // get uuid id, to-uuid id
     if (error == ERROR_NONE)
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &uuidId,
                              "entities \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
@@ -691,7 +691,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     }
     if (error == ERROR_NONE)
     {
-      error = Database_getId2(&indexHandle->databaseHandle,
+      error = Database_getId(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "uuids",
                              "id",
@@ -810,7 +810,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
   // get to-uuid id
   if (error == ERROR_NONE)
   {
-    error = Database_getId2(&indexHandle->databaseHandle,
+    error = Database_getId(&indexHandle->databaseHandle,
                            &toUUIDId,
                            "uuids",
                            "id",
