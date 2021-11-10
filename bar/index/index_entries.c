@@ -1433,7 +1433,6 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
         }
         else
         {
-fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
           // all entries
           if (String_isEmpty(entryIdsString))
           {
@@ -1762,7 +1761,6 @@ fprintf(stderr,"%s:%d: a_\n",__FILE__,__LINE__);
           }
           else
           {
-fprintf(stderr,"%s:%d: c33_\n",__FILE__,__LINE__);
             error = Database_get(&indexHandle->databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                  {
@@ -1889,7 +1887,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           if (String_isEmpty(entryIdsString))
           {
             // no storages selected, no entries selected -> get aggregated data from entities
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_get(&indexHandle->databaseHandle,
                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                  {
@@ -2472,7 +2469,6 @@ fprintf(stderr,"%s:%d: 1\n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s:%d: 2xxxx\n",__FILE__,__LINE__);
         return Database_select2(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
                                "entries \
@@ -4208,8 +4204,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
           if (error == ERROR_NONE)
           {
             entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-fprintf(stderr,"%s:%d: ibnsert %ld %ld\n",__FILE__,__LINE__,Index_getDatabaseId(entityId),entryId);
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
           }
 
           // add FTS entry

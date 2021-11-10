@@ -1481,15 +1481,12 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
 {
   Errors error;
   ulong  totalFileCount;
-  double totalFileSize_;
   uint64 totalFileSize;
   ulong  totalImageCount;
-  double totalImageSize_;
   uint64 totalImageSize;
   ulong  totalDirectoryCount;
   ulong  totalLinkCount;
   ulong  totalHardlinkCount;
-  double totalHardlinkSize_;
   uint64 totalHardlinkSize;
   ulong  totalSpecialCount;
 
@@ -1829,8 +1826,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                       );
   if (error != ERROR_NONE)
   {
-    totalImageCount = 0L;
-    totalImageSize_ = 0.0;
+    totalFileCount = 0L;
+    totalFileSize  = 0LL;
   }
 
   // get newest image aggregate data
@@ -1875,7 +1872,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   if (error != ERROR_NONE)
   {
     totalImageCount = 0L;
-    totalImageSize_ = 0.0;
+    totalImageSize  = 0LL;
   }
 
   // get newest directory aggregate data
@@ -2002,7 +1999,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   if (error != ERROR_NONE)
   {
     totalHardlinkCount = 0L;
-    totalHardlinkSize  = 0.0;
+    totalHardlinkSize  = 0LL;
   }
 
   // get newest special aggregate data
