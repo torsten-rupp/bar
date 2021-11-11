@@ -136,6 +136,7 @@ typedef enum
 #define DATABASE_FLAG_NONE    0
 #define DATABASE_FLAG_IGNORE  (1 << 0)
 #define DATABASE_FLAG_REPLACE (1 << 1)
+#define DATABASE_FLAG_PLAIN   (1 << 2)
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -635,6 +636,11 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+#define DATABASE_PLAIN(sqlCommand) \
+  (const char*[]){sqlCommand}, \
+  1, \
+  DATABASE_FLAG_PLAIN
 
 #define DATABASE_TABLES(...) \
   (const char*[]){__VA_ARGS__}, \
@@ -1753,22 +1759,12 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
 * Name   : Database_getNextRow
 * Purpose: get next row from query result
 * Input  : databaseStatementHandle - database statment handle
-*          format - format string
-* Output : ... - variables
+* Output : ... - values
 * Return : TRUE if row read, FALSE if not more rows
-* Notes  : Support format types:
-*            %b              - bool
-*            %[<n>][(ll|l)\d - int
-*            %[<n>][(ll|l)\u - unsigned int
-*            %[<n>][l\f      - float/double
-*            %c              - char
-*            %[<n>]s         - char*
-*            %S              - string
-*            %p              - pointer
+* Notes  : -
 \***********************************************************************/
 
 bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                         const char              *format,
                          ...
                         );
 
@@ -1778,7 +1774,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 * Input  : databaseHandle   - database handle
 *          changedRowCount  - row count variable (can be NULL)
 *          tableName        - table name,
-*          flags            - insert flags; see DATABASE_FLAGS_...
+*          flags            - insert flags; see DATABASE_FLAG_...
 *          values           - values to insert
 *          valueCount       - value count
 * Output : -
@@ -1800,7 +1796,7 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
 * Input  : databaseHandle   - database handle
 *          changedRowCount  - row count variable (can be NULL)
 *          tableName        - table name,
-*          flags            - insert flags; see DATABASE_FLAGS_...
+*          flags            - insert flags; see DATABASE_FLAG__...
 *          values           - values to insert
 *          valueCount       - value count
 *          tableNames       - select table names
@@ -1841,7 +1837,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
 * Purpose: update row in database table
 * Input  : databaseHandle   - database handle
 *          changedRowCount  - row count variable (can be NULL)
-*          flags            - insert flags; see DATABASE_FLAGS_...
+*          flags            - insert flags; see DATABASE_FLAG__...
 *          values           - values to insert
 *          valueCount       - value count
 *          filter           - SQL filter
@@ -1869,7 +1865,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
 * Input  : databaseHandle   - database handle
 *          changedRowCount  - row count variable (can be NULL)
 *          tableName        - table name,
-*          flags            - insert flags; see DATABASE_FLAGS_...
+*          flags            - insert flags; see DATABASE_FLAG__...
 *          filter           - SQL filter expression
 *          filterValues     - filter values
 *          filterValueCount - filter values count
@@ -1898,7 +1894,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 *          databaseRowUserData - user data for callback function
 *          changedRowCount     - number of changd rows (can be NULL)
 *          tableName           - table name,
-*          flags               - insert flags; see DATABASE_FLAGS_...
+*          flags               - insert flags; see DATABASE_FLAG__...
 *          columns             - select columns
 *          columnCount         - select columns couont
 *          filter              - SQL filter expression
@@ -1971,6 +1967,7 @@ bool Database_existsValue(DatabaseHandle      *databaseHandle,
 *          changedRowCount
 *          tableNames        - table names
 *          tableNameCount    - table names count
+*          flags             - flags; see DATABASE_FLAG__...
 *          selectColumns     - select columns
 *          selectColumnCount - select columns count
 *          filter            - filter string
@@ -1990,6 +1987,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     ulong                *changedRowCount,
                     const char           *tableNames[],
                     uint                 tableNameCount,
+                    uint                 flags,
 // TODO: select value datatype: name, type
                     DatabaseColumn       selectColumns[],
                     uint                 selectColumnCount,
@@ -2101,7 +2099,7 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
 * Purpose: insert or update int value in database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
-*          flags            - flags; see DATABASE_FLAGS_...
+*          flags            - flags; see DATABASE_FLAG__...
 *          columnName       - column name
 *          value            - int64 value
 *          filter           - filter string
@@ -2151,7 +2149,7 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
 * Purpose: insert or update uint value in database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
-*          flags            - flags; see DATABASE_FLAGS_...
+*          flags            - flags; see DATABASE_FLAG__...
 *          columnName       - column name
 *          value            - int64 value
 *          filter           - filter string
@@ -2202,7 +2200,7 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
 * Purpose: insert or update int64 value in database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
-*          flags            - flags; see DATABASE_FLAGS_...
+*          flags            - flags; see DATABASE_FLAG__...
 *          value            - int64 value
 *          columnName       - column name
 *          filter           - filter string
@@ -2253,7 +2251,7 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
 * Purpose: insert or update uint64 value in database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
-*          flags            - flags; see DATABASE_FLAGS_...
+*          flags            - flags; see DATABASE_FLAG__...
 *          columnName       - column name
 *          value            - int64 value
 *          filter           - filter string
@@ -2279,7 +2277,7 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
 * Purpose: get double value from database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
-*          flags            - flags; see DATABASE_FLAGS_...
+*          flags            - flags; see DATABASE_FLAG__...
 *          columnName       - column name
 *          filter           - filter string
 *          filterValues     - filter values
@@ -2305,7 +2303,7 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
 * Purpose: insert or update double value in database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
-*          flags            - flags; see DATABASE_FLAGS_...
+*          flags            - flags; see DATABASE_FLAG__...
 *          columnName       - column name
 *          value            - double value
 *          filter           - filter string
@@ -2365,7 +2363,7 @@ Errors Database_getCString(DatabaseHandle       *databaseHandle,
 * Purpose: insert or update string value in database table
 * Input  : databaseHandle   - database handle
 *          tableName        - table name
-*          flags            - flags; see DATABASE_FLAGS_...
+*          flags            - flags; see DATABASE_FLAG__...
 *          columnName       - column name
 *          value            - string value
 *          filter           - filter string

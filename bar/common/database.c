@@ -4738,6 +4738,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                                command,
                                arguments
                               );
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   done          = FALSE;
   error         = ERROR_NONE;
@@ -4798,12 +4799,19 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
 
             // allocate call-back data
             valueCount = sqlite3_column_count(statementHandle);
-            assertx(valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
+            assertx(valueCount == columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
 
             values = (DatabaseValue*)malloc(valueCount*sizeof(DatabaseValue));
             if (values == NULL)
             {
               HALT_INSUFFICIENT_MEMORY();
+            }
+
+            // bind results
+            for (i = 0; i < valueCount; i++)
+            {
+              values[i].name = NULL;
+              values[i].type = columnTypes[i];
             }
 
             // step and process rows
@@ -4830,7 +4838,8 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               {
                 for (i = 0; i < valueCount; i++)
                 {
-                  switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
+                  values[i].type = columnTypes[i];
+                  switch (columnTypes[i])
                   {
                     case DATABASE_DATATYPE_NONE:
                       break;
@@ -4880,7 +4889,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             // free call-back data
             for (i = 0; i < valueCount; i++)
             {
-              switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
+              switch (columnTypes[i])
               {
                 case DATABASE_DATATYPE_NONE:
                   break;
@@ -5018,7 +5027,7 @@ debugPrintStackTrace();
 
           // allocate call-back data
           valueCount = mysql_stmt_field_count(statementHandle);
-          assertx(valueCount >= columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
+          assertx(valueCount == columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
 
           bind = (MYSQL_BIND*)calloc(valueCount, sizeof(MYSQL_BIND));
           if (bind == NULL)
@@ -5041,7 +5050,9 @@ debugPrintStackTrace();
           // bind results
           for (i = 0; i < valueCount; i++)
           {
-            switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
+            values[i].name = NULL;
+            values[i].type = columnTypes[i];
+            switch (columnTypes[i])
             {
               case DATABASE_DATATYPE_NONE:
                 break;
@@ -5114,8 +5125,6 @@ debugPrintStackTrace();
                 break;
             }
           }
-
-          // bind results
           if (valueCount > 0)
           {
             if (mysql_stmt_bind_result(statementHandle, bind) != 0)
@@ -5176,7 +5185,7 @@ abort();
               {
                 for (i = 0; i < valueCount; i++)
                 {
-                  switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
+                  switch (columnTypes[i])
                   {
                     case DATABASE_DATATYPE_NONE:
                       break;
@@ -5228,7 +5237,7 @@ abort();
           // free call-back data
           for (i = 0; i < valueCount; i++)
           {
-            switch ((i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING)
+            switch (columnTypes[i])
             {
               case DATABASE_DATATYPE_NONE:
                 break;
@@ -6686,9 +6695,6 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
   {
     case DATABASE_TYPE_SQLITE3:
       {
-        const char *name,*type;
-        bool       isPrimaryKey;
-
         DATABASE_DOX(error,
                      ERRORX_(DATABASE_TIMEOUT,0,""),
                      databaseHandle,
@@ -6696,85 +6702,92 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
                      WAIT_FOREVER,
         {
           char sqlCommand[256];
-// TODO: use Database_execute()
-          error = Database_prepare(&databaseStatementHandle,
-                                   databaseHandle,
-                                   DATABASE_COLUMN_TYPES(INT,CSTRING,CSTRING,INT,INT,BOOL),
-                                   stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "PRAGMA table_info(%s)",
-                                                tableName
-                                               ),
-                                   DATABASE_VALUES
-                                   (
-                                   ),
-                                   DATABASE_FILTERS
-                                   (
-                                   )
-                                  );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-          while (Database_getNextRow(&databaseStatementHandle,
-                                     "%d %p %p %d %d %b",
-                                     NULL,  // id
-                                     &name,
-                                     &type,
-                                     NULL,  // canBeNULL
-                                     NULL,  // defaultValue
-                                     &isPrimaryKey
-                                    )
-                )
-          {
-            if (i < maxColumnCount)
-            {
-              if (   stringEqualsIgnoreCase(type,"INTEGER")
-                  || stringEqualsIgnoreCase(type,"NUMERIC")
-                 )
-              {
-                if (isPrimaryKey)
-                {
-                  stringSet(columnNames[i],sizeof(columnNames[i]),name);
-                  columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
-                  i++;
-                }
-                else
-                {
-                  stringSet(columnNames[i],sizeof(columnNames[i]),name);
-                  columnTypes[i] = DATABASE_DATATYPE_INT;
-                  i++;
-                }
-              }
-              else if (stringEqualsIgnoreCase(type,"REAL"))
-              {
-                stringSet(columnNames[i],sizeof(columnNames[i]),name);
-                columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
-                i++;
-              }
-              else if (stringEqualsIgnoreCase(type,"TEXT"))
-              {
-                stringSet(columnNames[i],sizeof(columnNames[i]),name);
-                columnTypes[i] = DATABASE_DATATYPE_CSTRING;
-                i++;
-              }
-              else if (stringEqualsIgnoreCase(type,"BLOB"))
-              {
-                stringSet(columnNames[i],sizeof(columnNames[i]),name);
-                columnTypes[i] = DATABASE_DATATYPE_BLOB;
-                i++;
-              }
-              else
-              {
-                // default datatype is TEXT
-                stringSet(columnNames[i],sizeof(columnNames[i]),"TEXT");
-                columnTypes[i] = DATABASE_DATATYPE_CSTRING;
-                i++;
-              }
-            }
-          }
-          Database_finalize(&databaseStatementHandle);
 
-          return error;
+          return Database_get(databaseHandle,
+                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                              {
+                                const char *name;
+                                const char *type;
+                                bool       isPrimaryKey;
+
+                                assert(values != NULL);
+                                assert(valueCount == 6);
+
+                                UNUSED_VARIABLE(userData);
+                                UNUSED_VARIABLE(valueCount);
+
+                                name         = values[1].text.data;
+                                type         = values[2].text.data;
+                                isPrimaryKey = values[5].b;
+
+                                if (i < maxColumnCount)
+                                {
+                                  if (   stringEqualsIgnoreCase(type,"INTEGER")
+                                      || stringEqualsIgnoreCase(type,"NUMERIC")
+                                     )
+                                  {
+                                    if (isPrimaryKey)
+                                    {
+                                      stringSet(columnNames[i],sizeof(columnNames[i]),name);
+                                      columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
+                                      i++;
+                                    }
+                                    else
+                                    {
+                                      stringSet(columnNames[i],sizeof(columnNames[i]),name);
+                                      columnTypes[i] = DATABASE_DATATYPE_INT;
+                                      i++;
+                                    }
+                                  }
+                                  else if (stringEqualsIgnoreCase(type,"REAL"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),name);
+                                    columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
+                                    i++;
+                                  }
+                                  else if (stringEqualsIgnoreCase(type,"TEXT"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),name);
+                                    columnTypes[i] = DATABASE_DATATYPE_CSTRING;
+                                    i++;
+                                  }
+                                  else if (stringEqualsIgnoreCase(type,"BLOB"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),name);
+                                    columnTypes[i] = DATABASE_DATATYPE_BLOB;
+                                    i++;
+                                  }
+                                  else
+                                  {
+                                    // default datatype is TEXT
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),"TEXT");
+                                    columnTypes[i] = DATABASE_DATATYPE_CSTRING;
+                                    i++;
+                                  }
+                                }
+
+                                return ERROR_NONE;
+                              },NULL),
+                              NULL,  // changedRowCount
+                              DATABASE_PLAIN(stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                          "PRAGMA table_info(%s)",
+                                                          tableName
+                                                         )
+                                            ),
+                              DATABASE_COLUMNS
+                              (
+                                DATABASE_COLUMN_KEY   ("id"),
+                                DATABASE_COLUMN_STRING("name"),
+                                DATABASE_COLUMN_STRING("type"),
+                                DATABASE_COLUMN_BOOL  ("canBeNull"),
+                                DATABASE_COLUMN_STRING("defaultValue"),
+                                DATABASE_COLUMN_BOOL  ("isPrimaryKey")
+                              ),
+                              DATABASE_FILTERS_NONE,
+                              NULL,  // orderGroup
+                              0LL,
+                              DATABASE_UNLIMITED
+                             );
         });
       }
       break;
@@ -6786,94 +6799,114 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
                      DATABASE_LOCK_TYPE_READ,
                      WAIT_FOREVER,
         {
-          return executeStatement(databaseHandle,
-                                  CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+          char sqlCommand[256];
+
+          return Database_get(databaseHandle,
+                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                              {
+                                const char *name;
+                                const char *type;
+                                bool       isPrimaryKey;
+
+                                assert(values != NULL);
+                                assert(valueCount == 6);
+
+                                UNUSED_VARIABLE(valueCount);
+                                UNUSED_VARIABLE(userData);
+
+                                name         = values[0].text.data;
+                                type         = values[1].text.data;
+                                isPrimaryKey = stringEqualsIgnoreCase(values[3].text.data,"PRI");
+
+                                if (i < maxColumnCount)
+                                {
+                                  if (stringStartsWith(values[1].text.data,"int"))
                                   {
-                                    bool isPrimaryKey;
-
-                                    assert(values != NULL);
-                                    assert(valueCount == 6);
-
-                                    UNUSED_VARIABLE(valueCount);
-                                    UNUSED_VARIABLE(userData);
-
-                                    isPrimaryKey = stringEqualsIgnoreCase(values[3].text.data,"PRI");
-
-                                    if (i < maxColumnCount)
+                                    if (isPrimaryKey)
                                     {
-                                      if (stringStartsWith(values[1].text.data,"int"))
-                                      {
-                                        if (isPrimaryKey)
-                                        {
-                                          stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                          columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
-                                          i++;
-                                        }
-                                        else
-                                        {
-                                          stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                          columnTypes[i] = DATABASE_DATATYPE_INT;
-                                          i++;
-                                        }
-                                      }
-                                      else if (stringEquals(values[1].text.data,"tinyint(1)"))
-                                      {
-                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                        columnTypes[i] = DATABASE_DATATYPE_BOOL;
-                                        i++;
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"tinyint"))
-                                      {
-                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                        columnTypes[i] = DATABASE_DATATYPE_INT;
-                                        i++;
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"bigint"))
-                                      {
-                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                        columnTypes[i] = DATABASE_DATATYPE_INT64;
-                                        i++;
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"double"))
-                                      {
-                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                        columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
-                                        i++;
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"datetime"))
-                                      {
-                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                        columnTypes[i] = DATABASE_DATATYPE_DATETIME;
-                                        i++;
-                                      }
-                                      else if (   stringStartsWith(values[1].text.data,"varchar")
-                                               || stringStartsWith(values[1].text.data,"text")
-                                              )
-                                      {
-                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                        columnTypes[i] = DATABASE_DATATYPE_CSTRING;
-                                        i++;
-                                      }
-                                      else if (stringStartsWith(values[1].text.data,"blob"))
-                                      {
-                                        stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
-                                        columnTypes[i] = DATABASE_DATATYPE_BLOB;
-                                        i++;
-                                      }
-                                      else
-                                      {
-                                        HALT_INTERNAL_ERROR("unknown database type '%s'",values[0].text.data);
-                                      }
+                                      stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                      columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
+                                      i++;
                                     }
+                                    else
+                                    {
+                                      stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                      columnTypes[i] = DATABASE_DATATYPE_INT;
+                                      i++;
+                                    }
+                                  }
+                                  else if (stringEquals(values[1].text.data,"tinyint(1)"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                    columnTypes[i] = DATABASE_DATATYPE_BOOL;
+                                    i++;
+                                  }
+                                  else if (stringStartsWith(values[1].text.data,"tinyint"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                    columnTypes[i] = DATABASE_DATATYPE_INT;
+                                    i++;
+                                  }
+                                  else if (stringStartsWith(values[1].text.data,"bigint"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                    columnTypes[i] = DATABASE_DATATYPE_INT64;
+                                    i++;
+                                  }
+                                  else if (stringStartsWith(values[1].text.data,"double"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                    columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
+                                    i++;
+                                  }
+                                  else if (stringStartsWith(values[1].text.data,"datetime"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                    columnTypes[i] = DATABASE_DATATYPE_DATETIME;
+                                    i++;
+                                  }
+                                  else if (   stringStartsWith(values[1].text.data,"varchar")
+                                           || stringStartsWith(values[1].text.data,"text")
+                                          )
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                    columnTypes[i] = DATABASE_DATATYPE_CSTRING;
+                                    i++;
+                                  }
+                                  else if (stringStartsWith(values[1].text.data,"blob"))
+                                  {
+                                    stringSet(columnNames[i],sizeof(columnNames[i]),values[0].text.data);
+                                    columnTypes[i] = DATABASE_DATATYPE_BLOB;
+                                    i++;
+                                  }
+                                  else
+                                  {
+                                    HALT_INTERNAL_ERROR("unknown database type '%s'",values[0].text.data);
+                                  }
+                                }
 
-                                    return ERROR_NONE;
-                                  },NULL),
-                                  NULL,  // changedRowCount
-                                  databaseHandle->timeout,
-                                  DATABASE_COLUMN_TYPES(CSTRING,CSTRING,CSTRING,CSTRING,CSTRING,CSTRING),
-                                  "SHOW COLUMNS FROM %s",
-                                  tableName
-                                 );
+                                return ERROR_NONE;
+                              },NULL),
+                              NULL,  // changedRowCount
+                              DATABASE_PLAIN(stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                          "SHOW COLUMNS FROM %s",
+                                                          tableName
+                                                         )
+                                            ),
+                              DATABASE_COLUMNS
+                              (
+                                DATABASE_COLUMN_STRING("name"),
+                                DATABASE_COLUMN_STRING("type"),
+                                DATABASE_COLUMN_BOOL  ("canBeNull"),
+                                DATABASE_COLUMN_STRING("isPrimaryKey"),
+                                DATABASE_COLUMN_STRING("defaultValue"),
+                                DATABASE_COLUMN_STRING("extra")
+                              ),
+                              DATABASE_FILTERS_NONE,
+                              NULL,  // orderGroup
+                              0LL,
+                              DATABASE_UNLIMITED
+                             );
         });
       }
       break;
@@ -7548,42 +7581,63 @@ Errors Database_getTableList(StringList     *tableList,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 1);
+        error = Database_get(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 1);
 
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+                               UNUSED_VARIABLE(userData);
 
-                                   StringList_appendCString(tableList,values[0].text.data);
+                               StringList_appendCString(tableList,values[0].text.data);
 
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(CSTRING),
-                                 "SELECT name FROM sqlite_master where type='table'"
-                                );
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "sqlite_master"
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
+                             "type='table'",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
         break;
       case DATABASE_TYPE_MYSQL:
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 1);
+        error = Database_get(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 1);
 
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+                               UNUSED_VARIABLE(userData);
 
-                                   StringList_appendCString(tableList,values[0].text.data);
+                               StringList_appendCString(tableList,values[0].text.data);
 
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(CSTRING),
-                                 "SHOW TABLES"
-                                );
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_PLAIN("SHOW TABLES"),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
+                             DATABASE_FILTERS_NONE,
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
         break;
     }
 
@@ -10629,287 +10683,9 @@ for (uint i = 0; i < resultDataTypeCount; i++) {
 }
 
 bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                         const char              *format,
                          ...
                         )
 {
-#if 0
-  bool    result;
-  uint    column;
-  va_list arguments;
-  bool    longFlag,longLongFlag;
-  bool    quoteFlag;
-  int     maxLength;
-  union
-  {
-    bool               *b;
-    int                *i;
-    uint               *ui;
-    long               *l;
-    ulong              *ul;
-    long long          *ll;
-    unsigned long long *ull;
-    float              *f;
-    double             *d;
-    char               *ch;
-    char               *s;
-    void               **p;
-    String string;
-  }       value;
-
-  assert(databaseStatementHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
-  assert(databaseStatementHandle->databaseHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
-  assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
-  assert(format != NULL);
-
-  DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-  switch (Database_getType(databaseStatementHandle->databaseHandle))
-  {
-    case DATABASE_TYPE_SQLITE3:
-      if (sqliteStep(databaseStatementHandle->databaseHandle->sqlite.handle,
-                      databaseStatementHandle->sqlite.statementHandle,
-                      databaseStatementHandle->databaseHandle->timeout
-                     ) == SQLITE_ROW
-         )
-      {
-        // get data
-        va_start(arguments,format);
-        column = 0;
-        while ((*format) != '\0')
-        {
-          // find next format specifier
-          while (((*format) != '\0') && ((*format) != '%'))
-          {
-            format++;
-          }
-
-          if ((*format) == '%')
-          {
-            format++;
-
-            // skip align specifier
-            if (    ((*format) != '\0')
-                 && (   ((*format) == '-')
-                     || ((*format) == '-')
-                    )
-               )
-            {
-              format++;
-            }
-
-            // get length specifier
-            maxLength = -1;
-            if (    ((*format) != '\0')
-                 && isdigit(*format)
-               )
-            {
-              maxLength = 0;
-              while (   ((*format) != '\0')
-                     && isdigit(*format)
-                    )
-              {
-                maxLength = maxLength*10+(uint)((*format)-'0');
-                format++;
-              }
-            }
-
-            // check for longlong/long flag
-            longLongFlag = FALSE;
-            longFlag     = FALSE;
-            if ((*format) == 'l')
-            {
-              format++;
-              if ((*format) == 'l')
-              {
-                format++;
-                longLongFlag = TRUE;
-              }
-              else
-              {
-                longFlag = TRUE;
-              }
-            }
-
-            // quoting flag (ignore quote char)
-            if (   ((*format) != '\0')
-                && !isalpha(*format)
-                && ((*format) != '%')
-                && (   ((*(format+1)) == 's')
-                    || ((*(format+1)) == 'S')
-                   )
-               )
-            {
-              quoteFlag = TRUE;
-              format++;
-            }
-            else
-            {
-              quoteFlag = FALSE;
-            }
-            UNUSED_VARIABLE(quoteFlag);
-
-            // handle format type
-            switch (*format)
-            {
-              case 'b':
-                // bool
-                format++;
-
-                value.b = va_arg(arguments,bool*);
-                if (value.b != NULL)
-                {
-                  (*value.b) = (sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,column) == 1);
-                }
-                break;
-              case 'd':
-                // integer
-                format++;
-
-                if      (longLongFlag)
-                {
-                  value.ll = va_arg(arguments,long long*);
-                  if (value.ll != NULL)
-                  {
-                    (*value.ll) = (int64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                else if (longFlag)
-                {
-                  value.l = va_arg(arguments,long*);
-                  if (value.l != NULL)
-                  {
-                    (*value.l) = (long)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                else
-                {
-                  value.i = va_arg(arguments,int*);
-                  if (value.i != NULL)
-                  {
-                    (*value.i) = sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                break;
-              case 'u':
-                // unsigned integer
-                format++;
-
-                if      (longLongFlag)
-                {
-                  value.ull = va_arg(arguments,unsigned long long*);
-                  if (value.ull != NULL)
-                  {
-                    (*value.ull) = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                else if (longFlag)
-                {
-                  value.ul = va_arg(arguments,ulong*);
-                  if (value.ul != NULL)
-                  {
-                    (*value.ul) = (ulong)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                else
-                {
-                  value.ui = va_arg(arguments,uint*);
-                  if (value.ui != NULL)
-                  {
-                    (*value.ui) = (uint)sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                break;
-              case 'f':
-                // float/double
-                format++;
-
-                if (longFlag)
-                {
-                  value.d = va_arg(arguments,double*);
-                  if (value.d != NULL)
-                  {
-                    (*value.d) = sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                else
-                {
-                  value.f = va_arg(arguments,float*);
-                  if (value.f != NULL)
-                  {
-                    (*value.f) = (float)sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,column);
-                  }
-                }
-                break;
-              case 'c':
-                // char
-                format++;
-
-                value.ch = va_arg(arguments,char*);
-                if (value.ch != NULL)
-                {
-                  (*value.ch) = ((char*)sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,column))[0];
-                }
-                break;
-              case 's':
-                // C string
-                format++;
-
-                value.s = va_arg(arguments,char*);
-                if (value.s != NULL)
-                {
-                  if (maxLength >= 0)
-                  {
-                    strncpy(value.s,(const char*)sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,column),maxLength-1);
-                    value.s[maxLength-1] = '\0';
-                  }
-                  else
-                  {
-                    strcpy(value.s,(const char*)sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,column));
-                  }
-                }
-                break;
-              case 'S':
-                // string
-                format++;
-
-                value.string = va_arg(arguments,String);
-                if (value.string != NULL)
-                {
-                  String_setCString(value.string,(const char*)sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,column));
-                }
-                break;
-              case 'p':
-                // text via pointer
-                format++;
-
-                value.p = va_arg(arguments,void*);
-                if (value.p != NULL)
-                {
-                  (*value.p) = (void*)sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,column);
-                }
-                break;
-              default:
-                return FALSE;
-                break; /* not reached */
-            }
-
-            column++;
-          }
-        }
-        va_end(arguments);
-
-        result = TRUE;
-      }
-      break;
-    case DATABASE_TYPE_MYSQL:
-      break;
-  }
-  DATABASE_DEBUG_TIME_END(databaseStatementHandle);
-
-  return result;
-#else
   bool    result;
   va_list arguments;
   union
@@ -10931,14 +10707,13 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   assert(databaseStatementHandle->databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle->databaseHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
-  assert(format != NULL);
 
   result = FALSE;
 
   DATABASE_DEBUG_TIME_START(databaseStatementHandle);
   if (getNextRow(databaseStatementHandle,NO_WAIT))
   {
-    va_start(arguments,format);
+    va_start(arguments,databaseStatementHandle);
     for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
     {
       switch (databaseStatementHandle->results[i].type)
@@ -11023,7 +10798,6 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   DATABASE_DEBUG_TIME_END(databaseStatementHandle);
 
   return result;
-#endif
 }
 
 Errors Database_insert(DatabaseHandle      *databaseHandle,
@@ -11037,8 +10811,6 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
   String                  sqlString;
   DatabaseStatementHandle databaseStatementHandle;
   Errors                  error;
-
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 
   // create SQL string
   sqlString = String_new();
@@ -11623,6 +11395,7 @@ bool Database_existsValue(DatabaseHandle      *databaseHandle,
                           (
                             tableName
                           ),
+                          DATABASE_FLAG_NONE,
                           DATABASE_COLUMNS
                           (
                             DATABASE_COLUMN_KEY   (columnName)
@@ -11643,6 +11416,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     ulong                *changedRowCount,
                     const char           *tableNames[],
                     uint                 tableNameCount,
+                    uint                 flags,
 // TODO: select value datatype: name, type
                     DatabaseColumn       columns[],
                     uint                 columnCount,
@@ -11663,40 +11437,48 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
 
   // create SQL string
   sqlString = String_new();
-  for (uint i = 0; i < tableNameCount; i++)
+  if (!IS_SET(flags,DATABASE_FLAG_PLAIN))
   {
-    if (i > 0)
+    for (uint i = 0; i < tableNameCount; i++)
     {
-      String_appendCString(sqlString," UNION SELECT ");
+      if (i > 0)
+      {
+        String_appendCString(sqlString," UNION SELECT ");
+      }
+      else
+      {
+        String_appendCString(sqlString,"SELECT ");
+      }
+      for (uint j = 0; j < columnCount; j++)
+      {
+        if (j > 0) String_appendChar(sqlString,',');
+        String_formatAppend(sqlString,"%s",columns[j].name);
+      }
+      String_formatAppend(sqlString," FROM %s ",tableNames[i]);
     }
-    else
-    {
-      String_appendCString(sqlString,"SELECT ");
-    }
-    for (uint j = 0; j < columnCount; j++)
-    {
-      if (j > 0) String_appendChar(sqlString,',');
-      String_formatAppend(sqlString,"%s",columns[j].name);
-    }
-    String_formatAppend(sqlString," FROM %s ",tableNames[i]);
     if (filter != NULL)
     {
       String_formatAppend(sqlString," WHERE %s",filter);
     }
+    if (orderGroup != NULL)
+    {
+      String_formatAppend(sqlString," %s",orderGroup);
+    }
+    if      (limit > 0LL)
+    {
+      String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,limit);
+    }
+    else if (offset > 0LL)
+    {
+      String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,DATABASE_UNLIMITED);
+    }
   }
-  if (orderGroup != NULL)
+  else
   {
-    String_formatAppend(sqlString," %s",orderGroup);
+    assert(tableNameCount == 1);
+    String_formatAppend(sqlString," %s",tableNames[0]);
   }
-  if      (limit > 0LL)
-  {
-    String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,limit);
-  }
-  else if (offset > 0LL)
-  {
-    String_formatAppend(sqlString," LIMIT %"PRIu64",%"PRIu64,offset,DATABASE_UNLIMITED);
-  }
-fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement2(&databaseStatementHandle,
@@ -11805,6 +11587,7 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY   (columnName)
@@ -11852,6 +11635,7 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY   (columnName)
@@ -11899,6 +11683,7 @@ Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY   (columnName)
@@ -11947,6 +11732,7 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY   (columnName)
@@ -12025,6 +11811,7 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_UINT(columnName)
@@ -12103,6 +11890,7 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_INT64(columnName)
@@ -12181,6 +11969,7 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_UINT64(columnName)
@@ -12259,6 +12048,7 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY   (columnName)
@@ -12336,6 +12126,7 @@ Errors Database_getString(DatabaseHandle      *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY   (columnName)
@@ -12384,6 +12175,7 @@ Errors Database_getCString(DatabaseHandle       *databaseHandle,
                       (
                         tableName
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_KEY   (columnName)
@@ -13116,92 +12908,6 @@ LOCAL size_t* debugGetColumnsWidth(const DatabaseValue values[], uint valueCount
   return widths;
 }
 
-/***********************************************************************\
-* Name   : debugCalculateColumnWidths
-* Purpose: calculate column width call back
-* Input  : columns  - column names
-*          values   - values
-*          count    - number of values
-*          userData - user data
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors debugCalculateColumnWidths(const DatabaseValue values[], uint valueCount, void *userData)
-{
-  DumpTableData *dumpTableData = (DumpTableData*)userData;
-  uint          i;
-  char          buffer[1024];
-
-  assert(values != NULL);
-  assert(dumpTableData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  if (dumpTableData->widths == NULL) dumpTableData->widths = debugGetColumnsWidth(values,valueCount);
-  assert(dumpTableData->widths != NULL);
-
-  for (i = 0; i < valueCount; i++)
-  {
-    Database_valueToCString(buffer,sizeof(buffer),&values[i]);
-    dumpTableData->widths[i] = MAX(stringLength(buffer),dumpTableData->widths[i]);
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : debugPrintRow
-* Purpose: print row call back
-* Input  : columns  - column names
-*          values   - values
-*          count    - number of values
-*          userData - user data
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors debugPrintRow(const DatabaseValue values[], uint valueCount, void *userData)
-{
-  DumpTableData *dumpTableData = (DumpTableData*)userData;
-  uint          i;
-  char          buffer[1024];
-
-  assert(values != NULL);
-  assert(dumpTableData != NULL);
-  assert(dumpTableData->widths != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-// TODO: names
-#if 0
-  if (dumpTableData->showHeaderFlag && !dumpTableData->headerPrintedFlag)
-  {
-    for (i = 0; i < columns->count; i++)
-    {
-      printf("%s ",columns->names[i]); debugPrintSpaces(dumpTableData->widths[i]-stringLength(columns->names[i]));
-    }
-    printf("\n");
-
-    dumpTableData->headerPrintedFlag = TRUE;
-  }
-#endif
-  for (i = 0; i < valueCount; i++)
-  {
-    Database_valueToCString(buffer,sizeof(buffer),&values[i]);
-    printf("%s ",buffer);
-    if (dumpTableData->showHeaderFlag)
-    {
-      debugPrintSpaces(dumpTableData->widths[i]-stringLength(buffer));
-    }
-  }
-  printf("\n");
-
-  return ERROR_NONE;
-}
-
 void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableName, bool showHeaderFlag)
 {
   Errors             error;
@@ -13233,21 +12939,79 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
   dumpTableData.headerPrintedFlag = FALSE;
   dumpTableData.widths            = NULL;
   error = Database_execute(databaseHandle,
-                           CALLBACK_(debugCalculateColumnWidths,&dumpTableData),
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             DumpTableData *dumpTableData = (DumpTableData*)userData;
+                             uint          i;
+                             char          buffer[1024];
+
+                             assert(values != NULL);
+                             assert(dumpTableData != NULL);
+
+                             UNUSED_VARIABLE(userData);
+
+                             if (dumpTableData->widths == NULL) dumpTableData->widths = debugGetColumnsWidth(values,valueCount);
+                             assert(dumpTableData->widths != NULL);
+
+                             for (i = 0; i < valueCount; i++)
+                             {
+                               Database_valueToCString(buffer,sizeof(buffer),&values[i]);
+                               dumpTableData->widths[i] = MAX(stringLength(buffer),dumpTableData->widths[i]);
+                             }
+
+                             return ERROR_NONE;
+                           },&dumpTableData),
                            NULL,  // changedRowCount
                            columnTypes, columnCount,
-                           String_cString(sqlString)
+                           "%S",
+                           sqlString
                           );
   if (error != ERROR_NONE)
   {
     printf("ERROR: cannot dump table (error: %s)\n",Error_getText(error));
     return;
   }
+
   error = Database_execute(databaseHandle,
-                           CALLBACK_(debugPrintRow,&dumpTableData),
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             DumpTableData *dumpTableData = (DumpTableData*)userData;
+                             uint          i;
+                             char          buffer[1024];
+
+                             assert(values != NULL);
+                             assert(dumpTableData != NULL);
+                             assert(dumpTableData->widths != NULL);
+
+                             UNUSED_VARIABLE(userData);
+
+                             if (dumpTableData->showHeaderFlag && !dumpTableData->headerPrintedFlag)
+                             {
+                               for (i = 0; i < columnCount; i++)
+                               {
+                                 printf("%s ",columnNames[i]); debugPrintSpaces(dumpTableData->widths[i]-stringLength(columnNames[i]));
+                               }
+                               printf("\n");
+
+                               dumpTableData->headerPrintedFlag = TRUE;
+                             }
+                             for (i = 0; i < valueCount; i++)
+                             {
+                               Database_valueToCString(buffer,sizeof(buffer),&values[i]);
+                               printf("%s ",buffer);
+                               if (dumpTableData->showHeaderFlag)
+                               {
+                                 debugPrintSpaces(dumpTableData->widths[i]-stringLength(buffer));
+                               }
+                             }
+                             printf("\n");
+
+                             return ERROR_NONE;
+                           },&dumpTableData),
                            NULL,  // changedRowCount
                            columnTypes, columnCount,
-                           String_cString(sqlString)
+                           "%S",
+                           sqlString
                           );
   if (error != ERROR_NONE)
   {

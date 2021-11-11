@@ -2068,12 +2068,11 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                          )
                         );
   while (Database_getNextRow(&databaseStatementHandle,
-                           "%lld %lld %S %d",
-                           &databaseId,
-                           &dateTime,
-                           name,
-                           &storedFlag
-                          )
+                             &databaseId,
+                             &dateTime,
+                             name,
+                             &storedFlag
+                            )
         )
   {
      fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);

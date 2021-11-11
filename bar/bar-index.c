@@ -4143,6 +4143,7 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                          (
                            "entities"
                          ),
+                         DATABASE_FLAG_NONE,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY("id")
