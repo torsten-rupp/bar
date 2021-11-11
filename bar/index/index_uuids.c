@@ -452,6 +452,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
                             "
                           ),
+                          DATABASE_FLAG_NONE,
                           DATABASE_COLUMNS
                           (
                             DATABASE_COLUMN_KEY   ("uuids.id"),
@@ -615,6 +616,7 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                            LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT64("MAX(UNIX_TIMESTAMP(entities.created))"),
@@ -1575,6 +1577,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                               LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                            "
                          ),
+                         DATABASE_FLAG_NONE,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY  ("entities.id")

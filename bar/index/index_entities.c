@@ -923,6 +923,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                               LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                            "
                          ),
+                         DATABASE_FLAG_NONE,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_KEY   ("uuids.id"),
@@ -1354,6 +1355,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                              "
                            ),
+                           DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY   ("uuids.id"),
@@ -1541,6 +1543,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -1585,6 +1588,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -1626,6 +1630,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          "entries"
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
@@ -1666,6 +1671,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          "entries"
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
@@ -1709,6 +1715,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
                         "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -1750,6 +1757,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          "entries"
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)")
@@ -1834,6 +1842,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
@@ -1879,6 +1888,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
@@ -1921,6 +1931,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        (
                          "entriesNewest"
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
@@ -1963,6 +1974,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
@@ -2006,6 +2018,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
@@ -2050,6 +2063,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
@@ -2190,6 +2204,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                              LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                           "
                         ),
+                        DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
                           DATABASE_COLUMN_KEY   ("IFNULL(uuids.id,0)"),

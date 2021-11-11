@@ -877,6 +877,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       (
                         "storages"
                       ),
+                      DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
                         DATABASE_COLUMN_UINT  ("state"),
@@ -1026,6 +1027,7 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
                               LEFT JOIN entries ON entries.id=specialEntries.entryId \
                             "
                           ),
+                          DATABASE_FLAG_NONE,
                           DATABASE_COLUMNS
                           (
                             DATABASE_COLUMN_KEY   ("entries.id"),
@@ -1127,6 +1129,7 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
                               LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
                             "
                           ),
+                          DATABASE_FLAG_NONE,
                           DATABASE_COLUMNS
                           (
                             DATABASE_COLUMN_KEY   ("entriesNewest.id"),
@@ -1324,6 +1327,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                                   LEFT JOIN entries ON entries.id=entryFragments.entryId \
                                "
                              ),
+                             DATABASE_FLAG_NONE,
                              DATABASE_COLUMNS
                              (
                                DATABASE_COLUMN_KEY   ("entries.id"),
@@ -1371,6 +1375,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                                   LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                                "
                              ),
+                             DATABASE_FLAG_NONE,
                              DATABASE_COLUMNS
                              (
                                DATABASE_COLUMN_KEY   ("entries.id"),
@@ -1418,6 +1423,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                                    LEFT JOIN entries ON entries.id=linkEntries.entryId \
                                "
                              ),
+                             DATABASE_FLAG_NONE,
                              DATABASE_COLUMNS
                              (
                                DATABASE_COLUMN_KEY   ("entries.id"),
@@ -1465,6 +1471,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                                   LEFT JOIN entries ON entries.id=specialEntries.entryId \
                                "
                              ),
+                             DATABASE_FLAG_NONE,
                              DATABASE_COLUMNS
                              (
                                DATABASE_COLUMN_KEY   ("entries.id"),
@@ -1546,6 +1553,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                                  LEFT JOIN entries ON entries.id=specialEntries.entryId \
                               "
                             ),
+                            DATABASE_FLAG_NONE,
                             DATABASE_COLUMNS
                             (
                               DATABASE_COLUMN_KEY   ("entries.id"),
@@ -2780,6 +2788,7 @@ LOCAL Errors purgeStorage(IndexHandle  *indexHandle,
                             LEFT JOIN entities ON entities.id=storages.entityId \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_STRING("storages.name"),
@@ -3219,6 +3228,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entries ON entries.id=entryFragments.entryId \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -3263,6 +3273,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entries ON entries.id=entryFragments.entryId \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -3306,6 +3317,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)")
@@ -3345,6 +3357,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entries ON entries.id=linkEntries.entryId \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
@@ -3385,6 +3398,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entries ON entries.id=entryFragments.entryId \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
@@ -3428,6 +3442,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                             LEFT JOIN entries ON entries.id=specialEntries.entryId \
                          "
                        ),
+                       DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
@@ -4489,6 +4504,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                            "
                          ),
+                         DATABASE_FLAG_NONE,
                          DATABASE_COLUMNS
                          (
                            DATABASE_COLUMN_UINT  ("COUNT(storages.id)"),

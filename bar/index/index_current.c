@@ -986,7 +986,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
-
+fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
+#if 1
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
@@ -1173,6 +1174,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
+#else
+error=ERROR_NONE;
+#endif
 
                                                             return error;
                                                           },NULL),
@@ -1305,6 +1309,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
 // TODO:
 #if 0
+fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:

@@ -1111,6 +1111,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1156,6 +1157,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1201,6 +1203,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1246,6 +1249,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1291,6 +1295,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1336,6 +1341,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1381,6 +1387,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1433,6 +1440,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                       LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                                    "
                                  ),
+                                 DATABASE_FLAG_NONE,
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT  ("0"),
@@ -1487,6 +1495,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1532,6 +1541,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1577,6 +1587,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1622,6 +1633,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1667,6 +1679,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1712,6 +1725,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1757,6 +1771,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                        "
                                      ),
+                                     DATABASE_FLAG_NONE,
                                      DATABASE_COLUMNS
                                      (
                                        DATABASE_COLUMN_UINT  ("0"),
@@ -1809,6 +1824,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                       LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                                    "
                                  ),
+                                 DATABASE_FLAG_NONE,
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT  ("0"),
@@ -1887,6 +1903,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                     LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                  "
                                ),
+                               DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
 // TODO: directory correct?
@@ -1931,6 +1948,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                       LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                    "
                                  ),
+                                 DATABASE_FLAG_NONE,
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
@@ -1977,6 +1995,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                       LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                    "
                                  ),
+                                 DATABASE_FLAG_NONE,
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
@@ -2066,6 +2085,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                     LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
                                  "
                                ),
+                               DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT  ("COUNT(entriesNewest.id)"),
@@ -2111,6 +2131,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                     LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                                  "
                                ),
+                               DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT  ("COUNT(entries.id)"),
@@ -2186,6 +2207,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                     LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                  "
                                ),
+                               DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
@@ -2230,6 +2252,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                     LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                  "
                                ),
+                               DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")

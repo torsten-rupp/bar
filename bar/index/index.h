@@ -34,7 +34,7 @@
 
 // switch on for debugging only!
 #define _INDEX_DEBUG_LOCK
-#define _INDEX_DEBUG_IMPORT_OLD_DATABASE
+#define INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
   #define INDEX_DEBUG_LIST_INFO  // enable to output list info

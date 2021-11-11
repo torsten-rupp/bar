@@ -4738,7 +4738,6 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                                command,
                                arguments
                               );
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   done          = FALSE;
   error         = ERROR_NONE;
