@@ -203,7 +203,9 @@ LOCAL ProgressInfo importProgressInfo;
   #define DIMPORT(format,...) \
     do \
     { \
-      fprintf(stderr,"DEBUG IMPORT: "); \
+      uint64 timestamp = Misc_getTimestamp() / 1000LL; \
+      \
+      fprintf(stderr,"DEBUG IMPORT [%12"PRIu64".%03"PRIu64"]: ",timestamp/1000,timestamp%1000); \
       fprintf(stderr,format, ## __VA_ARGS__); \
       fprintf(stderr,"\n"); \
     } \
