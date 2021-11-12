@@ -375,7 +375,12 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   {
    error = Database_prepare(&databaseStatementHandle1,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(STRING,STRING,UINT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("id"),
+                               DATABASE_COLUMN_STRING("name"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                             ),
                              "SELECT uuid, \
                                      name, \
                                      UNIX_TIMESTAMP(created) \
@@ -403,7 +408,11 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
         // find matching entity/create default entity
         error = Database_prepare(&databaseStatementHandle2,
                                  &oldIndexHandle->databaseHandle,
-                                 DATABASE_COLUMN_TYPES(KEY,STRING),
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_STRING("name"),
+                                 ),
                                  "SELECT id, \
                                          name \
                                   FROM storages \
@@ -480,6 +489,11 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
           // assign entity id for all storage entries with same uuid and matching name (equals except digits)
           error = Database_prepare(&databaseStatementHandle2,
                                    &oldIndexHandle->databaseHandle,
+                                   DATABASE_COLUMNS
+                                   (
+                                     DATABASE_COLUMN_KEY   ("id"),
+                                     DATABASE_COLUMN_STRING("name")
+                                   ),
                                    DATABASE_COLUMN_TYPES(KEY,STRING),
                                    "SELECT id, \
                                            name \
@@ -704,7 +718,12 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
   {
     error = Database_prepare(&databaseStatementHandle1,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,STRING,UINT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("id"),
+                               DATABASE_COLUMN_STRING("name"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                             ),
                              "SELECT id, \
                                      name, \
                                      UNIX_TIMESTAMP(created) \
@@ -732,6 +751,11 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
         // find matching entity/create default entity
         error = Database_prepare(&databaseStatementHandle2,
                                  &oldIndexHandle->databaseHandle,
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
                                  DATABASE_COLUMN_TYPES(KEY,STRING),
                                  "SELECT id, \
                                          name \
@@ -955,21 +979,20 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
     String_delete(entryNode->name);
   }
 
-  EntryList           entryList;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          entryId;
-  DatabaseId          uuidId;
-  DatabaseId          entityId;
-  uint                indexType;
-  String              entryName;
-  uint64              timeLastChanged;
-  uint32              userId;
-  uint32              groupId;
-  uint32              permission;
-  uint64              size;
-  Errors              error;
-  EntryNode           *entryNode;
-  bool                transactionFlag;
+  EntryList  entryList;
+  DatabaseId entryId;
+  DatabaseId uuidId;
+  DatabaseId entityId;
+  uint       indexType;
+  String     entryName;
+  uint64     timeLastChanged;
+  uint32     userId;
+  uint32     groupId;
+  uint32     permission;
+  uint64     size;
+  Errors     error;
+  EntryNode  *entryNode;
+  bool       transactionFlag;
 
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
@@ -1273,13 +1296,11 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
     String_delete(entryNode->name);
   }
 
-  EntryList           entryList;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          entryId;
-  String              entryName;
-  Errors              error;
-  EntryNode           *entryNode;
-  bool                transactionFlag;
+  EntryList  entryList;
+  String     entryName;
+  Errors     error;
+  EntryNode  *entryNode;
+  bool       transactionFlag;
 
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
@@ -2433,8 +2454,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                 LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
                              ",
                              "entries.id",
-                             "entries.type=? AND fileEntries.id IS NULL"
-                             ",
+                             "    entries.type=? \
+                              AND fileEntries.id IS NULL",
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
@@ -3499,7 +3520,11 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
   // get newest file aggregate data
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
+                             DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                           ),
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
                                    SUM(entryFragments.size) \
                             FROM entryFragments \
@@ -3537,7 +3562,11 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
   // get newest image aggregate data
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
+                             DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                           ),
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
                                    SUM(entryFragments.size) \
                             FROM entryFragments \
@@ -3575,7 +3604,10 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
   // get newest directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
+                           ),
                            "SELECT COUNT(DISTINCT entriesNewest.id) \
                             FROM directoryEntries \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
@@ -3606,7 +3638,10 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
   // get newest link aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
+                           ),
                            "SELECT COUNT(DISTINCT entriesNewest.id) \
                             FROM linkEntries \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
@@ -3637,7 +3672,11 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
   // get newest hardlink aggregate data
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT,INT64),
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
+                             DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                           ),
 //TODO: use entriesNewest.size?
                            "SELECT COUNT(DISTINCT entriesNewest.id), \
                                    SUM(entryFragments.size) \
@@ -3676,7 +3715,10 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
   // get newest special aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseStatementHandle,
                            &indexHandle->databaseHandle,
-                           DATABASE_COLUMN_TYPES(INT),
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("COUNT(DISTINC entriesNewest.id)")
+                           ),
                            "SELECT COUNT(DISTINCT entriesNewest.id) \
                             FROM specialEntries \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
@@ -3806,7 +3848,22 @@ bool Index_findStorageById(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,STRING,UINT64,INT64,INT,INT,UINT64,STRING,INT,INT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_UINT  ("IFNULL(uuids.id,0)"),
+                               DATABASE_COLUMN_STRING("entities.jobUUID"),
+                               DATABASE_COLUMN_UINT  ("IFNULL(entities.id,0)"),
+                               DATABASE_COLUMN_UINT  ("storages.id"),
+                               DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                               DATABASE_COLUMN_STRING("storages.name"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
+                               DATABASE_COLUMN_UINT64("storages.size"),
+                               DATABASE_COLUMN_UINT  ("storages.mode"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
+                               DATABASE_COLUMN_STRING("storages.errorMessage"),
+                               DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
+                               DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                             ),
                              "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
@@ -3916,7 +3973,22 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 //TODO: optimize: search for part of name?
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,STRING,KEY,KEY,STRING,STRING,UINT64,INT64,INT,INT,UINT64,STRING,INT,INT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_UINT  ("IFNULL(uuids.id,0)"),
+                               DATABASE_COLUMN_STRING("entities.jobUUID"),
+                               DATABASE_COLUMN_UINT  ("IFNULL(entities.id,0)"),
+                               DATABASE_COLUMN_UINT  ("storages.id"),
+                               DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                               DATABASE_COLUMN_STRING("storages.name"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
+                               DATABASE_COLUMN_UINT64("storages.size"),
+                               DATABASE_COLUMN_UINT  ("storages.mode"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
+                               DATABASE_COLUMN_STRING("storages.errorMessage"),
+                               DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
+                               DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                             ),
                              "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
@@ -4041,7 +4113,22 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,STRING,KEY,KEY,STRING,STRING,UINT64,INT64,INT,UINT64,STRING,INT,INT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_UINT  ("IFNULL(uuids.id,0)"),
+                               DATABASE_COLUMN_STRING("entities.jobUUID"),
+                               DATABASE_COLUMN_UINT  ("IFNULL(entities.id,0)"),
+                               DATABASE_COLUMN_UINT  ("storages.id"),
+                               DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                               DATABASE_COLUMN_STRING("storages.name"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
+                               DATABASE_COLUMN_UINT64("storages.size"),
+                               DATABASE_COLUMN_UINT  ("storages.mode"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
+                               DATABASE_COLUMN_STRING("storages.errorMessage"),
+                               DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
+                               DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                             ),
                              "SELECT IFNULL(uuids.id,0), \
                                      entities.jobUUID, \
                                      IFNULL(entities.id,0), \
@@ -4326,7 +4413,10 @@ long Index_countStorageState(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(INT),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_UINT  ("id")
+                             ),
                              "SELECT COUNT(id) \
                               FROM storages \
                               WHERE state=? \
@@ -5356,7 +5446,20 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
       // get aggregate data
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT,INT64,INT,INT64,INT,INT64,INT,INT,INT,INT64,INT),
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT  ("totalEntryCount"),
+                                 DATABASE_COLUMN_UINT64("totalEntrySize"),
+                                 DATABASE_COLUMN_UINT  ("totalFileCount"),
+                                 DATABASE_COLUMN_UINT64("totalFileSize"),
+                                 DATABASE_COLUMN_UINT  ("totalImageCount"),
+                                 DATABASE_COLUMN_UINT64("totalImageSize"),
+                                 DATABASE_COLUMN_UINT  ("totalDirectoryCount"),
+                                 DATABASE_COLUMN_UINT64("totalLinkCount"),
+                                 DATABASE_COLUMN_UINT  ("totalHardlinkCount"),
+                                 DATABASE_COLUMN_UINT64("totalHardlinkSize"),
+                                 DATABASE_COLUMN_UINT  ("totalSpecialCount")
+                               ),
                                "SELECT totalEntryCount, \
                                        totalEntrySize, \
                                        totalFileCount, \
@@ -5677,7 +5780,23 @@ Errors Index_getStorage(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,INT,STRING,UINT64,INT64,INT,INT,UINT64,STRING,INT,INT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("uuids.id"),
+                               DATABASE_COLUMN_STRING("uuids.jobUUID"),
+                               DATABASE_COLUMN_KEY   ("entities.id"),
+                               DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                               DATABASE_COLUMN_UINT  ("entities.type"),
+                               DATABASE_COLUMN_STRING("storages.name"),
+                               DATABASE_COLUMN_KEY   ("UNIX_TIMESTAMP(storages.created)"),
+                               DATABASE_COLUMN_UINT64("storages.size"),
+                               DATABASE_COLUMN_UINT  ("storages.state"),
+                               DATABASE_COLUMN_UINT  ("storages.mode"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
+                               DATABASE_COLUMN_STRING("storages.errorMessage"),
+                               DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
+                               DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                             ),
                              "SELECT uuids.id, \
                                      uuids.jobUUID, \
                                      entities.id, \

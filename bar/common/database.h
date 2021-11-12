@@ -652,11 +652,6 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
   (DatabaseDataTypes[]){_ITERATOR_EVAL(_ITERATOR_MAP(__DATABASE_COLUMN_TYPE, __VA_ARGS__))}, \
   _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
 
-#define DATABASE_VALUES(...) \
-  (DatabaseValue[]){ __VA_ARGS__ }, \
-  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
-
-
 // column macros
 #define DATABASE_COLUMNS(...) \
   (DatabaseColumn[]){__VA_ARGS__}, \
@@ -1729,6 +1724,7 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
 * Notes  : Database is locked until Database_finalize() is called
 \***********************************************************************/
 
+#if 0
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
@@ -1754,6 +1750,33 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
                             uint                    filterCount
                            );
 #endif /* NDEBUG */
+#else
+#ifdef NDEBUG
+  Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
+                          DatabaseHandle          *databaseHandle,
+                          const DatabaseColumn    *columns,
+                          uint                    columnCount,
+                          const char              *sqlCommand,
+                          const DatabaseValue     values[],
+                          uint                    nameValueCount,
+                          const DatabaseFilter    filters[],
+                          uint                    filterCount
+                         );
+#else /* not NDEBUG */
+  Errors __Database_prepare(const char              *__fileName__,
+                            ulong                   __lineNb__,
+                            DatabaseStatementHandle *databaseStatementHandle,
+                            DatabaseHandle          *databaseHandle,
+                            const DatabaseColumn    *columns,
+                            uint                    columnCount,
+                            const char              *sqlCommand,
+                            const DatabaseValue     values[],
+                            uint                    nameValueCount,
+                            const DatabaseFilter    filters[],
+                            uint                    filterCount
+                           );
+#endif /* NDEBUG */
+#endif
 
 /***********************************************************************\
 * Name   : Database_getNextRow

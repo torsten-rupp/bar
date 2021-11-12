@@ -1205,7 +1205,10 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
 #if 0
   if (Database_prepare(&databaseStatementHandle,
                        &indexHandle->databaseHandle,
-                       DATABASE_COLUMN_TYPES(STRING),
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_STRING("name")
+                       ),
                        "SELECT name FROM meta GROUP BY name"
                        DATABASE_VALUES
                        (
@@ -1218,7 +1221,10 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(STRING),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
                              "SELECT name FROM meta GROUP BY name"
                              DATABASE_VALUES
                              (
@@ -1701,7 +1707,12 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   {
    error = Database_prepare(&databaseStatementHandle1,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(STRING,STRING,UINT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("uuid")
+                               DATABASE_COLUMN_STRING("name")
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                             ),
                              "SELECT uuid, \
                                      name, \
                                      UNIX_TIMESTAMP(created) \
@@ -1729,6 +1740,11 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
         // find matching entity/create default entity
         error = Database_prepare(&databaseStatementHandle2,
                                  &oldIndexHandle->databaseHandle,
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
                                  DATABASE_COLUMN_TYPES(KEY,STRING),
                                  "SELECT id, \
                                          name \
@@ -1807,7 +1823,11 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
           // assign entity id for all storage entries with same uuid and matching name (equals except digits)
           error = Database_prepare(&databaseStatementHandle2,
                                    &oldIndexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(KEY,STRING),
+                                   DATABASE_COLUMNS
+                                   (
+                                     DATABASE_COLUMN_KEY   ("id"),
+                                     DATABASE_COLUMN_STRING("name")
+                                   ),
                                    "SELECT id, \
                                            name \
                                     FROM storages \
@@ -2031,7 +2051,12 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
   {
     error = Database_prepare(&databaseStatementHandle1,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,STRING,UINT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("id"),,
+                               DATABASE_COLUMN_STRING("name"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                             ),
                              "SELECT id, \
                                      name, \
                                      UNIX_TIMESTAMP(created) \
@@ -2059,7 +2084,11 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
         // find matching entity/create default entity
         error = Database_prepare(&databaseStatementHandle2,
                                  &oldIndexHandle->databaseHandle,
-                                 DATABASE_COLUMN_TYPES(KEY,STRING),
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),,
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
                                  "SELECT id, \
                                          name \
                                   FROM storages \
@@ -2367,7 +2396,11 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
       // get existing newest entry
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(KEY,UINT64),
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_KEY   ("id"),
+                                 DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(timeLastChanged)")
+                               ),
                                "SELECT id, \
                                        UNIX_TIMESTAMP(timeLastChanged) \
                                 FROM entriesNewest\
@@ -2739,6 +2772,12 @@ LOCAL void indexThreadCode(void)
           {
             error = Database_prepare(&databaseStatementHandle,
                                      &indexHandle.databaseHandle,
+                                     DATABASE_COLUMNS
+                                     (
+                                       DATABASE_COLUMN_KEY   ("id"),
+                                       DATABASE_COLUMN_KEY   ("entryId"),
+                                       DATABASE_COLUMN_STRING("name")
+                                     ),
                                      DATABASE_COLUMN_TYPES(KEY,KEY,STRING),
                                      "SELECT id, \
                                              entityId, \
@@ -3717,7 +3756,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total entities count
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT  ("COUNT(entities.id)")
+                               ),
                                "SELECT COUNT(entities.id) \
                                 FROM entities \
                                 WHERE deletedFlag!=1 \
@@ -3749,7 +3791,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total deleted entities count
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT  ("COUNT(entities.id)")
+                               ),
                                "SELECT COUNT(entities.id) \
                                 FROM entities \
                                 WHERE deletedFlag=1 \
@@ -3781,7 +3826,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total skipped entry count
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT  ("COUNT(id)")
+                               ),
                                "SELECT COUNT(id) \
                                 FROM skippedEntries \
                                ",
@@ -3814,13 +3862,35 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total * count/size, total newest count/size
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT,INT64,
-                                                     INT,
-                                                     INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
-                                                     INT,INT64,
-                                                     INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
-                                                     INT,INT64
-                                                    ),
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)"),
+                                 DATABASE_COLUMN_UINT  ("0"),
+
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCount)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalFileSize)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCount)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalImageSize)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCount)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCount)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCount)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSize)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCount)"),
+
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCountNewest)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySizeNewest)"),
+
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCountNewest)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalFileSizeNewest)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCountNewest)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalImageSizeNewest)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCountNewest)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCountNewest)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCountNewest)"),
+                                 DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSizeNewest)"),
+                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCountNewest)")
+                               ),
                                "SELECT SUM(storages.totalEntryCount), \
                                        SUM(storages.totalEntrySize), \
                                        0, \
@@ -3929,7 +3999,10 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total deleted storage count
       error = Database_prepare(&databaseStatementHandle,
                                &indexHandle->databaseHandle,
-                               DATABASE_COLUMN_TYPES(INT),
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_KEY   ("COUNT(id)")
+                               ),
                                "SELECT COUNT(id) \
                                 FROM storages \
                                 WHERE deletedFlag=1 \

@@ -986,8 +986,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
-fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
-#if 1
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
@@ -1174,9 +1172,6 @@ fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
-#else
-error=ERROR_NONE;
-#endif
 
                                                             return error;
                                                           },NULL),
@@ -1261,7 +1256,6 @@ error=ERROR_NONE;
                                toStorageId   = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                assert(toStorageId != DATABASE_ID_NONE);
 
-#if 1
                                t0 = Misc_getTimestamp();
                                error = Database_copyTable(oldDatabaseHandle,
                                                           newDatabaseHandle,
@@ -1291,7 +1285,7 @@ error=ERROR_NONE;
                                                           {
                                                             Errors     error;
                                                             DatabaseId fromEntryId;
-//                                                            IndexTypes type;
+                                                            IndexTypes type;
                                                             DatabaseId toEntryId;
 
                                                             assert(fromColumnInfo != NULL);
@@ -1301,14 +1295,14 @@ error=ERROR_NONE;
 
                                                             fromEntryId = Database_getTableColumnId(fromColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
-//                                                            type = Database_getTableColumnId(fromColumnInfo,"type",INDEX_TYPE_NONE);
+                                                            type = Database_getTableColumnId(fromColumnInfo,"type",INDEX_TYPE_NONE);
                                                             toEntryId   = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
 
 // TODO:
-#if 0
+#if 1
 fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                             switch (type)
                                                             {
@@ -1347,8 +1341,6 @@ fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                                                              assert(fromColumnInfo != NULL);
                                                                                              assert(toColumnInfo != NULL);
 
-                                                                                             UNUSED_VARIABLE(fromColumns);
-                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
                                                                                              fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
@@ -1399,8 +1391,6 @@ fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                                                              assert(fromColumnInfo != NULL);
                                                                                              assert(toColumnInfo != NULL);
 
-                                                                                             UNUSED_VARIABLE(fromColumns);
-                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
                                                                                              fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
@@ -1459,7 +1449,6 @@ fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                                                              assert(fromColumnInfo != NULL);
                                                                                              assert(toColumnInfo != NULL);
 
-                                                                                             UNUSED_VARIABLE(toColumns);
                                                                                              UNUSED_VARIABLE(userData);
 
                                                                                              fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
@@ -1513,7 +1502,6 @@ error = ERROR_NONE;
                                  return error;
                                }
                                t1 = Misc_getTimestamp();
-#endif
 
                                logImportProgress("Imported storage #%"PRIi64": '%s' (%llus)",
                                                  toStorageId,

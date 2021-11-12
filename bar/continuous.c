@@ -44,8 +44,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DEFAULT_DATABASE_NAME "bar-continuous"
-
 #define LOG_PREFIX "CONTINUOUS"
 
 #ifdef HAVE_IN_EXCL_UNLINK
@@ -62,7 +60,7 @@
 #define MIN_NOTIFY_WATCHES_WARNING   (64*1024)
 #define MIN_NOTIFY_INSTANCES_WARNING 256
 
-#define DATABASE_TIMEOUT (30L*MS_PER_SECOND)      // database timeout [ms]
+#define CONTINUOUS_DATABASE_TIMEOUT (30L*MS_PER_SECOND)      // database timeout [ms]
 
 // database version
 #define CONTINUOUS_VERSION 1
@@ -248,14 +246,14 @@ LOCAL void printNotifies(void)
     error = Database_open(databaseHandle,
                           databaseSpecifier,
                           continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
-                          DATABASE_TIMEOUT
+                          CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
                             continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
-                            DATABASE_TIMEOUT
+                            CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
@@ -264,14 +262,14 @@ LOCAL void printNotifies(void)
       error = Database_open(databaseHandle,
                             databaseSpecifier,
                             DATABASE_OPENMODE_CREATE,
-                            DATABASE_TIMEOUT
+                            CONTINUOUS_DATABASE_TIMEOUT
                            );
     #else /* not NDEBUG */
       error = __Database_open(__fileName__,__lineNb__,
                               databaseHandle,
                               databaseSpecifier,
                               DATABASE_OPENMODE_CREATE,
-                              DATABASE_TIMEOUT
+                              CONTINUOUS_DATABASE_TIMEOUT
                              );
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
@@ -317,14 +315,14 @@ LOCAL void printNotifies(void)
     error = Database_open(databaseHandle,
                           databaseSpecifier,
                           continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
-                          DATABASE_TIMEOUT
+                          CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
                             continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
-                            DATABASE_TIMEOUT
+                            CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
@@ -1889,7 +1887,11 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
     // prepare list
     if (Database_prepare(&databaseStatementHandle,
                          databaseHandle,
-                         DATABASE_COLUMN_TYPES(KEY,STRING),
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("id"),
+                           DATABASE_COLUMN_STRING("name")
+                         ),
                          "SELECT id,name \
                           FROM names \
                           WHERE     storedFlag=0 \
@@ -1987,7 +1989,11 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
   // prepare list
   error = Database_prepare(databaseStatementHandle,
                            databaseHandle,
-                           DATABASE_COLUMN_TYPES(KEY,STRING),
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("id"),
+                             DATABASE_COLUMN_STRING("name")
+                           ),
                            "SELECT id,name \
                             FROM names \
                             WHERE     storedFlag=0 \
@@ -2052,7 +2058,13 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
   Database_prepare(&databaseStatementHandle,
                          databaseHandle,
-                         DATABASE_COLUMN_TYPES(KEY,DATETIME,STRING,BOOL),
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("id"),
+                           DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(dateTime)"),
+                           DATABASE_COLUMN_STRING("name"),
+                           DATABASE_COLUMN_BOOL  ("storedFlag")
+                         ),
                          "SELECT id,UNIX_TIMESTAMP(dateTime),name,storedFlag \
                           FROM names \
                           WHERE     jobUUID=? \

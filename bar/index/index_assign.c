@@ -38,6 +38,7 @@
 
 #include "index/index.h"
 #include "index/index_common.h"
+#include "index/index_uuids.h"
 #include "index/index_entities.h"
 #include "index/index_storages.h"
 
@@ -100,7 +101,11 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,KEY),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("uuids.id"),
+                               DATABASE_COLUMN_KEY   ("entities.id")
+                             ),
                              "SELECT uuids.id, \
                                      entities.id \
                               FROM storages \
@@ -409,7 +414,11 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   {
     error = Database_prepare(&databaseStatementHandle,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(KEY,KEY),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("uuids.id"),
+                               DATABASE_COLUMN_KEY   ("entities.id")
+                             ),
                              "SELECT uuids.id, \
                                      entities.id \
                               FROM storages \
@@ -745,10 +754,9 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     if (error == ERROR_NONE)
     {
       error = IndexUUID_pruneAll(indexHandle,
-                                  NULL,  // doneFlag,
-                                  NULL,  // deletedCounter,
-                                  uuidId
-                                 );
+                                 NULL,  // doneFlag
+                                 NULL  // deletedCounter
+                                );
     }
   }
 
@@ -757,16 +765,19 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // set entity type
     if (error == ERROR_NONE)
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+      error = Database_update(&indexHandle->databaseHandle,
                                NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET type=%d \
-                                WHERE id=%lld \
-                               ",
-                               toArchiveType,
-                               entityId
+                               "entities",
+                               DATABASE_FLAG_NONE,
+                               DATABASE_VALUES
+                               (
+                                 DATABASE_VALUE_UINT("type", toArchiveType),
+                               ),
+                               "id=?",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY(entityId)
+                               )
                               );
     }
   }

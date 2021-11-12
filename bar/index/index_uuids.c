@@ -389,11 +389,8 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     uint64       *totalEntrySize
                    )
 {
-  String              filterString;
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          uuidDatabaseId;
-  double              totalStorageSize_,totalEntryCount_,totalEntrySize_;
+  String filterString;
+  Errors error;
 
   assert(indexHandle != NULL);
 
@@ -556,11 +553,9 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                            uint64        *totalEntrySize
                           )
 {
-  String                  ftsName;
-  String                  filterString;
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors                  error;
-  double                  totalEntryCount_,totalEntrySize_;
+  String ftsName;
+  String filterString;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
@@ -1542,8 +1537,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                         IndexId     uuidId
                        )
 {
-  Errors     error;
-  DatabaseId entityId;
+  Errors error;
 
   assert(indexHandle != NULL);
 

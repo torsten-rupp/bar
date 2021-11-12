@@ -107,7 +107,12 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   {
    error = Database_prepare(&databaseStatementHandle1,
                              &indexHandle->databaseHandle,
-                             DATABASE_COLUMN_TYPES(STRING,STRING,UINT64),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("uuid"),
+                               DATABASE_COLUMN_STRING("name"),
+                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                             ),
                              "SELECT uuid, \
                                      name, \
                                      UNIX_TIMESTAMP(created) \
@@ -135,7 +140,11 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
         // find matching entity/create default entity
         error = Database_prepare(&databaseStatementHandle2,
                                  &oldIndexHandle->databaseHandle,
-                                 DATABASE_COLUMN_TYPES(KEY,STRING),
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
                                  "SELECT id, \
                                          name \
                                   FROM storages \
@@ -212,7 +221,11 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
           // assign entity id for all storage entries with same uuid and matching name (equals except digits)
           error = Database_prepare(&databaseStatementHandle2,
                                    &oldIndexHandle->databaseHandle,
-                                   DATABASE_COLUMN_TYPES(KEY,STRING),
+                                   DATABASE_COLUMNS
+                                   (
+                                     DATABASE_COLUMN_KEY   ("id"),
+                                     DATABASE_COLUMN_STRING("name")
+                                   ),
                                    "SELECT id, \
                                            name \
                                     FROM storages \
@@ -876,10 +889,9 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                                    DatabaseId  toEntityId
                                   )
 {
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          entityId,uuidId;
-  DatabaseId          toUUIDId;
-  Errors              error;
+  DatabaseId entityId,uuidId;
+  DatabaseId toUUIDId;
+  Errors     error;
 
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
@@ -901,7 +913,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   // get entity id, uuid id
   if (error == ERROR_NONE)
   {
-    error = Database_get(&databaseStatementHandle,
+    error = Database_get(&indexHandle->databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
                            assert(values != NULL);
@@ -1019,6 +1031,16 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                               NULL,  // deletedCounter
                               entityId
                              );
+  }
+
+  // prune UUIDs
+  if (error == ERROR_NONE)
+  {
+    error = IndexUUID_prune(indexHandle,
+                            NULL,  // doneFlag
+                            NULL,  // deletedCounter
+                            uuidId
+                           );
   }
 
   // free resources
@@ -1415,9 +1437,10 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Purged entity #%llu, job %s, created at %s: no archives",
+                  "Purged entity #%llu, job %s, type '%s' created at %s: no archives",
                   entityId,
                   String_cString(jobUUID),
+                  Archive_archiveTypeToString(archiveType),
                   String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
                  );
 
@@ -2147,11 +2170,10 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       uint64       *totalEntrySize
                      )
 {
-  String                  filterString;
-  Errors                  error;
-  DatabaseStatementHandle databaseStatementHandle;
-  bool                    result;
-  DatabaseId              uuidDatabaseId,entityDatabaseId;
+  String     filterString;
+  Errors     error;
+  bool       result;
+  DatabaseId uuidDatabaseId,entityDatabaseId;
 
   assert(indexHandle != NULL);
 
@@ -2170,6 +2192,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   IndexCommon_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_NONE,"AND","entities.type=%u",findArchiveType);
   IndexCommon_filterAppend(filterString,findCreatedDateTime != 0LL,"AND","entities.created=%llu",findCreatedDateTime);
 
+  result = FALSE;
+
   INDEX_DOX(error,
             indexHandle,
   {
@@ -2185,14 +2209,16 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                           UNUSED_VARIABLE(valueCount);
 
                           uuidDatabaseId          = values[0].id;
-                          String_setBuffer(jobUUID,values[1].text.data,values[1].text.length);
+                          if (jobUUID          != NULL) String_setBuffer(jobUUID,values[1].text.data,values[1].text.length);
                           entityDatabaseId        = values[2].id;
-                          String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
-                          createdDateTime         = values[4].id;
-                          archiveType             = values[5].u;
-                          String_setBuffer(lastErrorMessage,values[6].text.data,values[6].text.length);
-                          totalEntryCount         = values[7].u;
-                          totalEntrySize          = values[8].u64;
+                          if (scheduleUUID     != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
+                          if (createdDateTime  != NULL) (*createdDateTime)         = values[4].id;
+                          if (archiveType      != NULL) (*archiveType)             = values[5].u;
+                          if (lastErrorMessage != NULL) String_setBuffer(lastErrorMessage,values[6].text.data,values[6].text.length);
+                          if (totalEntryCount  != NULL) (*totalEntryCount)         = values[7].u;
+                          if (totalEntrySize   != NULL) (*totalEntrySize)          = values[8].u64;
+
+                          result = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
