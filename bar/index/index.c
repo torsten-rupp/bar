@@ -2378,10 +2378,9 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                      uint32      permission
                                     )
 {
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          newestEntryId;
-  uint64              newestTimeLastChanged;
+  Errors     error;
+  DatabaseId newestEntryId;
+  uint64     newestTimeLastChanged;
 
   assert(indexHandle != NULL);
   assert(entryId != DATABASE_ID_NONE);
@@ -2394,39 +2393,42 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
     DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // get existing newest entry
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_KEY   ("id"),
-                                 DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(timeLastChanged)")
-                               ),
-                               "SELECT id, \
-                                       UNIX_TIMESTAMP(timeLastChanged) \
-                                FROM entriesNewest\
-                                WHERE name=? \
-                               ",
-                               DATABASE_VALUES
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                                 DATABASE_FILTER_STRING(name)
-                               )
-                              );
-      if (error == ERROR_NONE)
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 3);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "entriesNewest"
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("id"),
+                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(timeLastChanged)")
+                           ),
+                           "name=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_STRING(name)
+                           ),
+                           NULL,  // orderGroup
+                           0LL,
+                           1LL
+                          );
+      if (error != ERROR_NONE)
       {
-        if (!Database_getNextRow(&databaseStatementHandle,
-                                 "%lld %llu",
-                                 &newestEntryId,
-                                 &newestTimeLastChanged
-                                )
-           )
-        {
-          newestEntryId         = DATABASE_ID_NONE;
-          newestTimeLastChanged = 0LL;
-        }
-        Database_finalize(&databaseStatementHandle);
+        newestEntryId         = DATABASE_ID_NONE;
+        newestTimeLastChanged = 0LL;
       }
 
       // insert/update newest
@@ -2770,47 +2772,45 @@ LOCAL void indexThreadCode(void)
           INDEX_DOX(error,
                     &indexHandle,
           {
-            error = Database_prepare(&databaseStatementHandle,
-                                     &indexHandle.databaseHandle,
-                                     DATABASE_COLUMNS
-                                     (
-                                       DATABASE_COLUMN_KEY   ("id"),
-                                       DATABASE_COLUMN_KEY   ("entryId"),
-                                       DATABASE_COLUMN_STRING("name")
-                                     ),
-                                     DATABASE_COLUMN_TYPES(KEY,KEY,STRING),
-                                     "SELECT id, \
-                                             entityId, \
-                                             name \
-                                      FROM storages \
-                                      WHERE     state!=? \
-                                            AND deletedFlag=1 \
-                                      LIMIT 0,1 \
-                                     ",
-                                     DATABASE_VALUES
-                                     (
-                                     ),
-                                     DATABASE_FILTERS
-                                     (
-                                       UINT(INDEX_STATE_UPDATE)
-                                     )
-                                    );
-            if (error == ERROR_NONE)
-            {
-              if (!Database_getNextRow(&databaseStatementHandle,
-                                       "%lld %lld %S",
-                                       &storageId,
-                                       &entityId,
-                                       storageName
-                                      )
-                 )
-              {
-                storageId = DATABASE_ID_NONE;
-              }
+            error = Database_get(&indexHandle.databaseHandle,
+                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                 {
+                                   assert(values != NULL);
+                                   assert(valueCount == 3);
 
-              Database_finalize(&databaseStatementHandle);
-            }
-            else
+                                   UNUSED_VARIABLE(userData);
+                                   UNUSED_VARIABLE(valueCount);
+
+                                   storageId = values[0].id;
+                                   entityId  = values[1].id;
+                                   String_setBuffer(storageName,values[2].text.data,values[2].text.length);
+
+                                   return ERROR_NONE;
+                                 },NULL),
+                                 NULL,  // changedRowCount
+                                 DATABASE_TABLES
+                                 (
+                                   "storages"
+                                 ),
+                                 DATABASE_FLAG_NONE,
+                                 DATABASE_COLUMNS
+                                 (
+                                   DATABASE_COLUMN_KEY   ("id"),
+                                   DATABASE_COLUMN_KEY   ("entryId"),
+                                   DATABASE_COLUMN_STRING("name")
+                                 ),
+                                 "    state!=? \
+                                  AND deletedFlag=1 \
+                                 ",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
+                                 ),
+                                 NULL,  // orderGroup
+                                 0LL,
+                                 1LL
+                                );
+            if (error != ERROR_NONE)
             {
               storageId = DATABASE_ID_NONE;
             }
@@ -2839,10 +2839,10 @@ LOCAL void indexThreadCode(void)
             do
             {
               // purge storage
-              error = purgeStorage(&indexHandle,
-                                   storageId,
-                                   NULL  // progressInfo
-                                  );
+              error = IndexStorage_purge(&indexHandle,
+                                         storageId,
+                                         NULL  // progressInfo
+                                        );
               if (error == ERROR_INTERRUPTED)
               {
                 // wait until index is unused
@@ -3754,105 +3754,58 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
     if (totalEntityCount != NULL)
     {
       // get total entities count
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_UINT  ("COUNT(entities.id)")
-                               ),
-                               "SELECT COUNT(entities.id) \
-                                FROM entities \
-                                WHERE deletedFlag!=1 \
-                               ",
-                               DATABASE_VALUES
-                               (
-                               ),
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalEntityCount,
+                               "storages",
+                               "COUNT(entities.id)",
+                               "deletedFlag!=1",
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               NULL  // orderGroup
                               );
       if (error != ERROR_NONE)
       {
         return error;
       }
-//Database_debugPrintQueryInfo(&databaseStatementHandle);
-      if (Database_getNextRow(&databaseStatementHandle,
-                              "%lu",
-                              totalEntityCount
-                             )
-            )
-      {
-      }
-      Database_finalize(&databaseStatementHandle);
     }
 
     if (totalDeletedEntityCount != NULL)
     {
       // get total deleted entities count
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_UINT  ("COUNT(entities.id)")
-                               ),
-                               "SELECT COUNT(entities.id) \
-                                FROM entities \
-                                WHERE deletedFlag=1 \
-                               ",
-                               DATABASE_VALUES
-                               (
-                               ),
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalDeletedEntityCount,
+                               "storages",
+                               "COUNT(entities.id)",
+                               "deletedFlag=1",
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               NULL  // orderGroup
                               );
       if (error != ERROR_NONE)
       {
         return error;
       }
-//Database_debugPrintQueryInfo(&databaseStatementHandle);
-      if (Database_getNextRow(&databaseStatementHandle,
-                              "%lu",
-                              totalDeletedEntityCount
-                             )
-            )
-      {
-      }
-      Database_finalize(&databaseStatementHandle);
     }
 
     if (totalSkippedEntryCount != NULL)
     {
       // get total skipped entry count
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_UINT  ("COUNT(id)")
-                               ),
-                               "SELECT COUNT(id) \
-                                FROM skippedEntries \
-                               ",
-                               DATABASE_VALUES
-                               (
-                               ),
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalSkippedEntryCount,
+                               "skippedEntries",
+                               "COUNT(id)",
+                               NULL,
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               NULL  // orderGroup
                               );
       if (error != ERROR_NONE)
       {
         return error;
       }
-//Database_debugPrintQueryInfo(&databaseStatementHandle);
-      if (Database_getNextRow(&databaseStatementHandle,
-                              "%lu",
-                              totalSkippedEntryCount
-                             )
-            )
-      {
-      }
-      Database_finalize(&databaseStatementHandle);
     }
 
     if (   (totalStorageCount != NULL)
@@ -3860,173 +3813,112 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
        )
     {
       // get total * count/size, total newest count/size
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)"),
-                                 DATABASE_COLUMN_UINT  ("0"),
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 26);
 
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCount)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalFileSize)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCount)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalImageSize)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCount)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCount)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCount)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSize)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCount)"),
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
 
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCountNewest)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySizeNewest)"),
+                             if (totalEntryCount             != NULL) (*totalEntryCount            ) = values[ 0].u;
+                             if (totalEntrySize              != NULL) (*totalEntrySize             ) = values[ 1].u64;
+                             if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = values[ 2].u64;
+                             if (totalFileCount              != NULL) (*totalFileCount             ) = values[ 3].u;
+                             if (totalFileSize               != NULL) (*totalFileSize              ) = values[ 4].u64;
+                             if (totalImageCount             != NULL) (*totalImageCount            ) = values[ 5].u;
+                             if (totalImageSize              != NULL) (*totalImageSize             ) = values[ 6].u64;
+                             if (totalDirectoryCount         != NULL) (*totalDirectoryCount        ) = values[ 7].u;
+                             if (totalLinkCount              != NULL) (*totalLinkCount             ) = values[ 8].u;
+                             if (totalHardlinkCount          != NULL) (*totalHardlinkCount         ) = values[ 9].u;
+                             if (totalHardlinkSize           != NULL) (*totalHardlinkSize          ) = values[10].u64;
+                             if (totalSpecialCount           != NULL) (*totalSpecialCount          ) = values[11].u;
 
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCountNewest)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalFileSizeNewest)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCountNewest)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalImageSizeNewest)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCountNewest)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCountNewest)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCountNewest)"),
-                                 DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSizeNewest)"),
-                                 DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCountNewest)")
-                               ),
-                               "SELECT SUM(storages.totalEntryCount), \
-                                       SUM(storages.totalEntrySize), \
-                                       0, \
-                                       SUM(storages.totalFileCount), \
-                                       SUM(storages.totalFileSize), \
-                                       SUM(storages.totalImageCount), \
-                                       SUM(storages.totalImageSize), \
-                                       SUM(storages.totalDirectoryCount), \
-                                       SUM(storages.totalLinkCount), \
-                                       SUM(storages.totalHardlinkCount), \
-                                       SUM(storages.totalHardlinkSize), \
-                                       SUM(storages.totalSpecialCount), \
-                                       \
-                                       SUM(storages.totalEntryCountNewest), \
-                                       SUM(storages.totalEntrySizeNewest), \
-                                       0, \
-                                       SUM(storages.totalFileCountNewest), \
-                                       SUM(storages.totalFileSizeNewest), \
-                                       SUM(storages.totalImageCountNewest), \
-                                       SUM(storages.totalImageSizeNewest), \
-                                       SUM(storages.totalDirectoryCountNewest), \
-                                       SUM(storages.totalLinkCountNewest), \
-                                       SUM(storages.totalHardlinkCountNewest), \
-                                       SUM(storages.totalHardlinkSizeNewest), \
-                                       SUM(storages.totalSpecialCountNewest), \
-                                       \
-                                       COUNT(id), \
-                                       SUM(storages.size) \
-                                FROM storages \
-                                WHERE deletedFlag!=1 \
-                               ",
-                               DATABASE_VALUES
-                               (
-                               ),
-                               DATABASE_FILTERS
-                               (
-                               )
-                              );
+                             if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest      ) = values[12].u;
+                             if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = values[13].u64;
+                             if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = values[14].u64;
+                             if (totalFileCountNewest        != NULL) (*totalFileCountNewest       ) = values[15].u;
+                             if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = values[16].u64;
+                             if (totalImageCountNewest       != NULL) (*totalImageCountNewest      ) = values[17].u;
+                             if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest       ) = values[18].u64;
+                             if (totalDirectoryCountNewest   != NULL) (*totalDirectoryCountNewest  ) = values[19].u;
+                             if (totalLinkCountNewest        != NULL) (*totalLinkCountNewest       ) = values[20].u;
+                             if (totalHardlinkCountNewest    != NULL) (*totalHardlinkCountNewest   ) = values[21].u;
+                             if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest    ) = values[22].u64;
+                             if (totalSpecialCountNewest     != NULL) (*totalSpecialCountNewest    ) = values[23].u;
+
+                             if (totalStorageCount           != NULL) (*totalStorageCount          ) = values[24].u;
+                             if (totalStorageSize            != NULL) (*totalStorageSize           ) = values[25].u64;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "storages"
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)"),
+                             DATABASE_COLUMN_UINT  ("0"),
+
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalFileSize)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalImageSize)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCount)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCount)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSize)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCount)"),
+
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySizeNewest)"),
+
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalFileSizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalImageSizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCountNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCountNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCountNewest)")
+                           ),
+                           "deletedFlag!=1",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL,  // orderGroup
+                           0LL,
+                           1LL
+                          );
       if (error != ERROR_NONE)
       {
         return error;
       }
-//Database_debugPrintQueryInfo(&databaseStatementHandle);
-      if (Database_getNextRow(&databaseStatementHandle,
-                              "%lu %lf %lf %lu %lf %lu %lf %lu %lu %lu %lf %lu  %lu %lf %lf %lu %lf %lu %lf %lu %lu %lu %lf %lu  %lu %lf",
-                              totalEntryCount,
-                              &totalEntrySize_,
-                              &totalEntryContentSize_,
-                              totalFileCount,
-                              &totalFileSize_,
-                              totalImageCount,
-                              &totalImageSize_,
-                              totalDirectoryCount,
-                              totalLinkCount,
-                              totalHardlinkCount,
-                              &totalHardlinkSize_,
-                              totalSpecialCount,
-
-                              totalEntryCountNewest,
-                              &totalEntrySizeNewest_,
-                              &totalEntryContentSize_,
-                              totalFileCountNewest,
-                              &totalFileSizeNewest_,
-                              totalImageCountNewest,
-                              &totalImageSizeNewest_,
-                              totalDirectoryCountNewest,
-                              totalLinkCountNewest,
-                              totalHardlinkCountNewest,
-                              &totalHardlinkSizeNewest_,
-                              totalSpecialCountNewest,
-
-                              totalStorageCount,
-                              &totalStorageSize_
-                             )
-            )
-      {
-        assert(totalEntrySize_          >= 0.0);
-        assert(totalEntryContentSize_   >= 0.0);
-        assert(totalFileSize_           >= 0.0);
-        assert(totalImageSize_          >= 0.0);
-        assert(totalHardlinkSize_       >= 0.0);
-        assert(totalEntrySizeNewest_    >= 0.0);
-        assert(totalEntryContentSize_   >= 0.0);
-        assert(totalFileSizeNewest_     >= 0.0);
-        assert(totalImageSizeNewest_    >= 0.0);
-        assert(totalHardlinkSizeNewest_ >= 0.0);
-        assert(totalStorageSize_        >= 0.0);
-        if (totalEntrySize              != NULL) (*totalEntrySize             ) = (totalEntrySize_              >= 0.0) ? (uint64)totalEntrySize_              : 0LL;
-        if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = (totalEntryContentSize_       >= 0.0) ? (uint64)totalEntryContentSize_       : 0LL;
-        if (totalFileSize               != NULL) (*totalFileSize              ) = (totalFileSize_               >= 0.0) ? (uint64)totalFileSize_               : 0LL;
-        if (totalImageSize              != NULL) (*totalImageSize             ) = (totalImageSize_              >= 0.0) ? (uint64)totalImageSize_              : 0LL;
-        if (totalHardlinkSize           != NULL) (*totalHardlinkSize          ) = (totalHardlinkSize_           >= 0.0) ? (uint64)totalHardlinkSize_           : 0LL;
-        if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = (totalEntrySizeNewest_        >= 0.0) ? (uint64)totalEntrySizeNewest_        : 0LL;
-        if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = (totalEntryContentSizeNewest_ >= 0.0) ? (uint64)totalEntryContentSizeNewest_ : 0LL;
-        if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = (totalFileSizeNewest_         >= 0.0) ? (uint64)totalFileSizeNewest_         : 0LL;
-        if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest       ) = (totalImageSizeNewest_        >= 0.0) ? (uint64)totalImageSizeNewest_        : 0LL;
-        if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest    ) = (totalHardlinkSizeNewest_     >= 0.0) ? (uint64)totalHardlinkSizeNewest_     : 0LL;
-        if (totalStorageSize            != NULL) (*totalStorageSize           ) = (totalStorageSize_            >= 0.0) ? (uint64)totalStorageSize_            : 0LL;
-
-      }
-      Database_finalize(&databaseStatementHandle);
     }
 
     if (totalDeletedStorageCount != NULL)
     {
       // get total deleted storage count
-      error = Database_prepare(&databaseStatementHandle,
-                               &indexHandle->databaseHandle,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_KEY   ("COUNT(id)")
-                               ),
-                               "SELECT COUNT(id) \
-                                FROM storages \
-                                WHERE deletedFlag=1 \
-                               ",
-                               DATABASE_VALUES
-                               (
-                               ),
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalDeletedStorageCount,
+                               "storages",
+                               "COUNT(id)",
+                               "deletedFlag=1",
                                DATABASE_FILTERS
                                (
-                               )
+                               ),
+                               NULL  // orderGroup
                               );
       if (error != ERROR_NONE)
       {
         return error;
       }
-//Database_debugPrintQueryInfo(&databaseStatementHandle);
-      if (Database_getNextRow(&databaseStatementHandle,
-                              "%lu",
-                              totalDeletedStorageCount
-                             )
-            )
-      {
-      }
-      Database_finalize(&databaseStatementHandle);
     }
 
     return ERROR_NONE;

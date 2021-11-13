@@ -1880,55 +1880,55 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
   assert(jobUUID != NULL);
   assert(name != NULL);
 
+// TODO: lock required?
 //  BLOCK_DOX(result,
 //            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
 //            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
 //  {
-    // prepare list
-    if (Database_prepare(&databaseStatementHandle,
-                         databaseHandle,
-                         DATABASE_COLUMNS
-                         (
-                           DATABASE_COLUMN_KEY   ("id"),
-                           DATABASE_COLUMN_STRING("name")
-                         ),
-                         "SELECT id,name \
-                          FROM names \
-                          WHERE     storedFlag=0 \
-                                AND DATETIME('now','-? seconds')>=dateTime \
-                                AND jobUUID=? \
-                                AND scheduleUUID=? \
-                          LIMIT 0,1 \
-                         ",
-                         DATABASE_VALUES
-                         (
-                         ),
-                         DATABASE_FILTERS
-                         (
-                           DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
-                           DATABASE_FILTER_STRING(jobUUID),
-                           DATABASE_FILTER_STRING(scheduleUUID)
-                         )
-                        ) != ERROR_NONE
+    if (Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       assert(values != NULL);
+                       assert(valueCount == 2);
+
+                       UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
+
+                       databaseId_ = values[0].id;
+                       String_setBuffer(name,values[1].text.data,values[1].text.length);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "names"
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY   ("id"),
+                       DATABASE_COLUMN_STRING("name")
+                     ),
+                     "    storedFlag=0 \
+                      AND DATETIME('now','-? seconds')>=dateTime \
+                      AND jobUUID=? \
+                      AND scheduleUUID=? \
+                     ",
+                     DATABASE_FILTERS
+                     (
+                       DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
+                       DATABASE_FILTER_STRING(jobUUID),
+                       DATABASE_FILTER_STRING(scheduleUUID)
+                     ),
+                     NULL,  // orderGroup
+                     0LL,
+                     1LL
+                    ) != ERROR_NONE
        )
     {
       return FALSE;
     }
-
-    // get next entry
-    if (!Database_getNextRow(&databaseStatementHandle,
-                             "%lld %S",
-                             &databaseId_,
-                             name
-                            )
-       )
-    {
-      Database_finalize(&databaseStatementHandle);
-      return FALSE;
-    }
-
-    // done list
-    Database_finalize(&databaseStatementHandle);
 
     // mark entry stored
     if (markEntryStored(databaseHandle,databaseId_) != ERROR_NONE)
@@ -1973,9 +1973,9 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
 }
 
 Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
-                           DatabaseHandle      *databaseHandle,
-                           ConstString         jobUUID,
-                           ConstString         scheduleUUID
+                           DatabaseHandle          *databaseHandle,
+                           ConstString             jobUUID,
+                           ConstString             scheduleUUID
                           )
 {
   Errors error;
@@ -1987,30 +1987,27 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
   assert(!String_isEmpty(scheduleUUID));
 
   // prepare list
-  error = Database_prepare(databaseStatementHandle,
-                           databaseHandle,
-                           DATABASE_COLUMNS
-                           (
-                             DATABASE_COLUMN_KEY   ("id"),
-                             DATABASE_COLUMN_STRING("name")
-                           ),
-                           "SELECT id,name \
-                            FROM names \
-                            WHERE     storedFlag=0 \
-                                  AND DATETIME('now','-? seconds')>=dateTime \
-                                  AND jobUUID=? \
-                                  AND scheduleUUID=? \
-                           ",
-                           DATABASE_VALUES
-                           (
-                           ),
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
-                             DATABASE_FILTER_STRING(jobUUID),
-                             DATABASE_FILTER_STRING(scheduleUUID)
-                           )
-                          );
+  error = Database_select(databaseStatementHandle,
+                          databaseHandle,
+                          "names",
+                          DATABASE_FLAG_NONE,
+                          DATABASE_COLUMNS
+                          (
+                            DATABASE_COLUMN_KEY   ("id"),
+                            DATABASE_COLUMN_STRING("name")
+                          ),
+                          "    storedFlag=0 \
+                           AND DATETIME('now','-? seconds')>=dateTime \
+                           AND jobUUID=? \
+                           AND scheduleUUID=? \
+                          ",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
+                            DATABASE_FILTER_STRING(jobUUID),
+                            DATABASE_FILTER_STRING(scheduleUUID)
+                          )
+                        );
   if (error != ERROR_NONE)
   {
     return error;
@@ -2036,7 +2033,6 @@ bool Continuous_getNext(DatabaseStatementHandle *databaseStatementHandle,
   assert(databaseStatementHandle != NULL);
 
   return Database_getNextRow(databaseStatementHandle,
-                             "%lld %S",
                              databaseId,
                              name
                             );
@@ -2056,40 +2052,49 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
   name = String_new();
 
-  Database_prepare(&databaseStatementHandle,
-                         databaseHandle,
-                         DATABASE_COLUMNS
-                         (
-                           DATABASE_COLUMN_KEY   ("id"),
-                           DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(dateTime)"),
-                           DATABASE_COLUMN_STRING("name"),
-                           DATABASE_COLUMN_BOOL  ("storedFlag")
-                         ),
-                         "SELECT id,UNIX_TIMESTAMP(dateTime),name,storedFlag \
-                          FROM names \
-                          WHERE     jobUUID=? \
-                                AND scheduleUUID=? \
-                         ",
-                         DATABASE_VALUES
-                         (
-                         ),
-                         DATABASE_FILTERS
-                         (
-                           DATABASE_FILTER_CSTRING(jobUUID),
-                           DATABASE_FILTER_CSTRING(scheduleUUID)
-                         )
-                        );
-  while (Database_getNextRow(&databaseStatementHandle,
-                             &databaseId,
-                             &dateTime,
-                             name,
-                             &storedFlag
-                            )
-        )
-  {
-     fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
-  }
-  Database_finalize(&databaseStatementHandle);
+  Database_get(databaseHandle,
+               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+               {
+                 assert(values != NULL);
+                 assert(valueCount == 4);
+
+                 UNUSED_VARIABLE(userData);
+                 UNUSED_VARIABLE(valueCount);
+
+                 databaseId = values[0].id;
+                 dateTime   = values[1].dateTime;
+                 String_setBuffer(name,values[3].text.data,values[3].text.length);
+                 storedFlag = values[3].b;
+
+                 fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
+
+                 return ERROR_NONE;
+               },NULL),
+               NULL,  // changedRowCount
+               DATABASE_TABLES
+               (
+                 "storages"
+               ),
+               DATABASE_FLAG_NONE,
+               DATABASE_COLUMNS
+               (
+                 DATABASE_COLUMN_KEY   ("id"),
+                 DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(dateTime)"),
+                 DATABASE_COLUMN_STRING("name"),
+                 DATABASE_COLUMN_BOOL  ("storedFlag")
+               ),
+               "    jobUUID=? \
+                AND scheduleUUID=? \
+               ",
+               DATABASE_FILTERS
+               (
+                 DATABASE_FILTER_CSTRING(jobUUID),
+                 DATABASE_FILTER_CSTRING(scheduleUUID)
+               ),
+               NULL,  // orderGroup
+               0LL,
+               DATABASE_UNLIMITED
+              );
 
   String_delete(name);
 }

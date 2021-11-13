@@ -54,6 +54,22 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
                          );
 
 /***********************************************************************\
+* Name   : purgeStorage
+* Purpose: purge storage (mark as "deleted")
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_purge(IndexHandle  *indexHandle,
+                          DatabaseId   storageId,
+                          ProgressInfo *progressInfo
+                         );
+
+/***********************************************************************\
 * Name   : IndexStorage_updateAggregates
 * Purpose: update storage aggregates
 * Input  : indexHandle - index handle

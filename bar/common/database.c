@@ -11261,6 +11261,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 
 Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseHandle          *databaseHandle,
+// TODO: use DatabaseTable
                        const char              *tableName,
                        uint                    flags,
                        DatabaseColumn          columns[],
@@ -11268,6 +11269,7 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
                        const char              *filter,
                        const DatabaseFilter    filterValues[],
                        uint                    filterValueCount
+// TODO: separate order/group, offset, limit
                       )
 {
   String sqlString;

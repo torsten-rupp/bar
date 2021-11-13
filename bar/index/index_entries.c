@@ -2425,94 +2425,96 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
       if (newestOnly)
       {
-fprintf(stderr,"%s:%d: 1\n",__FILE__,__LINE__);
-        return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                                &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,STRING,STRING,INT,KEY,INT,STRING,DATETIME,INT,INT,INT,INT64,INT,KEY,STRING,INT64,INT64,INT,INT,INT64,STRING,INT64),
-                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                             "SELECT uuids.id, \
-                                                     uuids.jobUUID, \
-                                                     entities.id, \
-                                                     entities.scheduleUUID, \
-                                                     entities.hostName, \
-                                                     entities.userName, \
-                                                     entities.type, \
-                                                     entriesNewest.entryId, \
-                                                     entriesNewest.type, \
-                                                     entriesNewest.name, \
-                                                     entriesNewest.timeLastChanged, \
-                                                     entriesNewest.userId, \
-                                                     entriesNewest.groupId, \
-                                                     entriesNewest.permission, \
-                                                     entriesNewest.size, \
-                                                     %s, \
-                                                     CASE entries.type \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN directoryEntries.storageId \
-                                                       WHEN %u THEN linkEntries.storageId \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN specialEntries.storageId \
-                                                     END, \
-                                                     (SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN directoryEntries.storageId \
-                                                                                           WHEN %u THEN linkEntries.storageId \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN specialEntries.storageId \
-                                                                                         END \
-                                                     ), \
-                                                     fileEntries.size, \
-                                                     imageEntries.size, \
-                                                     imageEntries.fileSystemType, \
-                                                     imageEntries.blockSize, \
-                                                     directoryEntries.totalEntrySizeNewest, \
-                                                     linkEntries.destinationName, \
-                                                     hardlinkEntries.size \
-                                              FROM entriesNewest \
-                                                LEFT JOIN entities         ON entities.id=entriesNewest.entityid \
-                                                LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
-                                              WHERE     entities.deletedFlag!=1 \
-                                                    AND entriesNewest.id IS NOT NULL \
-                                                    AND %s \
-                                              %s \
-                                              LIMIT ?,? \
-                                             ",
-                                             fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0",
+        return Database_select(&indexQueryHandle->databaseStatementHandle,
+                               &indexHandle->databaseHandle,
+                               "entriesNewest \
+                                  LEFT JOIN entities         ON entities.id=entriesNewest.entityid \
+                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
+                               ",
+                               DATABASE_FLAG_NONE,
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_KEY   ("uuids.id"),
+                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY   ("entities.id"),
+                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING("entities.hostName"),
+                                 DATABASE_COLUMN_STRING("entities.userName"),
+                                 DATABASE_COLUMN_UINT  ("entities.type"),
+                                 DATABASE_COLUMN_KEY   ("entriesNewest.entryId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.type"),
+                                 DATABASE_COLUMN_STRING("entriesNewest.name"),
+                                 DATABASE_COLUMN_UINT64("entriesNewest.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.userId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.groupId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.permission"),
+                                 DATABASE_COLUMN_UINT64("entriesNewest.size"),
+                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
+                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN directoryEntries.storageId \
+                                                           WHEN %u THEN linkEntries.storageId \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN specialEntries.storageId \
+                                                         END \
+                                                        "
+                                                       ),
+                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN directoryEntries.storageId \
+                                                                                               WHEN %u THEN linkEntries.storageId \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN specialEntries.storageId \
+                                                                                             END \
+                                                         ) \
+                                                        "
+                                                       ),
+                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySizeNewest"),
+                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "     entities.deletedFlag!=1 \
+                                             AND entriesNewest.id IS NOT NULL \
+                                             AND %s \
+                                             %s \
+                                             LIMIT ?,? \
+                                            ",
+                                            String_cString(filterString),
+                                            String_cString(orderString)
+                                           ),
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
-
-                                             String_cString(filterString),
-                                             String_cString(orderString)
-                                            ),
-                                 DATABASE_VALUES
-                                 (
-                                 ),
-                                 DATABASE_FILTERS
-                                 (
-                                   DATABASE_FILTER_UINT64(offset),
-                                   DATABASE_FILTER_UINT64(limit)
-                                 )
-                               );
+                                 DATABASE_FILTER_UINT64(offset),
+                                 DATABASE_FILTER_UINT64(limit)
+                               )
+                              );
       }
       else
       {
@@ -2629,95 +2631,97 @@ fprintf(stderr,"%s:%d: 1\n",__FILE__,__LINE__);
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-fprintf(stderr,"%s:%d: 3\n",__FILE__,__LINE__);
-        return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                                &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,STRING,STRING,INT,KEY,INT,STRING,DATETIME,INT,INT,INT,INT64,INT,KEY,STRING,INT64,INT64,INT,INT,INT64,STRING,INT64),
-                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                             "SELECT uuids.id, \
-                                                     uuids.jobUUID, \
-                                                     entities.id, \
-                                                     entities.scheduleUUID, \
-                                                     entities.hostName, \
-                                                     entities.userName, \
-                                                     entities.type, \
-                                                     entriesNewest.entryId, \
-                                                     entriesNewest.type, \
-                                                     entriesNewest.name, \
-                                                     entriesNewest.timeLastChanged, \
-                                                     entriesNewest.userId, \
-                                                     entriesNewest.groupId, \
-                                                     entriesNewest.permission, \
-                                                     entriesNewest.size, \
-                                                     %s, \
-                                                     CASE entries.type \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN directoryEntries.storageId \
-                                                       WHEN %u THEN linkEntries.storageId \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN specialEntries.storageId \
-                                                     END, \
-                                                     (SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN directoryEntries.storageId \
-                                                                                           WHEN %u THEN linkEntries.storageId \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN specialEntries.storageId \
-                                                                                         END \
-                                                     ), \
-                                                     fileEntries.size, \
-                                                     imageEntries.size, \
-                                                     imageEntries.fileSystemType, \
-                                                     imageEntries.blockSize, \
-                                                     directoryEntries.totalEntrySizeNewest, \
-                                                     linkEntries.destinationName, \
-                                                     hardlinkEntries.size \
-                                              FROM FTS_entries \
-                                                LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
-                                                LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
-                                                LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
-                                                LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
-                                              WHERE     entities.deletedFlag!=1 \
-                                                    AND entriesNewest.id IS NOT NULL \
-                                                    AND %s \
+        return Database_select(&indexQueryHandle->databaseStatementHandle,
+                               &indexHandle->databaseHandle,
+                               "FTS_entries \
+                                  LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
+                                  LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
+                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
+                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
+                               ",
+                               DATABASE_FLAG_NONE,
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_KEY   ("uuids.id"),
+                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY   ("entities.id"),
+                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING("entities.hostName"),
+                                 DATABASE_COLUMN_STRING("entities.userName"),
+                                 DATABASE_COLUMN_UINT  ("entities.type"),
+                                 DATABASE_COLUMN_KEY   ("entriesNewest.entryId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.type"),
+                                 DATABASE_COLUMN_STRING("entriesNewest.name"),
+                                 DATABASE_COLUMN_UINT64("entriesNewest.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.userId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.groupId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.permission"),
+                                 DATABASE_COLUMN_UINT64("entriesNewest.size"),
+                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
+                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN directoryEntries.storageId \
+                                                           WHEN %u THEN linkEntries.storageId \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN specialEntries.storageId \
+                                                         END \
+                                                        "
+                                                       ),
+                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN directoryEntries.storageId \
+                                                                                               WHEN %u THEN linkEntries.storageId \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN specialEntries.storageId \
+                                                                                             END \
+                                                         ) \
+                                                        "
+                                                       ),
+                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySizeNewest"),
+                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "     entities.deletedFlag!=1 \
+                                              AND entriesNewest.id IS NOT NULL \
+                                              AND %s \
                                               %s \
                                               LIMIT ?,? \
-                                             ",
-                                             fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0",
+                                            ",
+                                            String_cString(filterString),
+                                            String_cString(orderString)
+                                           ),
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
-
-                                             String_cString(filterString),
-                                             String_cString(orderString)
-                                            ),
-                                 DATABASE_VALUES
-                                 (
-                                 ),
-                                 DATABASE_FILTERS
-                                 (
-                                   DATABASE_FILTER_UINT64(offset),
-                                   DATABASE_FILTER_UINT64(limit)
-                                 )
-                               );
+                                 DATABASE_FILTER_UINT64(offset),
+                                 DATABASE_FILTER_UINT64(limit)
+                               )
+                              );
       });
     }
     else
@@ -2728,93 +2732,96 @@ fprintf(stderr,"%s:%d: 3\n",__FILE__,__LINE__);
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
 fprintf(stderr,"%s:%d: 4\n",__FILE__,__LINE__);
-        return Database_prepare(&indexQueryHandle->databaseStatementHandle,
-                                &indexHandle->databaseHandle,
-                                DATABASE_COLUMN_TYPES(KEY,STRING,KEY,STRING,STRING,STRING,INT,KEY,INT,STRING,DATETIME,INT,INT,INT,INT64,INT,KEY,STRING,INT64,INT64,INT,INT,INT64,STRING,INT64),
-                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                             "SELECT uuids.id, \
-                                                     uuids.jobUUID, \
-                                                     entities.id, \
-                                                     entities.scheduleUUID, \
-                                                     entities.hostName, \
-                                                     entities.userName, \
-                                                     entities.type, \
-                                                     entries.id, \
-                                                     entries.type, \
-                                                     entries.name, \
-                                                     entries.timeLastChanged, \
-                                                     entries.userId, \
-                                                     entries.groupId, \
-                                                     entries.permission, \
-                                                     entries.size, \
-                                                     %s, \
-                                                     CASE entries.type \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN directoryEntries.storageId \
-                                                       WHEN %u THEN linkEntries.storageId \
-                                                       WHEN %u THEN 0 \
-                                                       WHEN %u THEN specialEntries.storageId \
-                                                     END, \
-                                                     (SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN directoryEntries.storageId \
-                                                                                           WHEN %u THEN linkEntries.storageId \
-                                                                                           WHEN %u THEN 0 \
-                                                                                           WHEN %u THEN specialEntries.storageId \
-                                                                                         END \
-                                                     ), \
-                                                     fileEntries.size, \
-                                                     imageEntries.size, \
-                                                     imageEntries.fileSystemType, \
-                                                     imageEntries.blockSize, \
-                                                     directoryEntries.totalEntrySize, \
-                                                     linkEntries.destinationName, \
-                                                     hardlinkEntries.size \
-                                               FROM FTS_entries \
-                                                 LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
-                                                 LEFT JOIN entities         ON entities.id=entries.entityId \
-                                                 LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                                 LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
-                                                 LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
-                                                 LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                                 LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                                 LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
-                                                 LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                               WHERE     entities.deletedFlag!=1 \
-                                                     AND %s \
+        return Database_select(&indexQueryHandle->databaseStatementHandle,
+                               &indexHandle->databaseHandle,
+                               "FTS_entries \
+                                  LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
+                                  LEFT JOIN entities         ON entities.id=entries.entityId \
+                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
+                                  LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
+                                  LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
+                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                               ",
+                               DATABASE_FLAG_NONE,
+                               DATABASE_COLUMNS
+                               (
+                                 DATABASE_COLUMN_KEY   ("uuids.id"),
+                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY   ("entities.id"),
+                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING("entities.hostName"),
+                                 DATABASE_COLUMN_STRING("entities.userName"),
+                                 DATABASE_COLUMN_UINT  ("entities.type"),
+                                 DATABASE_COLUMN_KEY   ("entriesNewest.entryId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.type"),
+                                 DATABASE_COLUMN_STRING("entriesNewest.name"),
+                                 DATABASE_COLUMN_UINT64("entriesNewest.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.userId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.groupId"),
+                                 DATABASE_COLUMN_UINT  ("entriesNewest.permission"),
+                                 DATABASE_COLUMN_UINT64("entriesNewest.size"),
+                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
+                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN directoryEntries.storageId \
+                                                           WHEN %u THEN linkEntries.storageId \
+                                                           WHEN %u THEN 0 \
+                                                           WHEN %u THEN specialEntries.storageId \
+                                                         END \
+                                                        "
+                                                       ),
+                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN directoryEntries.storageId \
+                                                                                               WHEN %u THEN linkEntries.storageId \
+                                                                                               WHEN %u THEN 0 \
+                                                                                               WHEN %u THEN specialEntries.storageId \
+                                                                                             END \
+                                                         ) \
+                                                        "
+                                                       ),
+                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySizeNewest"),
+                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                               ),
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "     entities.deletedFlag!=1 \
+                                               AND %s \
                                                %s \
                                                LIMIT ?,? \
-                                             ",
-                                             fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0",
+                                            ",
+                                            String_cString(filterString),
+                                            String_cString(orderString)
+                                           ),
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
 
-                                             INDEX_TYPE_FILE,
-                                             INDEX_TYPE_IMAGE,
-                                             INDEX_TYPE_DIRECTORY,
-                                             INDEX_TYPE_LINK,
-                                             INDEX_TYPE_HARDLINK,
-                                             INDEX_TYPE_SPECIAL,
-
-                                             String_cString(filterString),
-                                             String_cString(orderString)
-                                            ),
-                                 DATABASE_VALUES
-                                 (
-                                 ),
-                                 DATABASE_FILTERS
-                                 (
-                                   DATABASE_FILTER_UINT64(offset),
-                                   DATABASE_FILTER_UINT64(limit)
-                                 )
-                               );
+                                 DATABASE_FILTER_UINT64(offset),
+                                 DATABASE_FILTER_UINT64(limit)
+                               )
+                              );
       });
     }
   }
