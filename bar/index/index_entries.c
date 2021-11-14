@@ -2425,6 +2425,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
       if (newestOnly)
       {
+fprintf(stderr,"%s:%d: aaaaa\n",__FILE__,__LINE__);
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
                                "entriesNewest \
@@ -2457,22 +2458,22 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64("entriesNewest.size"),
                                  DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
                                  DATABASE_COLUMN_KEY   ("CASE entries.type \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN directoryEntries.storageId \
-                                                           WHEN %u THEN linkEntries.storageId \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN specialEntries.storageId \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN directoryEntries.storageId \
+                                                           WHEN ? THEN linkEntries.storageId \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN specialEntries.storageId \
                                                          END \
                                                         "
                                                        ),
                                  DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN directoryEntries.storageId \
-                                                                                               WHEN %u THEN linkEntries.storageId \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN specialEntries.storageId \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN directoryEntries.storageId \
+                                                                                               WHEN ? THEN linkEntries.storageId \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN specialEntries.storageId \
                                                                                              END \
                                                          ) \
                                                         "
@@ -2518,6 +2519,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       }
       else
       {
+fprintf(stderr,"%s:%d: 22222\n",__FILE__,__LINE__);
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
                                "entries \
@@ -2663,23 +2665,23 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT  ("entriesNewest.permission"),
                                  DATABASE_COLUMN_UINT64("entriesNewest.size"),
                                  DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entriesNewest.id)" : "0"),
-                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN directoryEntries.storageId \
-                                                           WHEN %u THEN linkEntries.storageId \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN specialEntries.storageId \
+                                 DATABASE_COLUMN_KEY   ("CASE entriesNewest.type \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN directoryEntries.storageId \
+                                                           WHEN ? THEN linkEntries.storageId \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN specialEntries.storageId \
                                                          END \
                                                         "
                                                        ),
-                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN directoryEntries.storageId \
-                                                                                               WHEN %u THEN linkEntries.storageId \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN specialEntries.storageId \
+                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entriesNewest.type \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN directoryEntries.storageId \
+                                                                                               WHEN ? THEN linkEntries.storageId \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN specialEntries.storageId \
                                                                                              END \
                                                          ) \
                                                         "
@@ -2731,7 +2733,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
       {
         char sqlCommand[MAX_SQL_COMMAND_LENGTH];
 
-fprintf(stderr,"%s:%d: 4\n",__FILE__,__LINE__);
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
                                "FTS_entries \
@@ -2755,32 +2756,32 @@ fprintf(stderr,"%s:%d: 4\n",__FILE__,__LINE__);
                                  DATABASE_COLUMN_STRING("entities.hostName"),
                                  DATABASE_COLUMN_STRING("entities.userName"),
                                  DATABASE_COLUMN_UINT  ("entities.type"),
-                                 DATABASE_COLUMN_KEY   ("entriesNewest.entryId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.type"),
-                                 DATABASE_COLUMN_STRING("entriesNewest.name"),
-                                 DATABASE_COLUMN_UINT64("entriesNewest.timeLastChanged"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.userId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.groupId"),
-                                 DATABASE_COLUMN_UINT  ("entriesNewest.permission"),
-                                 DATABASE_COLUMN_UINT64("entriesNewest.size"),
+                                 DATABASE_COLUMN_KEY   ("entries.id"),
+                                 DATABASE_COLUMN_UINT  ("entries.type"),
+                                 DATABASE_COLUMN_STRING("entries.name"),
+                                 DATABASE_COLUMN_UINT64("entries.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT  ("entries.userId"),
+                                 DATABASE_COLUMN_UINT  ("entries.groupId"),
+                                 DATABASE_COLUMN_UINT  ("entries.permission"),
+                                 DATABASE_COLUMN_UINT64("entries.size"),
                                  DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
                                  DATABASE_COLUMN_KEY   ("CASE entries.type \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN directoryEntries.storageId \
-                                                           WHEN %u THEN linkEntries.storageId \
-                                                           WHEN %u THEN 0 \
-                                                           WHEN %u THEN specialEntries.storageId \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN directoryEntries.storageId \
+                                                           WHEN ? THEN linkEntries.storageId \
+                                                           WHEN ? THEN 0 \
+                                                           WHEN ? THEN specialEntries.storageId \
                                                          END \
                                                         "
                                                        ),
                                  DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN directoryEntries.storageId \
-                                                                                               WHEN %u THEN linkEntries.storageId \
-                                                                                               WHEN %u THEN 0 \
-                                                                                               WHEN %u THEN specialEntries.storageId \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN directoryEntries.storageId \
+                                                                                               WHEN ? THEN linkEntries.storageId \
+                                                                                               WHEN ? THEN 0 \
+                                                                                               WHEN ? THEN specialEntries.storageId \
                                                                                              END \
                                                          ) \
                                                         "
@@ -2892,7 +2893,6 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %S %llu %S %S %S %u %llu %u %S %llu %u %u %u %llu %u %llu %S %llu %llu %u %u %llu %S %llu",
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatabaseId,
@@ -3039,7 +3039,6 @@ bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%llu %llu %'S %llu %llu %llu",
                            &entryFragmentDatabaseId,
                            &storageDatabaseId,
                            storageName,
@@ -3374,7 +3373,6 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %llu %S %llu %llu %d %d %d",
                            &databaseId,
                            createdDateTime,
                            fileName,
@@ -3531,7 +3529,6 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %llu %S %u %u %llu %llu %llu",
                            &databaseId,
                            createdDateTime,
                            imageName,
@@ -3694,7 +3691,6 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %llu %S %llu %d %d %d",
                            &databaseId,
                            createdDateTime,
                            directoryName,
@@ -3851,7 +3847,6 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %llu %S %S %llu %d %d %d",
                            &databaseId,
                            createdDateTime,
                            linkName,
@@ -4007,7 +4002,6 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %llu %S %llu %llu %d %d %d",
                            &databaseId,
                            createdDateTime,
                            fileName,
@@ -4161,7 +4155,6 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %llu %S %llu %d %d %d",
                            &databaseId,
                            createdDateTime,
                            name,

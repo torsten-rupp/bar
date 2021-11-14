@@ -3988,7 +3988,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                           UNUSED_VARIABLE(userData);
                           UNUSED_VARIABLE(valueCount);
 
-                          String_setBuffer(storageName,values[4].text.data,values[4].text.length);
+                          String_setBuffer(storageName,values[5].text.data,values[5].text.length);
 
                           if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
                           {
@@ -4939,7 +4939,6 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %S %lld %S %S %S %S %llu %u %lld %S %llu %llu %u %u %llu %S %lu %llu",
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatabaseId,
