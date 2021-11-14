@@ -1440,7 +1440,6 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %S %llu %S %lf %lf %lf",
                            &databaseId,
                            jobUUID,
                            lastExecutedDateTime,

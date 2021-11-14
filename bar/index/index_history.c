@@ -183,7 +183,6 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           "%lld %lld %S %S %S %S %u %llu %S %llu %lu %llu %lu %llu %lu %llu",
                            &historyDatabaseId,
                            &uuidDatabaseId,
                            jobUUID,
