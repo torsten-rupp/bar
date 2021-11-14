@@ -4469,9 +4469,9 @@ void ConfigValue_debugPrintComments(void)
 }
 
 #if   defined(HAVE_OPENSSL)
-  typedef SHA256_CTX SHA256;
+  typedef SHA256_CTX SHA256_;
 #elif defined(HAVE_GCRYPT)
-  typedef gcry_md_hd_t SHA256;
+  typedef gcry_md_hd_t SHA256_;
 #endif
 
 /***********************************************************************\
@@ -4485,7 +4485,7 @@ void ConfigValue_debugPrintComments(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateSHA256(SHA256 sha256, const void *data, uint dateLength)
+LOCAL void updateSHA256(SHA256_ sha256, const void *data, uint dateLength)
 {
   #if   defined(HAVE_OPENSSL)
   #elif defined(HAVE_GCRYPT)
@@ -4503,7 +4503,7 @@ LOCAL void updateSHA256(SHA256 sha256, const void *data, uint dateLength)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateSHA256StringList(SHA256 sha256, const StringList *stringList)
+LOCAL void updateSHA256StringList(SHA256_ sha256, const StringList *stringList)
 {
   const StringNode *stringNode;
   ConstString      line;
@@ -4527,7 +4527,7 @@ LOCAL void updateSHA256StringList(SHA256 sha256, const StringList *stringList)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateSHA256Value(SHA256            sha256,
+LOCAL void updateSHA256Value(SHA256_           sha256,
                              const ConfigValue *configValue,
                              const void        *variable
                             )
@@ -4903,7 +4903,7 @@ LOCAL void updateSHA256Value(SHA256            sha256,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateSHA256Section(SHA256            sha256,
+LOCAL void updateSHA256Section(SHA256_           sha256,
                                const ConfigValue configValues[],
                                uint              firstValueIndex,
                                uint              lastValueIndex,
@@ -5013,15 +5013,13 @@ LOCAL void updateSHA256Section(SHA256            sha256,
 
 void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferSize)
 {
-  SHA256 sha256;
-  #if   defined(HAVE_OPENSSL)
-    char       sha256[SHA256_DIGEST_LENGTH];
-  #elif defined(HAVE_GCRYPT)
-  #endif
+// TODO: does not compile
+#if 0
+  SHA256_ sha256;
+  uint    index;
 
   #if   defined(HAVE_OPENSSL)
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-    if (SHA256_Init(&sha256CTX) != 1)
+    if (SHA256_Init(&sha256) != 1)
     {
       return;
     }
@@ -5031,7 +5029,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,index);
     }
 
-    if (SHA256_Final(sha256,sha356CTX) != 1)
+    if (SHA256_Final(sha256,sha256) != 1)
     {
       return;
     }
@@ -5055,6 +5053,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   #else
     HALT_INTERNAL_ERROR("no SHA256 implementation");
   #endif /* ... */
+#endif
 }
 
 #endif /* not NDEBUG */
