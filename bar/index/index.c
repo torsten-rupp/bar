@@ -1677,10 +1677,10 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   Errors                  error;
   String                  name1,name2;
   DatabaseStatementHandle databaseStatementHandle1,databaseStatementHandle2;
-  DatabaseId              storageDatabaseId;
+  DatabaseId              storageId;
   StaticString            (uuid,MISC_UUID_STRING_LENGTH);
   uint64                  createdDateTime;
-  DatabaseId              entityDatabaseId;
+  DatabaseId              entityId;
   bool                    equalsFlag;
   ulong                   i;
   String                  oldDatabaseFileName;
@@ -1705,191 +1705,198 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   INDEX_DOX(error,
             indexHandle,
   {
-   error = Database_prepare(&databaseStatementHandle1,
-                             &indexHandle->databaseHandle,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_STRING("uuid")
-                               DATABASE_COLUMN_STRING("name")
-                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
-                             ),
-                             "SELECT uuid, \
-                                     name, \
-                                     UNIX_TIMESTAMP(created) \
-                              FROM storages \
-                              WHERE entityId=0 \
-                              ORDER BY id,created ASC \
-                             ",
-                             DATABASE_VALUES
-                             (
-                             ),
-                             DATABASE_FILTERS
-                             (
-                             )
-                            );
-    if (error == ERROR_NONE)
-    {
-      while (Database_getNextRow(&databaseStatementHandle1,results
-                                 "%S %llu",
-                                 uuid,
-                                 name1,
-                                 &createdDateTime
-                                )
-         )
-      {
-        // find matching entity/create default entity
-        error = Database_prepare(&databaseStatementHandle2,
-                                 &oldIndexHandle->databaseHandle,
-                                 DATABASE_COLUMNS
-                                 (
-                                   DATABASE_COLUMN_KEY   ("id"),
-                                   DATABASE_COLUMN_STRING("name")
-                                 ),
-                                 DATABASE_COLUMN_TYPES(KEY,STRING),
-                                 "SELECT id, \
-                                         name \
-                                  FROM storages \
-                                  WHERE uuid=? \
-                                 ",
-                                 DATABASE_VALUES
-                                 (
-                                 ).
-                                 DATABASE_FILTERS
-                                 (
-                                   DATABASE_FILTER_STRING(uuid)
-                                 )
-                                );
-        if (error == ERROR_NONE)
-        {
-          while (Database_getNextRow(&databaseStatementHandle2,
-                                     "%lld %S",
-                                     &storageId,
-                                     name2
-                                    )
-                )
-          {
-            // compare names (equals except digits)
-            equalsFlag = String_length(name1) == String_length(name2);
-            i = STRING_BEGIN;
-            while (equalsFlag
-                   && (i < String_length(name1))
-                   && (   isdigit(String_index(name1,i))
-                       || (String_index(name1,i) == String_index(name2,i))
-                      )
-                  )
-            {
-              i++;
-            }
-            if (equalsFlag)
-            {
-              // assign entity id
-// TODO:
-              (void)Database_update(&newIndexHandle->databaseHandle,
-                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                    NULL,  // changedRowCount
-                                    "storages",
-                                    DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES
-                                    (
-                                      DATABASE_VALUE_KEY("entityId", entityDatabaseId),
-                                    ),
-                                    NULL,
-                                    DATABASE_FILTERS
-                                    (
-                                      DATABASE_FILTER_KEY(storageDatabaseId)
-                                    )
-                                   );
-            }
-          }
-          Database_finalize(&databaseStatementHandle2);
-        }
+   return Database_get(&indexHandle->databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 3);
 
-        error = Database_insert(&newIndexHandle->databaseHandle,
-                                NULL,  // changedRowCount
-                                "entities",
-                                DATABASE_FLAG_NONE,
-                                DATABASE_VALUES
-                                (
-                                  STRING("jobUUID", uuid),
-                                  UINT64("created", createdDateTime),
-                                  UINT  ("type",    ARCHIVE_TYPE_FULL),
-                                )
-                               );
-        if (error == ERROR_NONE)
-        {
-          // get entity id
-          entityId = Database_getLastRowId(&newIndexHandle->databaseHandle);
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
 
-          // assign entity id for all storage entries with same uuid and matching name (equals except digits)
-          error = Database_prepare(&databaseStatementHandle2,
-                                   &oldIndexHandle->databaseHandle,
-                                   DATABASE_COLUMNS
-                                   (
-                                     DATABASE_COLUMN_KEY   ("id"),
-                                     DATABASE_COLUMN_STRING("name")
-                                   ),
-                                   "SELECT id, \
-                                           name \
-                                    FROM storages \
-                                    WHERE uuid=? \
-                                   ",
-                                   DATABASE_VALUES
-                                   (
-                                   ),
-                                   DATABASE_FILTERS
-                                   (
-                                     STRING(uuid)
-                                   )
-                                  );
-          if (error == ERROR_NONE)
-          {
-            while (Database_getNextRow(&databaseStatementHandle2,
-                                       "%lld %S",
-                                       &storageId,
-                                       name2
-                                      )
-                  )
-            {
-              // compare names (equals except digits)
-              equalsFlag = String_length(name1) == String_length(name2);
-              i = STRING_BEGIN;
-              while (equalsFlag
-                     && (i < String_length(name1))
-                     && (   isdigit(String_index(name1,i))
-                         || (String_index(name1,i) == String_index(name2,i))
-                        )
-                    )
-              {
-                i++;
-              }
-              if (equalsFlag)
-              {
-                // assign entity id
-// TODO:
-                (void)Database_update(&newIndexHandle->databaseHandle,
-                                      NULL,  // changedRowCount
-                                      "storages",
-                                      DATABASE_FLAG_NONE,
-                                      DATABASE_VALUES
-                                      (
-                                        DATABASE_VALUE_KEY("entityId", entityId),
-                                      ),
-                                      NULL,
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(storageId)
-                                      )
-                                     );
-              }
-            }
-            Database_finalize(&databaseStatementHandle2);
-          }
-        }
-      }
-      Database_finalize(&databaseStatementHandle1);
-    }
+                         String_setBuffer(uuid,values[0].text.data,values[0].text.length);
+                         String_setBuffer(name1,values[1].text.data,values[1].text.length);
+                         createdDateTime = values[2].dateTime;
+                         // find matching entity/create default entity
+                         error = Database_get(&indexHandle->databaseHandle,
+                                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                              {
+                                                assert(values != NULL);
+                                                assert(valueCount == 2);
 
-    return ERROR_NONE;
+                                                UNUSED_VARIABLE(userData);
+                                                UNUSED_VARIABLE(valueCount);
+
+                                                storageId = values[0].id;
+                                                String_setBuffer(name2,values[1].text.data,values[1].text.length);
+
+                                                // compare names (equals except digits)
+                                                equalsFlag = String_length(name1) == String_length(name2);
+                                                i = STRING_BEGIN;
+                                                while (equalsFlag
+                                                       && (i < String_length(name1))
+                                                       && (   isdigit(String_index(name1,i))
+                                                           || (String_index(name1,i) == String_index(name2,i))
+                                                          )
+                                                      )
+                                                {
+                                                  i++;
+                                                }
+                                                if (equalsFlag)
+                                                {
+                                                  // assign entity id
+                                                  (void)Database_update(&indexHandle->databaseHandle,
+                                                                        NULL,  // changedRowCount
+                                                                        "storages",
+                                                                        DATABASE_FLAG_NONE,
+                                                                        DATABASE_VALUES
+                                                                        (
+                                                                          DATABASE_VALUE_KEY("entityId", entityId)
+                                                                        ),
+                                                                        NULL,
+                                                                        DATABASE_FILTERS
+                                                                        (
+                                                                          DATABASE_FILTER_KEY(storageId)
+                                                                        )
+                                                                       );
+                                                }
+
+                                                return ERROR_NONE;
+                                              },NULL),
+                                              NULL,  // changedRowCount
+                                              DATABASE_TABLES
+                                              (
+                                                "storages"
+                                              ),
+                                              DATABASE_FLAG_NONE,
+                                              DATABASE_COLUMNS
+                                              (
+                                                DATABASE_COLUMN_KEY   ("id"),
+                                                DATABASE_COLUMN_STRING("name")
+                                              ),
+                                              "uuid=?",
+                                              DATABASE_FILTERS
+                                              (
+                                                DATABASE_FILTER_STRING(uuid)
+                                              ),
+                                              NULL,  // orderGroup
+                                              0LL,
+                                              DATABASE_UNLIMITED
+                                             );
+                         if (error != ERROR_NONE)
+                         {
+                           return error;
+                         }
+
+                         error = Database_insert(&indexHandle->databaseHandle,
+                                                 NULL,  // changedRowCount
+                                                 "entities",
+                                                 DATABASE_FLAG_NONE,
+                                                 DATABASE_VALUES
+                                                 (
+                                                   DATABASE_VALUE_STRING("jobUUID", uuid),
+                                                   DATABASE_VALUE_UINT64("created", createdDateTime),
+                                                   DATABASE_VALUE_UINT  ("type",    ARCHIVE_TYPE_FULL),
+                                                 )
+                                                );
+                         if (error == ERROR_NONE)
+                         {
+                           // get entity id
+                           entityId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+                           // assign entity id for all storage entries with same uuid and matching name (equals except digits)
+                           error = Database_get(&indexHandle->databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 3);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  storageId = values[0].id;
+                                                  String_setBuffer(name2,values[1].text.data,values[1].text.length);
+
+                                                  // compare names (equals except digits)
+                                                  equalsFlag = String_length(name1) == String_length(name2);
+                                                  i = STRING_BEGIN;
+                                                  while (equalsFlag
+                                                         && (i < String_length(name1))
+                                                         && (   isdigit(String_index(name1,i))
+                                                             || (String_index(name1,i) == String_index(name2,i))
+                                                            )
+                                                        )
+                                                  {
+                                                    i++;
+                                                  }
+                                                  if (equalsFlag)
+                                                  {
+                                                    // assign entity id
+                                                    (void)Database_update(&indexHandle->databaseHandle,
+                                                                          NULL,  // changedRowCount
+                                                                          "storages",
+                                                                          DATABASE_FLAG_NONE,
+                                                                          DATABASE_VALUES
+                                                                          (
+                                                                            DATABASE_VALUE_KEY("entityId", entityId),
+                                                                          ),
+                                                                          NULL,
+                                                                          DATABASE_FILTERS
+                                                                          (
+                                                                            DATABASE_FILTER_KEY(storageId)
+                                                                          )
+                                                                         );
+                                                  }
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "storages"
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_KEY   ("id"),
+                                                  DATABASE_COLUMN_STRING("name")
+                                                ),
+                                                "uuid=?",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_STRING(uuid)
+                                                ),
+                                                NULL,  // orderGroup
+                                                0LL,
+                                                DATABASE_UNLIMITED
+                                               );
+                           if (error == ERROR_NONE)
+                           {
+                           }
+                         }
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_STRING("uuid"),
+                         DATABASE_COLUMN_STRING("name"),
+                         DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                       ),
+                       "entityId=0",
+                       DATABASE_FILTERS
+                       (
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   });
 
   // free resources
@@ -3756,7 +3763,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total entities count
       error = Database_getUInt(&indexHandle->databaseHandle,
                                totalEntityCount,
-                               "storages",
+                               "entities",
                                "COUNT(entities.id)",
                                "deletedFlag!=1",
                                DATABASE_FILTERS
@@ -3775,7 +3782,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
       // get total deleted entities count
       error = Database_getUInt(&indexHandle->databaseHandle,
                                totalDeletedEntityCount,
-                               "storages",
+                               "entities",
                                "COUNT(entities.id)",
                                "deletedFlag=1",
                                DATABASE_FILTERS
@@ -3825,6 +3832,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                              if (totalEntryCount             != NULL) (*totalEntryCount            ) = values[ 0].u;
                              if (totalEntrySize              != NULL) (*totalEntrySize             ) = values[ 1].u64;
                              if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = values[ 2].u64;
+
                              if (totalFileCount              != NULL) (*totalFileCount             ) = values[ 3].u;
                              if (totalFileSize               != NULL) (*totalFileSize              ) = values[ 4].u64;
                              if (totalImageCount             != NULL) (*totalImageCount            ) = values[ 5].u;
@@ -3838,6 +3846,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                              if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest      ) = values[12].u;
                              if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = values[13].u64;
                              if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = values[14].u64;
+
                              if (totalFileCountNewest        != NULL) (*totalFileCountNewest       ) = values[15].u;
                              if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = values[16].u64;
                              if (totalImageCountNewest       != NULL) (*totalImageCountNewest      ) = values[17].u;
@@ -3861,32 +3870,36 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalEntryCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalEntrySize)"),
                              DATABASE_COLUMN_UINT  ("0"),
 
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCount)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalFileSize)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCount)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalImageSize)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCount)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCount)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCount)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSize)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCount)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalFileCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalFileSize)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalImageCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalImageSize)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalDirectoryCount)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalLinkCount)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalHardlinkCount)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalHardlinkSize)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalSpecialCount)"),
 
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCountNewest)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalEntryCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalEntrySizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("0"),
 
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalFileCountNewest)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalFileSizeNewest)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalImageCountNewest)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalImageSizeNewest)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalDirectoryCountNewest)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalLinkCountNewest)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalHardlinkCountNewest)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalHardlinkSizeNewest)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalSpecialCountNewest)")
+                             DATABASE_COLUMN_UINT  ("SUM(totalFileCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalFileSizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalImageCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalImageSizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalDirectoryCountNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalLinkCountNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalHardlinkCountNewest)"),
+                             DATABASE_COLUMN_UINT64("SUM(totalHardlinkSizeNewest)"),
+                             DATABASE_COLUMN_UINT  ("SUM(totalSpecialCountNewest)"),
+
+                             DATABASE_COLUMN_UINT  ("COUNT(id)"),
+                             DATABASE_COLUMN_UINT64("SUM(size)")
                            ),
                            "deletedFlag!=1",
                            DATABASE_FILTERS
