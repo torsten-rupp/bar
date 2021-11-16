@@ -119,12 +119,11 @@ typedef enum
 
   DATABASE_DATATYPE_BOOL,
   DATABASE_DATATYPE_INT,
-// TODO:`
-  DATABASE_DATATYPE_UINT = DATABASE_DATATYPE_INT,
-// TODO:`
   DATABASE_DATATYPE_INT64,
-  DATABASE_DATATYPE_UINT64 = DATABASE_DATATYPE_INT64,
+  DATABASE_DATATYPE_UINT,
+  DATABASE_DATATYPE_UINT64,
   DATABASE_DATATYPE_DOUBLE,
+//  DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
   DATABASE_DATATYPE_DATETIME,
   DATABASE_DATATYPE_STRING,
   DATABASE_DATATYPE_CSTRING,
@@ -657,14 +656,16 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
   (DatabaseColumn[]){__VA_ARGS__}, \
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2
 
-#define DATABASE_COLUMN_KEY(name)     { name, DATABASE_DATATYPE_KEY     }
-#define DATABASE_COLUMN_BOOL(name)    { name, DATABASE_DATATYPE_BOOL    }
-#define DATABASE_COLUMN_INT(name)     { name, DATABASE_DATATYPE_INT     }
-#define DATABASE_COLUMN_INT64(name)   { name, DATABASE_DATATYPE_INT64   }
-#define DATABASE_COLUMN_UINT(name)    { name, DATABASE_DATATYPE_UINT    }
-#define DATABASE_COLUMN_UINT64(name)  { name, DATABASE_DATATYPE_UINT64  }
-#define DATABASE_COLUMN_STRING(name)  { name, DATABASE_DATATYPE_STRING  }
-#define DATABASE_COLUMN_CSTRING(name) { name, DATABASE_DATATYPE_CSTRING }
+#define DATABASE_COLUMN_KEY(name)      { name, DATABASE_DATATYPE_KEY      }
+#define DATABASE_COLUMN_BOOL(name)     { name, DATABASE_DATATYPE_BOOL     }
+#define DATABASE_COLUMN_INT(name)      { name, DATABASE_DATATYPE_INT      }
+#define DATABASE_COLUMN_INT64(name)    { name, DATABASE_DATATYPE_INT64    }
+#define DATABASE_COLUMN_UINT(name)     { name, DATABASE_DATATYPE_UINT     }
+#define DATABASE_COLUMN_UINT64(name)   { name, DATABASE_DATATYPE_UINT64   }
+#define DATABASE_COLUMN_ENUM(name)     { name, DATABASE_DATATYPE_UINT     }
+#define DATABASE_COLUMN_DATETIME(name) { name, DATABASE_DATATYPE_DATETIME }
+#define DATABASE_COLUMN_STRING(name)   { name, DATABASE_DATATYPE_STRING   }
+#define DATABASE_COLUMN_CSTRING(name)  { name, DATABASE_DATATYPE_CSTRING  }
 
 // value macros
 #define DATABASE_VALUES(...) \
@@ -741,6 +742,16 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
     ) \
     ( \
       "?", DATABASE_DATATYPE_DOUBLE, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_ENUM(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_UINT, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_UINT, { (intptr_t)(data) } \
     ) \
   }
 #define DATABASE_VALUE_DATETIME(name,data,...) \

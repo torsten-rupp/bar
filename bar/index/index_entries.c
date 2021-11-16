@@ -803,7 +803,6 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
 
     if (databaseId != DATABASE_ID_NONE)
     {
-// TODO:
       error = Database_update(&indexHandle->databaseHandle,
                               NULL,  // changedRowCount
                               "directoryEntries",

@@ -3955,6 +3955,10 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               break;
             case DATABASE_DATATYPE_INT64:
               break;
+            case DATABASE_DATATYPE_UINT:
+              break;
+            case DATABASE_DATATYPE_UINT64:
+              break;
             case DATABASE_DATATYPE_DOUBLE:
               break;
             case DATABASE_DATATYPE_DATETIME:
@@ -4016,6 +4020,20 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_INT64:
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].i64;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+              break;
+            case DATABASE_DATATYPE_UINT:
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONG;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].u;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
+              break;
+            case DATABASE_DATATYPE_UINT64:
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].u64;
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
@@ -4253,19 +4271,16 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                                                                                i
                                                                               );
                 break;
-// TODO:
-#if 0
               case DATABASE_DATATYPE_UINT:
                 databaseStatementHandle->results[i].u = (uint)sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,
-                                                                                 i
-                                                                                );
+                                                                           i
+                                                                          );
                 break;
               case DATABASE_DATATYPE_UINT64:
                 databaseStatementHandle->results[i].u64 = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                                                       i
-                                                                                      );
+                                                                               i
+                                                                              );
                 break;
-#endif
               case DATABASE_DATATYPE_DOUBLE:
                 databaseStatementHandle->results[i].d = sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,
                                                                               i
@@ -4333,6 +4348,10 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                 case DATABASE_DATATYPE_INT:
                   break;
                 case DATABASE_DATATYPE_INT64:
+                  break;
+                case DATABASE_DATATYPE_UINT:
+                  break;
+                case DATABASE_DATATYPE_UINT64:
                   break;
                 case DATABASE_DATATYPE_DOUBLE:
                   break;
@@ -4456,6 +4475,12 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
             case DATABASE_DATATYPE_INT64:
               sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,i,databaseValue->i64);
               break;
+            case DATABASE_DATATYPE_UINT:
+              sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,i,(int)databaseValue->u);
+              break;
+            case DATABASE_DATATYPE_UINT64:
+              sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,i,(int64)databaseValue->u64);
+              break;
             case DATABASE_DATATYPE_DOUBLE:
               sqlite3_bind_double(databaseStatementHandle->sqlite.statementHandle,i,databaseValue->d);
               break;
@@ -4528,7 +4553,10 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
             case DATABASE_DATATYPE_INT:
               break;
             case DATABASE_DATATYPE_INT64:
-//fprintf(stderr,"%s:%d: key=%lld\n",__FILE__,__LINE__,databaseValue->i);
+              break;
+            case DATABASE_DATATYPE_UINT:
+              break;
+            case DATABASE_DATATYPE_UINT64:
               break;
             case DATABASE_DATATYPE_DOUBLE:
               break;
@@ -4842,10 +4870,16 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                       values[i].b = (sqlite3_column_int(statementHandle,i) == 1);
                       break;
                     case DATABASE_DATATYPE_INT:
-                      values[i].i = sqlite3_column_int64(statementHandle,i);
+                      values[i].i = sqlite3_column_int(statementHandle,i);
                       break;
                     case DATABASE_DATATYPE_INT64:
                       values[i].i64 = sqlite3_column_int64(statementHandle,i);
+                      break;
+                    case DATABASE_DATATYPE_UINT:
+                      values[i].u = (uint)sqlite3_column_int(statementHandle,i);
+                      break;
+                    case DATABASE_DATATYPE_UINT64:
+                      values[i].u64 = (uint64)sqlite3_column_int64(statementHandle,i);
                       break;
                     case DATABASE_DATATYPE_DOUBLE:
                       values[i].d = sqlite3_column_double(statementHandle,i);
@@ -4892,6 +4926,10 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                 case DATABASE_DATATYPE_INT:
                   break;
                 case DATABASE_DATATYPE_INT64:
+                  break;
+                case DATABASE_DATATYPE_UINT:
+                  break;
+                case DATABASE_DATATYPE_UINT64:
                   break;
                 case DATABASE_DATATYPE_DOUBLE:
                   break;
@@ -5078,6 +5116,22 @@ debugPrintStackTrace();
                 bind[i].length        = NULL;
                 bind[i].error         = NULL;
                 break;
+              case DATABASE_DATATYPE_UINT:
+                values[i].i = 0LL;
+                bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
+                bind[i].buffer        = (char *)&values[i].u;
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                bind[i].error         = NULL;
+                break;
+              case DATABASE_DATATYPE_UINT64:
+                values[i].i = 0LL;
+                bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
+                bind[i].buffer        = (char *)&values[i].u;
+                bind[i].is_null       = NULL;
+                bind[i].length        = NULL;
+                bind[i].error         = NULL;
+                break;
               case DATABASE_DATATYPE_DOUBLE:
                 values[i].d = 0.0;
                 bind[i].buffer_type   = MYSQL_TYPE_DOUBLE;
@@ -5188,6 +5242,10 @@ abort();
                     case DATABASE_DATATYPE_INT:
                       break;
                     case DATABASE_DATATYPE_INT64:
+                      break;
+                    case DATABASE_DATATYPE_UINT:
+                      break;
+                    case DATABASE_DATATYPE_UINT64:
                       break;
                     case DATABASE_DATATYPE_DOUBLE:
                       break;
@@ -5372,7 +5430,6 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((valueCount == 0) || (values != NULL));
-  assertx((databaseStatementHandle->valueIndex+valueCount) <= databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex+valueCount,databaseStatementHandle->valueCount);
 
   error = ERROR_NONE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
@@ -5394,6 +5451,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].id
@@ -5401,6 +5459,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_BOOL:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
                                               1+databaseStatementHandle->valueIndex,
                                               values[i].b ? 1 : 0
@@ -5408,6 +5467,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].i
@@ -5415,13 +5475,31 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT64:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].i64
                                                );
               databaseStatementHandle->valueIndex++;
               break;
+            case DATABASE_DATATYPE_UINT:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
+              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                1+databaseStatementHandle->valueIndex,
+                                                (int)values[i].u
+                                               );
+              databaseStatementHandle->valueIndex++;
+              break;
+            case DATABASE_DATATYPE_UINT64:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
+              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                1+databaseStatementHandle->valueIndex,
+                                                (int64)values[i].u64
+                                               );
+              databaseStatementHandle->valueIndex++;
+              break;
             case DATABASE_DATATYPE_DOUBLE:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_double(databaseStatementHandle->sqlite.statementHandle,
                                                  1+databaseStatementHandle->valueIndex,
                                                  values[i].d
@@ -5429,6 +5507,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_DATETIME:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 values[i].dateTime
@@ -5436,6 +5515,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_STRING:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
                                                1+databaseStatementHandle->valueIndex,
                                                String_cString(values[i].string),
@@ -5444,6 +5524,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_CSTRING:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
                                                1+databaseStatementHandle->valueIndex,
                                                values[i].text.data,
@@ -5496,6 +5577,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               break;
             case DATABASE_DATATYPE_PRIMARY_KEY:
             case DATABASE_DATATYPE_KEY:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONG;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].id;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
@@ -5503,6 +5585,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_BOOL:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_TINY;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].b;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
@@ -5510,6 +5593,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONG;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].i;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
@@ -5518,8 +5602,27 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_INT64:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].i64;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
+              databaseStatementHandle->valueIndex++;
+              break;
+            case DATABASE_DATATYPE_UINT:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONG;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].u;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
+              databaseStatementHandle->valueIndex++;
+              break;
+            case DATABASE_DATATYPE_UINT64:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&values[i].u64;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
@@ -5540,6 +5643,8 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 uint hour;
                 uint minute;
                 uint second;
+
+                assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
 
                 // convert to internal MySQL format
                 Misc_splitDateTime(values[i].dateTime,
@@ -5568,6 +5673,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               }
               break;
             case DATABASE_DATATYPE_STRING:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_STRING;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char*)String_cString(values[i].string);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_length = String_length(values[i].string);
@@ -5576,6 +5682,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->valueIndex++;
               break;
             case DATABASE_DATATYPE_CSTRING:
+              assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_STRING;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = values[i].s;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_length = stringLength(values[i].s);
@@ -5668,17 +5775,27 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                                              );
               break;
             case DATABASE_DATATYPE_INT:
-//            case DATABASE_DATATYPE_UINT:
-              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                1+databaseStatementHandle->valueIndex,
-                                                filters[i].i
-                                               );
+              sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
+                                              1+databaseStatementHandle->valueIndex,
+                                              filters[i].i
+                                             );
               break;
             case DATABASE_DATATYPE_INT64:
-//            case DATABASE_DATATYPE_UINT64:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
                                                 filters[i].i64
+                                               );
+              break;
+            case DATABASE_DATATYPE_UINT:
+              sqliteResult = sqlite3_bind_int(databaseStatementHandle->sqlite.statementHandle,
+                                              1+databaseStatementHandle->valueIndex,
+                                              (int)filters[i].u
+                                             );
+              break;
+            case DATABASE_DATATYPE_UINT64:
+              sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                1+databaseStatementHandle->valueIndex,
+                                                (uint64)filters[i].u64
                                                );
               break;
             case DATABASE_DATATYPE_DOUBLE:
@@ -5771,6 +5888,20 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_INT64:
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&filters[i].i64;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
+              break;
+            case DATABASE_DATATYPE_UINT:
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONG;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&filters[i].u;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
+              break;
+            case DATABASE_DATATYPE_UINT64:
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+              databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].buffer        = (char *)&filters[i].u64;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].is_null       = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].length        = NULL;
               databaseStatementHandle->mysql.values.bind[databaseStatementHandle->valueIndex].error         = NULL;
@@ -9721,6 +9852,15 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
     case DATABASE_DATATYPE_INT:
       columnTypeString = "INT DEFAULT 0";
       break;
+    case DATABASE_DATATYPE_INT64:
+      columnTypeString = "INT DEFAULT 0";
+      break;
+    case DATABASE_DATATYPE_UINT:
+      columnTypeString = "INT DEFAULT 0";
+      break;
+    case DATABASE_DATATYPE_UINT64:
+      columnTypeString = "INT DEFAULT 0";
+      break;
     case DATABASE_DATATYPE_DOUBLE:
       columnTypeString = "REAL DEFAULT 0.0";
       break;
@@ -10360,7 +10500,13 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
       String_format(string,"%lld",databaseValue->i);
       break;
     case DATABASE_DATATYPE_INT64:
-      String_format(string,"%lld",databaseValue->i64);
+      String_format(string,"%"PRIi64,databaseValue->i64);
+      break;
+    case DATABASE_DATATYPE_UINT:
+      String_format(string,"%lld",databaseValue->i);
+      break;
+    case DATABASE_DATATYPE_UINT64:
+      String_format(string,"%"PRIu64,databaseValue->u64);
       break;
     case DATABASE_DATATYPE_DOUBLE:
       String_format(string,"%lf",databaseValue->d);
@@ -10401,10 +10547,16 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       stringFormat(buffer,bufferSize,"%s",databaseValue->b ? "TRUE" : "FALSE");
       break;
     case DATABASE_DATATYPE_INT:
-      stringFormat(buffer,bufferSize,"%lld",databaseValue->i);
+      stringFormat(buffer,bufferSize,"%d",databaseValue->i);
       break;
     case DATABASE_DATATYPE_INT64:
-      stringFormat(buffer,bufferSize,"%lld",databaseValue->i64);
+      stringFormat(buffer,bufferSize,"%"PRIi64,databaseValue->i64);
+      break;
+    case DATABASE_DATATYPE_UINT:
+      stringFormat(buffer,bufferSize,"%u",databaseValue->i);
+      break;
+    case DATABASE_DATATYPE_UINT64:
+      stringFormat(buffer,bufferSize,"%"PRIu64,databaseValue->i64);
       break;
     case DATABASE_DATATYPE_DOUBLE:
       stringFormat(buffer,bufferSize,"%lf",databaseValue->d);
@@ -10678,16 +10830,16 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   va_list arguments;
   union
   {
-    bool               *b;
-    int                *i;
-    int64              *i64;
-    uint               *u;
-    uint64             *u64;
-    float              *f;
-    double             *d;
-    char               *ch;
-    char               **s;
-    String             string;
+    bool   *b;
+    int    *i;
+    int64  *i64;
+    uint   *u;
+    uint64 *u64;
+    float  *f;
+    double *d;
+    char   *ch;
+    char   **s;
+    String string;
   }       value;
 
   assert(databaseStatementHandle != NULL);
@@ -10737,6 +10889,20 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           if (value.i64 != NULL)
           {
             (*value.i64) = databaseStatementHandle->results[i].i64;
+          }
+          break;
+        case DATABASE_DATATYPE_UINT:
+          value.u = va_arg(arguments,uint*);
+          if (value.u != NULL)
+          {
+            (*value.u) = (int)databaseStatementHandle->results[i].u;
+          }
+          break;
+        case DATABASE_DATATYPE_UINT64:
+          value.u64 = va_arg(arguments,uint64*);
+          if (value.u64 != NULL)
+          {
+            (*value.u64) = databaseStatementHandle->results[i].u64;
           }
           break;
         case DATABASE_DATATYPE_DOUBLE:
@@ -10918,8 +11084,6 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   assert(columns != NULL);
   assert(columnCount > 0);
   assert(valueCount == columnCount);
-
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 
   // create SQL string
   sqlString = String_new();
@@ -11283,6 +11447,7 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   // create SQL string
   sqlString = String_newCString("SELECT ");
 (void)flags;
+// TODO: distinct
 #if 0
   if (IS_SET(flags,DATABASE_FLAG_DISTINCT))
   {
@@ -11301,7 +11466,15 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   for (uint i = 0; i < columnCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
-    String_formatAppend(sqlString,"%s",columns[i].name);
+    switch (columns[i].type)
+    {
+      case DATABASE_DATATYPE_DATETIME:
+        String_formatAppend(sqlString,"UNIX_TIMESTAMP(%s)",columns[i].name);
+        break;
+      default:
+        String_formatAppend(sqlString,"%s",columns[i].name);
+        break;
+    }
   }
   String_formatAppend(sqlString," FROM %s ",tableName);
   if (filter != NULL)
@@ -11452,7 +11625,16 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
       for (uint j = 0; j < columnCount; j++)
       {
         if (j > 0) String_appendChar(sqlString,',');
-        String_formatAppend(sqlString,"%s",columns[j].name);
+        switch (columns[j].type)
+        {
+          case DATABASE_DATATYPE_DATETIME:
+// TODO:fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+            String_formatAppend(sqlString,"UNIX_TIMESTAMP(%s)",columns[j].name);
+            break;
+          default:
+            String_formatAppend(sqlString,"%s",columns[j].name);
+            break;
+        }
       }
       String_formatAppend(sqlString," FROM %s ",tableNames[i]);
     }
@@ -11494,18 +11676,15 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   // bind values
   if (filter != NULL)
   {
-    for (uint i = 0; i < tableNameCount; i++)
+    error = bindFilters(&databaseStatementHandle,
+                        filterValues,
+                        filterValueCount
+                       );
+    if (error != ERROR_NONE)
     {
-      error = bindFilters(&databaseStatementHandle,
-                          filterValues,
-                          filterValueCount
-                         );
-      if (error != ERROR_NONE)
-      {
-        finalizeStatement(&databaseStatementHandle);
-        String_delete(sqlString);
-        return error;
-      }
+      finalizeStatement(&databaseStatementHandle);
+      String_delete(sqlString);
+      return error;
     }
   }
   error = bindResults(&databaseStatementHandle,
@@ -11569,6 +11748,8 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
+  (*value) = DATABASE_ID_NONE;
+
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
@@ -11616,6 +11797,8 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
   assert(ids != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
+
+  Array_clear(ids);
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -11665,6 +11848,8 @@ Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
+  (*value) = DATABASE_ID_NONE;
+
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
@@ -11713,6 +11898,8 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
+
+  (*value) = 0;
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -11793,6 +11980,8 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
+  (*value) = 0;
+
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
@@ -11872,6 +12061,8 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
+  (*value) = 0LL;
+
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
@@ -11950,6 +12141,8 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
   assert(value != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
+
+  (*value) = 0LL;
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -12107,6 +12300,8 @@ Errors Database_getString(DatabaseHandle      *databaseHandle,
   assert(string != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
+
+  String_clear(string);
 
   return Database_get(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),

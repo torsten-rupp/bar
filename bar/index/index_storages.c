@@ -3667,9 +3667,7 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
                        ),
-                       "    entryFragments.storageId=? \
-                        AND entriesNewest.type=? \
-                       ",
+                       "linkEntries.storageId=?",
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_KEY (storageId)
@@ -3755,13 +3753,10 @@ fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalL
                        (
                          DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
                        ),
-                       "    entryFragments.storageId=? \
-                        AND entriesNewest.type=? \
-                       ",
+                       "specialEntries.storageId=?",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_KEY (storageId),
-                         DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
+                         DATABASE_FILTER_KEY (storageId)
                        ),
                        NULL,  // orderGroup
                        0LL,
