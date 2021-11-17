@@ -436,6 +436,7 @@ typedef char DatabaseColumnName[DATABASE_MAX_COLUMN_NAME_LENGTH+1];
 typedef struct
 {
   const char        *name;
+  const char        *alias;
   DatabaseDataTypes type;
 } DatabaseColumn;
 
@@ -654,18 +655,109 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 // column macros
 #define DATABASE_COLUMNS(...) \
   (DatabaseColumn[]){__VA_ARGS__}, \
-  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
 
-#define DATABASE_COLUMN_KEY(name)      { name, DATABASE_DATATYPE_KEY      }
-#define DATABASE_COLUMN_BOOL(name)     { name, DATABASE_DATATYPE_BOOL     }
-#define DATABASE_COLUMN_INT(name)      { name, DATABASE_DATATYPE_INT      }
-#define DATABASE_COLUMN_INT64(name)    { name, DATABASE_DATATYPE_INT64    }
-#define DATABASE_COLUMN_UINT(name)     { name, DATABASE_DATATYPE_UINT     }
-#define DATABASE_COLUMN_UINT64(name)   { name, DATABASE_DATATYPE_UINT64   }
-#define DATABASE_COLUMN_ENUM(name)     { name, DATABASE_DATATYPE_UINT     }
-#define DATABASE_COLUMN_DATETIME(name) { name, DATABASE_DATATYPE_DATETIME }
-#define DATABASE_COLUMN_STRING(name)   { name, DATABASE_DATATYPE_STRING   }
-#define DATABASE_COLUMN_CSTRING(name)  { name, DATABASE_DATATYPE_CSTRING  }
+// Note: NULL (expand to "((void *)0)") cannot be used with _ITERATOR_MAP_COUNT because of the space and braces; use 0 instead
+#define DATABASE_COLUMN_KEY(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_KEY \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_KEY \
+    ) \
+  }
+#define DATABASE_COLUMN_BOOL(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_BOOL \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_BOOL \
+    ) \
+  }
+#define DATABASE_COLUMN_INT(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_INT \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_INT \
+    ) \
+  }
+#define DATABASE_COLUMN_INT64(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_INT64 \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_INT64 \
+    ) \
+  }
+#define DATABASE_COLUMN_UINT(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_UINT \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_UINT \
+    ) \
+  }
+#define DATABASE_COLUMN_UINT64(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_UINT64 \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_UINT64 \
+    ) \
+  }
+#define DATABASE_COLUMN_ENUM(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_UINT \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_UINT \
+    ) \
+  }
+#define DATABASE_COLUMN_DATETIME(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_DATETIME \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_DATETIME \
+    ) \
+  }
+#define DATABASE_COLUMN_STRING(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_STRING \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_STRING \
+    ) \
+  }
+#define DATABASE_COLUMN_CSTRING(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_CSTRING \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_CSTRING \
+    ) \
+  }
 
 // value macros
 #define DATABASE_VALUES(...) \

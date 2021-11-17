@@ -633,7 +633,6 @@ LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseDataTypes dat
       return (dataType1 == DATABASE_DATATYPE_PRIMARY_KEY);
     case DATABASE_DATATYPE_KEY:
       return (dataType1 == DATABASE_DATATYPE_KEY);
-
     case DATABASE_DATATYPE_BOOL:
       return    (dataType1 == DATABASE_DATATYPE_BOOL)
              || (dataType1 == DATABASE_DATATYPE_INT);
@@ -643,8 +642,15 @@ LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseDataTypes dat
              || (dataType1 == DATABASE_DATATYPE_INT64)
              || (dataType1 == DATABASE_DATATYPE_DATETIME);
     case DATABASE_DATATYPE_INT64:
-      return    (dataType1 == DATABASE_DATATYPE_INT)
-             || (dataType1 == DATABASE_DATATYPE_INT64)
+      return    (dataType1 == DATABASE_DATATYPE_INT64)
+             || (dataType1 == DATABASE_DATATYPE_DATETIME);
+    case DATABASE_DATATYPE_UINT:
+      return    (dataType1 == DATABASE_DATATYPE_BOOL)
+             || (dataType1 == DATABASE_DATATYPE_UINT)
+             || (dataType1 == DATABASE_DATATYPE_UINT64)
+             || (dataType1 == DATABASE_DATATYPE_DATETIME);
+    case DATABASE_DATATYPE_UINT64:
+      return    (dataType1 == DATABASE_DATATYPE_UINT64)
              || (dataType1 == DATABASE_DATATYPE_DATETIME);
     case DATABASE_DATATYPE_DOUBLE:
       return (dataType1 == DATABASE_DATATYPE_DOUBLE);
@@ -4278,8 +4284,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                 break;
               case DATABASE_DATATYPE_UINT64:
                 databaseStatementHandle->results[i].u64 = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                                               i
-                                                                              );
+                                                                                       i
+                                                                                      );
                 break;
               case DATABASE_DATATYPE_DOUBLE:
                 databaseStatementHandle->results[i].d = sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,
@@ -4287,6 +4293,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                                                                              );
                 break;
               case DATABASE_DATATYPE_DATETIME:
+// TODO: remove
+#if 0
                 // data/time is stored as an 'integer', but repesented as date/time string
                 s = sqlite3_column_text(databaseStatementHandle->sqlite.statementHandle,
                                         i
@@ -4299,6 +4307,11 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                 {
                   databaseStatementHandle->results[i].dateTime = 0LL;
                 }
+#else
+                databaseStatementHandle->results[i].dateTime = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                                                            i
+                                                                                           );
+#endif
                 break;
               case DATABASE_DATATYPE_STRING:
               case DATABASE_DATATYPE_CSTRING:
@@ -4326,7 +4339,6 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
       {
         int  mysqlResult;
         uint i;
-        uint year,month,day,hour,minute,second;
 
         mysqlResult = mysql_stmt_fetch(databaseStatementHandle->mysql.statementHandle);
         switch (mysqlResult)
@@ -4356,36 +4368,40 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                 case DATABASE_DATATYPE_DOUBLE:
                   break;
                 case DATABASE_DATATYPE_DATETIME:
-  // TODO: remove
-  #if 0
-  fprintf(stderr,"%s:%d: %d %d %d %d %d %d\n",__FILE__,__LINE__,
-  databaseStatementHandle->mysql.dateTime[i].year,
-  databaseStatementHandle->mysql.dateTime[i].month,
-  databaseStatementHandle->mysql.dateTime[i].day,
-  databaseStatementHandle->mysql.dateTime[i].hour,
-  databaseStatementHandle->mysql.dateTime[i].minute,
-  databaseStatementHandle->mysql.dateTime[i].second
-  );
-  #endif
-                  year   = (databaseStatementHandle->mysql.results.time[i].year >= 1970)
-                             ? databaseStatementHandle->mysql.results.time[i].year
-                             : 1970;
-                  month  = (databaseStatementHandle->mysql.results.time[i].month >= 1)
-                             ? databaseStatementHandle->mysql.results.time[i].month
-                             : 1;
-                  day    = (databaseStatementHandle->mysql.results.time[i].day >= 1)
-                             ? databaseStatementHandle->mysql.results.time[i].day
-                             : 1;
-                  hour   = databaseStatementHandle->mysql.results.time[i].hour;
-                  minute = databaseStatementHandle->mysql.results.time[i].minute;
-                  second = databaseStatementHandle->mysql.results.time[i].second;
-  //fprintf(stderr,"%s:%d: %d %d %d %d %d %d\n",__FILE__,__LINE__,year,month,day,hour,minute,second);
+                  {
+                    uint year,month,day;
+                    uint hour,minute,second;
+// TODO: remove
+#if 0
+fprintf(stderr,"%s:%d: %d %d %d %d %d %d\n",__FILE__,__LINE__,
+databaseStatementHandle->mysql.dateTime[i].year,
+databaseStatementHandle->mysql.dateTime[i].month,
+databaseStatementHandle->mysql.dateTime[i].day,
+databaseStatementHandle->mysql.dateTime[i].hour,
+databaseStatementHandle->mysql.dateTime[i].minute,
+databaseStatementHandle->mysql.dateTime[i].second
+);
+#endif
+                    year   = (databaseStatementHandle->mysql.results.time[i].year >= 1970)
+                               ? databaseStatementHandle->mysql.results.time[i].year
+                               : 1970;
+                    month  = (databaseStatementHandle->mysql.results.time[i].month >= 1)
+                               ? databaseStatementHandle->mysql.results.time[i].month
+                               : 1;
+                    day    = (databaseStatementHandle->mysql.results.time[i].day >= 1)
+                               ? databaseStatementHandle->mysql.results.time[i].day
+                               : 1;
+                    hour   = databaseStatementHandle->mysql.results.time[i].hour;
+                    minute = databaseStatementHandle->mysql.results.time[i].minute;
+                    second = databaseStatementHandle->mysql.results.time[i].second;
+    //fprintf(stderr,"%s:%d: %d %d %d %d %d %d\n",__FILE__,__LINE__,year,month,day,hour,minute,second);
 
-                  // TODO: day-light-saving?
-                  databaseStatementHandle->results[i].dateTime = Misc_makeDateTime(year,month,day,
-                                                                                   hour,minute,second,
-                                                                                   FALSE
-                                                                                  );
+                    // TODO: day-light-saving?
+                    databaseStatementHandle->results[i].dateTime = Misc_makeDateTime(year,month,day,
+                                                                                     hour,minute,second,
+                                                                                     FALSE
+                                                                                    );
+                  }
                   break;
                 case DATABASE_DATATYPE_STRING:
                 case DATABASE_DATATYPE_CSTRING:
@@ -4562,12 +4578,8 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
               break;
             case DATABASE_DATATYPE_DATETIME:
               {
-                uint year;
-                uint month;
-                uint day;
-                uint hour;
-                uint minute;
-                uint second;
+                uint year,month,day;
+                uint hour,minute,second;
 
                 Misc_splitDateTime(databaseValue->dateTime,
                                    &year,
@@ -4885,7 +4897,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                       values[i].d = sqlite3_column_double(statementHandle,i);
                       break;
                     case DATABASE_DATATYPE_DATETIME:
-                      values[i].dateTime = sqlite3_column_int64(statementHandle,i);
+                      values[i].dateTime = (uint64)sqlite3_column_int64(statementHandle,i);
                       break;
                     case DATABASE_DATATYPE_STRING:
                       String_setCString(values[i].string, (char*)sqlite3_column_text(statementHandle,i));
@@ -5111,7 +5123,7 @@ debugPrintStackTrace();
               case DATABASE_DATATYPE_INT64:
                 values[i].i = 0LL;
                 bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                bind[i].buffer        = (char *)&values[i].i;
+                bind[i].buffer        = (char *)&values[i].i64;
                 bind[i].is_null       = NULL;
                 bind[i].length        = NULL;
                 bind[i].error         = NULL;
@@ -5127,7 +5139,7 @@ debugPrintStackTrace();
               case DATABASE_DATATYPE_UINT64:
                 values[i].i = 0LL;
                 bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                bind[i].buffer        = (char *)&values[i].u;
+                bind[i].buffer        = (char *)&values[i].u64;
                 bind[i].is_null       = NULL;
                 bind[i].length        = NULL;
                 bind[i].error         = NULL;
@@ -5637,12 +5649,8 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               break;
             case DATABASE_DATATYPE_DATETIME:
               {
-                uint year;
-                uint month;
-                uint day;
-                uint hour;
-                uint minute;
-                uint second;
+                uint year,month,day;
+                uint hour,minute,second;
 
                 assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
 
@@ -5807,7 +5815,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_DATETIME:
               sqliteResult = sqlite3_bind_int64(databaseStatementHandle->sqlite.statementHandle,
                                                 1+databaseStatementHandle->valueIndex,
-                                                filters[i].dateTime
+                                                (int64)filters[i].dateTime
                                                );
               break;
             case DATABASE_DATATYPE_STRING:
@@ -5914,12 +5922,8 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
               break;
             case DATABASE_DATATYPE_DATETIME:
               {
-                uint year;
-                uint month;
-                uint day;
-                uint hour;
-                uint minute;
-                uint second;
+                uint year,month,day;
+                uint hour,minute,second;
 
                 // convert to internal MySQL format
                 Misc_splitDateTime(filters[i].dateTime,
@@ -11635,6 +11639,10 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
             String_formatAppend(sqlString,"%s",columns[j].name);
             break;
         }
+        if (columns[j].alias != NULL)
+        {
+          String_formatAppend(sqlString,"AS %s",columns[j].alias);
+        }
       }
       String_formatAppend(sqlString," FROM %s ",tableNames[i]);
     }
@@ -11711,19 +11719,6 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
     String_delete(sqlString);
     return error;
   }
-
-#if 0
-fprintf(stderr,"%s:%d: do rows\n",__FILE__,__LINE__);
-  while (getNextRow(&databaseStatementHandle,NO_WAIT))
-  {
-fprintf(stderr,"%s:%d: goooo row\n",__FILE__,__LINE__);
-    error = databaseRowFunction(databaseStatementHandle.results,
-                                databaseStatementHandle.resultCount,
-                                databaseRowUserData
-                               );
-    if (error != ERROR_NONE) break;
-  }
-#endif
 
   // free resources
   finalizeStatement(&databaseStatementHandle);
