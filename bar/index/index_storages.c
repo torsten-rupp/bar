@@ -461,9 +461,9 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                                   DATABASE_FLAG_NONE,
                                                   DATABASE_VALUES
                                                   (
-                                                    STRING("jobUUID", uuid),
-                                                    UINT64("created", createdDateTime),
-                                                    UINT  ("type",    ARCHIVE_TYPE_FULL),
+                                                    DATABASE_VALUE_STRING  ("jobUUID", uuid),
+                                                    DATABASE_VALUE_DATETIME("created", createdDateTime),
+                                                    DATABASE_VALUE_UINT    ("type",    ARCHIVE_TYPE_FULL),
                                                   )
                                                  );
                         }
@@ -809,9 +809,9 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                                     DATABASE_FLAG_NONE,
                                                     DATABASE_VALUES
                                                     (
-                                                      DATABASE_VALUE_STRING("jobUUID", uuid),
-                                                      DATABASE_VALUE_UINT64("created", createdDateTime),
-                                                      DATABASE_VALUE_UINT  ("type",    ARCHIVE_TYPE_FULL),
+                                                      DATABASE_VALUE_STRING  ("jobUUID", uuid),
+                                                      DATABASE_VALUE_DATETIME("created", createdDateTime),
+                                                      DATABASE_VALUE_UINT    ("type",    ARCHIVE_TYPE_FULL),
                                                     )
                                                    );
                             if (error == ERROR_NONE)
@@ -4272,7 +4272,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
-                                      DATABASE_VALUE_UINT64("lastChecked", lastCheckedDateTime)
+                                      DATABASE_COLUMN_DATETIME("lastChecked", lastCheckedDateTime)
                                     ),
                                     "entityId=?",
                                     DATABASE_FILTERS
@@ -4315,7 +4315,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
-                                      DATABASE_VALUE_UINT64("lastChecked", lastCheckedDateTime)
+                                      DATABASE_COLUMN_DATETIME("lastChecked", lastCheckedDateTime)
                                     ),
                                     "id=?",
                                     DATABASE_FILTERS
@@ -5017,16 +5017,16 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("uuidId",      Index_getDatabaseId(uuidId)),
-                                DATABASE_VALUE_KEY   ("entityId",    Index_getDatabaseId(entityId)),
-                                DATABASE_VALUE_STRING("hostName",    hostName),
-                                DATABASE_VALUE_STRING("userName",    userName),
-                                DATABASE_VALUE_STRING("name",        String_isEmpty(storageName) ? s : storageName),
-                                DATABASE_VALUE_UINT64("created",     dateTime),
-                                DATABASE_VALUE_UINT64("size",        size),
-                                DATABASE_VALUE_UINT  ("state",       indexState),
-                                DATABASE_VALUE_UINT  ("mode",        indexMode),
-                                DATABASE_VALUE_UINT64("lastChecked", "NOW()")
+                                DATABASE_VALUE_KEY     ("uuidId",      Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_KEY     ("entityId",    Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_STRING  ("hostName",    hostName),
+                                DATABASE_VALUE_STRING  ("userName",    userName),
+                                DATABASE_VALUE_STRING  ("name",        String_isEmpty(storageName) ? s : storageName),
+                                DATABASE_VALUE_DATETIME("created",     dateTime),
+                                DATABASE_VALUE_UINT64  ("size",        size),
+                                DATABASE_VALUE_UINT    ("state",       indexState),
+                                DATABASE_VALUE_UINT    ("mode",        indexMode),
+                                DATABASE_VALUE_DATETIME("lastChecked", "NOW()")
                               )
                              );
       if (error != ERROR_NONE)

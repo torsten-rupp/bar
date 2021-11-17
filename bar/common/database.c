@@ -4051,10 +4051,11 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
               break;
             case DATABASE_DATATYPE_DATETIME:
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_DATETIME;
-              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->mysql.results.time[databaseStatementHandle->resultIndex];
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer_type   = MYSQL_TYPE_LONGLONG;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].buffer        = (char*)&databaseStatementHandle->results[databaseStatementHandle->resultIndex].dateTime;
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].is_null       = NULL;
               databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].length        = NULL;
+              databaseStatementHandle->mysql.results.bind[databaseStatementHandle->resultIndex].error         = NULL;
               break;
             case DATABASE_DATATYPE_STRING:
             case DATABASE_DATATYPE_CSTRING:
@@ -4159,6 +4160,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
             case MYSQL_TYPE_DATE:
             case MYSQL_TYPE_TIME:
             case MYSQL_TYPE_YEAR:
+            case MYSQL_TYPE_DATETIME:
               break;
             case MYSQL_TYPE_STRING:
               free(databaseStatementHandle->mysql.results.bind[i].buffer);
@@ -4172,6 +4174,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
               break;
             #ifndef NDEBUG
               default:
+fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,databaseStatementHandle->mysql.results.bind[i].buffer_type);
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                 break;
             #endif /* NDEBUG */
@@ -4368,6 +4371,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
                 case DATABASE_DATATYPE_DOUBLE:
                   break;
                 case DATABASE_DATATYPE_DATETIME:
+// TODO: remove
+#if 0
                   {
                     uint year,month,day;
                     uint hour,minute,second;
@@ -4402,6 +4407,7 @@ databaseStatementHandle->mysql.dateTime[i].second
                                                                                      FALSE
                                                                                     );
                   }
+#endif
                   break;
                 case DATABASE_DATATYPE_STRING:
                 case DATABASE_DATATYPE_CSTRING:

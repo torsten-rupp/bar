@@ -193,9 +193,9 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                                     DATABASE_FLAG_NONE,
                                                     DATABASE_VALUES
                                                     (
-                                                      DATABASE_VALUE_STRING("jobUUID", uuid),
-                                                      DATABASE_VALUE_UINT64("created", createdDateTime),
-                                                      DATABASE_VALUE_UINT  ("type",    ARCHIVE_TYPE_FULL),
+                                                      DATABASE_VALUE_STRING  ("jobUUID", uuid),
+                                                      DATABASE_VALUE_DATETIME("created", createdDateTime),
+                                                      DATABASE_VALUE_UINT    ("type",    ARCHIVE_TYPE_FULL),
                                                     )
                                                    );
                           }
@@ -2595,14 +2595,14 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("uuidId",       uuidId),
-                                DATABASE_VALUE_STRING("jobUUID",      jobUUID),
-                                DATABASE_VALUE_STRING("scheduleUUID", scheduleUUID),
-                                DATABASE_VALUE_STRING("hostName",     hostName),
-                                DATABASE_VALUE_STRING("userName",     userName),
-                                DATABASE_VALUE_UINT64("created",      createdDateTime),
-                                DATABASE_VALUE_UINT  ("type",         archiveType),
-                                DATABASE_VALUE_UINT  ("lockedCount",  locked ? 1 : 0)
+                                DATABASE_VALUE_KEY     ("uuidId",       uuidId),
+                                DATABASE_VALUE_STRING  ("jobUUID",      jobUUID),
+                                DATABASE_VALUE_STRING  ("scheduleUUID", scheduleUUID),
+                                DATABASE_VALUE_STRING  ("hostName",     hostName),
+                                DATABASE_VALUE_STRING  ("userName",     userName),
+                                DATABASE_VALUE_DATETIME("created",      createdDateTime),
+                                DATABASE_VALUE_UINT    ("type",         archiveType),
+                                DATABASE_VALUE_UINT    ("lockedCount",  locked ? 1 : 0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -2685,12 +2685,12 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_STRING("jobUUID",      jobUUID),
-                                DATABASE_VALUE_STRING("scheduleUUID", scheduleUUID),
-                                DATABASE_VALUE_STRING("hostName",     hostName),
-                                DATABASE_VALUE_STRING("userName",     userName),
-                                DATABASE_VALUE_UINT64("created",      (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime()),
-                                DATABASE_VALUE_UINT  ("type",         archiveType)
+                                DATABASE_VALUE_STRING  ("jobUUID",      jobUUID),
+                                DATABASE_VALUE_STRING  ("scheduleUUID", scheduleUUID),
+                                DATABASE_VALUE_STRING  ("hostName",     hostName),
+                                DATABASE_VALUE_STRING  ("userName",     userName),
+                                DATABASE_VALUE_DATETIME("created",      (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime()),
+                                DATABASE_VALUE_UINT    ("type",         archiveType)
                               ),
                               "id=?",
                               DATABASE_FILTERS

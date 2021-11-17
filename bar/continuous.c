@@ -2078,10 +2078,10 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                DATABASE_FLAG_NONE,
                DATABASE_COLUMNS
                (
-                 DATABASE_COLUMN_KEY   ("id"),
-                 DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(dateTime)"),
-                 DATABASE_COLUMN_STRING("name"),
-                 DATABASE_COLUMN_BOOL  ("storedFlag")
+                 DATABASE_COLUMN_KEY     ("id"),
+                 DATABASE_COLUMN_DATETIME("dateTime"),
+                 DATABASE_COLUMN_STRING  ("name"),
+                 DATABASE_COLUMN_BOOL    ("storedFlag")
                ),
                "    jobUUID=? \
                 AND scheduleUUID=? \

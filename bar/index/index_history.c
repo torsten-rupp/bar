@@ -251,20 +251,20 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_STRING ("jobUUID",           jobUUID),
-                                DATABASE_VALUE_STRING ("scheduleUUID",      scheduleUUID),
-                                DATABASE_VALUE_STRING ("hostName",          hostName),
-                                DATABASE_VALUE_STRING ("userName",          userName),
-                                DATABASE_VALUE_UINT   ("type",              archiveType),
-                                DATABASE_VALUE_UINT64 ("created",           createdDateTime),
-                                DATABASE_VALUE_CSTRING("errorMessage",      errorMessage),
-                                DATABASE_VALUE_UINT64 ("duration",          duration),
-                                DATABASE_VALUE_UINT   ("totalEntryCount",   totalEntryCount),
-                                DATABASE_VALUE_UINT64 ("totalEntrySize",    totalEntrySize),
-                                DATABASE_VALUE_UINT   ("skippedEntryCount", skippedEntryCount),
-                                DATABASE_VALUE_UINT64 ("skippedEntrySize",  skippedEntrySize),
-                                DATABASE_VALUE_UINT   ("errorEntryCount",   errorEntryCount),
-                                DATABASE_VALUE_UINT64 ("errorEntrySize",    errorEntrySize)
+                                DATABASE_VALUE_STRING  ("jobUUID",           jobUUID),
+                                DATABASE_VALUE_STRING  ("scheduleUUID",      scheduleUUID),
+                                DATABASE_VALUE_STRING  ("hostName",          hostName),
+                                DATABASE_VALUE_STRING  ("userName",          userName),
+                                DATABASE_VALUE_UINT    ("type",              archiveType),
+                                DATABASE_VALUE_DATETIME("created",           createdDateTime),
+                                DATABASE_VALUE_CSTRING ("errorMessage",      errorMessage),
+                                DATABASE_VALUE_UINT64  ("duration",          duration),
+                                DATABASE_VALUE_UINT    ("totalEntryCount",   totalEntryCount),
+                                DATABASE_VALUE_UINT64  ("totalEntrySize",    totalEntrySize),
+                                DATABASE_VALUE_UINT    ("skippedEntryCount", skippedEntryCount),
+                                DATABASE_VALUE_UINT64  ("skippedEntrySize",  skippedEntrySize),
+                                DATABASE_VALUE_UINT    ("errorEntryCount",   errorEntryCount),
+                                DATABASE_VALUE_UINT64  ("errorEntrySize",    errorEntrySize)
                               )
                              );
       if (error != ERROR_NONE)

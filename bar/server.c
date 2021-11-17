@@ -3736,6 +3736,7 @@ LOCAL void autoIndexThreadCode(void)
 
                                        UNUSED_VARIABLE(userData);
 
+
                                        error = Storage_parseName(&storageSpecifier,storageName);
                                        if (error == ERROR_NONE)
                                        {

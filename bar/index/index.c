@@ -1794,9 +1794,9 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                                  DATABASE_FLAG_NONE,
                                                  DATABASE_VALUES
                                                  (
-                                                   DATABASE_VALUE_STRING("jobUUID", uuid),
-                                                   DATABASE_VALUE_UINT64("created", createdDateTime),
-                                                   DATABASE_VALUE_UINT  ("type",    ARCHIVE_TYPE_FULL),
+                                                   DATABASE_VALUE_STRING  ("jobUUID", uuid),
+                                                   DATABASE_VALUE_DATETIME("created", createdDateTime),
+                                                   DATABASE_VALUE_UINT    ("type",    ARCHIVE_TYPE_FULL),
                                                  )
                                                 );
                          if (error == ERROR_NONE)
@@ -2159,9 +2159,9 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                 DATABASE_FLAG_NONE,
                                 DATABASE_VALUES
                                 (
-                                  STRING("jobUUID", uuid},
-                                  UINT64("created", createdDateTime},
-                                  UINT  ("type",    ARCHIVE_TYPE_FULL},
+                                  DATABASE_VALUE_STRING  ("jobUUID", uuid},
+                                  DATABASE_VALUE_DATETIME("created", createdDateTime},
+                                  DATABASE_VALUE_UINT    ("type",    ARCHIVE_TYPE_FULL},
                                 )
                                );
         if (error == ERROR_NONE)
