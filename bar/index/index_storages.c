@@ -3955,8 +3955,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 {
   bool             foundFlag;
   Errors           error;
-  String           storageName;
   StorageSpecifier storageSpecifier;
+  String           storageName;
 
   assert(indexHandle != NULL);
   assert(storageId != NULL);
@@ -3969,7 +3969,10 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
     return FALSE;
   }
 
-  foundFlag = FALSE;
+  // init variables
+  Storage_initSpecifier(&storageSpecifier);
+  storageName = String_new();
+  foundFlag   = FALSE;
 
   INDEX_DOX(error,
             indexHandle,
@@ -4007,8 +4010,6 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                               if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
                             }
                           }
-
-                          foundFlag = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
@@ -4049,8 +4050,14 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   });
   if (error != ERROR_NONE)
   {
+    String_delete(storageName);
+    Storage_doneSpecifier(&storageSpecifier);
     return FALSE;
   }
+
+  // free resources
+  String_delete(storageName);
+  Storage_doneSpecifier(&storageSpecifier);
 
   return foundFlag;
 }
