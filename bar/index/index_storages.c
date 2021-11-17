@@ -550,9 +550,9 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                       DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
-                        DATABASE_COLUMN_KEY   ("id"),
-                        DATABASE_COLUMN_STRING("name"),
-                        DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)"),
+                        DATABASE_COLUMN_KEY     ("id"),
+                        DATABASE_COLUMN_STRING  ("name"),
+                        DATABASE_COLUMN_DATETIME("created"),
                       ),
                       "entityId=0",
                       DATABASE_FILTERS
@@ -831,9 +831,9 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_KEY   ("id"),
-                          DATABASE_COLUMN_STRING("name"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                          DATABASE_COLUMN_KEY     ("id"),
+                          DATABASE_COLUMN_STRING  ("name"),
+                          DATABASE_COLUMN_DATETIME("created")
                         ),
                         "entityId=0",
                         DATABASE_FILTERS
@@ -912,9 +912,9 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
-                        DATABASE_COLUMN_UINT  ("state"),
-                        DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(lastChecked)"),
-                        DATABASE_COLUMN_STRING("errorMessage")
+                        DATABASE_COLUMN_UINT    ("state"),
+                        DATABASE_COLUMN_DATETIME("lastChecked"),
+                        DATABASE_COLUMN_STRING  ("errorMessage")
                       ),
                       "id=?",
                       DATABASE_FILTERS
@@ -1010,6 +1010,7 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
   entryName = String_new();
   error     = ERROR_NONE;
 
+// TODO:
   // get entries info to add
   if (error == ERROR_NONE)
   {
@@ -1061,16 +1062,16 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
                           DATABASE_FLAG_NONE,
                           DATABASE_COLUMNS
                           (
-                            DATABASE_COLUMN_KEY   ("entries.id"),
-                            DATABASE_COLUMN_KEY   ("entries.uuidId"),
-                            DATABASE_COLUMN_KEY   ("entries.entityId"),
-                            DATABASE_COLUMN_UINT  ("entries.type"),
-                            DATABASE_COLUMN_STRING("entries.name"),
-                            DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged"),
-                            DATABASE_COLUMN_UINT  ("entries.userId"),
-                            DATABASE_COLUMN_UINT  ("entries.groupId"),
-                            DATABASE_COLUMN_UINT  ("entries.permission"),
-                            DATABASE_COLUMN_UINT64("entries.size")
+                            DATABASE_COLUMN_KEY     ("entries.id"),
+                            DATABASE_COLUMN_KEY     ("entries.uuidId"),
+                            DATABASE_COLUMN_KEY     ("entries.entityId"),
+                            DATABASE_COLUMN_UINT    ("entries.type"),
+                            DATABASE_COLUMN_STRING  ("entries.name"),
+                            DATABASE_COLUMN_DATETIME("entries.timeLastChanged","timeLastChanged"),
+                            DATABASE_COLUMN_UINT    ("entries.userId"),
+                            DATABASE_COLUMN_UINT    ("entries.groupId"),
+                            DATABASE_COLUMN_UINT    ("entries.permission"),
+                            DATABASE_COLUMN_UINT64  ("entries.size")
                           ),
                           "storageId=?",
                           DATABASE_FILTERS
@@ -1122,7 +1123,6 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
   IndexCommon_resetProgress(progressInfo,List_count(&entryList));
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
-//fprintf(stderr,"a");
     INDEX_DOX(error,
               indexHandle,
     {
@@ -1163,8 +1163,8 @@ LOCAL Errors addToNewest(IndexHandle  *indexHandle,
                           DATABASE_FLAG_NONE,
                           DATABASE_COLUMNS
                           (
-                            DATABASE_COLUMN_KEY   ("entriesNewest.id"),
-                            DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged")
+                            DATABASE_COLUMN_KEY     ("entriesNewest.id"),
+                            DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged","timeLastChanged")
                           ),
                           "    storages.deletedFlag!=1 \
                            AND entriesNewest.name=? \
@@ -1585,14 +1585,14 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                             DATABASE_FLAG_NONE,
                             DATABASE_COLUMNS
                             (
-                              DATABASE_COLUMN_KEY   ("entries.id"),
-                              DATABASE_COLUMN_KEY   ("entries.uuidId"),
-                              DATABASE_COLUMN_UINT  ("entries.type"),
-                              DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged"),
-                              DATABASE_COLUMN_UINT  ("entries.userId"),
-                              DATABASE_COLUMN_UINT  ("entries.groupId"),
-                              DATABASE_COLUMN_UINT  ("entries.permission"),
-                              DATABASE_COLUMN_UINT64("entries.size")
+                              DATABASE_COLUMN_KEY     ("entries.id"),
+                              DATABASE_COLUMN_KEY     ("entries.uuidId"),
+                              DATABASE_COLUMN_UINT    ("entries.type"),
+                              DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
+                              DATABASE_COLUMN_UINT    ("entries.userId"),
+                              DATABASE_COLUMN_UINT    ("entries.groupId"),
+                              DATABASE_COLUMN_UINT    ("entries.permission"),
+                              DATABASE_COLUMN_UINT64  ("entries.size")
                             ),
                             "    storages.deletedFlag!=1 \
                              AND entries.name=?",
@@ -1600,7 +1600,7 @@ LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
                             (
                               DATABASE_FILTER_STRING(entryNode->name)
                             ),
-                            "ORDER BY timeLastChanged DESC",
+                            "ORDER BY entries.timeLastChanged DESC",
                             0LL,
                             1LL
                            );
@@ -3104,8 +3104,8 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_STRING("storages.name"),
-                         DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
+                         DATABASE_COLUMN_STRING  ("storages.name"),
+                         DATABASE_COLUMN_DATETIME("entities.created"),
                        ),
                        "storages.id=?",
                        DATABASE_FILTERS
@@ -3905,19 +3905,19 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_STRING("entities.jobUUID"),
-                          DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                          DATABASE_COLUMN_UINT  ("IFNULL(uuids.id,0)"),
-                          DATABASE_COLUMN_UINT  ("IFNULL(entities.id,0)"),
-                          DATABASE_COLUMN_STRING("storages.name"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
-                          DATABASE_COLUMN_UINT64("storages.size"),
-                          DATABASE_COLUMN_UINT  ("storages.state"),
-                          DATABASE_COLUMN_UINT  ("storages.mode"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
-                          DATABASE_COLUMN_STRING("storages.errorMessage"),
-                          DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
-                          DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                          DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                          DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                          DATABASE_COLUMN_UINT    ("IFNULL(uuids.id,0)"),
+                          DATABASE_COLUMN_UINT    ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_STRING  ("storages.name"),
+                          DATABASE_COLUMN_DATETIME("storages.created"),
+                          DATABASE_COLUMN_UINT64  ("storages.size"),
+                          DATABASE_COLUMN_UINT    ("storages.state"),
+                          DATABASE_COLUMN_UINT    ("storages.mode"),
+                          DATABASE_COLUMN_DATETIME("storages.lastChecked"),
+                          DATABASE_COLUMN_STRING  ("storages.errorMessage"),
+                          DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                          DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
                         "    storages.deletedFlag!=1 \
                          AND storages.id=? \
@@ -4023,20 +4023,20 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_UINT  ("IFNULL(uuids.id,0)"),
-                          DATABASE_COLUMN_UINT  ("IFNULL(entities.id,0)"),
-                          DATABASE_COLUMN_STRING("entities.jobUUID"),
-                          DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                          DATABASE_COLUMN_UINT  ("storages.id"),
-                          DATABASE_COLUMN_STRING("storages.name"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
-                          DATABASE_COLUMN_UINT64("storages.size"),
-                          DATABASE_COLUMN_UINT  ("storages.state"),
-                          DATABASE_COLUMN_UINT  ("storages.mode"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
-                          DATABASE_COLUMN_STRING("storages.errorMessage"),
-                          DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
-                          DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                          DATABASE_COLUMN_UINT    ("IFNULL(uuids.id,0)"),
+                          DATABASE_COLUMN_UINT    ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                          DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                          DATABASE_COLUMN_UINT    ("storages.id"),
+                          DATABASE_COLUMN_STRING  ("storages.name"),
+                          DATABASE_COLUMN_DATETIME("storages.created"),
+                          DATABASE_COLUMN_UINT64  ("storages.size"),
+                          DATABASE_COLUMN_UINT    ("storages.state"),
+                          DATABASE_COLUMN_UINT    ("storages.mode"),
+                          DATABASE_COLUMN_DATETIME("storages.lastChecked"),
+                          DATABASE_COLUMN_STRING  ("storages.errorMessage"),
+                          DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                          DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
                         "storages.deletedFlag!=1",
                         DATABASE_FILTERS
@@ -4131,19 +4131,19 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_UINT  ("IFNULL(uuids.id,0)"),
-                          DATABASE_COLUMN_STRING("entities.jobUUID"),
-                          DATABASE_COLUMN_UINT  ("IFNULL(entities.id,0)"),
-                          DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                          DATABASE_COLUMN_UINT  ("storages.id"),
-                          DATABASE_COLUMN_STRING("storages.name"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
-                          DATABASE_COLUMN_UINT64("storages.size"),
-                          DATABASE_COLUMN_UINT  ("storages.mode"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
-                          DATABASE_COLUMN_STRING("storages.errorMessage"),
-                          DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
-                          DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                          DATABASE_COLUMN_UINT    ("IFNULL(uuids.id,0)"),
+                          DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                          DATABASE_COLUMN_UINT    ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                          DATABASE_COLUMN_UINT    ("storages.id"),
+                          DATABASE_COLUMN_STRING  ("storages.name"),
+                          DATABASE_COLUMN_DATETIME("storages.created"),
+                          DATABASE_COLUMN_UINT64  ("storages.size"),
+                          DATABASE_COLUMN_UINT    ("storages.mode"),
+                          DATABASE_COLUMN_DATETIME("storages.lastChecked"),
+                          DATABASE_COLUMN_STRING  ("storages.errorMessage"),
+                          DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                          DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
                         "    storages.deletedFlag!=1 \
                          AND (storages.state IN (?)) \
@@ -4833,25 +4833,25 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("IFNULL(uuids.id,0)"),
-                             DATABASE_COLUMN_STRING("entities.jobUUID"),
-                             DATABASE_COLUMN_KEY   ("IFNULL(entities.id,0)"),
-                             DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                             DATABASE_COLUMN_STRING("storages.hostName"),
-                             DATABASE_COLUMN_STRING("storages.userName"),
-                             DATABASE_COLUMN_STRING("storages.comment"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_UINT  ("entities.type"),
-                             DATABASE_COLUMN_KEY   ("storages.id"),
-                             DATABASE_COLUMN_STRING("storages.name"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
-                             DATABASE_COLUMN_UINT64("storages.size"),
-                             DATABASE_COLUMN_UINT  ("storages.state"),
-                             DATABASE_COLUMN_UINT  ("storages.mode"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
-                             DATABASE_COLUMN_STRING("storages.errorMessage"),
-                             DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
-                             DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                             DATABASE_COLUMN_KEY     ("IFNULL(uuids.id,0)"),
+                             DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                             DATABASE_COLUMN_KEY     ("IFNULL(entities.id,0)"),
+                             DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                             DATABASE_COLUMN_STRING  ("storages.hostName"),
+                             DATABASE_COLUMN_STRING  ("storages.userName"),
+                             DATABASE_COLUMN_STRING  ("storages.comment"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_UINT    ("entities.type"),
+                             DATABASE_COLUMN_KEY     ("storages.id"),
+                             DATABASE_COLUMN_STRING  ("storages.name"),
+                             DATABASE_COLUMN_DATETIME("storages.created"),
+                             DATABASE_COLUMN_UINT64  ("storages.size"),
+                             DATABASE_COLUMN_UINT    ("storages.state"),
+                             DATABASE_COLUMN_UINT    ("storages.mode"),
+                             DATABASE_COLUMN_DATETIME("storages.lastChecked"),
+                             DATABASE_COLUMN_STRING  ("storages.errorMessage"),
+                             DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                             DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    storages.deletedFlag!=1 \
@@ -5755,20 +5755,20 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                          DATABASE_FLAG_NONE,
                          DATABASE_COLUMNS
                          (
-                           DATABASE_COLUMN_KEY   ("uuids.id"),
-                           DATABASE_COLUMN_STRING("uuids.jobUUID"),
-                           DATABASE_COLUMN_KEY   ("entities.id"),
-                           DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                           DATABASE_COLUMN_UINT  ("entities.type"),
-                           DATABASE_COLUMN_STRING("storages.name"),
-                           DATABASE_COLUMN_KEY   ("UNIX_TIMESTAMP(storages.created)"),
-                           DATABASE_COLUMN_UINT64("storages.size"),
-                           DATABASE_COLUMN_UINT  ("storages.state"),
-                           DATABASE_COLUMN_UINT  ("storages.mode"),
-                           DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.lastChecked)"),
-                           DATABASE_COLUMN_STRING("storages.errorMessage"),
-                           DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
-                           DATABASE_COLUMN_UINT64("storages.totalEntrySize")
+                           DATABASE_COLUMN_KEY     ("uuids.id"),
+                           DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
+                           DATABASE_COLUMN_KEY     ("entities.id"),
+                           DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                           DATABASE_COLUMN_UINT    ("entities.type"),
+                           DATABASE_COLUMN_STRING  ("storages.name"),
+                           DATABASE_COLUMN_DATETIME("storages.created"),
+                           DATABASE_COLUMN_UINT64  ("storages.size"),
+                           DATABASE_COLUMN_UINT    ("storages.state"),
+                           DATABASE_COLUMN_UINT    ("storages.mode"),
+                           DATABASE_COLUMN_DATETIME("storages.lastChecked"),
+                           DATABASE_COLUMN_STRING  ("storages.errorMessage"),
+                           DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                           DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                          ),
                          "id=?",
                          DATABASE_FILTERS

@@ -283,9 +283,9 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_STRING("uuid"),
-                          DATABASE_COLUMN_STRING("name"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                          DATABASE_COLUMN_STRING  ("uuid"),
+                          DATABASE_COLUMN_STRING  ("name"),
+                          DATABASE_COLUMN_DATETIME("created")
                         ),
                         "entityId=0",
                         DATABASE_FILTERS
@@ -598,8 +598,8 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            ),
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(timeLastChanged)")
+                             DATABASE_COLUMN_KEY     ("id"),
+                             DATABASE_COLUMN_DATETIME("timeLastChanged")
                            ),
                            "name=?",
                            DATABASE_FILTERS
@@ -1389,10 +1389,10 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("uuids.id"),
-                             DATABASE_COLUMN_UINT64("entities.jobUUID"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_UINT  ("entities.type")
+                             DATABASE_COLUMN_KEY     ("uuids.id"),
+                             DATABASE_COLUMN_UINT64  ("entities.jobUUID"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_UINT    ("entities.type")
                            ),
                            "entities.id=?",
                            DATABASE_FILTERS
@@ -2242,15 +2242,15 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_KEY   ("IFNULL(uuids.id,0)"),
-                          DATABASE_COLUMN_STRING("entities.jobUUID"),
-                          DATABASE_COLUMN_KEY   ("IFNULL(entities.id,0)"),
-                          DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                          DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                          DATABASE_COLUMN_UINT  ("entities.type"),
-                          DATABASE_COLUMN_STRING("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
-                          DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
-                          DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
+                          DATABASE_COLUMN_KEY     ("IFNULL(uuids.id,0)"),
+                          DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                          DATABASE_COLUMN_KEY     ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                          DATABASE_COLUMN_DATETIME("entities.created"),
+                          DATABASE_COLUMN_UINT    ("entities.type"),
+                          DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
+                          DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
+                          DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)")
                         ),
                         stringFormat(sqlCommand,sizeof(sqlCommand),
                                      "    entities.deletedFlag!=1 \
@@ -2421,18 +2421,17 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("IFNULL(uuids.id,0)"),
-                             DATABASE_COLUMN_STRING("entities.jobUUID"),
-                             DATABASE_COLUMN_KEY   ("entities.id"),
-                             DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-//                             DATABASE_COLUMN_DATETIME("entities.created"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_UINT  ("entities.type"),
-                             DATABASE_COLUMN_STRING("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 0,1)"),
-                             DATABASE_COLUMN_UINT64("storages.size"),
-                             DATABASE_COLUMN_UINT  ("storages.totalEntryCount"),
-                             DATABASE_COLUMN_UINT64("storages.totalEntrySize"),
-                             DATABASE_COLUMN_UINT  ("entities.lockedCount")
+                             DATABASE_COLUMN_KEY     ("IFNULL(uuids.id,0)"),
+                             DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                             DATABASE_COLUMN_KEY     ("entities.id"),
+                             DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_UINT    ("entities.type"),
+                             DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 0,1)"),
+                             DATABASE_COLUMN_UINT64  ("storages.size"),
+                             DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                             DATABASE_COLUMN_UINT64  ("storages.totalEntrySize"),
+                             DATABASE_COLUMN_UINT    ("entities.lockedCount")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    entities.deletedFlag!=1 \

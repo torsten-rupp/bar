@@ -1885,9 +1885,9 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_STRING("uuid"),
-                         DATABASE_COLUMN_STRING("name"),
-                         DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                         DATABASE_COLUMN_STRING  ("uuid"),
+                         DATABASE_COLUMN_STRING  ("name"),
+                         DATABASE_COLUMN_DATETIME("created")
                        ),
                        "entityId=0",
                        DATABASE_FILTERS
@@ -2060,13 +2060,13 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                              &indexHandle->databaseHandle,
                              DATABASE_COLUMNS
                              (
-                               DATABASE_COLUMN_KEY   ("id"),,
-                               DATABASE_COLUMN_STRING("name"),
-                               DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(created)")
+                               DATABASE_COLUMN_KEY     ("id"),,
+                               DATABASE_COLUMN_STRING  ("name"),
+                               DATABASE_COLUMN_DATETIME("created")
                              ),
                              "SELECT id, \
                                      name, \
-                                     UNIX_TIMESTAMP(created) \
+                                     created \
                               FROM storages \
                               WHERE entityId=0 \
                               ORDER BY name ASC \
@@ -2420,8 +2420,8 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(timeLastChanged)")
+                             DATABASE_COLUMN_KEY     ("id"),
+                             DATABASE_COLUMN_DATETIME("timeLastChanged")
                            ),
                            "name=?",
                            DATABASE_FILTERS

@@ -614,10 +614,10 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_UINT64("MAX(UNIX_TIMESTAMP(entities.created))"),
-                         DATABASE_COLUMN_UINT  ("COUNT(entities.id)"),
-                         DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
-                         DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)"),
+                         DATABASE_COLUMN_DATETIME("MAX(entities.created)"),
+                         DATABASE_COLUMN_UINT    ("COUNT(entities.id)"),
+                         DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
+                         DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)"),
                        ),
                        stringFormat(sqlCommand,sizeof(sqlCommand),
                                     "%s",
@@ -1374,13 +1374,13 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("uuids.id"),
-                             DATABASE_COLUMN_STRING("uuids.jobUUID"),
-                             DATABASE_COLUMN_UINT64("(SELECT MAX(UNIX_TIMESTAMP(entities.created)) FROM entities WHERE entities.jobUUID=uuids.jobUUID)"),
-                             DATABASE_COLUMN_STRING("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.size)"),
-                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
-                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
+                             DATABASE_COLUMN_KEY     ("uuids.id"),
+                             DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
+                             DATABASE_COLUMN_DATETIME("(SELECT MAX(entities.created) FROM entities WHERE entities.jobUUID=uuids.jobUUID)"),
+                             DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
+                             DATABASE_COLUMN_UINT64  ("SUM(storages.size)"),
+                             DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
+                             DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "     %s \

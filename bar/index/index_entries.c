@@ -491,8 +491,8 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            ),
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(timeLastChanged)")
+                             DATABASE_COLUMN_KEY     ("id"),
+                             DATABASE_COLUMN_DATETIME("timeLastChanged")
                            ),
                            "name=?",
                            DATABASE_FILTERS
@@ -2979,12 +2979,12 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entryFragments.id"),
-                             DATABASE_COLUMN_KEY   ("storages.id"),
-                             DATABASE_COLUMN_STRING("storages.name"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(storages.created)"),
-                             DATABASE_COLUMN_UINT64("entryFragments.offset"),
-                             DATABASE_COLUMN_UINT64("entryFragments.size ")
+                             DATABASE_COLUMN_KEY     ("entryFragments.id"),
+                             DATABASE_COLUMN_KEY     ("storages.id"),
+                             DATABASE_COLUMN_STRING  ("storages.name"),
+                             DATABASE_COLUMN_DATETIME("storages.created"),
+                             DATABASE_COLUMN_UINT64  ("entryFragments.offset"),
+                             DATABASE_COLUMN_UINT64  ("entryFragments.size ")
                            ),
                            "storages.deletedFlag!=1 \
                                    AND entryFragments.entryId=? \
@@ -3308,14 +3308,14 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_STRING("entries.name"),
-                             DATABASE_COLUMN_UINT64("entries.size"),
-                             DATABASE_COLUMN_UINT64("entries.timeModified"),
-                             DATABASE_COLUMN_UINT  ("entries.userId"),
-                             DATABASE_COLUMN_UINT  ("entries.groupId"),
-                             DATABASE_COLUMN_UINT  ("entries.permission")
+                             DATABASE_COLUMN_KEY     ("entries.id"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_STRING  ("entries.name"),
+                             DATABASE_COLUMN_UINT64  ("entries.size"),
+                             DATABASE_COLUMN_UINT64  ("entries.timeModified"),
+                             DATABASE_COLUMN_UINT    ("entries.userId"),
+                             DATABASE_COLUMN_UINT    ("entries.groupId"),
+                             DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    entities.deletedFlag!=1 \
@@ -3463,12 +3463,12 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_STRING("entries.name"),
-                             DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType,"),
-                             DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
-                             DATABASE_COLUMN_UINT64("entries.size")
+                             DATABASE_COLUMN_KEY     ("entries.id"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_STRING  ("entries.name"),
+                             DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType,"),
+                             DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
+                             DATABASE_COLUMN_UINT64  ("entries.size")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    entities.deletedFlag!=1 \
@@ -3627,13 +3627,13 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_STRING("entries.name"),
-                             DATABASE_COLUMN_UINT64("entries.timeModified"),
-                             DATABASE_COLUMN_UINT  ("entries.userId"),
-                             DATABASE_COLUMN_UINT  ("entries.groupId"),
-                             DATABASE_COLUMN_UINT  ("entries.permission")
+                             DATABASE_COLUMN_KEY     ("entries.id"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_STRING  ("entries.name"),
+                             DATABASE_COLUMN_DATETIME("entries.timeModified"),
+                             DATABASE_COLUMN_UINT    ("entries.userId"),
+                             DATABASE_COLUMN_UINT    ("entries.groupId"),
+                             DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    entities.deletedFlag!=1 \
@@ -3781,15 +3781,15 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_STRING("entries.name"),
-                             DATABASE_COLUMN_STRING("linkEntries.destinationName"),
-                             DATABASE_COLUMN_UINT64("entries.size"),
-                             DATABASE_COLUMN_UINT64("entries.timeModified"),
-                             DATABASE_COLUMN_UINT  ("entries.userId"),
-                             DATABASE_COLUMN_UINT  ("entries.groupId"),
-                             DATABASE_COLUMN_UINT  ("entries.permission")
+                             DATABASE_COLUMN_KEY     ("entries.id"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_STRING  ("entries.name"),
+                             DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
+                             DATABASE_COLUMN_UINT64  ("entries.size"),
+                             DATABASE_COLUMN_DATETIME("entries.timeModified"),
+                             DATABASE_COLUMN_UINT    ("entries.userId"),
+                             DATABASE_COLUMN_UINT    ("entries.groupId"),
+                             DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    entities.deletedFlag!=1 \
@@ -3937,14 +3937,14 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_STRING("entries.name"),
-                             DATABASE_COLUMN_UINT64("entries.size"),
-                             DATABASE_COLUMN_UINT64("entries.timeModified"),
-                             DATABASE_COLUMN_UINT  ("entries.userId"),
-                             DATABASE_COLUMN_UINT  ("entries.groupId"),
-                             DATABASE_COLUMN_UINT  ("entries.permission")
+                             DATABASE_COLUMN_KEY     ("entries.id"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_STRING  ("entries.name"),
+                             DATABASE_COLUMN_UINT64  ("entries.size"),
+                             DATABASE_COLUMN_DATETIME("entries.timeModified"),
+                             DATABASE_COLUMN_UINT    ("entries.userId"),
+                             DATABASE_COLUMN_UINT    ("entries.groupId"),
+                             DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    entities.deletedFlag!=1 \
@@ -4092,13 +4092,13 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id"),
-                             DATABASE_COLUMN_UINT64("UNIX_TIMESTAMP(entities.created)"),
-                             DATABASE_COLUMN_STRING("entries.name"),
-                             DATABASE_COLUMN_UINT64("entries.timeModified"),
-                             DATABASE_COLUMN_UINT  ("entries.userId"),
-                             DATABASE_COLUMN_UINT  ("entries.groupId"),
-                             DATABASE_COLUMN_UINT  ("entries.permission")
+                             DATABASE_COLUMN_KEY     ("entries.id"),
+                             DATABASE_COLUMN_DATETIME("entities.created"),
+                             DATABASE_COLUMN_STRING  ("entries.name"),
+                             DATABASE_COLUMN_DATETIME("entries.timeModified"),
+                             DATABASE_COLUMN_UINT    ("entries.userId"),
+                             DATABASE_COLUMN_UINT    ("entries.groupId"),
+                             DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "    entities.deletedFlag!=1 \
