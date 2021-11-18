@@ -133,16 +133,16 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("uuidId")
-                                    DATABASE_VALUE_KEY   ("entityId")
-                                    DATABASE_VALUE_UINT  ("type")
-                                    DATABASE_VALUE_STRING("name")
-                                    DATABASE_VALUE_UINT64("timeLastAccess")
-                                    DATABASE_VALUE_UINT64("timeModified")
-                                    DATABASE_VALUE_UINT64("timeLastChanged")
-                                    DATABASE_VALUE_UINT  ("userId")
-                                    DATABASE_VALUE_UINT  ("groupId")
-                                    DATABASE_VALUE_UINT  ("permission")
+                                    DATABASE_VALUE_KEY     ("uuidId")
+                                    DATABASE_VALUE_KEY     ("entityId")
+                                    DATABASE_VALUE_UINT    ("type")
+                                    DATABASE_VALUE_STRING  ("name")
+                                    DATABASE_VALUE_DATETIME("timeLastAccess")
+                                    DATABASE_VALUE_DATETIME("timeModified")
+                                    DATABASE_VALUE_DATETIME("timeLastChanged")
+                                    DATABASE_VALUE_UINT    ("userId")
+                                    DATABASE_VALUE_UINT    ("groupId")
+                                    DATABASE_VALUE_UINT    ("permission")
                                   ),
                                   DATABASE_TABLES
                                   (
@@ -150,16 +150,16 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                                   ),
                                   DATABASE_COLUMNS
                                   (
-                                    DATABASE_COLUMN_KEY   ("uuidId"),
-                                    DATABASE_COLUMN_KEY   ("entityId"),
-                                    DATABASE_COLUMN_UINT  ("type"),
-                                    DATABASE_COLUMN_STRING("name"),
-                                    DATABASE_COLUMN_UINT64("timeLastAccess"),
-                                    DATABASE_COLUMN_UINT64("timeModified"),
-                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
-                                    DATABASE_COLUMN_UINT  ("userId"),
-                                    DATABASE_COLUMN_UINT  ("groupId"),
-                                    DATABASE_COLUMN_UINT  ("permission")
+                                    DATABASE_COLUMN_KEY     ("uuidId"),
+                                    DATABASE_COLUMN_KEY     ("entityId"),
+                                    DATABASE_COLUMN_UINT    ("type"),
+                                    DATABASE_COLUMN_STRING  ("name"),
+                                    DATABASE_COLUMN_DATETIME("timeLastAccess"),
+                                    DATABASE_COLUMN_DATETIME("timeModified"),
+                                    DATABASE_COLUMN_DATETIME("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT    ("userId"),
+                                    DATABASE_COLUMN_UINT    ("groupId"),
+                                    DATABASE_COLUMN_UINT    ("permission")
                                   ),
                                   "id!=? AND name=?",
                                   DATABASE_FILTERS
@@ -2761,50 +2761,50 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
-                                 DATABASE_COLUMN_KEY   ("uuids.id"),
-                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
-                                 DATABASE_COLUMN_KEY   ("entities.id"),
-                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                                 DATABASE_COLUMN_STRING("entities.hostName"),
-                                 DATABASE_COLUMN_STRING("entities.userName"),
-                                 DATABASE_COLUMN_UINT  ("entities.type"),
-                                 DATABASE_COLUMN_KEY   ("entries.id"),
-                                 DATABASE_COLUMN_UINT  ("entries.type"),
-                                 DATABASE_COLUMN_STRING("entries.name"),
-                                 DATABASE_COLUMN_UINT64("entries.timeLastChanged"),
-                                 DATABASE_COLUMN_UINT  ("entries.userId"),
-                                 DATABASE_COLUMN_UINT  ("entries.groupId"),
-                                 DATABASE_COLUMN_UINT  ("entries.permission"),
-                                 DATABASE_COLUMN_UINT64("entries.size"),
-                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
-                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN directoryEntries.storageId \
-                                                           WHEN ? THEN linkEntries.storageId \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN specialEntries.storageId \
-                                                         END \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN directoryEntries.storageId \
-                                                                                               WHEN ? THEN linkEntries.storageId \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN specialEntries.storageId \
-                                                                                             END \
-                                                         ) \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
-                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySizeNewest"),
-                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
-                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                                 DATABASE_COLUMN_KEY     ("uuids.id"),
+                                 DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY     ("entities.id"),
+                                 DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING  ("entities.hostName"),
+                                 DATABASE_COLUMN_STRING  ("entities.userName"),
+                                 DATABASE_COLUMN_UINT    ("entities.type"),
+                                 DATABASE_COLUMN_KEY     ("entries.id"),
+                                 DATABASE_COLUMN_UINT    ("entries.type"),
+                                 DATABASE_COLUMN_STRING  ("entries.name"),
+                                 DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT    ("entries.userId"),
+                                 DATABASE_COLUMN_UINT    ("entries.groupId"),
+                                 DATABASE_COLUMN_UINT    ("entries.permission"),
+                                 DATABASE_COLUMN_UINT64  ("entries.size"),
+                                 DATABASE_COLUMN_UINT    (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
+                                 DATABASE_COLUMN_KEY     ("CASE entries.type \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN directoryEntries.storageId \
+                                                             WHEN ? THEN linkEntries.storageId \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN specialEntries.storageId \
+                                                           END \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN directoryEntries.storageId \
+                                                                                                 WHEN ? THEN linkEntries.storageId \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN specialEntries.storageId \
+                                                                                               END \
+                                                           ) \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_UINT64  ("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64  ("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySizeNewest"),
+                                 DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                             "     entities.deletedFlag!=1 \
@@ -4247,18 +4247,18 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_FILE),
-                                    DATABASE_VALUE_STRING("name",            name),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                    DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                    DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                    DATABASE_VALUE_UINT  ("userId",          userId),
-                                    DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                    DATABASE_VALUE_UINT  ("permission",      permission),
+                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_FILE),
+                                    DATABASE_VALUE_STRING  ("name",            name),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                    DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                    DATABASE_VALUE_UINT    ("userId",          userId),
+                                    DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                    DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    DATABASE_VALUE_UINT64("size",            size)
+                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64  ("size",            size)
                                   )
                                  );
 
@@ -4440,18 +4440,18 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_IMAGE),
-                                    DATABASE_VALUE_STRING("name",            name),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  0LL),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  0LL),
-                                    DATABASE_VALUE_UINT64("timeLastChanged", 0LL),
-                                    DATABASE_VALUE_UINT  ("userId",          0),
-                                    DATABASE_VALUE_UINT  ("groupId",         0),
-                                    DATABASE_VALUE_UINT  ("permission",      0),
+                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_IMAGE),
+                                    DATABASE_VALUE_STRING  ("name",            name),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  0LL),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  0LL),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", 0LL),
+                                    DATABASE_VALUE_UINT    ("userId",          0),
+                                    DATABASE_VALUE_UINT    ("groupId",         0),
+                                    DATABASE_VALUE_UINT    ("permission",      0),
 
-                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    DATABASE_VALUE_UINT64("size",            size)
+                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64  ("size",            size)
                                   )
                                  );
           // get entry id
@@ -4592,18 +4592,18 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_DIRECTORY),
-                                DATABASE_VALUE_STRING("name",            name),
-                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                DATABASE_VALUE_UINT  ("userId",          userId),
-                                DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                DATABASE_VALUE_UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_DIRECTORY),
+                                DATABASE_VALUE_STRING  ("name",            name),
+                                DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT    ("userId",          userId),
+                                DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                DATABASE_VALUE_UINT64("size",            0)
+                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64  ("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4744,18 +4744,18 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_LINK),
-                                DATABASE_VALUE_STRING("name",            linkName),
-                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                DATABASE_VALUE_UINT  ("userId",          userId),
-                                DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                DATABASE_VALUE_UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_LINK),
+                                DATABASE_VALUE_STRING  ("name",            linkName),
+                                DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT    ("userId",          userId),
+                                DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                DATABASE_VALUE_UINT64("size",            0)
+                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64  ("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4909,18 +4909,18 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_HARDLINK),
-                                    DATABASE_VALUE_STRING("name",            name),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                    DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                    DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                    DATABASE_VALUE_UINT  ("userId",          userId),
-                                    DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                    DATABASE_VALUE_UINT  ("permission",      permission),
+                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_HARDLINK),
+                                    DATABASE_VALUE_STRING  ("name",            name),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                    DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                    DATABASE_VALUE_UINT    ("userId",          userId),
+                                    DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                    DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    DATABASE_VALUE_UINT64("size",            size)
+                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64  ("size",            size)
                                   )
                                  );
 
@@ -5085,18 +5085,18 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_SPECIAL),
-                                DATABASE_VALUE_STRING("name",            name),
-                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                DATABASE_VALUE_UINT  ("userId",          userId),
-                                DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                DATABASE_VALUE_UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_SPECIAL),
+                                DATABASE_VALUE_STRING  ("name",            name),
+                                DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT    ("userId",          userId),
+                                DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                DATABASE_VALUE_UINT64("size",            0)
+                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64  ("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
