@@ -77,9 +77,8 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
                                            DatabaseId  toStorageId
                                           )
 {
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          toUUIDId,toEntityId;
+  Errors     error;
+  DatabaseId toUUIDId,toEntityId;
 
   /* steps:
      - get to-UUID id, to-entity id
@@ -418,7 +417,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                                    DatabaseId  toEntityId
                                   )
 {
-  DatabaseId entityId,uuidId;
+  DatabaseId entityId;
   DatabaseId toUUIDId;
   Errors     error;
 
@@ -439,46 +438,21 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 
   error = ERROR_NONE;
 
-  // get entity id, uuid id
+  // get entity id
   if (error == ERROR_NONE)
   {
-    error = Database_get(&indexHandle->databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           assert(values != NULL);
-                           assert(valueCount == 2);
-
-                           UNUSED_VARIABLE(userData);
-                           UNUSED_VARIABLE(valueCount);
-
-                           entityId = values[0].id;
-                           entityId = values[1].id;
-
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_TABLES
-                         (
+    error = Database_getId(&indexHandle->databaseHandle,
+                           &entityId,
                            "storages \
-                                LEFT JOIN entities ON entities.id=storages.entityId \
-                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                           "
-                         ),
-                         DATABASE_FLAG_NONE,
-                         DATABASE_COLUMNS
-                         (
-                           DATABASE_COLUMN_KEY   ("uuids.id"),
-                           DATABASE_COLUMN_KEY   ("entities.id")
-                         ),
-                         "storages.id=?",
-                         DATABASE_FILTERS
-                         (
-                           DATABASE_FILTER_KEY (storageId)
-                         ),
-                         NULL,  // orderGroup
-                         0LL,
-                         1LL
-                        );
+                              LEFT JOIN entities ON entities.id=storages.entityId \
+                           ",
+                           "entities.id",
+                           "storages.id=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY (storageId)
+                           )
+                          );
   }
 
   // get to-uuid id

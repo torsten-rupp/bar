@@ -1856,13 +1856,12 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount_=%lu totalEntrySize_=%"PRIu64"\n",__FILE__,__LINE__,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize);
+        fprintf(stderr,"%s, %d: totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount_=%lu totalEntrySize_=%"PRIu64"\n",__FILE__,__LINE__,*totalStorageCount,*totalStorageSize,*totalEntryCount,*totalEntrySize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif
     }
 
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     if (error == ERROR_NONE)
     {
       #ifdef INDEX_DEBUG_LIST_INFO
@@ -2024,7 +2023,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,totalEntryContentSize);
+        fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,*totalEntryContentSize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif
@@ -2161,7 +2160,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalEntryCount=%lu totalEntrySize_=%"PRIu64"\n",__FILE__,__LINE__,totalEntryCount,totalEntrySize);
+        fprintf(stderr,"%s, %d: totalEntryCount=%lu totalEntrySize_=%"PRIu64"\n",__FILE__,__LINE__,*totalEntryCount,*totalEntrySize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif
@@ -2280,7 +2279,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
       #ifdef INDEX_DEBUG_LIST_INFO
         t1 = Misc_getTimestamp();
-        fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,totalEntryContentSize);
+        fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,*totalEntryContentSize);
         fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
         fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
       #endif

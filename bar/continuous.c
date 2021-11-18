@@ -1871,9 +1871,8 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                          String         name
                         )
 {
-  DatabaseStatementHandle databaseStatementHandle;
-  bool                result;
-  DatabaseId          databaseId_;
+  bool       result;
+  DatabaseId databaseId_;
 
   assert(initFlag);
   assert(databaseHandle != NULL);
@@ -2044,11 +2043,10 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                             const char     *scheduleUUID
                            )
 {
-  DatabaseStatementHandle databaseStatementHandle;
-  uint64                  dateTime;
-  DatabaseId              databaseId;
-  String                  name;
-  uint                    storedFlag;
+  uint64     dateTime;
+  DatabaseId databaseId;
+  String     name;
+  uint       storedFlag;
 
   name = String_new();
 

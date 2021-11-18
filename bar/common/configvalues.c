@@ -5014,6 +5014,10 @@ LOCAL void updateSHA256Section(SHA256_           sha256,
 void ConfigValue_debugSHA256(const ConfigValue configValues[], void *buffer, uint bufferSize)
 {
 // TODO: does not compile
+UNUSED_VARIABLE(configValues);
+UNUSED_VARIABLE(buffer);
+UNUSED_VARIABLE(bufferSize);
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 #if 0
   SHA256_ sha256;
   uint    index;

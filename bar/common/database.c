@@ -4172,12 +4172,11 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
             case MYSQL_TYPE_GEOMETRY:
             case MYSQL_TYPE_NULL:
               break;
-            #ifndef NDEBUG
-              default:
-fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,databaseStatementHandle->mysql.results.bind[i].buffer_type);
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break;
           }
         }
         if (databaseStatementHandle->mysql.results.time != NULL) free(databaseStatementHandle->mysql.results.time);
@@ -4225,9 +4224,8 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
   {
     case DATABASE_TYPE_SQLITE3:
       {
-        int                 sqliteResult;
-        uint                i;
-        const unsigned char *s;
+        int  sqliteResult;
+        uint i;
 
         do
         {
@@ -4416,11 +4414,11 @@ databaseStatementHandle->mysql.dateTime[i].second
                 case DATABASE_DATATYPE_BLOB:
                   HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                   break;
-                #ifndef NDEBUG
-                  default:
+                default:
+                  #ifndef NDEBUG
                     HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    break;
-                #endif /* NDEBUG */
+                  #endif /* NDEBUG */
+                  break;
               }
             }
 
@@ -5842,11 +5840,11 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
-            #ifndef NDEBUG
-              default:
+            default:
+              #ifndef NDEBUG
                 HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break;
-            #endif /* NDEBUG */
+              #endif /* NDEBUG */
+              break;
           }
           if      (sqliteResult == SQLITE_MISUSE)
           {

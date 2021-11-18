@@ -291,10 +291,13 @@ LOCAL void                       *indexPauseCallbackUserData;
 
 LOCAL ProgressInfo               importProgressInfo;
 
+// TODO: remove
+#if 0
 #ifndef NDEBUG
   LOCAL void const *indexBusyStackTrace[32];
   LOCAL uint       indexBusyStackTraceSize;
 #endif /* not NDEBUG */
+#endif
 
 #ifdef INDEX_DEBUG_LOCK
   LOCAL ThreadLWPId indexUseCountLPWIds[32];
@@ -3701,47 +3704,43 @@ bool Index_containsType(const IndexId indexIds[],
 }
 
 Errors Index_getInfos(IndexHandle   *indexHandle,
-                      ulong         *totalEntityCount,
-                      ulong         *totalDeletedEntityCount,
+                      uint          *totalEntityCount,
+                      uint          *totalDeletedEntityCount,
 
-                      ulong         *totalEntryCount,
+                      uint          *totalEntryCount,
                       uint64        *totalEntrySize,
                       uint64        *totalEntryContentSize,
-                      ulong         *totalFileCount,
+                      uint          *totalFileCount,
                       uint64        *totalFileSize,
-                      ulong         *totalImageCount,
+                      uint          *totalImageCount,
                       uint64        *totalImageSize,
-                      ulong         *totalDirectoryCount,
-                      ulong         *totalLinkCount,
-                      ulong         *totalHardlinkCount,
+                      uint          *totalDirectoryCount,
+                      uint          *totalLinkCount,
+                      uint          *totalHardlinkCount,
                       uint64        *totalHardlinkSize,
-                      ulong         *totalSpecialCount,
+                      uint          *totalSpecialCount,
 
-                      ulong         *totalEntryCountNewest,
+                      uint          *totalEntryCountNewest,
                       uint64        *totalEntrySizeNewest,
                       uint64        *totalEntryContentSizeNewest,
-                      ulong         *totalFileCountNewest,
+                      uint          *totalFileCountNewest,
                       uint64        *totalFileSizeNewest,
-                      ulong         *totalImageCountNewest,
+                      uint          *totalImageCountNewest,
                       uint64        *totalImageSizeNewest,
-                      ulong         *totalDirectoryCountNewest,
-                      ulong         *totalLinkCountNewest,
-                      ulong         *totalHardlinkCountNewest,
+                      uint          *totalDirectoryCountNewest,
+                      uint          *totalLinkCountNewest,
+                      uint          *totalHardlinkCountNewest,
                       uint64        *totalHardlinkSizeNewest,
-                      ulong         *totalSpecialCountNewest,
+                      uint          *totalSpecialCountNewest,
 
-                      ulong         *totalSkippedEntryCount,
+                      uint          *totalSkippedEntryCount,
 
-                      ulong         *totalStorageCount,
+                      uint          *totalStorageCount,
                       uint64        *totalStorageSize,
-                      ulong         *totalDeletedStorageCount
+                      uint          *totalDeletedStorageCount
                      )
 {
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors              error;
-  double              totalEntrySize_,totalEntryContentSize_,totalFileSize_,totalImageSize_,totalHardlinkSize_;
-  double              totalEntrySizeNewest_,totalEntryContentSizeNewest_,totalFileSizeNewest_,totalImageSizeNewest_,totalHardlinkSizeNewest_;
-  double              totalStorageSize_;
+  Errors error;
 
   assert(indexHandle != NULL);
 

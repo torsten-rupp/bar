@@ -690,16 +690,14 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
 #if 1
 LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
 {
-  Errors              error;
-  String              name1,name2;
-  DatabaseStatementHandle databaseStatementHandle1,databaseStatementHandle2;
-  DatabaseId          storageId;
-  StaticString        (uuid,MISC_UUID_STRING_LENGTH);
-  uint64              createdDateTime;
-  DatabaseId          entityId;
-  bool                equalsFlag;
-  ulong               i;
-  String              oldDatabaseFileName;
+  Errors       error;
+  String       name1,name2;
+  DatabaseId   storageId;
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
+  uint64       createdDateTime;
+  DatabaseId   entityId;
+  bool         equalsFlag;
+  ulong        i;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -866,6 +864,8 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                 Error_getText(error)
                );
   }
+
+  return error;
 }
 #endif
 
@@ -4114,14 +4114,15 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                           if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[2].id);
                           if (scheduleUUID        != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
                           if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
-                          if (dateTime            != NULL) (*dateTime)            = values[5].u64;
-                          if (size                != NULL) (*size)                = values[6].u64;
-//                          if (indexState          != NULL) (*indexState)          = values[7].u;
-                          if (indexMode           != NULL) (*indexMode)           = values[7].u;
-                          if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[8].u64;
-                          if (errorMessage        != NULL) String_setBuffer(errorMessage,values[9].text.data,values[9].text.length);
-                          if (totalEntryCount     != NULL) (*totalEntryCount)     = values[10].u;
-                          if (totalEntrySize      != NULL) (*totalEntrySize)      = values[11].u64;
+                          if (storageName         != NULL) String_setBuffer(storageName,values[5].text.data,values[5].text.length);
+                          if (dateTime            != NULL) (*dateTime)            = values[6].u64;
+                          if (size                != NULL) (*size)                = values[7].u64;
+//                          if (indexState          != NULL) (*indexState)          = values[8].u;
+                          if (indexMode           != NULL) (*indexMode)           = values[8].u;
+                          if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[9].u64;
+                          if (errorMessage        != NULL) String_setBuffer(errorMessage,values[10].text.data,values[10].text.length);
+                          if (totalEntryCount     != NULL) (*totalEntryCount)     = values[11].u;
+                          if (totalEntrySize      != NULL) (*totalEntrySize)      = values[12].u64;
 
                           foundFlag = TRUE;
 
@@ -4368,9 +4369,7 @@ long Index_countStorageState(IndexHandle *indexHandle,
                              IndexStates indexState
                             )
 {
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  long                count;
+  long count;
 
   assert(indexHandle != NULL);
 
@@ -4385,8 +4384,10 @@ long Index_countStorageState(IndexHandle *indexHandle,
   INDEX_DOX(count,
             indexHandle,
   {
+    uint n;
+
     if (Database_getUInt(&indexHandle->databaseHandle,
-                         &count,
+                         &n,
                          "storages",
                          "COUNT(id)",
                          "state=?",
@@ -4395,13 +4396,15 @@ long Index_countStorageState(IndexHandle *indexHandle,
                            DATABASE_FILTER_UINT(indexState)
                          ),
                          NULL  // group
-                        ) != ERROR_NONE
+                        ) == ERROR_NONE
        )
+    {
+      return (long)n;
+    }
+    else
     {
       return -1;
     }
-
-    return count;
   });
 
   return count;
