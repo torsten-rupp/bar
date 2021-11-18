@@ -11237,8 +11237,8 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                        const DatabaseValue  values[],
                        uint                 valueCount,
                        const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
+                       const DatabaseFilter filters[],
+                       uint                 filterCount
                       )
 {
   String                  sqlString;
@@ -11301,8 +11301,8 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   if (filter != NULL)
   {
     error = bindFilters(&databaseStatementHandle,
-                        filterValues,
-                        filterValueCount
+                        filters,
+                        filterCount
                        );
     if (error != ERROR_NONE)
     {
@@ -11338,8 +11338,8 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
                        const char           *tableName,
                        uint                 flags,
                        const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount,
+                       const DatabaseFilter filters[],
+                       uint                 filterCount,
                        uint                 limit
                       )
 {
@@ -11385,8 +11385,8 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   if (filter != NULL)
   {
     error = bindFilters(&databaseStatementHandle,
-                        filterValues,
-                        filterValueCount
+                        filters,
+                        filterCount
                        );
     if (error != ERROR_NONE)
     {
@@ -11452,8 +11452,8 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseColumn          columns[],
                        uint                    columnCount,
                        const char              *filter,
-                       const DatabaseFilter    filterValues[],
-                       uint                    filterValueCount
+                       const DatabaseFilter    filters[],
+                       uint                    filterCount
 // TODO: separate order/group, offset, limit
                       )
 {
@@ -11519,8 +11519,8 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   if (filter != NULL)
   {
     error = bindFilters(databaseStatementHandle,
-                        filterValues,
-                        filterValueCount
+                        filters,
+                        filterCount
                        );
     if (error != ERROR_NONE)
     {
@@ -11564,8 +11564,8 @@ bool Database_existsValue(DatabaseHandle      *databaseHandle,
                          const char           *tableName,
                          const char           *columnName,
                          const char           *filter,
-                         const DatabaseFilter filterValues[],
-                         uint                 filterValueCount
+                         const DatabaseFilter filters[],
+                         uint                 filterCount
                         )
 {
   bool existsFlag;
@@ -11596,8 +11596,8 @@ bool Database_existsValue(DatabaseHandle      *databaseHandle,
                             DATABASE_COLUMN_KEY   (columnName)
                           ),
                           filter,
-                          filterValues,
-                          filterValueCount,
+                          filters,
+                          filterCount,
                           NULL,  // orderGroup
                           0LL,
                           1LL
@@ -11615,8 +11615,8 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     DatabaseColumn       columns[],
                     uint                 columnCount,
                     const char           *filter,
-                    const DatabaseFilter filterValues[],
-                    uint                 filterValueCount,
+                    const DatabaseFilter filters[],
+                    uint                 filterCount,
                     const char           *orderGroup,
                     uint64               offset,
                     uint64               limit
@@ -11702,8 +11702,8 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   if (filter != NULL)
   {
     error = bindFilters(&databaseStatementHandle,
-                        filterValues,
-                        filterValueCount
+                        filters,
+                        filterCount
                        );
     if (error != ERROR_NONE)
     {
@@ -11749,8 +11749,8 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
                       const char           *tableName,
                       const char           *columnName,
                       const char           *filter,
-                      const DatabaseFilter filterValues[],
-                      uint                 filterValueCount
+                      const DatabaseFilter filters[],
+                      uint                 filterCount
                      )
 {
   assert(databaseHandle != NULL);
@@ -11786,8 +11786,8 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       NULL,  // orderGroup
                       0LL,
                       1LL
@@ -11799,8 +11799,8 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                        const char           *tableName,
                        const char           *columnName,
                        const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
+                       const DatabaseFilter filters[],
+                       uint                 filterCount
                       )
 {
   assert(databaseHandle != NULL);
@@ -11836,8 +11836,8 @@ Errors Database_getIds(DatabaseHandle      *databaseHandle,
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       NULL,  // orderGroup
                       0,
                       DATABASE_UNLIMITED
@@ -11849,8 +11849,8 @@ Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
                          const char           *tableName,
                          const char           *columnName,
                          const char           *filter,
-                         const DatabaseFilter filterValues[],
-                         uint                 filterValueCount
+                         const DatabaseFilter filters[],
+                         uint                 filterCount
                         )
 {
   assert(databaseHandle != NULL);
@@ -11886,8 +11886,8 @@ Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       NULL,  // orderGroup
                       0LL,
                       1LL
@@ -11899,8 +11899,8 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                        const char           *tableName,
                        const char           *columnName,
                        const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount,
+                       const DatabaseFilter filters[],
+                       uint                 filterCount,
                        const char           *group
                       )
 {
@@ -11937,8 +11937,8 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       group,
                       0LL,
                       1LL
@@ -11951,8 +11951,8 @@ Errors Database_setInt(DatabaseHandle       *databaseHandle,
                        const char           *columnName,
                        int                  value,
                        const char           *filter,
-                       const DatabaseFilter filterValues[],
-                       uint                 filterValueCount
+                       const DatabaseFilter filters[],
+                       uint                 filterCount
                       )
 {
   assert(databaseHandle != NULL);
@@ -11970,8 +11970,8 @@ Errors Database_setInt(DatabaseHandle       *databaseHandle,
                            DATABASE_VALUE_INT(columnName, value)
                          ),
                          filter,
-                         filterValues,
-                         filterValueCount
+                         filters,
+                         filterCount
                         );
 }
 
@@ -11980,8 +11980,8 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                         const char           *tableName,
                         const char           *columnName,
                         const char           *filter,
-                        const DatabaseFilter filterValues[],
-                        uint                 filterValueCount,
+                        const DatabaseFilter filters[],
+                        uint                 filterCount,
                         const char           *group
                        )
 {
@@ -12018,8 +12018,8 @@ Errors Database_getUInt(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_UINT(columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       group,
                       0LL,
                       1LL
@@ -12032,8 +12032,8 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
                         const char           *columnName,
                         uint                 value,
                         const char           *filter,
-                        const DatabaseFilter filterValues[],
-                        uint                 filterValueCount
+                        const DatabaseFilter filters[],
+                        uint                 filterCount
                        )
 {
   assert(databaseHandle != NULL);
@@ -12051,8 +12051,8 @@ Errors Database_setUInt(DatabaseHandle       *databaseHandle,
                            DATABASE_VALUE_UINT(columnName, value)
                          ),
                          filter,
-                         filterValues,
-                         filterValueCount
+                         filters,
+                         filterCount
                         );
 }
 
@@ -12061,8 +12061,8 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                          const char           *tableName,
                          const char           *columnName,
                          const char           *filter,
-                         const DatabaseFilter filterValues[],
-                         uint                 filterValueCount,
+                         const DatabaseFilter filters[],
+                         uint                 filterCount,
                          const char           *group
                         )
 {
@@ -12099,8 +12099,8 @@ Errors Database_getInt64(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_INT64(columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       group,
                       0LL,
                       1LL
@@ -12113,8 +12113,8 @@ Errors Database_setInt64(DatabaseHandle       *databaseHandle,
                          const char           *columnName,
                          int64                value,
                          const char           *filter,
-                         const DatabaseFilter filterValues[],
-                         uint                 filterValueCount
+                         const DatabaseFilter filters[],
+                         uint                 filterCount
                         )
 {
   assert(databaseHandle != NULL);
@@ -12132,8 +12132,8 @@ Errors Database_setInt64(DatabaseHandle       *databaseHandle,
                            DATABASE_VALUE_INT64(columnName, value)
                          ),
                          filter,
-                         filterValues,
-                         filterValueCount
+                         filters,
+                         filterCount
                         );
 }
 
@@ -12142,8 +12142,8 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                           const char           *tableName,
                           const char           *columnName,
                           const char           *filter,
-                          const DatabaseFilter filterValues[],
-                          uint                 filterValueCount,
+                          const DatabaseFilter filters[],
+                          uint                 filterCount,
                           const char           *group
                          )
 {
@@ -12180,8 +12180,8 @@ Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_UINT64(columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       group,
                       0LL,
                       1LL
@@ -12194,8 +12194,8 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
                           const char           *columnName,
                           uint64               value,
                           const char           *filter,
-                          const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
                          )
 {
   assert(databaseHandle != NULL);
@@ -12213,8 +12213,8 @@ Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
                            DATABASE_VALUE_UINT64(columnName, value)
                          ),
                          filter,
-                         filterValues,
-                         filterValueCount
+                         filters,
+                         filterCount
                         );
 }
 
@@ -12223,8 +12223,8 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                           const char           *tableName,
                           const char           *columnName,
                           const char           *filter,
-                          const DatabaseFilter filterValues[],
-                          uint                 filterValueCount,
+                          const DatabaseFilter filters[],
+                          uint                 filterCount,
                           const char           *group
                          )
 {
@@ -12259,8 +12259,8 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       group,
                       0LL,
                       1LL
@@ -12273,8 +12273,8 @@ Errors Database_setDouble(DatabaseHandle       *databaseHandle,
                           const char           *columnName,
                           double               value,
                           const char           *filter,
-                          const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
                          )
 {
   assert(databaseHandle != NULL);
@@ -12292,8 +12292,8 @@ Errors Database_setDouble(DatabaseHandle       *databaseHandle,
                            DATABASE_VALUE_DOUBLE(columnName, value)
                          ),
                          filter,
-                         filterValues,
-                         filterValueCount
+                         filters,
+                         filterCount
                         );
 }
 
@@ -12302,8 +12302,8 @@ Errors Database_getString(DatabaseHandle      *databaseHandle,
                           const char           *tableName,
                           const char           *columnName,
                           const char           *filter,
-                          const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
                          )
 {
   assert(databaseHandle != NULL);
@@ -12339,8 +12339,8 @@ Errors Database_getString(DatabaseHandle      *databaseHandle,
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       NULL,  // orderGroup
                       0LL,
                       1LL
@@ -12353,8 +12353,8 @@ Errors Database_getCString(DatabaseHandle       *databaseHandle,
                            const char           *tableName,
                            const char           *columnName,
                            const char           *filter,
-                           const DatabaseFilter filterValues[],
-                           uint                 filterValueCount
+                           const DatabaseFilter filters[],
+                           uint                 filterCount
                           )
 {
   assert(databaseHandle != NULL);
@@ -12388,8 +12388,8 @@ Errors Database_getCString(DatabaseHandle       *databaseHandle,
                         DATABASE_COLUMN_KEY   (columnName)
                       ),
                       filter,
-                      filterValues,
-                      filterValueCount,
+                      filters,
+                      filterCount,
                       NULL,  // orderGroup
                       0LL,
                       1LL
@@ -12402,8 +12402,8 @@ Errors Database_setString(DatabaseHandle       *databaseHandle,
                           const char           *columnName,
                           const String         value,
                           const char           *filter,
-                          const DatabaseFilter filterValues[],
-                          uint                 filterValueCount
+                          const DatabaseFilter filters[],
+                          uint                 filterCount
                          )
 {
   assert(databaseHandle != NULL);
@@ -12421,8 +12421,8 @@ Errors Database_setString(DatabaseHandle       *databaseHandle,
                            DATABASE_VALUE_STRING(columnName, value)
                          ),
                          filter,
-                         filterValues,
-                         filterValueCount
+                         filters,
+                         filterCount
                         );
 }
 

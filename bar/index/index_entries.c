@@ -395,8 +395,11 @@ LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
                                     NULL,  // deletedCounter
                                   #endif
                                   "entryFragments",
-                                  "storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
         if (error == ERROR_NONE)
         {
@@ -2348,11 +2351,11 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       case INDEX_TYPE_UUID:
         if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-        String_appendFormat(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(uuidIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
         if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-        String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
         break;
@@ -2366,7 +2369,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-    String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+    String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
   }
 
   // get filters
