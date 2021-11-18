@@ -481,7 +481,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES
                             (
-                              DATABASE_VALUE_KEY("uuid",    toUUIDId),
+                              DATABASE_VALUE_KEY("uuidId",  toUUIDId),
                               DATABASE_VALUE_KEY("entityId",toEntityId)
                             ),
                             "id=?",
@@ -501,7 +501,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES
                             (
-                              DATABASE_VALUE_KEY("uuid",    toUUIDId),
+                              DATABASE_VALUE_KEY("uuidId",  toUUIDId),
                               DATABASE_VALUE_KEY("entityId",toEntityId)
                             ),
                             "id IN (      SELECT entryId FROM entryFragments   WHERE storageId=? \

@@ -573,7 +573,7 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
   filterString = String_newCString("1");
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   IndexCommon_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
@@ -1348,7 +1348,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   filterString = String_newCString("1");
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get filters
   string = String_new();
