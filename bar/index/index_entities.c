@@ -1434,8 +1434,11 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                                 doneFlag,
                                 deletedCounter,
                                 "skippedEntries",
-                                "entityId=%lld",
-                                entityId
+                                "entityId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(entityId)
+                                )
                                );
       if (error != ERROR_NONE)
       {
@@ -2381,7 +2384,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   orderString  = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get filters
   string = String_newCString("1");

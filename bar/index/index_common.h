@@ -536,7 +536,11 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
 * Notes  : -
 \***********************************************************************/
 
-String IndexCommon_getFTSString(String string, ConstString patternText);
+String IndexCommon_getFTSString(String         string,
+                                DatabaseHandle *databaseHandle,
+                                const char     *columnName,
+                                ConstString    patternText
+                               );
 
 /***********************************************************************\
 * Name   : IndexCommon_filterAppend

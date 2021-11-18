@@ -155,7 +155,11 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
   return string;
 }
 
-String IndexCommon_getFTSString(String string, ConstString patternText)
+String IndexCommon_getFTSString(String         string,
+                                DatabaseHandle *databaseHandle,
+                                const char     *columnName,
+                                ConstString    patternText
+                               )
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -167,6 +171,16 @@ String IndexCommon_getFTSString(String string, ConstString patternText)
 
   if (!String_isEmpty(patternText))
   {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        String_formatAppend(string,"FTS_entries MATCH '");
+        break;
+      case DATABASE_TYPE_MYSQL:
+        String_formatAppend(string,"MATCH(%s) AGAINST('",columnName);
+        break;
+    }
+
     String_initTokenizer(&stringTokenizer,
                          patternText,
                          STRING_BEGIN,
@@ -206,6 +220,16 @@ String IndexCommon_getFTSString(String string, ConstString patternText)
       }
     }
     String_doneTokenizer(&stringTokenizer);
+
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        String_formatAppend(string,"'");
+        break;
+      case DATABASE_TYPE_MYSQL:
+        String_formatAppend(string,"')");
+        break;
+    }
   }
 
   return string;
