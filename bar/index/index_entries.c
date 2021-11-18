@@ -2342,7 +2342,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   orderString      = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"entries.name",name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -2734,7 +2734,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
-#if 0
+#if 1
                                "FTS_entries \
                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
@@ -2747,7 +2747,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                   LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
                                ",
 #else
-                               "entries \
+                               "entries AS FTS_entries \
+                                  LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                   LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \

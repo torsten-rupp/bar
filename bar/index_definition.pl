@@ -24,10 +24,13 @@ use Getopt::Long;
 
 my $PREFIX_CONST_NAME = "INDEX_CONST_";
 
-my $TYPE_TABLE   = "TABLE";
-my $TYPE_INDEX   = "INDEX";
-my $TYPE_FTS     = "FTS";
-my $TYPE_TRIGGER = "TRIGGER";
+my $TYPE_TABLE    = "TABLE";
+my $TYPE_INDEX    = "INDEX";
+my $TYPE_FTS      = "FTS";
+my $TYPE_TRIGGER  = "TRIGGER";
+my $TYPE_FUNCTION = "FUNCTION";
+my $TYPE_VIEW     = "VIEW";
+
 
 my %constants;
 my $id=0;
@@ -121,6 +124,8 @@ sub processFile($$)
   my @ftsTableNames;
   my @indexNames;
   my @triggerNames;
+  my @functionNames;
+  my @viewNames;
 
   # open file
   open(HANDLE, '<', $fileName);
@@ -134,6 +139,8 @@ sub processFile($$)
   my $triggerOperationOf = "";
   my $indexName          = "";
   my $triggerName        = "";
+  my $functionName       = "";
+  my $viewName           = "";
   while ($line=<HANDLE>)
   {
     chop $line;
@@ -305,18 +312,15 @@ sub processFile($$)
 
         $definition = "";
       }
-#      elsif ($line =~ /^\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
-#      {
-#        # create anonymous trigger (multi-line)
-#        $type = $TYPE_TRIGGER;
-#
-#        $triggerType      = expandMacros($1);
-#        $triggerOperation = "";
-#        $tableName        = expandMacros($2);
-#        $triggerName      = getName("trigger");
-#
-#        $definition = "";
-#      }
+      elsif ($line =~ /^\s*CREATE\s+VIEW\s+(.*?)\s*\($/)
+      {
+        # create view (multi-line)
+        $type = $TYPE_VIEW;
+
+        $viewName = expandMacros($1);
+
+        $definition = "";
+      }
       elsif ($line =~ /^\s*END;\s*$/)
       {
         # end trigger
@@ -370,6 +374,10 @@ sub processFile($$)
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)." = INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)."_;\n";
           }
         }
+        elsif ($type eq $TYPE_VIEW)
+        {
+          die "Invald type 'view'";
+        }
         else
         {
           die "Unexpected 'END' ";
@@ -378,14 +386,14 @@ sub processFile($$)
         $type       = "";
         $definition = "";
       }
-      elsif (   (   ($type eq $TYPE_TABLE)
+      elsif (   ($line =~ /\)(.*);\s*$/)
+             && (   ($type eq $TYPE_TABLE)
                  || ($type eq $TYPE_FTS)
                  || ($type eq $TYPE_INDEX)
                 )
-             && ($line =~ /\)(.*);\s*$/)
             )
       {
-        # end table/index
+        # end table/FTS/trigger/view
         $definition = append($definition,")".$1);
 
         if    ($type eq $TYPE_TABLE)
@@ -434,10 +442,10 @@ sub processFile($$)
 
             print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
 
-            print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_  \\\n";
+            print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
             print CFILE_HANDLE "\"\\\n";
             print CFILE_HANDLE "CREATE VIRTUAL TABLE IF NOT EXISTS $tableName USING $ftsType(\\\n";
-            print CFILE_HANDLE $definition."\\\n";
+            print CFLILE_HANDLE $definition."\\\n";
             print CFILE_HANDLE "\"\n";
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
             print CFILE_HANDLE "\n";
@@ -449,9 +457,9 @@ sub processFile($$)
 
             print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
 
-            print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." \\\n";
+            print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
             print CFILE_HANDLE "\"\\\n";
-            print CFILE_HANDLE "CREATE VIRTUAL TABLE IF NOT EXISTS $tableName USING $ftsType(\\\n";
+            print CFILE_HANDLE "CREATE VIEW IF NOT EXISTS $tableName(\\\n";
             print CFILE_HANDLE $definition."\\\n";
             print CFILE_HANDLE "\"\n";
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
@@ -462,10 +470,126 @@ sub processFile($$)
         {
           die "Invalid type 'trigger'";
         }
+        elsif ($type eq $TYPE_VIEW)
+        {
+          push(@definitions, "INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE VIEW $viewName AS \\\n";
+          print CFILE_HANDLE $definition."\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)." = INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
         else
         {
           die "Unexpected ')' ";
         }
+
+        $type       = "";
+        $definition = "";
+      }
+      elsif (   ($line =~ /\)(.*);\s*$/)
+             && ($type eq $TYPE_TABLE)
+            )
+      {
+        # end table
+        $definition = append($definition,")".$1);
+
+        if    ($suffix eq "SQLITE")
+        {
+          push(@tableNames, $tableName);
+          push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE TABLE IF NOT EXISTS $tableName (\\\n";
+          print CFILE_HANDLE $definition."\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+        elsif ($suffix eq "MYSQL")
+        {
+          push(@tableNames, $tableName);
+          push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE TABLE IF NOT EXISTS $tableName (\\\n";
+          print CFILE_HANDLE $definition."\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+
+        $type       = "";
+        $definition = "";
+      }
+      elsif (   ($line =~ /\)(.*);\s*$/)
+             && ($type eq $TYPE_FTS)
+            )
+      {
+        # end FTS
+        $definition = append($definition,")".$1);
+
+        if    ($suffix eq "SQLITE")
+        {
+          push(@ftsTableNames, $tableName);
+          push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE VIRTUAL TABLE IF NOT EXISTS $tableName USING $ftsType(\\\n";
+          print CFLILE_HANDLE $definition."\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+        elsif ($suffix eq "MYSQL")
+        {
+          push(@ftsTableNames, $tableName);
+          push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE VIEW IF NOT EXISTS $tableName(\\\n";
+          print CFILE_HANDLE $definition."\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+
+        $type       = "";
+        $definition = "";
+      }
+      elsif (   ($line =~ /\)(.*);\s*$/)
+             && ($type eq $TYPE_VIEW)
+            )
+      {
+        # end view
+        push(@definitions, "INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName));
+
+        print HFILE_HANDLE "extern const char *INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName).";\n";
+
+        print CFILE_HANDLE "#define INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)."_ \\\n";
+        print CFILE_HANDLE "\"\\\n";
+        print CFILE_HANDLE "CREATE VIEW $viewName AS \\\n";
+        print CFILE_HANDLE $definition."\\\n";
+        print CFILE_HANDLE "\"\n";
+        print CFILE_HANDLE "const char *INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)." = INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)."_;\n";
+        print CFILE_HANDLE "\n";
 
         $type       = "";
         $definition = "";

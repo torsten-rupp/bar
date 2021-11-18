@@ -7675,7 +7675,7 @@ Errors Database_getTableList(StringList     *tableList,
                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                              {
                                assert(values != NULL);
-                               assert(valueCount == 1);
+                               assert(valueCount == 2);
 
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
@@ -7685,7 +7685,94 @@ Errors Database_getTableList(StringList     *tableList,
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_PLAIN("SHOW TABLES"),
+                             DATABASE_PLAIN("SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE'"),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
+                             DATABASE_FILTERS_NONE,
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        break;
+    }
+
+    return error;
+  });
+
+  return ERROR_NONE;
+}
+
+Errors Database_getViewList(StringList     *viewList,
+                            DatabaseHandle *databaseHandle
+                           )
+{
+  Errors error;
+
+  assert(viewList != NULL);
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  StringList_init(viewList);
+
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ,
+               WAIT_FOREVER,
+  {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_get(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(valueCount);
+                               UNUSED_VARIABLE(userData);
+
+                               StringList_appendCString(viewList,values[0].text.data);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "sqlite_master"
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
+                             "type='view'",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        error = Database_get(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(valueCount);
+                               UNUSED_VARIABLE(userData);
+
+                               StringList_appendCString(viewList,values[0].text.data);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_PLAIN("SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'VIEW'"),
                              DATABASE_COLUMNS
                              (
                                DATABASE_COLUMN_STRING("name")
@@ -8647,6 +8734,38 @@ Errors Database_dropTables(DatabaseHandle *databaseHandle)
     return error;
   }
   StringList_done(&tableNameList);
+
+  return ERROR_NONE;
+}
+
+Errors Database_dropViews(DatabaseHandle *databaseHandle)
+{
+  StringList         viewNameList;
+  Errors             error;
+  StringListIterator iteratorViewName;
+  String             viewName;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  StringList_init(&viewNameList);
+  error = Database_getViewList(&viewNameList,databaseHandle);
+  STRINGLIST_ITERATEX(&viewNameList,iteratorViewName,viewName,error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "DROP VIEW %s",
+                             String_cString(viewName)
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&viewNameList);
+    return error;
+  }
+  StringList_done(&viewNameList);
 
   return ERROR_NONE;
 }

@@ -602,7 +602,34 @@ LOCAL void dropTables(DatabaseHandle *databaseHandle, bool quietFlag)
   {
     if (!quietFlag)
     {
-      printInfo("FAIL\n");
+      printInfo("FAIL (error: %s)\n",Error_getText(error));
+    }
+    return;
+  }
+  if (!quietFlag) printInfo("OK\n");
+}
+
+/***********************************************************************\
+* Name   : dropViews
+* Purpose: drop all views
+* Input  : databaseHandle - database handle
+*          quietFlag      - TRUE to suppress output
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void dropViews(DatabaseHandle *databaseHandle, bool quietFlag)
+{
+  Errors error;
+
+  if (!quietFlag) printInfo("Drop views...");
+  error = Database_dropViews(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    if (!quietFlag)
+    {
+      printInfo("FAIL (error: %s)\n",Error_getText(error));
     }
     return;
   }
@@ -697,7 +724,7 @@ LOCAL void dropTriggers(DatabaseHandle *databaseHandle, bool quietFlag)
   {
     if (!quietFlag)
     {
-      printInfo("FAIL\n");
+      printInfo("FAIL (error: %s)\n",Error_getText(error));
     }
     return;
   }
@@ -705,15 +732,15 @@ LOCAL void dropTriggers(DatabaseHandle *databaseHandle, bool quietFlag)
 }
 
 /***********************************************************************\
-* Name   : createTablesIndicesTriggers
-* Purpose: create database with tables/indices/triggers
+* Name   : createTablesViewsIndicesTriggers
+* Purpose: create database with tables/views/indices/triggers
 * Input  : databaseFileName - database file name
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createTablesIndicesTriggers(DatabaseHandle *databaseHandle)
+LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
 {
   Errors     error;
   const char *indexDefinition;
@@ -724,10 +751,11 @@ LOCAL Errors createTablesIndicesTriggers(DatabaseHandle *databaseHandle)
     // drop tables/incides/triggers
     dropTriggers(databaseHandle,TRUE);
     dropIndices(databaseHandle,TRUE);
+    dropViews(databaseHandle,TRUE);
     dropTables(databaseHandle,TRUE);
   }
 
-  printInfo("Create tables/indices/triggers...");
+  printInfo("Create tables/views/indices/triggers...");
   error = ERROR_NONE;
   INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITIONS[Database_getType(databaseHandle)],
                              indexDefinition,
@@ -8440,10 +8468,11 @@ else if (stringEquals(argv[i],"--xxx"))
     printTriggerNames(&databaseHandle);
   }
 
-  // drop tables
+  // drop tables/views
   if (dropTablesFlag)
   {
     dropTables(&databaseHandle,FALSE);
+    dropViews(&databaseHandle,FALSE);
   }
 
   // drop triggeres
@@ -8458,10 +8487,10 @@ else if (stringEquals(argv[i],"--xxx"))
     dropIndices(&databaseHandle,FALSE);
   }
 
-  // create tables/indices/triggers
+  // create tables/views/indices/triggers
   if (createFlag)
   {
-    error = createTablesIndicesTriggers(&databaseHandle);
+    error = createTablesViewsIndicesTriggers(&databaseHandle);
   }
 
   // import

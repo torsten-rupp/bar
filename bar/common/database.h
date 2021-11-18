@@ -1269,6 +1269,20 @@ Errors Database_getTableList(StringList     *tableList,
                             );
 
 /***********************************************************************\
+* Name   : Database_getViewList
+* Purpose: get view list
+* Input  : viewList       - view list variable
+*          databaseHandle - database handle
+* Output : viewList - view list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getViewList(StringList     *viewList,
+                            DatabaseHandle *databaseHandle
+                           );
+
+/***********************************************************************\
 * Name   : Database_getIndexList
 * Purpose: get index list
 * Input  : indexList      - index list variable
@@ -1525,6 +1539,17 @@ Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
 \***********************************************************************/
 
 Errors Database_dropTables(DatabaseHandle *databaseHandle);
+
+/***********************************************************************\
+* Name   : Database_dropViews
+* Purpose: drop views
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_dropViews(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
 * Name   : Database_dropIndices
