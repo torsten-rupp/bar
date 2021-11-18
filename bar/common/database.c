@@ -6373,6 +6373,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                             "%s",
                             mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
                            );
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
             break;
           }
 
@@ -10358,8 +10359,16 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
              );
     #endif /* DATABASE_DEBUG_LOCK_PRINT */
 
-    // try to execute checkpoint
-    executeCheckpoint(databaseHandle);
+    // post operations
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        // try to execute checkpoint
+        executeCheckpoint(databaseHandle);
+        break;
+      case DATABASE_TYPE_MYSQL:
+        break;
+    }
   #else /* not DATABASE_SUPPORT_TRANSACTIONS */
     UNUSED_VARIABLE(databaseHandle);
   #endif /* DATABASE_SUPPORT_TRANSACTIONS */
@@ -11239,6 +11248,11 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   DatabaseStatementHandle databaseStatementHandle;
   Errors                  error;
 
+  assert(databaseHandle != NULL);
+  assert(tableName != NULL);
+  assert(values != NULL);
+  assert(valueCount > 0);
+
   // create SQL string
   sqlString = String_newCString("UPDATE ");
   if (IS_SET(flags,DATABASE_FLAG_IGNORE))
@@ -11263,7 +11277,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   {
     String_formatAppend(sqlString," WHERE %s",filter);
   }
-fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(&databaseStatementHandle,
