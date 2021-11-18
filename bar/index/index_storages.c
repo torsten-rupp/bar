@@ -1750,8 +1750,11 @@ LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
                                     NULL,  // deletedCounter
                                   #endif
                                   "entryFragments",
-                                  "storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
         if (error == ERROR_NONE)
         {
@@ -1842,7 +1845,10 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
                                     #endif
                                     "FTS_entries",
                                     "entryId IN (%S)",
-                                    entryIdsString
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_STRING(entryIdsString)
+                                    )
                                    );
           if (error == ERROR_NONE)
           {
@@ -1937,10 +1943,13 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "fileEntries",
-                                    "    entryId IN (%S) \
+                                    "    entryId IN (?) \
                                      AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1) \
                                     ",
-                                    entryIdsString
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_STRING(entryIdsString)
+                                    )
                                    );
           if (error == ERROR_NONE)
           {
@@ -1989,10 +1998,13 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "imageEntries",
-                                    "    entryId IN (%S) \
+                                    "    entryId IN (?) \
                                      AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1) \
                                     ",
-                                    entryIdsString
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_STRING(entryIdsString)
+                                    )
                                    );
           if (error == ERROR_NONE)
           {
@@ -2033,8 +2045,11 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                     NULL,  // deletedCounter
                                   #endif
                                   "directoryEntries",
-                                  "storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
         if (error == ERROR_NONE)
         {
@@ -2074,8 +2089,11 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                     NULL,  // deletedCounter
                                   #endif
                                   "linkEntries",
-                                  "storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
         if (error == ERROR_NONE)
         {
@@ -2123,10 +2141,13 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "hardlinkEntries",
-                                    "    entryId IN (%S) \
+                                    "    entryId IN (?) \
                                      AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1) \
                                     ",
-                                    entryIdsString
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_STRING(entryIdsString)
+                                    )
                                    );
           if (error == ERROR_NONE)
           {
@@ -2167,8 +2188,11 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                     NULL,  // deletedCounter
                                   #endif
                                   "specialEntries",
-                                  "storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
         if (error == ERROR_NONE)
         {
@@ -2258,8 +2282,11 @@ LOCAL Errors clearStorageEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "entries",
-                                    "id IN (%S)",
-                                    entryIdsString
+                                    "id IN (?)",
+                                    DATABASE_FILTERS
+                                    (
+                                      DATABASE_FILTER_STRING(entryIdsString)
+                                    )
                                    );
           if (error == ERROR_NONE)
           {
@@ -3147,8 +3174,11 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
                                     NULL,  // deletedCounter
                                   #endif
                                   "FTS_storages",
-                                  "storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
         if (error == ERROR_NONE)
         {
@@ -4463,7 +4493,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   filterString = String_newCString("1");
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -4760,7 +4790,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   orderString  = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   uuidIdsString    = String_new();

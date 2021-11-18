@@ -395,8 +395,11 @@ LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
                                     NULL,  // deletedCounter
                                   #endif
                                   "entryFragments",
-                                  "storageId=%lld",
-                                  storageId
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  )
                                  );
         if (error == ERROR_NONE)
         {
@@ -948,7 +951,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
                              entryIds,
                              "specialEntries",
                              "entryId",
-                             "WHERE storageId=?",
+                             "storageId=?",
                              DATABASE_FILTERS
                              (
                                DATABASE_FILTER_KEY(storageId)
@@ -1018,7 +1021,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterString    = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -2312,7 +2315,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              uint64              limit
                             )
 {
-  String ftsName;
+  String ftsMatchString;
   String uuidIdsString,entityIdsString;
   String entryIdsString;
   ulong  i;
@@ -2332,14 +2335,14 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   }
 
   // init variables
-  ftsName          = String_new();
+  ftsMatchString   = String_new();
   uuidIdsString    = String_new();
   entityIdsString  = String_new();
   entryIdsString   = String_new();
   orderString      = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"entries.name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -2348,11 +2351,11 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     {
       case INDEX_TYPE_UUID:
         if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-        String_appendFormat(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(uuidIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
         if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-        String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
         break;
@@ -2366,7 +2369,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-    String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+    String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
   }
 
   // get filters
@@ -2402,7 +2405,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
-  if (String_isEmpty(ftsName))
+  if (String_isEmpty(ftsMatchString))
   {
     // entries selected
 
@@ -2423,7 +2426,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
       if (newestOnly)
       {
-fprintf(stderr,"%s:%d: aaaaa\n",__FILE__,__LINE__);
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
                                "entriesNewest \
@@ -2517,7 +2519,6 @@ fprintf(stderr,"%s:%d: aaaaa\n",__FILE__,__LINE__);
       }
       else
       {
-fprintf(stderr,"%s:%d: 22222\n",__FILE__,__LINE__);
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
                                "entries \
@@ -2609,12 +2610,12 @@ fprintf(stderr,"%s:%d: 22222\n",__FILE__,__LINE__);
       }
     });
   }
-  else /* !String_isEmpty(ftsName) */
+  else /* !String_isEmpty(ftsMatchString) */
   {
     // names (and optional entries) selected
 
     // get additional filters
-    IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH '%S'",ftsName);
+    IndexCommon_filterAppend(filterString,TRUE,"AND",String_cString(ftsMatchString));
     if (newestOnly)
     {
       IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
@@ -2733,6 +2734,7 @@ fprintf(stderr,"%s:%d: 22222\n",__FILE__,__LINE__);
 
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
+#if 0
                                "FTS_entries \
                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
@@ -2744,6 +2746,18 @@ fprintf(stderr,"%s:%d: 22222\n",__FILE__,__LINE__);
                                   LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
                                   LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
                                ",
+#else
+                               "entries \
+                                  LEFT JOIN entities         ON entities.id=entries.entityId \
+                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
+                                  LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
+                                  LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
+                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                               ",
+#endif
                                DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
@@ -2832,7 +2846,7 @@ fprintf(stderr,"%s:%d: 22222\n",__FILE__,__LINE__);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
   #ifdef INDEX_DEBUG_LIST_INFO
@@ -2846,7 +2860,7 @@ fprintf(stderr,"%s:%d: 22222\n",__FILE__,__LINE__);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3266,7 +3280,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   filterString = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3421,7 +3435,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   filterString = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3585,7 +3599,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   filterString = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3738,7 +3752,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   filterString = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3895,7 +3909,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   filterString = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   entityIdsString = String_new();
@@ -4050,7 +4064,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   filterString = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsName,name);
+// TODO:  IndexCommon_getFTSString(ftsName,name);
 
   // get id sets
   entityIdsString = String_new();

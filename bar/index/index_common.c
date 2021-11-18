@@ -155,7 +155,11 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
   return string;
 }
 
-String IndexCommon_getFTSString(String string, ConstString patternText)
+String IndexCommon_getFTSString(String         string,
+                                DatabaseHandle *databaseHandle,
+                                const char     *columnName,
+                                ConstString    patternText
+                               )
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -167,6 +171,16 @@ String IndexCommon_getFTSString(String string, ConstString patternText)
 
   if (!String_isEmpty(patternText))
   {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        String_formatAppend(string,"FTS_entries MATCH '");
+        break;
+      case DATABASE_TYPE_MYSQL:
+        String_formatAppend(string,"MATCH(%s) AGAINST('",columnName);
+        break;
+    }
+
     String_initTokenizer(&stringTokenizer,
                          patternText,
                          STRING_BEGIN,
@@ -206,6 +220,16 @@ String IndexCommon_getFTSString(String string, ConstString patternText)
       }
     }
     String_doneTokenizer(&stringTokenizer);
+
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        String_formatAppend(string,"'");
+        break;
+      case DATABASE_TYPE_MYSQL:
+        String_formatAppend(string,"')");
+        break;
+    }
   }
 
   return string;
@@ -356,30 +380,21 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
   return ERROR_NONE;
 }
 
-Errors IndexCommon_purge(IndexHandle *indexHandle,
-                         bool        *doneFlag,
-                         ulong       *deletedCounter,
-                         const char  *tableName,
-                         const char  *filter,
-                         ...
+Errors IndexCommon_purge(IndexHandle          *indexHandle,
+                         bool                 *doneFlag,
+                         ulong                *deletedCounter,
+                         const char           *tableName,
+                         const char           *filter,
+                         const DatabaseFilter filters[],
+                         uint                 filterCount
                         )
 {
   #ifdef INDEX_DEBUG_PURGE
     uint64 t0;
   #endif
 
-  String  filterString;
-  va_list arguments;
-  Errors  error;
-  ulong   changedRowCount;
-
-  // init variables
-  filterString = String_new();
-
-  // get filter
-  va_start(arguments,filter);
-  String_vformat(filterString,filter,arguments);
-  va_end(arguments);
+  Errors error;
+  ulong  changedRowCount;
 
 //fprintf(stderr,"%s, %d: purge (%d): %s %s\n",__FILE__,__LINE__,IndexCommon_isIndexInUse(),tableName,String_cString(filterString));
   error = ERROR_NONE;
@@ -389,18 +404,15 @@ Errors IndexCommon_purge(IndexHandle *indexHandle,
     #ifdef INDEX_DEBUG_PURGE
       t0 = Misc_getTimestamp();
     #endif
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             &changedRowCount,
-                             DATABASE_COLUMN_TYPES(),
-                             "DELETE FROM %s \
-                              WHERE %S \
-                              LIMIT %u \
-                             ",
-                             tableName,
-                             filterString,
-                             SINGLE_STEP_PURGE_LIMIT
-                            );
+    error = Database_delete(&indexHandle->databaseHandle,
+                            &changedRowCount,
+                            tableName,
+                            DATABASE_FLAG_NONE,
+                            filter,
+                            filters,
+                            filterCount,
+                            SINGLE_STEP_PURGE_LIMIT
+                           );
     if (error == ERROR_NONE)
     {
       if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
@@ -440,9 +452,6 @@ Errors IndexCommon_purge(IndexHandle *indexHandle,
     }
 //fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,*doneFlag,IndexCommon_isIndexInUse());
   }
-
-  // free resources
-  String_delete(filterString);
 
   return error;
 }
