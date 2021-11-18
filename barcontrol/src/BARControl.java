@@ -1779,7 +1779,7 @@ public class BARControl
     new Option("--index-database-refresh",       null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
     new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName",""),
     new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName",""),
-    new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
+    new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName",""),
     new Option("--index-database-entries-newest",null,Options.Types.BOOLEAN,    "indexDatabaseEntriesNewestOnly"),
     new Option("--index-database-history-list",  null,Options.Types.BOOLEAN,    "indexDatabaseHistoryList"),
 
@@ -5369,11 +5369,10 @@ if (false) {
                                              break;
                                            case HARDLINK:
                                              {
-                                               String fileName        = valueMap.getString("name"          );
-                                               long   size            = valueMap.getLong  ("size"          );
-                                               long   dateTime        = valueMap.getLong  ("dateTime"      );
-                                               long   fragmentOffset  = valueMap.getLong  ("fragmentOffset");
-                                               long   fragmentSize    = valueMap.getLong  ("fragmentSize"  );
+                                               String fileName        = valueMap.getString("name"         );
+                                               long   size            = valueMap.getLong  ("size"         );
+                                               long   dateTime        = valueMap.getLong  ("dateTime"     );
+                                               long   fragmentCount   = valueMap.getLong  ("fragmentCount");
 
                                                System.out.println(String.format("%8d %-8s %14d %-19s %s",
                                                                                 getDatabaseId(entryId),

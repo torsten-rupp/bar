@@ -473,7 +473,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                (void)Index_unlockEntity(newIndexHandle,entityId);
 
-                               return ERROR_NONE;
+                               return error;
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
                              CALLBACK_(NULL,NULL),  // progress
@@ -588,6 +588,10 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
   }
   String_delete(name2);
   String_delete(name1);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }

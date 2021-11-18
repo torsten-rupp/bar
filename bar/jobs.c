@@ -47,7 +47,7 @@
 #include "entrylists.h"
 #include "archive.h"
 #include "storage.h"
-#include "index.h"
+#include "index/index.h"
 #include "continuous.h"
 #include "server_io.h"
 #include "connector.h"

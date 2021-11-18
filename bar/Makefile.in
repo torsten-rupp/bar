@@ -425,7 +425,14 @@ BAR_SOURCES                 = bar.c \
                               deltasourcelists.c \
                               crypt.c \
                               storage.c \
-                              index.c \
+                              index/index.c \
+                              index/index_uuids.c \
+                              index/index_entities.c \
+                              index/index_entries.c \
+                              index/index_storages.c \
+                              index/index_history.c \
+                              index/index_assign.c \
+                              index/index_common.c \
                               jobs.c \
                               continuous.c \
                               server.c \
@@ -451,14 +458,14 @@ BAR_SOURCES_OTHER           = forward.h \
                               storage_device.c \
                               storage_master.c \
                               \
-                              index_version1.c \
-                              index_version2.c \
-                              index_version3.c \
-                              index_version4.c \
-                              index_version5.c \
-                              index_version6.c \
-                              index_version7.c \
-                              index_current.c \
+                              index/index_version1.c \
+                              index/index_version2.c \
+                              index/index_version3.c \
+                              index/index_version4.c \
+                              index/index_version5.c \
+                              index/index_version6.c \
+                              index/index_version7.c \
+                              index/index_current.c \
                               \
                               archive_format.pl \
                               archive_format.def \
@@ -597,6 +604,7 @@ BAR_INDEX_SOURCES           = bar-index.c \
 
 BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
                               index_definition.def \
+                              index/index_current.c \
 
 BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/cmdoptions.c \

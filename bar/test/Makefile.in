@@ -1958,6 +1958,7 @@ test_smoke:
           test_crypt \
           test_asymmetric_crypt \
           test_split \
+          test_index \
           test_arguments \
           test_config \
           test_misc

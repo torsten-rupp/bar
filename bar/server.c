@@ -45,7 +45,7 @@
 #include "crypt.h"
 #include "archive.h"
 #include "storage.h"
-#include "index.h"
+#include "index/index.h"
 #include "continuous.h"
 #include "jobs.h"
 #include "server_io.h"
@@ -1773,6 +1773,7 @@ fprintf(stderr,"%s:%d: %d %d %d : %d %d : %x\n",__FILE__,__LINE__,scheduleNode->
                   month = 12;
                 }
               }
+// TODO: remove
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 if (executeScheduleNodeFull != NULL)
 {
@@ -3734,6 +3735,7 @@ LOCAL void autoIndexThreadCode(void)
                                        assert(fileInfo != NULL);
 
                                        UNUSED_VARIABLE(userData);
+
 
                                        error = Storage_parseName(&storageSpecifier,storageName);
                                        if (error == ERROR_NONE)
@@ -14460,40 +14462,40 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors error;
-  ulong  totalEntityCount;
-  ulong  totalDeletedEntityCount;
+  uint   totalEntityCount;
+  uint   totalDeletedEntityCount;
 
-  ulong  totalEntryCount;
+  uint   totalEntryCount;
   uint64 totalEntrySize;
   uint64 totalEntryContentSize;
-  ulong  totalFileCount;
+  uint   totalFileCount;
   uint64 totalFileSize;
-  ulong  totalImageCount;
+  uint   totalImageCount;
   uint64 totalImageSize;
-  ulong  totalDirectoryCount;
-  ulong  totalLinkCount;
-  ulong  totalHardlinkCount;
+  uint   totalDirectoryCount;
+  uint   totalLinkCount;
+  uint   totalHardlinkCount;
   uint64 totalHardlinkSize;
-  ulong  totalSpecialCount;
+  uint   totalSpecialCount;
 
-  ulong  totalEntryCountNewest;
+  uint   totalEntryCountNewest;
   uint64 totalEntrySizeNewest;
   uint64 totalEntryContentSizeNewest;
-  ulong  totalFileCountNewest;
+  uint   totalFileCountNewest;
   uint64 totalFileSizeNewest;
-  ulong  totalImageCountNewest;
+  uint   totalImageCountNewest;
   uint64 totalImageSizeNewest;
-  ulong  totalDirectoryCountNewest;
-  ulong  totalLinkCountNewest;
-  ulong  totalHardlinkCountNewest;
+  uint   totalDirectoryCountNewest;
+  uint   totalLinkCountNewest;
+  uint   totalHardlinkCountNewest;
   uint64 totalHardlinkSizeNewest;
-  ulong  totalSpecialCountNewest;
+  uint   totalSpecialCountNewest;
 
-  ulong  totalSkippedEntryCount;
+  uint   totalSkippedEntryCount;
 
-  ulong  totalStorageCount;
+  uint   totalStorageCount;
   uint64 totalStorageSize;
-  ulong  totalDeletedStorageCount;
+  uint   totalDeletedStorageCount;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14553,40 +14555,40 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                      "totalEntityCount=%lu \
-                       totalDeletedEntityCount=%lu \
+                      "totalEntityCount=%u \
+                       totalDeletedEntityCount=%u \
                        \
-                       totalEntryCount=%lu \
+                       totalEntryCount=%u \
                        totalEntrySize=%llu \
                        totalEntryContentSize=%llu \
-                       totalFileCount=%lu \
+                       totalFileCount=%u \
                        totalFileSize=%llu \
-                       totalImageCount=%lu \
+                       totalImageCount=%u \
                        totalImageSize=%llu \
-                       totalDirectoryCount=%lu \
-                       totalLinkCount=%lu \
-                       totalHardlinkCount=%lu \
+                       totalDirectoryCount=%u \
+                       totalLinkCount=%u \
+                       totalHardlinkCount=%u \
                        totalHardlinkSize=%llu \
-                       totalSpecialCount=%lu \
+                       totalSpecialCount=%u \
                        \
-                       totalEntryCountNewest=%lu \
+                       totalEntryCountNewest=%u \
                        totalEntrySizeNewest=%llu \
                        totalEntryContentSizeNewest=%llu \
-                       totalFileCountNewest=%lu \
+                       totalFileCountNewest=%u \
                        totalFileSizeNewest=%llu \
-                       totalImageCountNewest=%lu \
+                       totalImageCountNewest=%u \
                        totalImageSizeNewest=%llu \
-                       totalDirectoryCountNewest=%lu \
-                       totalLinkCountNewest=%lu \
-                       totalHardlinkCountNewest=%lu \
+                       totalDirectoryCountNewest=%u \
+                       totalLinkCountNewest=%u \
+                       totalHardlinkCountNewest=%u \
                        totalHardlinkSizeNewest=%llu \
-                       totalSpecialCountNewest=%lu \
+                       totalSpecialCountNewest=%u \
                        \
-                       totalSkippedEntryCount=%lu \
+                       totalSkippedEntryCount=%u \
                        \
-                       totalStorageCount=%lu \
+                       totalStorageCount=%u \
                        totalStorageSize=%llu \
-                       totalDeletedStorageCount=%lu \
+                       totalDeletedStorageCount=%u \
                       ",
                       totalEntityCount,
                       totalDeletedEntityCount,

@@ -33,7 +33,7 @@
 #include "deltasources.h"
 #include "archive_format.h"
 #include "storage.h"
-#include "index.h"
+#include "index/index.h"
 
 /****************** Conditional compilation switches *******************/
 

@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <semaphore.h>
 #include <assert.h>
 
@@ -60,6 +61,7 @@ typedef struct
   DatabaseTypes type;
   union
   {
+    intptr_t p;
     struct
     {
       String fileName;
@@ -103,10 +105,14 @@ typedef enum
 #define DATABASE_MAX_TABLE_COLUMNS      64
 #define DATABASE_MAX_COLUMN_NAME_LENGTH 63
 
+#define DATABASE_UNLIMITED 9223372036854775807LL
+
 // database datatypes
 typedef enum
 {
   DATABASE_DATATYPE_NONE,
+
+  DATABASE_DATATYPE,
 
   DATABASE_DATATYPE_PRIMARY_KEY,
   DATABASE_DATATYPE_KEY,
@@ -114,16 +120,22 @@ typedef enum
   DATABASE_DATATYPE_BOOL,
   DATABASE_DATATYPE_INT,
   DATABASE_DATATYPE_INT64,
+  DATABASE_DATATYPE_UINT,
+  DATABASE_DATATYPE_UINT64,
   DATABASE_DATATYPE_DOUBLE,
+//  DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
   DATABASE_DATATYPE_DATETIME,
-  DATABASE_DATATYPE_TEXT,
+  DATABASE_DATATYPE_STRING,
+  DATABASE_DATATYPE_CSTRING,
   DATABASE_DATATYPE_BLOB,
 
   DATABASE_DATATYPE_UNKNOWN
 } DatabaseDataTypes;
 
-#define DATABASE_FLAG_NONE   0
-#define DATABASE_FLAG_IGNORE (1 << 0)
+#define DATABASE_FLAG_NONE    0
+#define DATABASE_FLAG_IGNORE  (1 << 0)
+#define DATABASE_FLAG_REPLACE (1 << 1)
+#define DATABASE_FLAG_PLAIN   (1 << 2)
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -420,20 +432,34 @@ typedef struct DatabaseHandle
 
 typedef char DatabaseColumnName[DATABASE_MAX_COLUMN_NAME_LENGTH+1];
 
+// databaes column
+typedef struct
+{
+  const char        *name;
+  const char        *alias;
+  DatabaseDataTypes type;
+} DatabaseColumn;
+
 // database value
 typedef struct
 {
-const char *name;
+  const char        *name;   // column name
+  const char        *value;  // value, e. g. <column name>+?
   DatabaseDataTypes type;
   union
   {
-    uint64 id;
-    bool   b;
-    int64  i;
-    uint64 u;
-    double d;
-    uint64 dateTime;
-    char   *s;
+    intptr_t p;
+
+    uint64   id;
+    bool     b;
+    int      i;
+    int64    i64;
+    uint32   u;
+    uint64   u64;
+    double   d;
+    uint64   dateTime;
+    String   string;
+    char     *s;
 // TODO: use String?
     struct
     {
@@ -454,31 +480,93 @@ const char *name;
   };
 } DatabaseValue;
 
+// database filter
+typedef struct
+{
+  DatabaseDataTypes type;
+  union
+  {
+    intptr_t p;
+
+    uint64   id;
+    bool     b;
+    int      i;
+    int64    i64;
+    uint32   u;
+    uint64   u64;
+    double   d;
+    uint64   dateTime;
+    String   string;
+    char     *s;
+// TODO: use String?
+    struct
+    {
+      char  *data;
+      ulong length;
+    } text;
+    struct
+    {
+      void  *data;
+      ulong length;
+    } blob;
+// TODO: remove
+    struct
+    {
+      void  *p;
+      ulong length;
+    } data;
+  };
+} DatabaseFilter;
+
 // database statement handle
 typedef struct
 {
-  DatabaseHandle *databaseHandle;
+  DatabaseHandle    *databaseHandle;
   union
   {
     struct
     {
-      sqlite3_stmt *statementHandle;
+      sqlite3_stmt      *statementHandle;
+      DatabaseValue     **bind;
     }
     sqlite;
     struct
     {
-      MYSQL_STMT    *statementHandle;
-      MYSQL_BIND    *bind;
-      MYSQL_TIME    *dateTime;
+      MYSQL_STMT        *statementHandle;
+DatabaseDataTypes *dataTypes;
+      struct
+      {
+        MYSQL_BIND      *bind;
+        MYSQL_TIME      *time;
+      }                 values;
+      struct
+      {
+        MYSQL_BIND      *bind;
+        MYSQL_TIME      *time;
+      }                 results;
+      bool xxxexecutedFlag;
     }
     mysql;
   };
-  uint          valueIndex;
 
-  DatabaseValue *values;
-  uint          valueCount;
+//  const DatabaseValue **values;
+  uint                valueCount;
+  uint                valueIndex;
+
+#if 0
+  const DatabaseFilter **filters;
+  uint                filterCount;
+  uint                filterIndex;
+#endif
+
+  DatabaseValue       *results;
+  uint                resultCount;
+  uint                resultIndex;
+
   uint          *valueMap;
   uint          valueMapCount;
+
+//  DatabaseValue *results;
   #ifndef NDEBUG
     String sqlString;
     uint64 t0,t1;
@@ -505,7 +593,7 @@ typedef struct
   const DatabaseColumnName *names;
   DatabaseValue            *values;
   uint                     count;
-} DatabaseColumns;
+} DatabaseColumnInfo;
 
 /***********************************************************************\
 * Name   : DatabaseCopyTableFunction
@@ -518,8 +606,8 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*DatabaseCopyTableFunction)(DatabaseColumns *fromColumns,
-                                           DatabaseColumns *toColumns,
+typedef Errors(*DatabaseCopyTableFunction)(DatabaseColumnInfo *fromColumns,
+                                           DatabaseColumnInfo *toColumns,
                                            void            *userData
                                           );
 
@@ -549,14 +637,264 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 
 /****************************** Macros *********************************/
 
+#define DATABASE_PLAIN(sqlCommand) \
+  (const char*[]){sqlCommand}, \
+  1, \
+  DATABASE_FLAG_PLAIN
+
+#define DATABASE_TABLES(...) \
+  (const char*[]){__VA_ARGS__}, \
+  (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/1
+
+
 #define __DATABASE_COLUMN_TYPE(type) DATABASE_DATATYPE_ ## type,
 #define DATABASE_COLUMN_TYPES(...) \
   (DatabaseDataTypes[]){_ITERATOR_EVAL(_ITERATOR_MAP(__DATABASE_COLUMN_TYPE, __VA_ARGS__))}, \
   _ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0
 
-#define DATABASE_VALUES(...) \
-  (DatabaseValue[]){ __VA_ARGS__ }, \
+// column macros
+#define DATABASE_COLUMNS(...) \
+  (DatabaseColumn[]){__VA_ARGS__}, \
   (_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/3
+
+// Note: NULL (expand to "((void *)0)") cannot be used with _ITERATOR_MAP_COUNT because of the space and braces; use 0 instead
+#define DATABASE_COLUMN_KEY(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_KEY \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_KEY \
+    ) \
+  }
+#define DATABASE_COLUMN_BOOL(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_BOOL \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_BOOL \
+    ) \
+  }
+#define DATABASE_COLUMN_INT(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_INT \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_INT \
+    ) \
+  }
+#define DATABASE_COLUMN_INT64(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_INT64 \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_INT64 \
+    ) \
+  }
+#define DATABASE_COLUMN_UINT(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_UINT \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_UINT \
+    ) \
+  }
+#define DATABASE_COLUMN_UINT64(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_UINT64 \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_UINT64 \
+    ) \
+  }
+#define DATABASE_COLUMN_ENUM(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_UINT \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_UINT \
+    ) \
+  }
+#define DATABASE_COLUMN_DATETIME(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_DATETIME \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_DATETIME \
+    ) \
+  }
+#define DATABASE_COLUMN_STRING(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_STRING \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_STRING \
+    ) \
+  }
+#define DATABASE_COLUMN_CSTRING(name,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      __VA_ARGS__, DATABASE_DATATYPE_CSTRING \
+    ) \
+    ( \
+      0, DATABASE_DATATYPE_CSTRING \
+    ) \
+  }
+
+// value macros
+#define DATABASE_VALUES(...) \
+  (DatabaseValue[]){__VA_ARGS__}, \
+  ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/4)
+
+#define DATABASE_VALUE(name,value) \
+  { name, value, DATABASE_DATATYPE, { (intptr_t)(0) } }
+#define DATABASE_VALUE_KEY(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_KEY, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_KEY, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_BOOL(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_BOOL, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_BOOL, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_INT(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_INT, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_INT, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_UINT(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_UINT, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_UINT, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_INT64(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_INT64, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_INT64, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_UINT64(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_UINT64, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_UINT64, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_DOUBLE(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_DOUBLE, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_DOUBLE, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_ENUM(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_UINT, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_UINT, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_DATETIME(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_DATETIME, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_DATETIME, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_STRING(name,data,...) \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_STRING, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_STRING, { (intptr_t)(data) } \
+    ) \
+  }
+#define DATABASE_VALUE_CSTRING(name,data,...)  \
+  { name, \
+    _ITERATOR_IF_ELSE(_ITERATOR_HAS_ARGS(__VA_ARGS__)) \
+    ( \
+      data, DATABASE_DATATYPE_CSTRING, { (intptr_t)(__VA_ARGS__) } \
+    ) \
+    ( \
+      "?", DATABASE_DATATYPE_CSTRING, { (intptr_t)(data) } \
+    ) \
+  }
+
+#define DATABASE_VALUES_NONE (DatabaseValue*)NULL,0
+
+// filter macros
+#define DATABASE_FILTERS(...) \
+  (DatabaseFilter[]){__VA_ARGS__}, \
+  ((_ITERATOR_EVAL(_ITERATOR_MAP_COUNT(__VA_ARGS__)) 0)/2)
+
+#define DATABASE_FILTER_KEY(value)      { DATABASE_DATATYPE_KEY,      { (intptr_t)(value) } }
+#define DATABASE_FILTER_BOOL(value)     { DATABASE_DATATYPE_BOOL,     { (intptr_t)((value) == true) } }
+#define DATABASE_FILTER_INT(value)      { DATABASE_DATATYPE_INT,      { (intptr_t)(value) } }
+#define DATABASE_FILTER_UINT(value)     { DATABASE_DATATYPE_UINT,     { (intptr_t)(value) } }
+#define DATABASE_FILTER_INT64(value)    { DATABASE_DATATYPE_INT64,    { (intptr_t)(value) } }
+#define DATABASE_FILTER_UINT64(value)   { DATABASE_DATATYPE_UINT64,   { (intptr_t)(value) } }
+#define DATABASE_FILTER_DATETIME(value) { DATABASE_DATATYPE_DATETIME, { (intptr_t)(value) } }
+#define DATABASE_FILTER_STRING(value)   { DATABASE_DATATYPE_STRING,   { (intptr_t)(void*)(value) } }
+#define DATABASE_FILTER_CSTRING(value)  { DATABASE_DATATYPE_CSTRING,  { (intptr_t)(value) } }
+
+#define DATABASE_FILTERS_NONE (const char*)NULL,(DatabaseFilter*)NULL,0
 
 /***********************************************************************\
 * Name   : DATABASE_LOCKED_DO
@@ -1280,16 +1618,16 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
 * Notes  : -
 \***********************************************************************/
 
-DatabaseId Database_getTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId defaultValue);
-int Database_getTableColumnInt(DatabaseColumns *columns, const char *columnName, int defaultValue);
-uint Database_getTableColumnUInt(DatabaseColumns *columns, const char *columnName, uint defaultValue);
-int64 Database_getTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 defaultValue);
-uint64 Database_getTableColumnUInt64(DatabaseColumns *columns, const char *columnName, uint64 defaultValue);
-double Database_getTableColumnDouble(DatabaseColumns *columns, const char *columnName, double defaultValue);
-uint64 Database_getTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 defaultValue);
-String Database_getTableColumnString(DatabaseColumns *columns, const char *columnName, String value, const char *defaultValue);
-const char *Database_getTableColumnCString(DatabaseColumns *columns, const char *columnName, const char *defaultValue);
-void Database_getTableColumnBlob(DatabaseColumns *columns, const char *columnName, void *data, uint length);
+DatabaseId Database_getTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId defaultValue);
+int Database_getTableColumnInt(DatabaseColumnInfo *columnInfo, const char *columnName, int defaultValue);
+uint Database_getTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *columnName, uint defaultValue);
+int64 Database_getTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 defaultValue);
+uint64 Database_getTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue);
+double Database_getTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double defaultValue);
+uint64 Database_getTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue);
+String Database_getTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, String value, const char *defaultValue);
+const char *Database_getTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *defaultValue);
+void Database_getTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, void *data, uint length);
 
 /***********************************************************************\
 * Name   : Database_setTableColumn*
@@ -1302,14 +1640,14 @@ void Database_getTableColumnBlob(DatabaseColumns *columns, const char *columnNam
 * Notes  : -
 \***********************************************************************/
 
-bool Database_setTableColumnId(DatabaseColumns *columns, const char *columnName, DatabaseId value);
-bool Database_setTableColumnBool(DatabaseColumns *columns, const char *columnName, bool value);
-bool Database_setTableColumnInt64(DatabaseColumns *columns, const char *columnName, int64 value);
-bool Database_setTableColumnDouble(DatabaseColumns *columns, const char *columnName, double value);
-bool Database_setTableColumnDateTime(DatabaseColumns *columns, const char *columnName, uint64 value);
-bool Database_setTableColumnString(DatabaseColumns *columns, const char *columnName, ConstString value);
-bool Database_setTableColumnCString(DatabaseColumns *columns, const char *columnName, const char *value);
-bool Database_setTableColumnBlob(DatabaseColumns *columns, const char *columnName, const void *data, uint length);
+bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId value);
+bool Database_setTableColumnBool(DatabaseColumnInfo *columnInfo, const char *columnName, bool value);
+bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 value);
+bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double value);
+bool Database_setTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value);
+bool Database_setTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, ConstString value);
+bool Database_setTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *value);
+bool Database_setTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, const void *data, uint length);
 
 /***********************************************************************\
 * Name   : Database_addColumn
@@ -1477,77 +1815,6 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
                        );
 
 /***********************************************************************\
-* Name   : Database_insert
-* Purpose: insert row into database table
-* Input  : databaseHandle   - database handle
-*          changedRowCount  - row count variable (can be NULL)
-*          tableName        - table name,
-*          flags            - insert flags; see DATABASE_FLAGS_...
-*          filter           - SQL filter expression
-*          filterValues     - filter values
-*          filterValueCount - filter values count
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-Errors Database_insert(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       DatabaseValue  values[],
-                       uint           valueCount
-                      );
-
-/***********************************************************************\
-* Name   : Database_insert
-* Purpose: insert row into database table
-* Input  : databaseHandle  - database handle
-*          changedRowCount - row count variable (can be NULL)
-*          flags           - insert flags; see DATABASE_FLAGS_...
-*          values          - values to insert
-*          valueCount      - value count
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-Errors Database_update(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       DatabaseValue  values[],
-                       uint           valueCount,
-                       const char     *filter,
-                       DatabaseValue  filterValues[],
-                       uint           filterCalueCount
-                      );
-
-/***********************************************************************\
-* Name   : Database_delete
-* Purpose: delete rows from database table
-* Input  : databaseHandle   - database handle
-*          changedRowCount  - row count variable (can be NULL)
-*          tableName        - table name,
-*          flags            - insert flags; see DATABASE_FLAGS_...
-*          filter           - SQL filter expression
-*          filterValues     - filter values
-*          filterValueCount - filter values count
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-Errors Database_delete(DatabaseHandle *databaseHandle,
-                       ulong          *changedRowCount,
-                       const char     *tableName,
-                       uint           flags,
-                       const char     *filter,
-                       DatabaseValue  filterValues[],
-                       uint           filterValueCount
-                      );
-
-/***********************************************************************\
 * Name   : Database_prepare
 * Purpose: prepare database query
 * Input  : databaseHandle - database handle
@@ -1560,48 +1827,221 @@ Errors Database_delete(DatabaseHandle *databaseHandle,
 * Notes  : Database is locked until Database_finalize() is called
 \***********************************************************************/
 
+#if 0
 #ifdef NDEBUG
   Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
                           DatabaseHandle          *databaseHandle,
-                          const DatabaseDataTypes *columnTypes,
-                          uint                    columnTypeCount,
-                          const char              *command,
-                          ...
+                          const DatabaseDataTypes *resultDataTypes,
+                          uint                    resultDataTypeCount,
+                          const char              *sqlCommand,
+                          const DatabaseValue     values[],
+                          uint                    nameValueCount,
+                          const DatabaseFilter    filters[],
+                          uint                    filterCount
                          );
 #else /* not NDEBUG */
   Errors __Database_prepare(const char              *__fileName__,
                             ulong                   __lineNb__,
                             DatabaseStatementHandle *databaseStatementHandle,
                             DatabaseHandle          *databaseHandle,
-                            const DatabaseDataTypes *columnTypes,
-                            uint                    columnTypeCount,
-                            const char              *command,
-                            ...
+                            const DatabaseDataTypes *resultDataTypes,
+                            uint                    resultDataTypeCount,
+                            const char              *sqlCommand,
+                            const DatabaseValue     values[],
+                            uint                    nameValueCount,
+                            const DatabaseFilter    filters[],
+                            uint                    filterCount
                            );
 #endif /* NDEBUG */
+#else
+#ifdef NDEBUG
+  Errors Database_prepare(DatabaseStatementHandle *databaseStatementHandle,
+                          DatabaseHandle          *databaseHandle,
+                          const DatabaseColumn    *columns,
+                          uint                    columnCount,
+                          const char              *sqlCommand,
+                          const DatabaseValue     values[],
+                          uint                    nameValueCount,
+                          const DatabaseFilter    filters[],
+                          uint                    filterCount
+                         );
+#else /* not NDEBUG */
+  Errors __Database_prepare(const char              *__fileName__,
+                            ulong                   __lineNb__,
+                            DatabaseStatementHandle *databaseStatementHandle,
+                            DatabaseHandle          *databaseHandle,
+                            const DatabaseColumn    *columns,
+                            uint                    columnCount,
+                            const char              *sqlCommand,
+                            const DatabaseValue     values[],
+                            uint                    nameValueCount,
+                            const DatabaseFilter    filters[],
+                            uint                    filterCount
+                           );
+#endif /* NDEBUG */
+#endif
 
 /***********************************************************************\
 * Name   : Database_getNextRow
 * Purpose: get next row from query result
 * Input  : databaseStatementHandle - database statment handle
-*          format - format string
-* Output : ... - variables
+* Output : ... - values
 * Return : TRUE if row read, FALSE if not more rows
-* Notes  : Support format types:
-*            %b              - bool
-*            %[<n>][(ll|l)\d - int
-*            %[<n>][(ll|l)\u - unsigned int
-*            %[<n>][l\f      - float/double
-*            %c              - char
-*            %[<n>]s         - char*
-*            %S              - string
-*            %p              - pointer
+* Notes  : -
 \***********************************************************************/
 
 bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                         const char              *format,
                          ...
                         );
+
+/***********************************************************************\
+* Name   : Database_insert
+* Purpose: insert row into database table
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAG_...
+*          values           - values to insert
+*          valueCount       - value count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_insert(DatabaseHandle      *databaseHandle,
+                       ulong               *changedRowCount,
+                       const char          *tableName,
+                       uint                flags,
+                       const DatabaseValue values[],
+                       uint                valueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_insertSelect
+* Purpose: insert row into database table from seledt
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAG__...
+*          values           - values to insert
+*          valueCount       - value count
+*          tableNames       - select table names
+*          tableNameCount   - select table names count
+*          columns          - select columns
+*          columnCount      - select columns couont
+*          filter           - SQL filter expression
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+*          orderGroup       - order/group SQL string or NULL
+*          offset           - offset or 0
+*          limit            - limit or 0
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
+                             ulong                *changedRowCount,
+                             const char           *tableName,
+                             uint                 flags,
+                             const DatabaseValue  values[],
+                             uint                 valueCount,
+                             const char           *tableNames[],
+                             uint                 tableNameCount,
+                             DatabaseColumn       columns[],
+                             uint                 columnCount,
+                             const char           *filter,
+                             const DatabaseFilter filterValues[],
+                             uint                 filterValueCount,
+                             const char           *orderGroup,
+                             uint64               offset,
+                             uint64               limit
+                            );
+
+/***********************************************************************\
+* Name   : Database_update
+* Purpose: update row in database table
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          flags            - insert flags; see DATABASE_FLAG__...
+*          values           - values to insert
+*          valueCount       - value count
+*          filter           - SQL filter
+*          filterValues     - values to insert
+*          filterValueCount - value count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_update(DatabaseHandle       *databaseHandle,
+                       ulong                *changedRowCount,
+                       const char           *tableName,
+                       uint                 flags,
+                       const DatabaseValue  values[],
+                       uint                 valueCount,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_delete
+* Purpose: delete rows from database table
+* Input  : databaseHandle   - database handle
+*          changedRowCount  - row count variable (can be NULL)
+*          tableName        - table name,
+*          flags            - insert flags; see DATABASE_FLAG__...
+*          filter           - SQL filter expression
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+*          limit            - delete limit (if supported) or 0
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_delete(DatabaseHandle       *databaseHandle,
+                       ulong                *changedRowCount,
+                       const char           *tableName,
+                       uint                 flags,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount,
+                       uint                 limit
+                      );
+
+/***********************************************************************\
+* Name   : Database_select
+* Purpose: select rows in database table
+* Input  : databaseHandle      - database handle
+*          databaseRowFunction - callback function for row data (can be
+*                                NULL)
+*          databaseRowUserData - user data for callback function
+*          changedRowCount     - number of changd rows (can be NULL)
+*          tableName           - table name,
+*          flags               - insert flags; see DATABASE_FLAG__...
+*          columns             - select columns
+*          columnCount         - select columns couont
+*          filter              - SQL filter expression
+*          filterValues        - filter values
+*          filterValueCount    - filter values count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
+                       DatabaseHandle          *databaseHandle,
+                       const char              *tables,
+                       uint                    flags,
+// TODO: select value datatype: name, type
+                       DatabaseColumn          columns[],
+                       uint                    columnCount,
+                       const char              *filter,
+                       const DatabaseFilter    filterValues[],
+                       uint                    filterValueCount
+                      );
 
 /***********************************************************************\
 * Name   : Database_finalize
@@ -1622,308 +2062,453 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Database_exists
-* Purpose: check if value exists database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Name   : Database_existsValue
+* Purpose: check if value exists in database table
+* Input  : databaseHandle    - database handle
+*          tableName         - table name
+*          columnName        - column name
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
 * Output : -
 * Return : TRUE iff value exists
-* Notes  : -
+* Notes  : use DATABASE_FILTERS() for filters
 \***********************************************************************/
 
-bool Database_existsValue(DatabaseHandle *databaseHandle,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
-                         );
+bool Database_existsValue(DatabaseHandle      *databaseHandle,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        );
 
 /***********************************************************************\
-* Name   : Database_getId, Database_vgetId
-* Purpose: get database id of value from database table
+* Name   : Database_get
+* Purpose: get values from database table
 * Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+*          databaseRowFunction
+*          databaseRowUserData
+// TODO:
+*          changedRowCount
+*          tableNames        - table names
+*          tableNameCount    - table names count
+*          flags             - flags; see DATABASE_FLAG__...
+*          selectColumns     - select columns
+*          selectColumnCount - select columns count
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          orderGroup        - order/group SQL string or NULL
+*          offset            - offset or 0
+*          limit             - limit or 0
+* Output : value - database id or DATABASE_ID_NONE
+* Return : ERROR_NONE or error code
+* Notes  : use DATABASE_FILTERS() for filters
+\***********************************************************************/
+
+Errors Database_get(DatabaseHandle       *databaseHandle,
+                    DatabaseRowFunction  databaseRowFunction,
+                    void                 *databaseRowUserData,
+                    ulong                *changedRowCount,
+                    const char           *tableNames[],
+                    uint                 tableNameCount,
+                    uint                 flags,
+// TODO: select value datatype: name, type
+                    DatabaseColumn       selectColumns[],
+                    uint                 selectColumnCount,
+                    const char           *filter,
+                    const DatabaseFilter filterValues[],
+                    uint                 filterValueCount,
+                    const char           *orderGroup,
+                    uint64               offset,
+                    uint64               limit
+                   );
+
+/***********************************************************************\
+* Name   : Database_getId
+* Purpose: get database id of value from database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : value - database id or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getId(DatabaseHandle *databaseHandle,
-                      DatabaseId     *value,
-                      const char     *tableName,
-                      const char     *columnName,
-                      const char     *additional,
-                      ...
+Errors Database_getId(DatabaseHandle       *databaseHandle,
+                      DatabaseId           *value,
+                      const char           *tableName,
+                      const char           *columnName,
+                      const char           *filter,
+                      const DatabaseFilter filterValues[],
+                      uint                 filterValueCount
                      );
-Errors Database_vgetId(DatabaseHandle *databaseHandle,
-                       DatabaseId     *value,
-                       const char     *tableName,
-                       const char     *columnName,
-                       const char     *additional,
-                       va_list        arguments
-                      );
 
 /***********************************************************************\
-* Name   : Database_getIds, Database_vgetIds
+* Name   : Database_getIds
 * Purpose: get database ids from database table
-* Input  : databaseHandle - database handle
-*          values         - database ids array
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
-* Output : values - database ids array
+* Input  : databaseHandle   - database handle
+*          ids              - database ids array
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+* Output : ids - database ids array
 * Return : ERROR_NONE or error code
 * Notes  : values are added to array!
 \***********************************************************************/
 
-Errors Database_getIds(DatabaseHandle *databaseHandle,
-                       Array          *values,
-                       const char     *tableName,
-                       const char     *columnName,
-                       const char     *additional,
-                       ...
+Errors Database_getIds(DatabaseHandle       *databaseHandle,
+                       Array                *ids,
+                       const char           *tableName,
+                       const char           *columnName,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
                       );
-Errors Database_vgetIds(DatabaseHandle *databaseHandle,
-                        Array          *values,
-                        const char     *tableName,
-                        const char     *columnName,
-                        const char     *additional,
-                        va_list        arguments
-                       );
 
 /***********************************************************************\
-* Name   : Database_getMaxId, Database_vgetMaxId
+* Name   : Database_getMaxId
 * Purpose: get max. database id of value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : value - max. database id or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getMaxId(DatabaseHandle *databaseHandle,
-                         DatabaseId     *value,
-                         const char     *tableName,
-                         const char     *columnName,
-                         const char     *additional,
-                         ...
+Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
+                         DatabaseId           *value,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
                         );
-Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
-                          DatabaseId     *value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          va_list        arguments
-                         );
 
 /***********************************************************************\
-* Name   : Database_getInteger64, Database_vgetInteger64
-* Purpose: get int64 value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Name   : Database_getInt
+* Purpose: get int value from database table
+* Input  : databaseHandle    - database handle
+*          tableName         - table name
+*          columnName        - column name
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          group             - group SQL string or NULL
+* Output : value - int value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getInt(DatabaseHandle       *databaseHandle,
+                       int                  *value,
+                       const char           *tableName,
+                       const char           *columnName,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount,
+                       const char           *group
+                      );
+
+/***********************************************************************\
+* Name   : Database_setInt
+* Purpose: insert or update int value in database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAG__...
+*          columnName       - column name
+*          value            - int64 value
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setInt(DatabaseHandle       *databaseHandle,
+                       const char           *tableName,
+                       uint                 flags,
+                       const char           *columnName,
+                       int                  value,
+                       const char           *filter,
+                       const DatabaseFilter filterValues[],
+                       uint                 filterValueCount
+                      );
+
+/***********************************************************************\
+* Name   : Database_getUInt
+* Purpose: get uint value from database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : value - int64 value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getInteger64(DatabaseHandle *databaseHandle,
-                             int64          *value,
-                             const char     *tableName,
-                             const char     *columnName,
-                             const char     *additional,
-                             ...
-                            );
-Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
-                              int64          *value,
-                              const char     *tableName,
-                              const char     *columnName,
-                              const char     *additional,
-                              va_list        arguments
-                             );
+Errors Database_getUInt(DatabaseHandle       *databaseHandle,
+                        uint                 *value,
+                        const char           *tableName,
+                        const char           *columnName,
+                        const char           *filter,
+                        const DatabaseFilter filterValues[],
+                        uint                 filterValueCount,
+                        const char           *group
+                       );
 
 /***********************************************************************\
-* Name   : Database_setInteger64, Database_vsetInteger64
-* Purpose: insert or update int64 value in database table
-* Input  : databaseHandle - database handle
-*          value          - int64 value
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Name   : Database_setUint
+* Purpose: insert or update uint value in database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAG__...
+*          columnName       - column name
+*          value            - int64 value
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_setInteger64(DatabaseHandle *databaseHandle,
-                             int64          value,
-                             const char     *tableName,
-                             const char     *columnName,
-                             const char     *additional,
-                             ...
-                            );
-Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
-                              int64          value,
-                              const char     *tableName,
-                              const char     *columnName,
-                              const char     *additional,
-                              va_list        arguments
-                             );
+Errors Database_setUInt(DatabaseHandle       *databaseHandle,
+                        const char           *tableName,
+                        uint                 flags,
+                        const char           *columnName,
+                        uint                 value,
+                        const char           *filter,
+                        const DatabaseFilter filterValues[],
+                        uint                 filterValueCount
+                       );
 
 /***********************************************************************\
-* Name   : Database_getDouble, Database_vgetDouble
+* Name   : Database_getInt64
 * Purpose: get int64 value from database table
-* Input  : databaseHandle - database handle
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle    - database handle
+*          tableName         - table name
+*          columnName        - column name
+*          filter            - filter string
+*          filterValues      - filter values
+*          filterValueCount  - filter values count
+*          group             - group SQL string or NULL
+* Output : value - int64 value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getInt64(DatabaseHandle       *databaseHandle,
+                         int64                *value,
+                         const char           *tableName,
+                         const char           *columnName,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount,
+                         const char           *group
+                        );
+
+/***********************************************************************\
+* Name   : Database_setInt64
+* Purpose: insert or update int64 value in database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAG__...
+*          value            - int64 value
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setInt64(DatabaseHandle       *databaseHandle,
+                         const char           *tableName,
+                         uint                 flags,
+                         const char           *columnName,
+                         int64                value,
+                         const char           *filter,
+                         const DatabaseFilter filterValues[],
+                         uint                 filterValueCount
+                        );
+
+/***********************************************************************\
+* Name   : Database_getUInt64
+* Purpose: get uint64 value from database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+*          group            - group SQL string or NULL
+* Output : value - int64 value
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getUInt64(DatabaseHandle       *databaseHandle,
+                          uint64               *value,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount,
+                          const char           *group
+                         );
+
+/***********************************************************************\
+* Name   : Database_setUInt64
+* Purpose: insert or update uint64 value in database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAG__...
+*          columnName       - column name
+*          value            - int64 value
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setUInt64(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          uint64               value,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
+                         );
+
+/***********************************************************************\
+* Name   : Database_getDouble
+* Purpose: get double value from database table
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAG__...
+*          columnName       - column name
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
+*          group            - group SQL string or NULL
 * Output : value - double value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getDouble(DatabaseHandle *databaseHandle,
-                          double         *value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_getDouble(DatabaseHandle       *databaseHandle,
+                          double               *value,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount,
+                          const char           *group
                          );
-Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
-                           double         *value,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          );
 
 /***********************************************************************\
-* Name   : Database_setDouble, Database_vsetDouble
+* Name   : Database_setDouble
 * Purpose: insert or update double value in database table
-* Input  : databaseHandle - database handle
-*          value          - double value
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAG__...
+*          columnName       - column name
+*          value            - double value
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_setDouble(DatabaseHandle *databaseHandle,
-                          double         value,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_setDouble(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          double               value,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
                          );
-Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
-                           double         value,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          );
 
 /***********************************************************************\
-* Name   : Database_getString, Database_vgetString
+* Name   : Database_getString, Database_getCString
 * Purpose: get string value from database table
 * Input  : databaseHandle  - database handle
 *          tableName       - table name
 *          string          - string variable
 *          maxStringLength - max. length of string
 *          columnName      - column name
-*          additional      - additional string (e. g. WHERE...)
-*                            special functions:
-*                              REGEXP(pattern,case-flag,text)
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : string - string value
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_getString(DatabaseHandle *databaseHandle,
-                          String         string,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_getString(DatabaseHandle       *databaseHandle,
+                          String               string,
+                          const char           *tableName,
+                          const char           *columnName,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
                          );
-Errors Database_getCString(DatabaseHandle *databaseHandle,
-                           char           *string,
-                           uint           maxStringLength,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           ...
+Errors Database_getCString(DatabaseHandle       *databaseHandle,
+                           char                 *string,
+                           uint                 maxStringLength,
+                           const char           *tableName,
+                           const char           *columnName,
+                           const char           *filter,
+                           const DatabaseFilter filterValues[],
+                           uint                 filterValueCount
                           );
-Errors Database_vgetString(DatabaseHandle *databaseHandle,
-                           String         string,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          );
-Errors Database_vgetCString(DatabaseHandle *databaseHandle,
-                            char           *string,
-                            uint           maxStringLength,
-                            const char     *tableName,
-                            const char     *columnName,
-                            const char     *additional,
-                            va_list        arguments
-                           );
 
 /***********************************************************************\
-* Name   : Database_setString, Database_vsetString
+* Name   : Database_setString
 * Purpose: insert or update string value in database table
-* Input  : databaseHandle - database handle
-*          string         - string value
-*          tableName      - table name
-*          columnName     - column name
-*          additional     - additional string (e. g. WHERE...)
-*                           special functions:
-*                             REGEXP(pattern,case-flag,text)
+* Input  : databaseHandle   - database handle
+*          tableName        - table name
+*          flags            - flags; see DATABASE_FLAG__...
+*          columnName       - column name
+*          value            - string value
+*          filter           - filter string
+*          filterValues     - filter values
+*          filterValueCount - filter values count
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_setString(DatabaseHandle *databaseHandle,
-                          const String   string,
-                          const char     *tableName,
-                          const char     *columnName,
-                          const char     *additional,
-                          ...
+Errors Database_setString(DatabaseHandle       *databaseHandle,
+                          const char           *tableName,
+                          uint                 flags,
+                          const char           *columnName,
+                          const String         value,
+                          const char           *filter,
+                          const DatabaseFilter filterValues[],
+                          uint                 filterValueCount
                          );
-Errors Database_vsetString(DatabaseHandle *databaseHandle,
-                           const String   string,
-                           const char     *tableName,
-                           const char     *columnName,
-                           const char     *additional,
-                           va_list        arguments
-                          );
 
 /***********************************************************************\
 * Name   : Database_getLastRowId
@@ -1940,6 +2525,7 @@ INLINE DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->lastInsertId != DATABASE_ID_NONE);
 
   return databaseHandle->lastInsertId;
 }

@@ -57,3 +57,6 @@ RUN apt-get -y install \
   ;
 
 RUN mkdir /.cache;
+
+COPY ./download-third-party-packages.sh .
+RUN ./download-third-party-packages.sh

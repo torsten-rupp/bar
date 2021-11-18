@@ -24,8 +24,8 @@
 #include "common/files.h"
 #include "common/filesystems.h"
 #include "errors.h"
-#include "index_definition.h"
 
+#include "index_definition.h"
 #include "storage.h"
 #include "server_io.h"
 
@@ -34,10 +34,10 @@
 
 // switch on for debugging only!
 #define _INDEX_DEBUG_LOCK
-#define _INDEX_DEBUG_IMPORT_OLD_DATABASE
+#define INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
-  #define _INDEX_DEBUG_LIST_INFO  // enable to output list info
+  #define INDEX_DEBUG_LIST_INFO  // enable to output list info
   #define _INDEX_DEBUG_PURGE      // enable to output purge info
 #endif
 
@@ -46,7 +46,7 @@
 #define INDEX_VERSION INDEX_CONST_VERSION
 
 // max. limit value
-#define INDEX_UNLIMITED 9223372036854775807LL
+#define INDEX_UNLIMITED DATABASE_UNLIMITED
 
 //TODO: use type safe type
 #ifndef __INDEX_ID_TYPE_SAFE
@@ -1092,40 +1092,40 @@ long Index_countStorageState(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getInfos(IndexHandle   *indexHandle,
-                      ulong         *totalEntityCount,
-                      ulong         *totalDeletedEntityCount,
+                      uint          *totalEntityCount,
+                      uint          *totalDeletedEntityCount,
 
-                      ulong         *totalEntryCount,
+                      uint          *totalEntryCount,
                       uint64        *totalEntrySize,
                       uint64        *totalEntryContentSize,
-                      ulong         *totalFileCount,
+                      uint          *totalFileCount,
                       uint64        *totalFileSize,
-                      ulong         *totalImageCount,
+                      uint          *totalImageCount,
                       uint64        *totalImageSize,
-                      ulong         *totalDirectoryCount,
-                      ulong         *totalLinkCount,
-                      ulong         *totalHardlinkCount,
+                      uint          *totalDirectoryCount,
+                      uint          *totalLinkCount,
+                      uint          *totalHardlinkCount,
                       uint64        *totalHardlinkSize,
-                      ulong         *totalSpecialCount,
+                      uint          *totalSpecialCount,
 
-                      ulong         *totalEntryCountNewest,
+                      uint          *totalEntryCountNewest,
                       uint64        *totalEntrySizeNewest,
                       uint64        *totalEntryContentSizeNewest,
-                      ulong         *totalFileCountNewest,
+                      uint          *totalFileCountNewest,
                       uint64        *totalFileSizeNewest,
-                      ulong         *totalImageCountNewest,
+                      uint          *totalImageCountNewest,
                       uint64        *totalImageSizeNewest,
-                      ulong         *totalDirectoryCountNewest,
-                      ulong         *totalLinkCountNewest,
-                      ulong         *totalHardlinkCountNewest,
+                      uint          *totalDirectoryCountNewest,
+                      uint          *totalLinkCountNewest,
+                      uint          *totalHardlinkCountNewest,
                       uint64        *totalHardlinkSizeNewest,
-                      ulong         *totalSpecialCountNewest,
+                      uint          *totalSpecialCountNewest,
 
-                      ulong         *totalSkippedEntryCount,
+                      uint          *totalSkippedEntryCount,
 
-                      ulong         *totalStorageCount,
+                      uint          *totalStorageCount,
                       uint64        *totalStorageSize,
-                      ulong         *totalDeletedStorageCount
+                      uint          *totalDeletedStorageCount
                      );
 
 // ---------------------------------------------------------------------
@@ -1954,7 +1954,7 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
                         String       jobUUID,
                         IndexId      *entityId,
                         String       scheduleUUID,
-                        ArchiveTypes archiveType,
+                        ArchiveTypes *archiveType,
                         String       storageName,
                         uint64       *createdDateTime,
                         uint64       *size,

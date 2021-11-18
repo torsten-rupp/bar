@@ -894,9 +894,9 @@ ERROR DATABASE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR DATABASE_CONNECTION_LOST         TR("datbase connection lost")
+ERROR DATABASE_CONNECTION_LOST         TR("database connection lost")
 ERROR DATABASE_EXISTS                  TR("database already exists")
-ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version on index")
+ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version of index")
 ERROR DATABASE_MISSING_TABLE
   stringSet(errorText,sizeof(errorText),TR("missing table"));
   if (!stringIsEmpty(ERROR_DATA))
@@ -925,8 +925,12 @@ ERROR DATABASE_OBSOLETE_COLUMN
     stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
 
-ERROR DATABASE_BUSY                    TR("database busy")
-ERROR DATABASE_INTERRUPTED             TR("database operation interupted")
+ERROR DATABASE_BIND
+  stringSet(errorText,sizeof(errorText),TR("database bind fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
 
 ERROR DATABASE_TYPE_MISMATCH
   stringSet(errorText,sizeof(errorText),TR("type mismatch"));
@@ -952,6 +956,8 @@ ERROR DATABASE_PARSE_ID
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DATABASE_BUSY                    TR("database busy")
+ERROR DATABASE_INTERRUPTED             TR("database operation interupted")
 ERROR DATABASE_TIMEOUT                 TR("timeout accessing index")
 
 // --- master/slave -----------------------------------------------------
