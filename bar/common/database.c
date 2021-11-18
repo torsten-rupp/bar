@@ -6373,7 +6373,6 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                             "%s",
                             mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
                            );
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
             break;
           }
 
