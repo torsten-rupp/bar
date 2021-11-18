@@ -4272,7 +4272,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
-                                      DATABASE_COLUMN_DATETIME("lastChecked", lastCheckedDateTime)
+                                      DATABASE_VALUE_DATETIME("lastChecked", lastCheckedDateTime)
                                     ),
                                     "entityId=?",
                                     DATABASE_FILTERS
