@@ -4458,7 +4458,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               uint64        *totalEntryContentSize
                              )
 {
-  String ftsName;
+  String ftsMatchString;
   String filterString;
   String uuidIdsString,entityIdsString,storageIdsString;
   ulong  i;
@@ -4489,11 +4489,11 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_newCString("1");
+  ftsMatchString = String_new();
+  filterString   = String_newCString("1");
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -4531,7 +4531,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   IndexCommon_filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
   IndexCommon_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
   IndexCommon_filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
   IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
@@ -4547,7 +4547,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
     fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
-    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
 
     t0 = Misc_getTimestamp();
   #endif /* INDEX_DEBUG_LIST_INFO */
@@ -4687,7 +4687,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
     String_delete(filterString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
   #ifdef INDEX_DEBUG_LIST_INFO
@@ -4702,7 +4702,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
   String_delete(filterString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   return ERROR_NONE;
 }
@@ -4763,7 +4763,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               uint64                limit
                              )
 {
-  String ftsName;
+  String ftsMatchString;
   String filterString;
   String orderString;
   ulong  i;
@@ -4785,12 +4785,12 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_newCString("1");
-  orderString  = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_newCString("1");
+  orderString    = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -4831,7 +4831,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   IndexCommon_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
   IndexCommon_filterAppend(filterString,!String_isEmpty(hostName),"AND","entities.hostName LIKE %S",hostName);
   IndexCommon_filterAppend(filterString,!String_isEmpty(userName),"AND","storages.userName LIKE %S",userName);
-// TODO:  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S')",ftsName);
+// TODO:  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
   IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
@@ -4852,7 +4852,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
     fprintf(stderr,"%s, %d: hostName=%s\n",__FILE__,__LINE__,String_cString(hostName));
     fprintf(stderr,"%s, %d: userName=%s\n",__FILE__,__LINE__,String_cString(userName));
-    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
     fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
@@ -4918,7 +4918,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     String_delete(storageIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
   #ifdef INDEX_DEBUG_LIST_INFO
@@ -4932,7 +4932,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   String_delete(storageIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 

@@ -14758,7 +14758,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   List_init(&uuidList);
   lastErrorMessage = String_new();
 
-  // get UUIDs from database (Note: use list to avoid dead-lock in job list)
+  // get UUIDs from database (Note: store into list to avoid dead-lock in job list)
   error = Index_initListUUIDs(&indexQueryHandle,
                               indexHandle,
                               indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,

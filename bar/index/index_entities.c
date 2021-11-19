@@ -2362,7 +2362,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                               uint64               limit
                              )
 {
-  String ftsName;
+  String ftsMatchString;
   String filterString;
   String string;
   String orderString;
@@ -2379,12 +2379,12 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_format(String_new(),"entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
-  orderString  = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_format(String_new(),"entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  orderString    = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get filters
   string = String_newCString("1");
@@ -2392,7 +2392,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   IndexCommon_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   IndexCommon_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
   IndexCommon_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
   IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
@@ -2404,7 +2404,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
     fprintf(stderr,"%s, %d: Index_initListEntities ------------------------------------------------------\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
     fprintf(stderr,"%s, %d: archiveType=%u\n",__FILE__,__LINE__,archiveType);
-    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
     fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
@@ -2458,7 +2458,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
     String_delete(orderString);
     String_delete(filterString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
   #ifdef INDEX_DEBUG_LIST_INFO
@@ -2469,7 +2469,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
   // free resources
   String_delete(orderString);
   String_delete(filterString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 

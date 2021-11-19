@@ -3271,7 +3271,6 @@ fprintf(stderr,"%s:%d: indexVersion=%lld\n",__FILE__,__LINE__,indexVersion);
       {
         if (indexVersion < INDEX_VERSION)
         {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           // rename existing index for upgrade
           saveDatabaseName = String_new();
           n = 0;
@@ -3293,7 +3292,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
           // upgrade version -> create new
           createFlag = TRUE;
-fprintf(stderr,"%s:%d: upgare_\n",__FILE__,__LINE__);
           plogMessage(NULL,  // logHandle
                       LOG_TYPE_ERROR,
                       "INDEX",
@@ -3307,7 +3305,6 @@ fprintf(stderr,"%s:%d: upgare_\n",__FILE__,__LINE__);
       {
         // unknown version -> create new
         createFlag = TRUE;
-fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
@@ -3326,6 +3323,7 @@ fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
 
   if (!createFlag)
   {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 // TODO: remove #if 0
 #if 0
     // check if database is outdated or corrupt
@@ -3405,7 +3403,6 @@ fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
   }
   else
   {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     // get database index version
     error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
     if (error != ERROR_NONE)

@@ -994,7 +994,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                            )
 {
   Errors error;
-  String ftsName;
+  String ftsMatchString;
   String uuidIdsString,entityIdsString;
   String entryIdsString;
   ulong  i;
@@ -1014,14 +1014,14 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
 
   // init variables
-  ftsName         = String_new();
+  ftsMatchString  = String_new();
   uuidIdsString   = String_new();
   entityIdsString = String_new();
   entryIdsString  = String_new();
   filterString    = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -1055,7 +1055,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
     fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(entryIdsString));
-    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // get filters
@@ -1065,7 +1065,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   error = ERROR_NONE;
-  if (String_isEmpty(ftsName))
+  if (String_isEmpty(ftsMatchString))
   {
     // no names
     if (error == ERROR_NONE)
@@ -2037,7 +2037,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
     // names selected
 
     // get filters
-    IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH '%S'",ftsName);
+    IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","%S",ftsMatchString);
     if (newestOnly)
     {
       IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
@@ -2294,7 +2294,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   return error;
 }
@@ -2734,7 +2734,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
-#if 1
                                "FTS_entries \
                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
@@ -2746,19 +2745,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                   LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
                                   LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
                                ",
-#else
-                               "entries AS FTS_entries \
-                                  LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
-                                  LEFT JOIN entities         ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
-                                  LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
-                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                  LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
-                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                               ",
-#endif
                                DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
@@ -3258,7 +3244,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            ConstString      name
                           )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3277,11 +3263,11 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3303,7 +3289,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_FILE);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3348,7 +3334,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3356,7 +3342,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3413,7 +3399,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             ConstString      name
                            )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3432,11 +3418,11 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3458,7 +3444,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3501,7 +3487,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3509,7 +3495,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3577,7 +3563,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  ConstString      name
                                 )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3596,11 +3582,11 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3622,7 +3608,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3667,7 +3653,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3675,7 +3661,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3730,7 +3716,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            ConstString      name
                           )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3749,11 +3735,11 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3776,7 +3762,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3822,7 +3808,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3830,7 +3816,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3887,7 +3873,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                ConstString      name
                               )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3906,11 +3892,11 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3932,7 +3918,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entries.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3977,7 +3963,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3985,7 +3971,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -4042,7 +4028,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              ConstString      name
                             )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -4061,11 +4047,11 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -4087,7 +4073,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -4131,7 +4117,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -4139,7 +4125,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 

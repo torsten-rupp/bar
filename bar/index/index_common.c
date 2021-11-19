@@ -175,59 +175,93 @@ String IndexCommon_getFTSString(String         string,
     {
       case DATABASE_TYPE_SQLITE3:
         String_formatAppend(string,"FTS_entries MATCH '");
-        break;
-      case DATABASE_TYPE_MYSQL:
-        String_formatAppend(string,"MATCH(%s) AGAINST('",columnName);
-        break;
-    }
 
-    String_initTokenizer(&stringTokenizer,
-                         patternText,
-                         STRING_BEGIN,
-                         STRING_WHITE_SPACES,
-                         STRING_QUOTES,
-                         TRUE
-                        );
-    while (String_getNextToken(&stringTokenizer,&token,NULL))
-    {
-      addedTextFlag    = FALSE;
-      addedPatternFlag = FALSE;
-      STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
-      {
-        if (isalnum(codepoint) || (codepoint >= 128))
+        String_initTokenizer(&stringTokenizer,
+                             patternText,
+                             STRING_BEGIN,
+                             STRING_WHITE_SPACES,
+                             STRING_QUOTES,
+                             TRUE
+                            );
+        while (String_getNextToken(&stringTokenizer,&token,NULL))
         {
-          if (addedPatternFlag)
+          addedTextFlag    = FALSE;
+          addedPatternFlag = FALSE;
+          STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
           {
-            String_appendChar(string,' ');
-            addedPatternFlag = FALSE;
+            if (isalnum(codepoint) || (codepoint >= 128))
+            {
+              if (addedPatternFlag)
+              {
+                String_appendChar(string,' ');
+                addedPatternFlag = FALSE;
+              }
+              String_appendCharUTF8(string,codepoint);
+              addedTextFlag = TRUE;
+            }
+            else
+            {
+              if (addedTextFlag && !addedPatternFlag)
+              {
+                String_appendChar(string,'*');
+                addedTextFlag    = FALSE;
+                addedPatternFlag = TRUE;
+              }
+            }
           }
-          String_appendCharUTF8(string,codepoint);
-          addedTextFlag = TRUE;
-        }
-        else
-        {
           if (addedTextFlag && !addedPatternFlag)
           {
             String_appendChar(string,'*');
-            addedTextFlag    = FALSE;
-            addedPatternFlag = TRUE;
           }
         }
-      }
-      if (addedTextFlag && !addedPatternFlag)
-      {
-        String_appendChar(string,'*');
-      }
-    }
-    String_doneTokenizer(&stringTokenizer);
+        String_doneTokenizer(&stringTokenizer);
 
-    switch (Database_getType(databaseHandle))
-    {
-      case DATABASE_TYPE_SQLITE3:
         String_formatAppend(string,"'");
         break;
       case DATABASE_TYPE_MYSQL:
-        String_formatAppend(string,"')");
+        String_formatAppend(string,"MATCH(%s) AGAINST('",columnName);
+
+        String_initTokenizer(&stringTokenizer,
+                             patternText,
+                             STRING_BEGIN,
+                             STRING_WHITE_SPACES,
+                             STRING_QUOTES,
+                             TRUE
+                            );
+        while (String_getNextToken(&stringTokenizer,&token,NULL))
+        {
+          addedTextFlag    = FALSE;
+          addedPatternFlag = FALSE;
+          STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
+          {
+            if (isalnum(codepoint) || (codepoint >= 128))
+            {
+              if (addedPatternFlag)
+              {
+                String_appendChar(string,' ');
+                addedPatternFlag = FALSE;
+              }
+              String_appendCharUTF8(string,codepoint);
+              addedTextFlag = TRUE;
+            }
+            else
+            {
+              if (addedTextFlag && !addedPatternFlag)
+              {
+                String_appendChar(string,'*');
+                addedTextFlag    = FALSE;
+                addedPatternFlag = TRUE;
+              }
+            }
+          }
+          if (addedTextFlag && !addedPatternFlag)
+          {
+            String_appendChar(string,'*');
+          }
+        }
+        String_doneTokenizer(&stringTokenizer);
+
+        String_formatAppend(string,"' IN BOOLEAN MODE)");
         break;
     }
   }
