@@ -124,7 +124,8 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
       error = executeTemplate(String_cString(globalOptions.file.writePreProcessCommand),
                               time,
                               textMacros.data,
-                              textMacros.count
+                              textMacros.count,
+                              CALLBACK_(executeIOOutput,NULL)
                              );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
@@ -162,7 +163,8 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
       error = executeTemplate(String_cString(globalOptions.file.writePostProcessCommand),
                               time,
                               textMacros.data,
-                              textMacros.count
+                              textMacros.count,
+                              CALLBACK_(executeIOOutput,NULL)
                              );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }

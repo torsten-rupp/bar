@@ -42,12 +42,13 @@
 #include "common/patterns.h"
 #include "common/misc.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "errors.h"
 #include "crypt.h"
 #include "archive.h"
 #include "jobs.h"
-#include "bar_global.h"
-#include "bar.h"
 
 #include "storage.h"
 

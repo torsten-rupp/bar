@@ -65,7 +65,7 @@
 #include "configuration.h"
 #include "crypt.h"
 #include "server_io.h"
-#include "bar_global.h"
+#include "bar_common.h"
 
 /****************** Conditional compilation switches *******************/
 

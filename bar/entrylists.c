@@ -30,8 +30,9 @@
 #include "common/strings.h"
 #include "common/stringlists.h"
 
+// TODO: remove bar.h
 #include "bar.h"
-#include "bar_global.h"
+#include "bar_common.h"
 #include "common/patterns.h"
 
 #include "entrylists.h"

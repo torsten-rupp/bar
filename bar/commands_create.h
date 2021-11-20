@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "bar_common.h"
 #include "errors.h"
 #include "entrylists.h"
 #include "common/patternlists.h"
@@ -26,7 +27,6 @@
 #include "crypt.h"
 #include "storage.h"
 #include "server.h"
-#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 

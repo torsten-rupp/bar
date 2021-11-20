@@ -34,10 +34,11 @@
 #include "common/misc.h"
 #include "errors.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "entrylists.h"
 #include "common/patternlists.h"
-#include "bar_global.h"
-#include "bar.h"
 
 #include "continuous.h"
 

@@ -410,6 +410,7 @@ common/%.o: common/%.cpp
 #--------------------------------- objects -----------------------------------
 
 BAR_SOURCES                 = bar.c \
+                              bar_common.c \
                               configuration.c \
                               commands_create.c \
                               commands_list.c \
@@ -601,6 +602,7 @@ BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
                               )
 
 BAR_INDEX_SOURCES           = bar-index.c \
+                              bar_common.c \
 
 BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
                               index_definition.def \

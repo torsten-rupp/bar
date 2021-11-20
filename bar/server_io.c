@@ -29,9 +29,10 @@
 #include "common/stringmaps.h"
 #include "common/strings.h"
 
-#include "bar_global.h"
-#include "crypt.h"
+// TODO: remove bar.h
 #include "bar.h"
+#include "bar_common.h"
+#include "crypt.h"
 
 #include "server_io.h"
 
@@ -39,10 +40,10 @@
 
 /***************************** Constants *******************************/
 
-#define SESSION_KEY_SIZE            1024     // number of session key bits
+#define SESSION_KEY_SIZE  1024     // number of session key bits
 
-#define LOCK_TIMEOUT                (10LL*MS_PER_MINUTE)  // general lock timeout [ms]
-#define READ_TIMEOUT                (5LL*MS_PER_SECOND)
+#define LOCK_TIMEOUT      (10LL*MS_PER_MINUTE)  // general lock timeout [ms]
+#define READ_TIMEOUT      (5LL*MS_PER_SECOND)
 
 #define BUFFER_SIZE       (64*1024)
 #define BUFFER_DELTA_SIZE 4096

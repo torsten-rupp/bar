@@ -30,6 +30,7 @@
 #include "common/files.h"
 #include "common/filesystems.h"
 
+#include "bar.h"
 #include "errors.h"
 #include "archive.h"
 

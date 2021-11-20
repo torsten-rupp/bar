@@ -21,7 +21,7 @@
 #include "common/global.h"
 #include "common/patternlists.h"
 
-#include "bar_global.h"
+#include "bar_common.h"
 #include "configuration.h"
 #include "entrylists.h"
 #include "connector.h"

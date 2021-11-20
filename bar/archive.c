@@ -27,6 +27,9 @@
 #include "common/semaphores.h"
 #include "common/passwords.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "errors.h"
 #include "configuration.h"
 #include "chunks.h"
@@ -35,8 +38,6 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index/index.h"
-#include "bar_global.h"
-#include "bar.h"
 
 #include "archive.h"
 

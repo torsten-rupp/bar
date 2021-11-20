@@ -31,12 +31,13 @@
 #include "common/misc.h"
 #include "errors.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "storage.h"
 #include "server_io.h"
 #include "index_definition.h"
 #include "archive.h"
-#include "bar.h"
-#include "bar_global.h"
 
 #include "index/index_common.h"
 #include "index/index_entities.h"

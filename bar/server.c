@@ -4383,7 +4383,8 @@ LOCAL void jobThreadCode(void)
       error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
                               startDateTime,
                               textMacros.data,
-                              textMacros.count
+                              textMacros.count,
+                              CALLBACK_(executeIOOutput,NULL)
                              );
       if (error == ERROR_NONE)
       {
@@ -4715,7 +4716,8 @@ NULL,//                                                        scheduleTitle,
       error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                               executeStartDateTime,
                               textMacros.data,
-                              textMacros.count
+                              textMacros.count,
+                              CALLBACK_(executeIOOutput,NULL)
                              );
       if (error == ERROR_NONE)
       {

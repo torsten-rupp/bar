@@ -33,11 +33,12 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "errors.h"
 #include "crypt.h"
 #include "archive.h"
-#include "bar_global.h"
-#include "bar.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -1218,7 +1219,8 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
         error = executeTemplate(String_cString(globalOptions.ftp.writePreProcessCommand),
                                 time,
                                 textMacros.data,
-                                textMacros.count
+                                textMacros.count,
+                                CALLBACK_(executeIOOutput,NULL)
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
@@ -1269,7 +1271,8 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
         error = executeTemplate(String_cString(globalOptions.ftp.writePostProcessCommand),
                                 time,
                                 textMacros.data,
-                                textMacros.count
+                                textMacros.count,
+                                CALLBACK_(executeIOOutput,NULL)
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }

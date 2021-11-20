@@ -21,11 +21,12 @@
 #include "common/files.h"
 #include "common/fragmentlists.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "errors.h"
 #include "storage.h"
 #include "archive.h"
-#include "bar_global.h"
-#include "bar.h"
 
 #include "deltasources.h"
 

@@ -36,11 +36,12 @@
 #include "common/passwords.h"
 #include "common/misc.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "errors.h"
 #include "crypt.h"
 #include "archive.h"
-#include "bar_global.h"
-#include "bar.h"
 
 #include "storage.h"
 
@@ -1224,7 +1225,8 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
     error = executeTemplate(String_cString(template),
                             timestamp,
                             textMacros.data,
-                            textMacros.count
+                            textMacros.count,
+                            CALLBACK_(executeIOOutput,NULL)
                            );
     printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
   }
@@ -1695,7 +1697,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     error = executeTemplate(String_cString(template),
                             timestamp,
                             textMacros.data,
-                            textMacros.count
+                            textMacros.count,
+                            CALLBACK_(executeIOOutput,NULL)
                            );
     printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
   }

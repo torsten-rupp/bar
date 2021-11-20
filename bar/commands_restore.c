@@ -24,21 +24,22 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "common/global.h"
 #include "common/autofree.h"
-#include "common/strings.h"
-#include "common/stringlists.h"
-#include "common/msgqueues.h"
 #include "common/dictionaries.h"
-
-#include "errors.h"
-#include "common/patterns.h"
+#include "common/fragmentlists.h"
+#include "common/global.h"
+#include "common/misc.h"
+#include "common/msgqueues.h"
 #include "common/patternlists.h"
+#include "common/patterns.h"
+#include "common/stringlists.h"
+#include "common/strings.h"
+
+#include "bar.h"
+#include "errors.h"
 #include "deltasourcelists.h"
 #include "common/files.h"
 #include "archive.h"
-#include "common/fragmentlists.h"
-#include "common/misc.h"
 
 #include "commands_restore.h"
 
