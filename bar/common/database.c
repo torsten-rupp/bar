@@ -1706,7 +1706,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
   }
   assert(databaseHandle->databaseNode != NULL);
 
-  // get database type and open/connect data
+  // get database type and open/connect
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -1839,11 +1839,12 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
       break;
     case DATABASE_TYPE_MYSQL:
       {
-        int mysqlResult;
+        int  mysqlResult;
+        char sqlCommand[256];
 
-        // open database
         SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
+          // open database
           databaseHandle->mysql.handle = mysql_init(NULL);
           if (databaseHandle->mysql.handle == NULL)
           {
@@ -1856,9 +1857,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                                  String_cString(databaseSpecifier->mysql.serverName),
                                  String_cString(databaseSpecifier->mysql.userName),
                                  databaseSpecifier->mysql.password.data,
-                                 !String_isEmpty(databaseName)
-                                   ? String_cString(databaseName)
-                                   : String_cString(databaseSpecifier->mysql.databaseName),
+                                 NULL,  // databaseName
                                  0,
                                  0,
                                  0
@@ -1876,6 +1875,70 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           mysqlResult = mysql_query(databaseHandle->mysql.handle,
                                     "SET NAMES 'UTF8'"
                                    );
+          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+          {
+            HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
+          }
+          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+          {
+            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            mysql_close(databaseHandle->mysql.handle);
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+          else if (mysqlResult != 0)
+          {
+            error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            mysql_close(databaseHandle->mysql.handle);
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+
+          // create database if requested
+          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
+          {
+            stringFormat(sqlCommand,sizeof(sqlCommand),
+                         "CREATE DATABASE IF NOT EXISTS %s \
+                          CHARACTER SET 'utf8mb4' \
+                          COLLATE 'utf8mb4_bin' \
+                         ",
+                         !String_isEmpty(databaseName)
+                           ? String_cString(databaseName)
+                           : String_cString(databaseSpecifier->mysql.databaseName)
+                        );
+            mysqlResult = mysql_query(databaseHandle->mysql.handle,
+                                      sqlCommand
+                                     );
+            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            {
+              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
+            }
+            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+            {
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+              mysql_close(databaseHandle->mysql.handle);
+              Semaphore_unlock(&databaseList.lock);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
+            else if (mysqlResult != 0)
+            {
+              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+              mysql_close(databaseHandle->mysql.handle);
+              Semaphore_unlock(&databaseList.lock);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
+          }
+
+          // select database
+          mysqlResult = mysql_select_db(databaseHandle->mysql.handle,
+                                        !String_isEmpty(databaseName)
+                                          ? String_cString(databaseName)
+                                          : String_cString(databaseSpecifier->mysql.databaseName)
+                                       );
           if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
           {
             HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
@@ -7382,13 +7445,13 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
     {
       case DATABASE_TYPE_SQLITE3:
         fprintf(stderr,
-                "Database debug: open 'sqlite:%s'\n",
+                "Database debug: opened 'sqlite:%s'\n",
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                );
         break;
       case DATABASE_TYPE_MYSQL:
         fprintf(stderr,
-                "Database debug: open 'mysql:%s:%s:*:%s'\n",
+                "Database debug: opened 'mysql:%s:%s:*:%s'\n",
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName)
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.databaseName)
