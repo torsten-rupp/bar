@@ -585,7 +585,7 @@ sub processFile($$)
 
         print CFILE_HANDLE "#define INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)."_ \\\n";
         print CFILE_HANDLE "\"\\\n";
-        print CFILE_HANDLE "CREATE VIEW $viewName AS \\\n";
+        print CFILE_HANDLE "CREATE OR REPLACE VIEW $viewName AS \\\n";
         print CFILE_HANDLE $definition."\\\n";
         print CFILE_HANDLE "\"\n";
         print CFILE_HANDLE "const char *INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)." = INDEX_DEFINITION_VIEW_".$suffix."_".uc($viewName)."_;\n";
