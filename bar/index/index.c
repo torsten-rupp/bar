@@ -409,14 +409,18 @@ LOCAL void busyHandler(void *userData)
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
-      if (String_isEmpty(databaseSpecifier->mysql.databaseName)) String_setCString(databaseSpecifier->mysql.databaseName,DEFAULT_DATABASE_NAME);
+      if (String_isEmpty(databaseSpecifier->mysql.databaseName))
+      {
+        String_setCString(databaseSpecifier->mysql.databaseName,DEFAULT_DATABASE_NAME);
+      }
       break;
   }
 
   // open index database
   if ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_CREATE)
   {
-    // open database
+    // create database
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     INDEX_DOX(error,
               indexHandle,
     {
@@ -437,8 +441,11 @@ LOCAL void busyHandler(void *userData)
     });
     if (error != ERROR_NONE)
     {
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+
       return error;
     }
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
     // create tables/indicees/triggers
     INDEX_DOX(error,
@@ -2613,7 +2620,6 @@ LOCAL void indexThreadCode(void)
 {
   IndexHandle         indexHandle;
   Errors              error;
-#if 0
   #ifdef INDEX_IMPORT_OLD_DATABASE
     String              absoluteFileName;
     String              directoryName;
@@ -2627,7 +2633,6 @@ LOCAL void indexThreadCode(void)
   DatabaseId          storageId,entityId;
   String              storageName;
   uint                sleepTime;
-#endif
 
   assert(indexDatabaseSpecifier != NULL);
 
@@ -2661,102 +2666,101 @@ LOCAL void indexThreadCode(void)
   // set index handle for thread interruption
   indexThreadIndexHandle = &indexHandle;
 
-// TODO: remove #if 0
-#if 0
+  // import old index files (Sqlite only)
   #ifdef INDEX_IMPORT_OLD_DATABASE
-    // get absolute database file name
-// TODO:
-    absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexDatabaseSpecifier);
-
-    // open directory where database is located
-    directoryName = File_getDirectoryName(String_new(),absoluteFileName);
-    error = File_openDirectoryList(&directoryListHandle,directoryName);
-    if (error != ERROR_NONE)
+    if (indexDatabaseSpecifier->type == DATABASE_TYPE_SQLITE3)
     {
+      // get absolute database file name
+// TODO:
+      absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexDatabaseSpecifier->sqlite.fileName);
+
+      // open directory where database is located
+      directoryName = File_getDirectoryName(String_new(),absoluteFileName);
+      error = File_openDirectoryList(&directoryListHandle,directoryName);
+      if (error != ERROR_NONE)
+      {
+        String_delete(directoryName);
+        closeIndex(&indexHandle);
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Import index database '%s' fail: %s",
+                    indexDatabaseSpecifier,
+                    Error_getText(error)
+                   );
+        return;
+      }
       String_delete(directoryName);
-      closeIndex(&indexHandle);
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_ERROR,
-                  "INDEX",
-                  "Import index database '%s' fail: %s",
-                  indexDatabaseSpecifier,
-                  Error_getText(error)
-                 );
-      return;
-    }
-    String_delete(directoryName);
 
-    // process all *.oldNNN files
-    #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
-      logImportIndexHandle = fopen(IMPORT_INDEX_LOG_FILENAME,"w");
-    #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
-    i                   = 0;
-    oldDatabaseFileName = String_new();
-    oldDatabaseCount    = 0;
-    while (   !indexQuitFlag
-           && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
-          )
-    {
-      if (   String_startsWith(oldDatabaseFileName,absoluteFileName)\
-          && String_matchCString(oldDatabaseFileName,STRING_BEGIN,DATABASE_SAVE_PATTERNS[indexDatabaseSpecifier->type],NULL,NULL)
-         )
+      // process all *.oldNNN files
+      #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+        logImportIndexHandle = fopen(IMPORT_INDEX_LOG_FILENAME,"w");
+      #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
+      i                   = 0;
+      oldDatabaseFileName = String_new();
+      oldDatabaseCount    = 0;
+      while (   !indexQuitFlag
+             && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
+            )
       {
-        if (i == 0)
+        if (   String_startsWith(oldDatabaseFileName,absoluteFileName)\
+            && String_matchCString(oldDatabaseFileName,STRING_BEGIN,DATABASE_SAVE_PATTERNS[indexDatabaseSpecifier->type],NULL,NULL)
+           )
         {
-          plogMessage(NULL,  // logHandle
-                      LOG_TYPE_INDEX,
-                      "INDEX",
-                      "Started import old index databases"
-                     );
-        }
-        DIMPORT("import %s -> %s",String_cString(oldDatabaseFileName),indexDatabaseSpecifier);
-        error = importIndex(&indexHandle,oldDatabaseFileName);
-        if (error == ERROR_NONE)
-        {
-          oldDatabaseCount++;
-          (void)File_delete(oldDatabaseFileName,FALSE);
-        }
-        else
-        {
-          failFileName = String_appendCString(String_duplicate(oldDatabaseFileName),".fail");
-// TODO:
-          (void)File_rename(oldDatabaseFileName,failFileName,NULL);
-          String_delete(failFileName);
-        }
+          if (i == 0)
+          {
+            plogMessage(NULL,  // logHandle
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Started import old index databases"
+                       );
+          }
+          DIMPORT("import %s -> %s",String_cString(oldDatabaseFileName),indexDatabaseSpecifier);
+          error = importIndex(&indexHandle,oldDatabaseFileName);
+          if (error == ERROR_NONE)
+          {
+            oldDatabaseCount++;
+            (void)File_delete(oldDatabaseFileName,FALSE);
+          }
+          else
+          {
+            failFileName = String_appendCString(String_duplicate(oldDatabaseFileName),".fail");
+  // TODO:
+            (void)File_rename(oldDatabaseFileName,failFileName,NULL);
+            String_delete(failFileName);
+          }
 
-        i++;
+          i++;
+        }
       }
-    }
-    #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
-      if (logImportIndexHandle != NULL)
+      #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+        if (logImportIndexHandle != NULL)
+        {
+          fclose(logImportIndexHandle);
+        }
+      #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
+      if (i > 0)
       {
-        fclose(logImportIndexHandle);
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    "Done import %d old index databases",
+                    oldDatabaseCount
+                   );
       }
-    #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
-    if (i > 0)
-    {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_INDEX,
-                  "INDEX",
-                  "Done import %d old index databases",
-                  oldDatabaseCount
-                 );
+      String_delete(oldDatabaseFileName);
+
+      // close directory
+      File_closeDirectoryList(&directoryListHandle);
+
+      // free resources
+      String_delete(absoluteFileName);
     }
-    String_delete(oldDatabaseFileName);
-
-    // close directory
-    File_closeDirectoryList(&directoryListHandle);
-
-    // free resources
-    String_delete(absoluteFileName);
   #endif /* INDEX_IMPORT_OLD_DATABASE */
-#endif
 
   // index is initialized and ready to use
   indexInitializedFlag = TRUE;
 
-// TODO: remove #if 0
-#if 0
   // regular clean-ups
   storageName = String_new();
   while (!indexQuitFlag)
@@ -2806,7 +2810,7 @@ LOCAL void indexThreadCode(void)
                                  DATABASE_COLUMNS
                                  (
                                    DATABASE_COLUMN_KEY   ("id"),
-                                   DATABASE_COLUMN_KEY   ("entryId"),
+                                   DATABASE_COLUMN_KEY   ("entityId"),
                                    DATABASE_COLUMN_STRING("name")
                                  ),
                                  "    state!=? \
@@ -2911,7 +2915,6 @@ LOCAL void indexThreadCode(void)
     }
   }
   String_delete(storageName);
-#endif
 
   // clear index handle for thread interruption
   indexThreadIndexHandle = NULL;
@@ -3231,11 +3234,8 @@ Errors Index_init(const char             *uriString,
   bool              createFlag;
   Errors            error;
   uint              indexVersion;
-//  String            saveDatabaseName;
-//  uint              n;
-//  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {(intptr_t)NULL} };
-//  IndexHandle       indexHandleReference,indexHandle;
-IndexHandle       indexHandle;
+  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {(intptr_t)NULL} };
+  IndexHandle       indexHandleReference,indexHandle;
 //  ProgressInfo      progressInfo;
 
   assert(uriString != NULL);
@@ -3258,42 +3258,79 @@ IndexHandle       indexHandle;
   // check if index exists, check version
   if (!createFlag)
   {
-// TODO: remove #if 0
-#if 0
     if (Database_exists(indexDatabaseSpecifier,NULL))
     {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       // check index version
       error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: indexVersion=%lld\n",__FILE__,__LINE__,indexVersion);
       if (error == ERROR_NONE)
       {
         if (indexVersion < INDEX_VERSION)
         {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           // rename existing index for upgrade
-          saveDatabaseName = String_new();
-          n = 0;
-          do
+          switch (indexDatabaseSpecifier->type)
           {
-            String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
-            String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
-            n++;
+            case DATABASE_TYPE_SQLITE3:
+              {
+                String saveDatabaseName;
+                uint   n;
+
+                saveDatabaseName = String_new();
+
+                // get backup name
+                n = 0;
+                do
+                {
+                  String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+                  String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
+                  n++;
+                }
+                while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+
+                // rename database
+                error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
+                if (error != ERROR_NONE)
+                {
+                  String_delete(saveDatabaseName);
+                  Database_deleteSpecifier(indexDatabaseSpecifier);
+                  return error;
+                }
+
+                String_delete(saveDatabaseName);
+              }
+              break;
+            case DATABASE_TYPE_MYSQL:
+              {
+                String saveDatabaseName;
+                uint   n;
+
+                saveDatabaseName = String_new();
+
+                // get backup name
+                n = 0;
+                do
+                {
+                  String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+                  String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
+                  n++;
+                }
+                while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+
+                // rename database
+                error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
+                if (error != ERROR_NONE)
+                {
+                  String_delete(saveDatabaseName);
+                  Database_deleteSpecifier(indexDatabaseSpecifier);
+                  return error;
+                }
+
+                String_delete(saveDatabaseName);
+              }
+              break;
           }
-          while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
-          error = renameIndex(indexDatabaseSpecifier,saveDatabaseName);
-          if (error != ERROR_NONE)
-          {
-            String_delete(saveDatabaseName);
-            Database_deleteSpecifier(indexDatabaseSpecifier);
-            return error;
-          }
-          String_delete(saveDatabaseName);
 
           // upgrade version -> create new
           createFlag = TRUE;
-fprintf(stderr,"%s:%d: upgare_\n",__FILE__,__LINE__);
           plogMessage(NULL,  // logHandle
                       LOG_TYPE_ERROR,
                       "INDEX",
@@ -3307,7 +3344,6 @@ fprintf(stderr,"%s:%d: upgare_\n",__FILE__,__LINE__);
       {
         // unknown version -> create new
         createFlag = TRUE;
-fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
@@ -3321,11 +3357,11 @@ fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
       // does not exists -> create new
       createFlag = TRUE;
     }
-#endif
   }
 
   if (!createFlag)
   {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 // TODO: remove #if 0
 #if 0
     // check if database is outdated or corrupt
@@ -3380,6 +3416,7 @@ fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
   if (createFlag)
   {
     // create new index database
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
     if (error != ERROR_NONE)
     {
@@ -3405,7 +3442,6 @@ fprintf(stderr,"%s:%d: unknow_\n",__FILE__,__LINE__);
   }
   else
   {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     // get database index version
     error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
     if (error != ERROR_NONE)

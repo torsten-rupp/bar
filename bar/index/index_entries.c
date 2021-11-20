@@ -133,16 +133,16 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("uuidId")
-                                    DATABASE_VALUE_KEY   ("entityId")
-                                    DATABASE_VALUE_UINT  ("type")
-                                    DATABASE_VALUE_STRING("name")
-                                    DATABASE_VALUE_UINT64("timeLastAccess")
-                                    DATABASE_VALUE_UINT64("timeModified")
-                                    DATABASE_VALUE_UINT64("timeLastChanged")
-                                    DATABASE_VALUE_UINT  ("userId")
-                                    DATABASE_VALUE_UINT  ("groupId")
-                                    DATABASE_VALUE_UINT  ("permission")
+                                    DATABASE_VALUE_KEY     ("uuidId")
+                                    DATABASE_VALUE_KEY     ("entityId")
+                                    DATABASE_VALUE_UINT    ("type")
+                                    DATABASE_VALUE_STRING  ("name")
+                                    DATABASE_VALUE_DATETIME("timeLastAccess")
+                                    DATABASE_VALUE_DATETIME("timeModified")
+                                    DATABASE_VALUE_DATETIME("timeLastChanged")
+                                    DATABASE_VALUE_UINT    ("userId")
+                                    DATABASE_VALUE_UINT    ("groupId")
+                                    DATABASE_VALUE_UINT    ("permission")
                                   ),
                                   DATABASE_TABLES
                                   (
@@ -150,16 +150,16 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
                                   ),
                                   DATABASE_COLUMNS
                                   (
-                                    DATABASE_COLUMN_KEY   ("uuidId"),
-                                    DATABASE_COLUMN_KEY   ("entityId"),
-                                    DATABASE_COLUMN_UINT  ("type"),
-                                    DATABASE_COLUMN_STRING("name"),
-                                    DATABASE_COLUMN_UINT64("timeLastAccess"),
-                                    DATABASE_COLUMN_UINT64("timeModified"),
-                                    DATABASE_COLUMN_UINT64("timeLastChanged"),
-                                    DATABASE_COLUMN_UINT  ("userId"),
-                                    DATABASE_COLUMN_UINT  ("groupId"),
-                                    DATABASE_COLUMN_UINT  ("permission")
+                                    DATABASE_COLUMN_KEY     ("uuidId"),
+                                    DATABASE_COLUMN_KEY     ("entityId"),
+                                    DATABASE_COLUMN_UINT    ("type"),
+                                    DATABASE_COLUMN_STRING  ("name"),
+                                    DATABASE_COLUMN_DATETIME("timeLastAccess"),
+                                    DATABASE_COLUMN_DATETIME("timeModified"),
+                                    DATABASE_COLUMN_DATETIME("timeLastChanged"),
+                                    DATABASE_COLUMN_UINT    ("userId"),
+                                    DATABASE_COLUMN_UINT    ("groupId"),
+                                    DATABASE_COLUMN_UINT    ("permission")
                                   ),
                                   "id!=? AND name=?",
                                   DATABASE_FILTERS
@@ -994,7 +994,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                            )
 {
   Errors error;
-  String ftsName;
+  String ftsMatchString;
   String uuidIdsString,entityIdsString;
   String entryIdsString;
   ulong  i;
@@ -1014,14 +1014,14 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   }
 
   // init variables
-  ftsName         = String_new();
+  ftsMatchString  = String_new();
   uuidIdsString   = String_new();
   entityIdsString = String_new();
   entryIdsString  = String_new();
   filterString    = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -1055,7 +1055,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
     fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(entryIdsString));
-    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // get filters
@@ -1065,7 +1065,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   error = ERROR_NONE;
-  if (String_isEmpty(ftsName))
+  if (String_isEmpty(ftsMatchString))
   {
     // no names
     if (error == ERROR_NONE)
@@ -2037,7 +2037,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
     // names selected
 
     // get filters
-    IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH '%S'",ftsName);
+    IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","%S",ftsMatchString);
     if (newestOnly)
     {
       IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
@@ -2294,7 +2294,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   return error;
 }
@@ -2342,7 +2342,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   orderString      = String_new();
 
   // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"entries.name",name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -2734,7 +2734,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
         return Database_select(&indexQueryHandle->databaseStatementHandle,
                                &indexHandle->databaseHandle,
-#if 0
                                "FTS_entries \
                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
@@ -2746,65 +2745,53 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                   LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
                                   LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
                                ",
-#else
-                               "entries \
-                                  LEFT JOIN entities         ON entities.id=entries.entityId \
-                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
-                                  LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
-                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                  LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
-                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                               ",
-#endif
                                DATABASE_FLAG_NONE,
                                DATABASE_COLUMNS
                                (
-                                 DATABASE_COLUMN_KEY   ("uuids.id"),
-                                 DATABASE_COLUMN_STRING("uuids.jobUUID"),
-                                 DATABASE_COLUMN_KEY   ("entities.id"),
-                                 DATABASE_COLUMN_STRING("entities.scheduleUUID"),
-                                 DATABASE_COLUMN_STRING("entities.hostName"),
-                                 DATABASE_COLUMN_STRING("entities.userName"),
-                                 DATABASE_COLUMN_UINT  ("entities.type"),
-                                 DATABASE_COLUMN_KEY   ("entries.id"),
-                                 DATABASE_COLUMN_UINT  ("entries.type"),
-                                 DATABASE_COLUMN_STRING("entries.name"),
-                                 DATABASE_COLUMN_UINT64("entries.timeLastChanged"),
-                                 DATABASE_COLUMN_UINT  ("entries.userId"),
-                                 DATABASE_COLUMN_UINT  ("entries.groupId"),
-                                 DATABASE_COLUMN_UINT  ("entries.permission"),
-                                 DATABASE_COLUMN_UINT64("entries.size"),
-                                 DATABASE_COLUMN_UINT  (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
-                                 DATABASE_COLUMN_KEY   ("CASE entries.type \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN directoryEntries.storageId \
-                                                           WHEN ? THEN linkEntries.storageId \
-                                                           WHEN ? THEN 0 \
-                                                           WHEN ? THEN specialEntries.storageId \
-                                                         END \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_STRING("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN directoryEntries.storageId \
-                                                                                               WHEN ? THEN linkEntries.storageId \
-                                                                                               WHEN ? THEN 0 \
-                                                                                               WHEN ? THEN specialEntries.storageId \
-                                                                                             END \
-                                                         ) \
-                                                        "
-                                                       ),
-                                 DATABASE_COLUMN_UINT64("fileEntries.size"),
-                                 DATABASE_COLUMN_UINT64("imageEntries.size"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.fileSystemType"),
-                                 DATABASE_COLUMN_UINT  ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64("directoryEntries.totalEntrySizeNewest"),
-                                 DATABASE_COLUMN_STRING("linkEntries.destinationName"),
-                                 DATABASE_COLUMN_UINT64("hardlinkEntries.size")
+                                 DATABASE_COLUMN_KEY     ("uuids.id"),
+                                 DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
+                                 DATABASE_COLUMN_KEY     ("entities.id"),
+                                 DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                                 DATABASE_COLUMN_STRING  ("entities.hostName"),
+                                 DATABASE_COLUMN_STRING  ("entities.userName"),
+                                 DATABASE_COLUMN_UINT    ("entities.type"),
+                                 DATABASE_COLUMN_KEY     ("entries.id"),
+                                 DATABASE_COLUMN_UINT    ("entries.type"),
+                                 DATABASE_COLUMN_STRING  ("entries.name"),
+                                 DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
+                                 DATABASE_COLUMN_UINT    ("entries.userId"),
+                                 DATABASE_COLUMN_UINT    ("entries.groupId"),
+                                 DATABASE_COLUMN_UINT    ("entries.permission"),
+                                 DATABASE_COLUMN_UINT64  ("entries.size"),
+                                 DATABASE_COLUMN_UINT    (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
+                                 DATABASE_COLUMN_KEY     ("CASE entries.type \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN directoryEntries.storageId \
+                                                             WHEN ? THEN linkEntries.storageId \
+                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN specialEntries.storageId \
+                                                           END \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entries.type \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN directoryEntries.storageId \
+                                                                                                 WHEN ? THEN linkEntries.storageId \
+                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN specialEntries.storageId \
+                                                                                               END \
+                                                           ) \
+                                                          "
+                                                         ),
+                                 DATABASE_COLUMN_UINT64  ("fileEntries.size"),
+                                 DATABASE_COLUMN_UINT64  ("imageEntries.size"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
+                                 DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
+                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySizeNewest"),
+                                 DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
+                                 DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                             "     entities.deletedFlag!=1 \
@@ -3257,7 +3244,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            ConstString      name
                           )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3276,11 +3263,11 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3302,7 +3289,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_FILE);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3347,7 +3334,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3355,7 +3342,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3412,7 +3399,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             ConstString      name
                            )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3431,11 +3418,11 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3457,7 +3444,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3500,7 +3487,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3508,7 +3495,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3576,7 +3563,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  ConstString      name
                                 )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3595,11 +3582,11 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3621,7 +3608,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3666,7 +3653,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3674,7 +3661,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3729,7 +3716,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            ConstString      name
                           )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3748,11 +3735,11 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3775,7 +3762,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3821,7 +3808,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3829,7 +3816,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -3886,7 +3873,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                ConstString      name
                               )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -3905,11 +3892,11 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3931,7 +3918,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entries.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -3976,7 +3963,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -3984,7 +3971,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -4041,7 +4028,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              ConstString      name
                             )
 {
-  String ftsName;
+  String ftsMatchString;
   String entityIdsString;
   String entryIdsString;
   uint   i;
@@ -4060,11 +4047,11 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_new();
+  ftsMatchString = String_new();
+  filterString   = String_new();
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -4086,7 +4073,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   // get filters
   IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
@@ -4130,7 +4117,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
     String_delete(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
@@ -4138,7 +4125,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   String_delete(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
@@ -4247,18 +4234,18 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_FILE),
-                                    DATABASE_VALUE_STRING("name",            name),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                    DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                    DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                    DATABASE_VALUE_UINT  ("userId",          userId),
-                                    DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                    DATABASE_VALUE_UINT  ("permission",      permission),
+                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_FILE),
+                                    DATABASE_VALUE_STRING  ("name",            name),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                    DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                    DATABASE_VALUE_UINT    ("userId",          userId),
+                                    DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                    DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    DATABASE_VALUE_UINT64("size",            size)
+                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64  ("size",            size)
                                   )
                                  );
 
@@ -4440,18 +4427,18 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_IMAGE),
-                                    DATABASE_VALUE_STRING("name",            name),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  0LL),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  0LL),
-                                    DATABASE_VALUE_UINT64("timeLastChanged", 0LL),
-                                    DATABASE_VALUE_UINT  ("userId",          0),
-                                    DATABASE_VALUE_UINT  ("groupId",         0),
-                                    DATABASE_VALUE_UINT  ("permission",      0),
+                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_IMAGE),
+                                    DATABASE_VALUE_STRING  ("name",            name),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  0LL),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  0LL),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", 0LL),
+                                    DATABASE_VALUE_UINT    ("userId",          0),
+                                    DATABASE_VALUE_UINT    ("groupId",         0),
+                                    DATABASE_VALUE_UINT    ("permission",      0),
 
-                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    DATABASE_VALUE_UINT64("size",            size)
+                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64  ("size",            size)
                                   )
                                  );
           // get entry id
@@ -4592,18 +4579,18 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_DIRECTORY),
-                                DATABASE_VALUE_STRING("name",            name),
-                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                DATABASE_VALUE_UINT  ("userId",          userId),
-                                DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                DATABASE_VALUE_UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_DIRECTORY),
+                                DATABASE_VALUE_STRING  ("name",            name),
+                                DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT    ("userId",          userId),
+                                DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                DATABASE_VALUE_UINT64("size",            0)
+                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64  ("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4744,18 +4731,18 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_LINK),
-                                DATABASE_VALUE_STRING("name",            linkName),
-                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                DATABASE_VALUE_UINT  ("userId",          userId),
-                                DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                DATABASE_VALUE_UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_LINK),
+                                DATABASE_VALUE_STRING  ("name",            linkName),
+                                DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT    ("userId",          userId),
+                                DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                DATABASE_VALUE_UINT64("size",            0)
+                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64  ("size",            0)
                               )
                              );
       if (error != ERROR_NONE)
@@ -4909,18 +4896,18 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                    DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_HARDLINK),
-                                    DATABASE_VALUE_STRING("name",            name),
-                                    DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                    DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                    DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                    DATABASE_VALUE_UINT  ("userId",          userId),
-                                    DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                    DATABASE_VALUE_UINT  ("permission",      permission),
+                                    DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                    DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_HARDLINK),
+                                    DATABASE_VALUE_STRING  ("name",            name),
+                                    DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                    DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                    DATABASE_VALUE_UINT    ("userId",          userId),
+                                    DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                    DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                    DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                    DATABASE_VALUE_UINT64("size",            size)
+                                    DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                    DATABASE_VALUE_UINT64  ("size",            size)
                                   )
                                  );
 
@@ -5085,18 +5072,18 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entityId",        Index_getDatabaseId(entityId)),
-                                DATABASE_VALUE_UINT  ("type",            INDEX_TYPE_SPECIAL),
-                                DATABASE_VALUE_STRING("name",            name),
-                                DATABASE_VALUE_UINT64("timeLastAccess",  timeLastAccess),
-                                DATABASE_VALUE_UINT64("timeModified",    timeModified),
-                                DATABASE_VALUE_UINT64("timeLastChanged", timeLastChanged),
-                                DATABASE_VALUE_UINT  ("userId",          userId),
-                                DATABASE_VALUE_UINT  ("groupId",         groupId),
-                                DATABASE_VALUE_UINT  ("permission",      permission),
+                                DATABASE_VALUE_KEY     ("entityId",        Index_getDatabaseId(entityId)),
+                                DATABASE_VALUE_UINT    ("type",            INDEX_TYPE_SPECIAL),
+                                DATABASE_VALUE_STRING  ("name",            name),
+                                DATABASE_VALUE_DATETIME("timeLastAccess",  timeLastAccess),
+                                DATABASE_VALUE_DATETIME("timeModified",    timeModified),
+                                DATABASE_VALUE_DATETIME("timeLastChanged", timeLastChanged),
+                                DATABASE_VALUE_UINT    ("userId",          userId),
+                                DATABASE_VALUE_UINT    ("groupId",         groupId),
+                                DATABASE_VALUE_UINT    ("permission",      permission),
 
-                                DATABASE_VALUE_KEY   ("uuidId",          Index_getDatabaseId(uuidId)),
-                                DATABASE_VALUE_UINT64("size",            0)
+                                DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
+                                DATABASE_VALUE_UINT64  ("size",            0)
                               )
                              );
       if (error != ERROR_NONE)

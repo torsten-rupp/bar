@@ -553,7 +553,7 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                            uint64        *totalEntrySize
                           )
 {
-  String ftsName;
+  String ftsMatchString;
   String filterString;
   Errors error;
 
@@ -569,16 +569,17 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_newCString("1");
+  ftsMatchString = String_new();
+  filterString   = String_newCString("1");
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+// TODO: FTS_uuids do not exists
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_uuids.name",name);
 
   IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   IndexCommon_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
   IndexCommon_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID='%S'",scheduleUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE FTS_uuids MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE %S)",ftsMatchString);
 
   INDEX_DOX(error,
             indexHandle,
@@ -634,13 +635,13 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
   if (error != ERROR_NONE)
   {
     String_delete(filterString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 
   // free resources
   String_delete(filterString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   return ERROR_NONE;
 }
@@ -1329,7 +1330,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            uint64           limit
                           )
 {
-  String ftsName;
+  String ftsMatchString;
   String filterString;
   String string;
   Errors error;
@@ -1344,15 +1345,15 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  ftsName      = String_new();
-  filterString = String_newCString("1");
+  ftsMatchString = String_new();
+  filterString   = String_newCString("1");
 
   // get FTS
-// TODO:  IndexCommon_getFTSString(ftsName,name);
+  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get filters
   string = String_new();
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsName),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S')",ftsName);
+  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
   IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
   IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
@@ -1401,14 +1402,14 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
     String_delete(filterString);
-    String_delete(ftsName);
+    String_delete(ftsMatchString);
     return error;
   }
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseStatementHandle);
 
   // free resources
   String_delete(filterString);
-  String_delete(ftsName);
+  String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 

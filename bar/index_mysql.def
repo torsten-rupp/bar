@@ -188,6 +188,13 @@ CREATE TABLE IF NOT EXISTS storages(
   FULLTEXT(name)
 ) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
 
+// full-text-search (using a view)
+CREATE VIEW FTS_storages(
+  SELECT id AS storageId,
+         name
+  FROM storages
+);
+
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
   id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -247,6 +254,13 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   INDEX(timeLastChanged,name,size,type),
   INDEX(entityId,type,entryId,name,size,timeLastChanged)
 ) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+
+// full-text-search (using a view)
+CREATE VIEW FTS_entries(
+  SELECT id AS entryId,
+         name
+  FROM entries
+);
 
 /*
 CREATE TRIGGER AFTER UPDATE ON entries

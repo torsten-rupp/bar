@@ -1706,7 +1706,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
   }
   assert(databaseHandle->databaseNode != NULL);
 
-  // get database type and open/connect data
+  // get database type and open/connect
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -1839,11 +1839,12 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
       break;
     case DATABASE_TYPE_MYSQL:
       {
-        int mysqlResult;
+        int  mysqlResult;
+        char sqlCommand[256];
 
-        // open database
         SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
+          // open database
           databaseHandle->mysql.handle = mysql_init(NULL);
           if (databaseHandle->mysql.handle == NULL)
           {
@@ -1856,9 +1857,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                                  String_cString(databaseSpecifier->mysql.serverName),
                                  String_cString(databaseSpecifier->mysql.userName),
                                  databaseSpecifier->mysql.password.data,
-                                 !String_isEmpty(databaseName)
-                                   ? String_cString(databaseName)
-                                   : String_cString(databaseSpecifier->mysql.databaseName),
+                                 NULL,  // databaseName
                                  0,
                                  0,
                                  0
@@ -1876,6 +1875,70 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           mysqlResult = mysql_query(databaseHandle->mysql.handle,
                                     "SET NAMES 'UTF8'"
                                    );
+          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+          {
+            HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
+          }
+          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+          {
+            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            mysql_close(databaseHandle->mysql.handle);
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+          else if (mysqlResult != 0)
+          {
+            error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            mysql_close(databaseHandle->mysql.handle);
+            Semaphore_unlock(&databaseList.lock);
+            sem_destroy(&databaseHandle->wakeUp);
+            return error;
+          }
+
+          // create database if requested
+          if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
+          {
+            stringFormat(sqlCommand,sizeof(sqlCommand),
+                         "CREATE DATABASE IF NOT EXISTS %s \
+                          CHARACTER SET 'utf8mb4' \
+                          COLLATE 'utf8mb4_bin' \
+                         ",
+                         !String_isEmpty(databaseName)
+                           ? String_cString(databaseName)
+                           : String_cString(databaseSpecifier->mysql.databaseName)
+                        );
+            mysqlResult = mysql_query(databaseHandle->mysql.handle,
+                                      sqlCommand
+                                     );
+            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            {
+              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
+            }
+            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+            {
+              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+              mysql_close(databaseHandle->mysql.handle);
+              Semaphore_unlock(&databaseList.lock);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
+            else if (mysqlResult != 0)
+            {
+              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+              mysql_close(databaseHandle->mysql.handle);
+              Semaphore_unlock(&databaseList.lock);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
+          }
+
+          // select database
+          mysqlResult = mysql_select_db(databaseHandle->mysql.handle,
+                                        !String_isEmpty(databaseName)
+                                          ? String_cString(databaseName)
+                                          : String_cString(databaseSpecifier->mysql.databaseName)
+                                       );
           if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
           {
             HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
@@ -7382,13 +7445,13 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
     {
       case DATABASE_TYPE_SQLITE3:
         fprintf(stderr,
-                "Database debug: open 'sqlite:%s'\n",
+                "Database debug: opened 'sqlite:%s'\n",
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                );
         break;
       case DATABASE_TYPE_MYSQL:
         fprintf(stderr,
-                "Database debug: open 'mysql:%s:%s:*:%s'\n",
+                "Database debug: opened 'mysql:%s:%s:*:%s'\n",
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName)
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.databaseName)
@@ -7675,7 +7738,7 @@ Errors Database_getTableList(StringList     *tableList,
                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                              {
                                assert(values != NULL);
-                               assert(valueCount == 1);
+                               assert(valueCount == 2);
 
                                UNUSED_VARIABLE(valueCount);
                                UNUSED_VARIABLE(userData);
@@ -7685,7 +7748,94 @@ Errors Database_getTableList(StringList     *tableList,
                                return ERROR_NONE;
                              },NULL),
                              NULL,  // changedRowCount
-                             DATABASE_PLAIN("SHOW TABLES"),
+                             DATABASE_PLAIN("SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE'"),
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
+                             DATABASE_FILTERS_NONE,
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        break;
+    }
+
+    return error;
+  });
+
+  return ERROR_NONE;
+}
+
+Errors Database_getViewList(StringList     *viewList,
+                            DatabaseHandle *databaseHandle
+                           )
+{
+  Errors error;
+
+  assert(viewList != NULL);
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  StringList_init(viewList);
+
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ,
+               WAIT_FOREVER,
+  {
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_get(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(valueCount);
+                               UNUSED_VARIABLE(userData);
+
+                               StringList_appendCString(viewList,values[0].text.data);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "sqlite_master"
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
+                             "type='view'",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        error = Database_get(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(valueCount);
+                               UNUSED_VARIABLE(userData);
+
+                               StringList_appendCString(viewList,values[0].text.data);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_PLAIN("SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'VIEW'"),
                              DATABASE_COLUMNS
                              (
                                DATABASE_COLUMN_STRING("name")
@@ -8647,6 +8797,38 @@ Errors Database_dropTables(DatabaseHandle *databaseHandle)
     return error;
   }
   StringList_done(&tableNameList);
+
+  return ERROR_NONE;
+}
+
+Errors Database_dropViews(DatabaseHandle *databaseHandle)
+{
+  StringList         viewNameList;
+  Errors             error;
+  StringListIterator iteratorViewName;
+  String             viewName;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  StringList_init(&viewNameList);
+  error = Database_getViewList(&viewNameList,databaseHandle);
+  STRINGLIST_ITERATEX(&viewNameList,iteratorViewName,viewName,error == ERROR_NONE)
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             DATABASE_COLUMN_TYPES(),
+                             "DROP VIEW %s",
+                             String_cString(viewName)
+                            );
+  }
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&viewNameList);
+    return error;
+  }
+  StringList_done(&viewNameList);
 
   return ERROR_NONE;
 }
