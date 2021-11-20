@@ -525,13 +525,17 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString,
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
-      if (String_isEmpty(databaseSpecifier.mysql.databaseName)) String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+      if (String_isEmpty(databaseSpecifier.mysql.databaseName))
+      {
+        String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+      }
       break;
   }
 
   // open database
+fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,createFlag);
   printInfo("Open database '%s'...",uriString);
-  openMode = (forceFlag)
+  openMode = (createFlag)
                ? DATABASE_OPENMODE_FORCE_CREATE
                : DATABASE_OPENMODE_READWRITE;
   openMode |= DATABASE_OPENMODE_AUX;
@@ -540,17 +544,6 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString,
                         openMode,
                         WAIT_FOREVER
                        );
-  if (error != ERROR_NONE)
-  {
-    if (createFlag)
-    {
-      error = Database_open(databaseHandle,
-                            &databaseSpecifier,
-                            DATABASE_OPENMODE_CREATE|DATABASE_OPENMODE_AUX,
-                            WAIT_FOREVER
-                           );
-    }
-  }
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -5846,7 +5839,8 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
 LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  int64  n;
+  uint   n;
+  uint64 n64;
 
   // show meta data
   printf("Meta:\n");
@@ -5882,498 +5876,518 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (verboseFlag)
   {
     // show number of entities
-    error = Database_getInt64(databaseHandle,
-                              &n,
-                              "entities",
-                              "COUNT(id)",
-                              "id!=0 AND deletedFlag!=1",
-                              DATABASE_FILTERS
-                              (
-                              ),
-                              NULL  // group
-                             );
+    error = Database_getUInt(databaseHandle,
+                             &n,
+                             "entities",
+                             "COUNT(id)",
+                             "id!=0 AND deletedFlag=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_BOOL(FALSE)
+                             ),
+                             NULL  // group
+                            );
     if (error != ERROR_NONE)
     {
       printError("get entities data fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printf(" %"PRIi64,n);
+    printf(" %u",n);
   }
   printf("\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "type=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_NORMAL)
+                           ),
+                           NULL  // group
+                           );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+  printf("  Normal          : %u\n",n);
 
-                             printf("  Normal          : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_NORMAL
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "type=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_FULL)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+  printf("  Full            : %u\n",n);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Full            : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_FULL
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "type=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+  printf("  Differential    : %u\n",n);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Differential    : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "type=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+  printf("  Incremental     : %u\n",n);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Incremental     : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL
-                          );
-  if (error != ERROR_NONE)
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "type=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS)
+                           ),
+                           NULL  // group
+                           );
+  if (error!= ERROR_NONE)
   {
     printError("get entities data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
-
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Continuous      : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE type=%u \
-                           ",
-                           CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
+  printf("  Continuous      : %u\n",n);
 
   printf("Storages:");
   if (verboseFlag)
   {
     // show number of storages
-    error = Database_getInt64(databaseHandle,
-                              &n,
-                              "storages",
-                              "COUNT(id)",
-                              "deletedFlag!=1",
-                              DATABASE_FILTERS
-                              (
-                              ),
-                              NULL  // group
-                             );
+    error = Database_getUInt(databaseHandle,
+                             &n,
+                             "storages",
+                             "COUNT(id)",
+                             "deletedFlag=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_BOOL(FALSE)
+                             ),
+                             NULL  // group
+                            );
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printf(" %"PRIi64,n);
+    printf(" %u",n);
   }
   printf("\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  OK              : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM storages \
-                            WHERE state=%d AND deletedFlag!=1 \
-                           ",
-                           INDEX_CONST_STATE_OK
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "storages",
+                           "COUNT(id)",
+                           "state=? AND deletedFlag=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK),
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+  printf("  OK              : %s\n",n);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Update requested: %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM storages \
-                            WHERE state=%d AND deletedFlag!=1 \
-                           ",
-                           INDEX_CONST_STATE_UPDATE_REQUESTED
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "storages",
+                           "COUNT(id)",
+                           "state=? AND deletedFlag=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_UPDATE_REQUESTED),
+                             DATABASE_FILTER_BOOL(FALSE)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+  printf("  Update requested: %u\n",n);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Error           : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM storages \
-                            WHERE state=%d AND deletedFlag!=1 \
-                           ",
-                           INDEX_CONST_STATE_ERROR
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "storages",
+                           "COUNT(id)",
+                           "state=? AND deletedFlag=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR),
+                             DATABASE_FILTER_BOOL(FALSE)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+  printf("  Error           : %u\n",n);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             printf("  Deleted         : %u\n",values[0].u);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM storages \
-                            WHERE deletedFlag=1 \
-                           "
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "storages",
+                           "COUNT(id)",
+                           "deletedFlag=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_BOOL(TRUE)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  printf("  Deleted         : %u\n",n);
 
   printf("Entries:");
   if (verboseFlag)
   {
     // show number of entries
-    error = Database_getInt64(databaseHandle,
-                              &n,
-                              "entries",
-                              "COUNT(id)",
-                              DATABASE_FILTERS_NONE,
-                              NULL  // group
-                             );
+    error = Database_getUInt(databaseHandle,
+                             &n,
+                             "entries",
+                             "COUNT(id)",
+                             DATABASE_FILTERS_NONE,
+                             NULL  // group
+                            );
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printf(" %"PRIi64,n);
+    printf(" %u",n);
   }
   printf("\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Total           : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,
-                                                 UINT64
-                                                ),
-                           "SELECT SUM(totalEntryCount),SUM(totalEntrySize) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Total           : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalEntryCount)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalEntrySize)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Files           : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,
-                                                 UINT64
-                                                ),
-                           "SELECT SUM(totalFileCount),SUM(totalFileSize) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Files           : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalFileCount)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalFileSize)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Images          : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,
-                                                 UINT64
-                                                ),
-                           "SELECT SUM(totalImageCount),SUM(totalImageSize) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Images          : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalImageCount)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalImageSize)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
 
-                             printf("  Directories     : %u\n",values[0].u);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT SUM(totalDirectoryCount) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Directories     : %u\n",values[0].u);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalDirectoryCount)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
 
-                             printf("  Links           : %u\n",values[0].u);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT SUM(totalLinkCount) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Links           : %u\n",values[0].u);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalLinkCount)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Hardlinks       : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,
-                                                 UINT64
-                                                ),
-                           "SELECT SUM(totalHardlinkCount),SUM(totalHardlinkSize) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Hardlinks       : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalHardlinkCount)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalHardlinkSize)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
 
-                             printf("  Special         : %u\n",values[0].u);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT SUM(totalSpecialCount) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Special         : %u\n",values[0].u);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalSpecialCount)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -6384,217 +6398,306 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   if (verboseFlag)
   {
     // show number of newest entries
-    error = Database_getInt64(databaseHandle,
-                              &n,
-                              "entriesNewest",
-                              "COUNT(id)",
-                              DATABASE_FILTERS_NONE,
-                              NULL  // group
-                             );
+    error = Database_getUInt(databaseHandle,
+                             &n,
+                             "entriesNewest",
+                             "COUNT(id)",
+                             DATABASE_FILTERS_NONE,
+                             NULL  // group
+                            );
     if (error != ERROR_NONE)
     {
       printError("get storage data fail (error: %s)!",Error_getText(error));
       exit(EXITCODE_FAIL);
     }
-    printf(" %"PRIi64,n);
+    printf(" %u",n);
   }
   printf("\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Total           : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,
-                                                 UINT64
-                                                ),
-                           "SELECT SUM(totalEntryCountNewest),SUM(totalEntrySizeNewest) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Total           : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalEntryCountNewest)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalEntrySizeNewest)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Files           : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,
-                                                 UINT64
-                                                ),
-                           "SELECT SUM(totalFileCountNewest),SUM(totalFileSizeNewest) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Files           : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalFileCountNewest)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalFileSizeNewest)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Images          : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,
-                                                 UINT64
-                                                ),
-                           "SELECT SUM(totalImageCountNewest),SUM(totalImageSizeNewest) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Images          : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalImageCountNewest)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalImageSizeNewest)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
 
-                             printf("  Directories     : %u\n",values[0].u);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT SUM(totalDirectoryCountNewest) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Directories     : %u\n",values[0].u);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalDirectoryCountNewest)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
 
-                             printf("  Links           : %u\n",values[0].u);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT SUM(totalLinkCountNewest) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Links           : %u\n",values[0].u);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalLinkCountNewest)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             printf("  Hardlinks       : %u, %.1lf %s (%"PRIu64" bytes)\n",
-                                    values[0].u,
-                                    getByteSize(values[1].u64),
-                                    getByteUnitShort(values[1].u64),
-                                    values[1].u64
-                                   );
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT,UINT64),
-                           "SELECT SUM(totalHardlinkCountNewest),SUM(totalHardlinkSizeNewest) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Hardlinks       : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                                values[0].u,
+                                getByteSize(values[1].u64),
+                                getByteUnitShort(values[1].u64),
+                                values[1].u64
+                               );
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalHardlinkCountNewest)"),
+                         DATABASE_COLUMN_UINT64("SUM(totalHardlinkSizeNewest)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
 
-                             printf("  Special         : %u\n",values[0].u);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT SUM(totalSpecialCountNewest) \
-                            FROM storages \
-                            WHERE deletedFlag!=1 \
-                           "
-                          );
+                         printf("  Special         : %u\n",values[0].u);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                        "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_UINT  ("SUM(totalSpecialCountNewest)")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       1LL
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8340,7 +8443,7 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // open database
-  error = openDatabase(&databaseHandle,databaseFileName,!String_isEmpty(command) || pipeFlag);
+  error = openDatabase(&databaseHandle,databaseFileName,createFlag);
   if (error != ERROR_NONE)
   {
     Array_done(&storageIds);
