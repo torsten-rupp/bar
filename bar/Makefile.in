@@ -484,7 +484,7 @@ BAR_SOURCES_FILTER          = $(if @HAVE_BFD@,,common/stacktraces.c) \
 
 BAR_HEADERS                 = $(patsubst %.c,  %.h,$(filter %.c,  $(BAR_SOURCES))) \
                               $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
-                              bar_global.h \
+                              bar_common.h \
 
 BAR_OBJECTS                 = $(foreach z,$(filter %.c,  $(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                               $(foreach z,$(filter %.cpp,$(filter-out $(BAR_SOURCES_FILTER),$(BAR_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
