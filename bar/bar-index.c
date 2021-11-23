@@ -39,6 +39,7 @@
 #include "sqlite3.h"
 
 #include "index/index.h"
+#include "index/index_common.h"
 #include "index_definition.h"
 #include "archive_format_const.h"
 
@@ -49,20 +50,6 @@
 
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
 #define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
-
-// program exit codes
-typedef enum
-{
-  EXITCODE_OK                     =   0,
-  EXITCODE_FAIL                   =   1,
-
-  EXITCODE_INVALID_ARGUMENT       =   5,
-
-  EXITCODE_FATAL_ERROR            = 126,
-  EXITCODE_FUNCTION_NOT_SUPPORTED = 127,
-
-  EXITCODE_UNKNOWN                = 128
-} ExitCodes;
 
 // archive types
 const char *ARCHIVE_TYPES[] =
@@ -121,18 +108,6 @@ LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("xhelp",                             0,   0, 0, xhelpFlag,        "output help to extended options" ),
 );
 #endif
-
-// progress info data
-typedef struct
-{
-  const char *text;
-  uint64     startTimestamp;
-  uint64     steps,maxSteps;
-  ulong      lastProgressSum;  // last progress sum [1/1000]
-  uint       lastProgressCount;
-  uint64     lastProgressTimestamp;
-} ProgressInfo;
-
 
 /***************************** Variables *******************************/
 LOCAL const char *changeToDirectory                   = NULL;
@@ -305,6 +280,112 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --xhelp                                 - print extended help\n");
 }
 
+/***********************************************************************\
+* Name   : vprintInfo, pprintInfo, printInfo
+* Purpose: output info to console
+* Input  : prefix    - prefix text
+*          format    - format string (like printf)
+*          arguments - arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
+{
+  String line;
+
+  assert(format != NULL);
+
+  line = String_new();
+
+  // format line
+  if (prefix != NULL) String_appendCString(line,prefix);
+  String_appendVFormat(line,format,arguments);
+
+  // output
+  fwrite(String_cString(line),1,String_length(line),stdout);
+
+  String_delete(line);
+}
+
+/***********************************************************************\
+* Name   : printInfo
+* Purpose: output info to console
+* Input  : format - format string (like printf)
+*          ...    - optional arguments (like printf)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printInfo(const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  vprintInfo(NULL,format,arguments);
+  va_end(arguments);
+}
+
+/***********************************************************************\
+* Name   : printWarning
+* Purpose: output warning on console and write to log file
+* Input  : text - format string (like printf)
+*          ...  - optional arguments (like printf)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printWarning(const char *text, ...)
+{
+  String  line;
+  va_list arguments;
+
+  assert(text != NULL);
+
+  line = String_new();
+  va_start(arguments,text);
+  String_appendCString(line,"Warning: ");
+  String_appendVFormat(line,text,arguments);
+  String_appendChar(line,'\n');
+  va_end(arguments);
+  (void)fwrite(String_cString(line),1,String_length(line),stderr);
+
+  String_delete(line);
+}
+
+/***********************************************************************\
+* Name   : printError
+* Purpose: print error message on stderr and write to log file
+*          text - format string (like printf)
+*          ...  - optional arguments (like printf)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printError(const char *text, ...)
+{
+  String  line;
+  va_list arguments;
+
+  assert(text != NULL);
+
+  line = String_new();
+  va_start(arguments,text);
+  String_appendCString(line,"ERROR: ");
+  String_appendVFormat(line,text,arguments);
+  String_appendChar(line,'\n');
+  va_end(arguments);
+  (void)fwrite(String_cString(line),1,String_length(line),stderr);
+
+  String_delete(line);
+}
+
 //TODO: remove, not used
 #if 0
 /***********************************************************************\
@@ -393,76 +474,6 @@ LOCAL const char *getByteUnitShort(uint64 n)
 }
 
 /***********************************************************************\
-* Name   : printInfo
-* Purpose: print info (if verbose)
-* Input  : format - printf-format string
-*          ...    - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void printInfo(const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  if (verboseFlag)
-  {
-    va_start(arguments,format);
-    vfprintf(stdout,format,arguments); fflush(stdout);
-    va_end(arguments);
-  }
-}
-
-/***********************************************************************\
-* Name   : printError
-* Purpose: print error message
-* Input  : format - printf-format string
-*          ...    - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void printError(const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  va_start(arguments,format);
-  fprintf(stderr,"ERROR: ");
-  vfprintf(stderr,format,arguments);
-  fprintf(stderr,"\n");
-  va_end(arguments);
-}
-
-/***********************************************************************\
-* Name   : printWarning
-* Purpose: print warning message
-* Input  : format - printf-format string
-*          ...    - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void printWarning(const char *format, ...)
-{
-  va_list arguments;
-
-  assert(format != NULL);
-
-  va_start(arguments,format);
-  fprintf(stderr,"Warning: ");
-  vfprintf(stderr,format,arguments);
-  fprintf(stderr,"\n");
-  va_end(arguments);
-}
-
-/***********************************************************************\
 * Name   : printPercentage
 * Purpose: print percentage value (if verbose)
 * Input  : n     - value
@@ -533,7 +544,6 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString,
   }
 
   // open database
-fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,createFlag);
   printInfo("Open database '%s'...",uriString);
   openMode = (createFlag)
                ? DATABASE_OPENMODE_FORCE_CREATE
@@ -934,21 +944,15 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
      )
   {
     Misc_getUUID(jobUUID);
-    error = Database_execute(newDatabaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "INSERT OR IGNORE INTO uuids \
-                                ( \
-                                 jobUUID \
-                                ) \
-                              VALUES \
-                                ( \
-                                 %'S \
-                                ) \
-                             ",
-                             jobUUID
-                            );
+    error = Database_insert(newDatabaseHandle,
+                            NULL,  // changedRowCount
+                            "uuids",
+                            DATABASE_FLAG_IGNORE,
+                            DATABASE_VALUES
+                            (
+                              DATABASE_VALUE_STRING("jobUUID", jobUUID)
+                            )
+                           );
 
     // get uuid id
     if (error == ERROR_NONE)
@@ -968,30 +972,18 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
     // create entity
     if (error == ERROR_NONE)
     {
-      error = Database_execute(newDatabaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "INSERT INTO entities \
-                                  ( \
-                                   uuidId, \
-                                   jobUUID, \
-                                   type, \
-                                   lockedCount \
-                                  ) \
-                                VALUES \
-                                  ( \
-                                   %lld, \
-                                   %'S, \
-                                   %u, \
-                                   1 \
-                                  ) \
-                               ",
-                               uuidId,
-                               jobUUID,
-                               ARCHIVE_TYPE_FULL
-                              );
-      return error;
+      error = Database_insert(newDatabaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_IGNORE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_KEY   ("uuidId",      uuidId),
+                                DATABASE_VALUE_STRING("jobUUID",     jobUUID),
+                                DATABASE_VALUE_UINT  ("type",        ARCHIVE_TYPE_FULL),
+                                DATABASE_VALUE_UINT  ("lockedCount", 1)
+                              )
+                             );
     }
 
     if (error == ERROR_NONE)
@@ -1014,13 +1006,20 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
 {
   assert(databaseHandle != NULL);
 
-  return Database_execute(databaseHandle,
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          DATABASE_COLUMN_TYPES(),
-                          "UPDATE entities SET lockedCount=lockedCount-1 WHERE id=%lld AND lockedCount>0;",
-                          entityId
-                         );
+  return Database_update(databaseHandle,
+                         NULL,  // changedRowCount
+                         "entities",
+                         DATABASE_FLAG_NONE,
+                         DATABASE_VALUES
+                         (
+                           DATABASE_VALUE("lockedCount","lockedCount-1")
+                         ),
+                         "id=? AND lockedCount>0",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_KEY(entityId)
+                         )
+                        );
 }
 
 #include "index/index_current.c"
@@ -1077,7 +1076,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriS
 }
 
 /***********************************************************************\
-* Name   : checkDatabaseIntegrity
+* Name   : checkIntegrity
 * Purpose: check database integrity
 * Input  : databaseHandle - database handle
 * Output : -
@@ -1085,7 +1084,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriS
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void checkDatabaseIntegrity(DatabaseHandle *databaseHandle)
+LOCAL void checkIntegrity(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
@@ -1153,7 +1152,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "fileEntries",
                             "COUNT(id)",
-                            "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1174,7 +1173,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "imageEntries",
                             "COUNT(id)",
-                            "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1195,7 +1194,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "hardlinkEntries",
                             "COUNT(id)",
-                            "WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
+                            "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1218,7 +1217,9 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "entries",
                             "COUNT(id)",
-                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1)",
+                            "    entries.type=? \
+                             AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_UINT(INDEX_CONST_TYPE_FILE)
@@ -1240,7 +1241,9 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "entries",
                             "COUNT(id)",
-                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1)",
+                            "    entries.type=? \
+                             AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_UINT(INDEX_CONST_TYPE_IMAGE)
@@ -1262,7 +1265,9 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "entries",
                             "COUNT(id)",
-                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1)",
+                            "    entries.type=? \
+                             AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_UINT(INDEX_CONST_TYPE_DIRECTORY)
@@ -1284,7 +1289,9 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "entries",
                             "COUNT(id)",
-                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1)",
+                            "    entries.type=? \
+                             AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_UINT(INDEX_CONST_TYPE_LINK)
@@ -1306,7 +1313,9 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "entries",
                             "COUNT(id)",
-                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1)",
+                            "    entries.type=? \
+                             AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_UINT(INDEX_CONST_TYPE_HARDLINK)
@@ -1328,7 +1337,9 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "entries",
                             "COUNT(id)",
-                            "WHERE entries.type=? AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1)",
+                            "    entries.type=? \
+                             AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_UINT(INDEX_CONST_TYPE_SPECIAL)
@@ -1352,7 +1363,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                             &n,
                             "storages",
                             "COUNT(id)",
-                            "WHERE name IS NULL OR name=''",
+                            "name IS NULL OR name=''",
                             DATABASE_FILTERS
                             (
                             ),
@@ -1378,7 +1389,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "FTS_entries",
                                 "COUNT(entryId)",
-                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1401,7 +1412,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "FTS_storages",
                                 "COUNT(storageId)",
-                                "WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1424,7 +1435,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                 &n,
                                 "entriesNewest",
                                 "COUNT(id)",
-                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
+                                "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
                                 DATABASE_FILTERS
                                 (
                                 ),
@@ -1478,30 +1489,42 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
   // check duplicate storages
   printInfo("  storages...");
   n = 0L;
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 1);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             if (String_equalsCString(name,values[0].text.data))
-                             {
-                               n++;
-                             }
-                             String_setCString(name,values[0].text.data);
+                         if (String_equalsCString(name,values[0].text.data))
+                         {
+                           n++;
+                         }
+                         String_setCString(name,values[0].text.data);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(CSTRING),
-                           "SELECT name FROM storages \
-                            WHERE deletedFlag!=1 \
-                            ORDER BY name \
-                           "
-                          );
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_STRING("name")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       "ORDER BY name",
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   if (error == ERROR_NONE)
   {
     printInfo("%lld\n",n);
@@ -1533,125 +1556,108 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
 
 LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
 {
-  StringList       nameList;
-  Errors           error;
-  ulong            n;
-  const StringNode *stringNode;
-  ConstString      name;
+  StringList         tableNameList;
+  Errors             error;
+  ulong              n;
+  StringListIterator stringListIterator;
+  ConstString        name;
 
   // init variables
-  StringList_init(&nameList);
 
   printInfo("Optimize:\n");
 
   printInfo("  Tables...");
-  StringList_clear(&nameList);
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
-
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             StringList_appendCString(&nameList,values[0].text.data);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(CSTRING),
-                           "SELECT name FROM sqlite_master WHERE type='table'"
-                          );
+  StringList_clear(&tableNameList);
+  error = Database_getTableList(&tableNameList,databaseHandle);
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("get tables fail (error: %s)!",Error_getText(error));
     return;
   }
+
   n = 0;
-  STRINGLIST_ITERATE(&nameList,stringNode,name)
+  STRINGLIST_ITERATE(&tableNameList,stringListIterator,name)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "ANALYZE %s",
-                             String_cString(name)
-                            );
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
+                                 "ANALYZE %s",
+                                 String_cString(name)
+                                );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        break;
+    }
     if (error != ERROR_NONE)
     {
       break;
     }
 
     n++;
-    printPercentage(n,StringList_count(&nameList));
+    printPercentage(n,StringList_count(&tableNameList));
   }
   clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("optimize table '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
-    StringList_done(&nameList);
+    StringList_done(&tableNameList);
     return;
   }
   printInfo("OK  \n");
 
   printInfo("  Indizes...");
-  StringList_clear(&nameList);
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
-
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             StringList_appendCString(&nameList,values[0].text.data);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(CSTRING),
-                           "SELECT name FROM sqlite_master WHERE type='index'"
-                          );
+  StringList_clear(&tableNameList);
+  error = Database_getIndexList(&tableNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("get indizes fail (error: %s)!",Error_getText(error));
     return;
   }
+
   n = 0;
-  STRINGLIST_ITERATE(&nameList,stringNode,name)
+  STRINGLIST_ITERATE(&tableNameList,stringListIterator,name)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "ANALYZE %s",
-                             String_cString(name)
-                            );
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        error = Database_execute(databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 DATABASE_COLUMN_TYPES(),
+                                 "ANALYZE %s",
+                                 String_cString(name)
+                                );
+        break;
+      case DATABASE_TYPE_MYSQL:
+        break;
+    }
     if (error != ERROR_NONE)
     {
       break;
     }
 
     n++;
-    printPercentage(n,StringList_count(&nameList));
+    printPercentage(n,StringList_count(&tableNameList));
   }
   clearPercentage();
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("optimize index '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
-    StringList_done(&nameList);
+    StringList_done(&tableNameList);
     return;
   }
   printInfo("OK  \n");
 
   // free resources
-  StringList_done(&nameList);
+  StringList_done(&tableNameList);
 }
 
 /***********************************************************************\
@@ -1902,40 +1908,23 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
     {
       case DATABASE_TYPE_SQLITE3:
         {
-          char name[1024];
-          do
+          StringList         indexNameList;
+          StringListIterator iteratorIndexName;
+          String             indexName;
+
+          StringList_init(&indexNameList);
+          error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
+          STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
           {
-            stringClear(name);
-// TODO: use Database_getString()
             error = Database_execute(databaseHandle,
-                                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                     {
-                                       assert(values != NULL);
-                                       assert(valueCount == 1);
-
-                                       UNUSED_VARIABLE(valueCount);
-                                       UNUSED_VARIABLE(userData);
-
-                                       stringSet(name,sizeof(name),values[0].text.data);
-
-                                       return ERROR_NONE;
-                                     },NULL),
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(CSTRING),
-                                     "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'index%%' LIMIT 0,1"
+                                     DATABASE_COLUMN_TYPES(),
+                                     "DROP INDEX IF EXISTS %s",
+                                     indexName
                                     );
-            if ((error == ERROR_NONE) && !stringIsEmpty(name))
-            {
-              error = Database_execute(databaseHandle,
-                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                       NULL,  // changedRowCount
-                                       DATABASE_COLUMN_TYPES(),
-                                       "DROP INDEX IF EXISTS %s",
-                                       name
-                                      );
-            }
           }
-          while ((error == ERROR_NONE) && !stringIsEmpty(name));
+          StringList_done(&indexNameList);
         }
         break;
       case DATABASE_TYPE_MYSQL:
@@ -2056,26 +2045,60 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
           }
           if (error == ERROR_NONE)
           {
-            error = Database_execute(databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "INSERT INTO FTS_storages SELECT id,name FROM storages"
-                                    );
+            error = Database_insertSelect(databaseHandle,
+                                          NULL,  // changedRowCount
+                                          "FTS_storages",
+                                          DATABASE_FLAG_IGNORE,
+                                          DATABASE_COLUMNS
+                                          (
+                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_STRING("name")
+                                          ),
+                                          DATABASE_TABLES
+                                          (
+                                            "storages"
+                                          ),
+                                          DATABASE_COLUMNS
+                                          (
+                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_STRING("name")
+                                          ),
+                                          DATABASE_FILTERS_NONE,
+                                          NULL,  // orderGroup
+                                          0LL,
+                                          DATABASE_UNLIMITED
+                                         );
           }
           if (error == ERROR_NONE)
           {
-            error = Database_execute(databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                     NULL,  // changedRowCount
-                                     DATABASE_COLUMN_TYPES(),
-                                     "INSERT INTO FTS_entries SELECT id,name FROM entries"
-                                    );
+            error = Database_insertSelect(databaseHandle,
+                                          NULL,  // changedRowCount
+                                          "FTS_entries",
+                                          DATABASE_FLAG_IGNORE,
+                                          DATABASE_COLUMNS
+                                          (
+                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_STRING("name")
+                                          ),
+                                          DATABASE_TABLES
+                                          (
+                                            "entries"
+                                          ),
+                                          DATABASE_COLUMNS
+                                          (
+                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_STRING("name")
+                                          ),
+                                          DATABASE_FILTERS_NONE,
+                                          NULL,  // orderGroup
+                                          0LL,
+                                          DATABASE_UNLIMITED
+                                         );
           }
         }
         break;
       case DATABASE_TYPE_MYSQL:
-// TODO:
+        // nothing to do (use views)
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -2120,17 +2143,18 @@ LOCAL void reindex(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : addStorageToNewest
+* Name   : addToNewest
 * Purpose: add storage entries to newest entries (if newest)
 * Input  : databaseHandle - database handle
 *          storageId      - storage database id
-*          progressInfo   - progress info (or NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId storageId)
+LOCAL Errors addToNewest(IndexHandle  *indexHandle,
+                         DatabaseId   storageId
+                        )
 {
   typedef struct EntryNode
   {
@@ -2176,262 +2200,238 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
     String_delete(entryNode->name);
   }
 
-  EntryList entryList;
-  Errors    error;
-  EntryNode *entryNode;
+  EntryList  entryList;
+  DatabaseId entryId;
+  DatabaseId uuidId;
+  DatabaseId entityId;
+  uint       indexType;
+  String     entryName;
+  uint64     timeLastChanged;
+  uint32     userId;
+  uint32     groupId;
+  uint32     permission;
+  uint64     size;
+  Errors     error;
+  EntryNode  *entryNode;
+  bool       transactionFlag;
 
-  assert(databaseHandle != NULL);
+  assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
   List_init(&entryList);
-  error = ERROR_NONE;
+  entryName = String_new();
+  error     = ERROR_NONE;
 
+// TODO:
   // get entries info to add
   if (error == ERROR_NONE)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               EntryNode *entryNode;
+    error = Database_get(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           assert(values != NULL);
+                           assert(valueCount == 10);
 
-                               assert(values != NULL);
-                               assert(valueCount == 10);
+                           UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           entryId         = values[0].id;
+                           uuidId          = values[1].id;
+                           entityId        = values[2].id;
+                           indexType       = values[3].id;
+                           String_setBuffer(entryName,values[4].text.data,values[4].text.length);
+                           timeLastChanged = values[5].dateTime;
+                           userId          = values[6].u;
+                           groupId         = values[7].u;
+                           permission      = values[8].u;
+                           size            = values[9].u64;
 
-                               entryNode = LIST_NEW_NODE(EntryNode);
-                               if (entryNode == NULL)
-                               {
-                                 HALT_INSUFFICIENT_MEMORY();
-                               }
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "entryFragments \
+                             LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                             LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                           ",
+                           "directoryEntries \
+                             LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                             LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                           ",
+                           "linkEntries \
+                             LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                             LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                           ",
+                           "specialEntries \
+                             LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                             LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY     ("entries.id"),
+                           DATABASE_COLUMN_KEY     ("entries.uuidId"),
+                           DATABASE_COLUMN_KEY     ("entries.entityId"),
+                           DATABASE_COLUMN_UINT    ("entries.type"),
+                           DATABASE_COLUMN_STRING  ("entries.name"),
+                           DATABASE_COLUMN_DATETIME("entries.timeLastChanged","timeLastChanged"),
+                           DATABASE_COLUMN_UINT    ("entries.userId"),
+                           DATABASE_COLUMN_UINT    ("entries.groupId"),
+                           DATABASE_COLUMN_UINT    ("entries.permission"),
+                           DATABASE_COLUMN_UINT64  ("entries.size")
+                         ),
+                         "storageId=?",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_KEY(storageId)
+                         ),
+                         "ORDER BY timeLastChanged DESC",
+                         0LL,
+                         1LL
+                        );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
-                               entryNode->entryId                = values[0].id;
-                               entryNode->uuidId                 = values[1].id;
-                               entryNode->entityId               = values[2].id;
-                               entryNode->indexType              = values[3].u;
-                               entryNode->name                   = String_newBuffer(values[4].text.data,values[4].text.length);
-                               entryNode->timeLastChanged        = values[5].dateTime;
-                               entryNode->userId                 = values[6].u;
-                               entryNode->groupId                = values[7].u;
-                               entryNode->permission             = values[8].u;
-                               entryNode->size                   = values[9].u64;
-                               entryNode->newest.entryId         = DATABASE_ID_NONE;
-                               entryNode->newest.timeLastChanged = 0LL;
+    entryNode = LIST_NEW_NODE(EntryNode);
+    if (entryNode == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
 
-                               List_append(&entryList,entryNode);
+    entryNode->entryId                = entryId;
+    entryNode->uuidId                 = uuidId;
+    entryNode->entityId               = entityId;
+    entryNode->indexType              = (IndexTypes)indexType;
+    entryNode->name                   = String_duplicate(entryName);
+    entryNode->timeLastChanged        = timeLastChanged;
+    entryNode->userId                 = (uint32)userId;
+    entryNode->groupId                = (uint32)groupId;
+    entryNode->permission             = (uint32)permission;
+    entryNode->size                   = (uint64)size;
+    entryNode->newest.entryId         = DATABASE_ID_NONE;
+    entryNode->newest.timeLastChanged = 0LL;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   KEY,
-                                                   KEY,
-                                                   INT,
-                                                   CSTRING,
-                                                   DATETIME,
-                                                   INT,
-                                                   INT,
-                                                   INT,
-                                                   INT64
-                                                  ),
-                             "      SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           entries.name, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM entryFragments \
-                                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                                    WHERE entryFragments.storageId=%lld \
-                              UNION SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           entries.name, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM directoryEntries \
-                                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                                    WHERE directoryEntries.storageId=%lld \
-                              UNION SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           entries.name, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM linkEntries \
-                                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                                    WHERE linkEntries.storageId=%lld \
-                              UNION SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           entries.name, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM specialEntries \
-                                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                                    WHERE specialEntries.storageId=%lld \
-                              GROUP BY name \
-                             ",
-                             storageId,
-                             storageId,
-                             storageId,
-                             storageId
-                            );
+    List_append(&entryList,entryNode);
   }
   if (error != ERROR_NONE)
   {
+    String_delete(entryName);
     List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
     return error;
   }
-//fprintf(stderr,"%s, %d: add %d\n",__FILE__,__LINE__,List_count(&entryList));
 
   // find newest entries for entries to add
+//fprintf(stderr,"%s, %d: find newest entries for entries to add %d\n",__FILE__,__LINE__,List_count(&entryList));
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+    error = Database_get(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           assert(values != NULL);
+                           assert(valueCount == 2);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
 
-                               entryNode->newest.entryId         = values[0].id;
-                               entryNode->newest.timeLastChanged = values[1].dateTime;
+                           entryNode->newest.entryId         = values[0].id;
+                           entryNode->newest.timeLastChanged = values[1].dateTime;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,DATETIME),
-                             "      SELECT entriesNewest.id, \
-                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
-                                    FROM entryFragments \
-                                      LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                                      LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entriesNewest.name=%'S \
-                              UNION SELECT entriesNewest.id, \
-                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
-                                    FROM directoryEntries \
-                                      LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                                      LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entriesNewest.name=%'S \
-                              UNION SELECT entriesNewest.id, \
-                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
-                                    FROM linkEntries \
-                                      LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                                      LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entriesNewest.name=%'S \
-                              UNION SELECT entriesNewest.id, \
-                                           UNIX_TIMESTAMP(entriesNewest.timeLastChanged) AS timeLastChanged \
-                                    FROM specialEntries \
-                                      LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                                      LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entriesNewest.name=%'S \
-                              ORDER BY timeLastChanged DESC \
-                              LIMIT 0,1 \
-                             ",
-                             entryNode->name,
-                             entryNode->name,
-                             entryNode->name,
-                             entryNode->name
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "entryFragments \
+                             LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                             LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
+                           ",
+                           "directoryEntries \
+                             LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                             LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
+                           ",
+                           "linkEntries \
+                             LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                             LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
+                           ",
+                           "specialEntries \
+                             LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                             LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY     ("entriesNewest.id"),
+                           DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged","timeLastChanged")
+                         ),
+                         "    storages.deletedFlag!=1 \
+                          AND entriesNewest.name=? \
+                         ",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_STRING(entryNode->name)
+                         ),
+                         "ORDER BY timeLastChanged DESC",
+                         0LL,
+                         1LL
+                        );
   }
   if (error != ERROR_NONE)
   {
+    String_delete(entryName);
     List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
     return error;
   }
 
   // add entries to newest entries
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+//fprintf(stderr,"%s, %d: add entries to newest entries %d\n",__FILE__,__LINE__,List_count(&entryList));
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
-    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+//fprintf(stderr,"b");
+    if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
     {
-//fprintf(stderr,"%s, %d: %s %llu %llu %d\n",__FILE__,__LINE__,String_cString(entryNode->name),entryNode->timeLastChanged,entryNode->newest.timeLastChanged,entryNode->timeLastChanged > entryNode->newest.timeLastChanged);
-      if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "INSERT OR REPLACE INTO entriesNewest \
-                                    ( \
-                                     entryId, \
-                                     uuidId, \
-                                     entityId, \
-                                     type, \
-                                     name, \
-                                     timeLastChanged, \
-                                     userId, \
-                                     groupId, \
-                                     permission, \
-                                     size \
-                                    ) \
-                                  VALUES \
-                                    ( \
-                                      %lld, \
-                                      %lld, \
-                                      %lld, \
-                                      %u, \
-                                      %'S, \
-                                      %llu, \
-                                      %lu, \
-                                      %lu, \
-                                      %lu, \
-                                      %llu \
-                                    ) \
-                                 ",
-                                 entryNode->entryId,
-                                 entryNode->uuidId,
-                                 entryNode->entityId,
-                                 entryNode->indexType,
-                                 entryNode->name,
-                                 entryNode->timeLastChanged,
-                                 entryNode->userId,
-                                 entryNode->groupId,
-                                 entryNode->permission,
-                                 entryNode->size
-                                );
-      }
+      error = Database_insert(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entriesNewest",
+                              DATABASE_FLAG_REPLACE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_KEY   ("entryId",         entryNode->entryId),
+                                DATABASE_VALUE_KEY   ("uuidId",          entryNode->uuidId),
+                                DATABASE_VALUE_KEY   ("entityId",        entryNode->entityId),
+                                DATABASE_VALUE_UINT  ("type",            entryNode->indexType),
+                                DATABASE_VALUE_STRING("name",            entryNode->name),
+                                DATABASE_VALUE_UINT64("timeLastChanged", entryNode->timeLastChanged),
+                                DATABASE_VALUE_UINT  ("userId",          entryNode->userId),
+                                DATABASE_VALUE_UINT  ("groupId",         entryNode->groupId),
+                                DATABASE_VALUE_UINT  ("permission",      entryNode->permission),
+                                DATABASE_VALUE_UINT64("size",            entryNode->size)
+                              )
+                             );
     }
   }
+//fprintf(stderr,"%s, %d: add entries to newest entries %d done\n",__FILE__,__LINE__,List_count(&entryList));
   if (error != ERROR_NONE)
   {
+    String_delete(entryName);
     List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
     return error;
   }
 
   // free resources
+  String_delete(entryName);
   List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 
   return ERROR_NONE;
 }
 
 /***********************************************************************\
-* Name   : removeStorageFromNewest
+* Name   : removeFromNewest
 * Purpose: remove storage entries from newest entries
 * Input  : databaseHandle - database handle
 *          storageId      - storage database id
@@ -2440,7 +2440,9 @@ LOCAL Errors addStorageToNewest(DatabaseHandle *databaseHandle, DatabaseId stora
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId storageId)
+LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
+                              DatabaseId   storageId
+                             )
 {
   typedef struct EntryNode
   {
@@ -2485,258 +2487,360 @@ LOCAL Errors removeStorageFromNewest(DatabaseHandle *databaseHandle, DatabaseId 
     String_delete(entryNode->name);
   }
 
-  EntryList entryList;
-  Errors    error;
-  EntryNode *entryNode;
+  EntryList  entryList;
+  String     entryName;
+  Errors     error;
+  EntryNode  *entryNode;
+  bool       transactionFlag;
 
-  assert(databaseHandle != NULL);
+  assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
   List_init(&entryList);
-  error = ERROR_NONE;
+  entryName = String_new();
+  error     = ERROR_NONE;
 
   // get entries info to remove
   if (error == ERROR_NONE)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+    if (error == ERROR_NONE)
+    {
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             entryNode = LIST_NEW_NODE(EntryNode);
+                             if (entryNode == NULL)
                              {
-//fprintf(stderr,"%s, %d: name=%s t=%s newid=%s newt=%s\n",__FILE__,__LINE__,values[2],values[3],values[4],values[5]);
-                               EntryNode *entryNode;
+                               HALT_INSUFFICIENT_MEMORY();
+                             }
 
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+                             entryNode->entryId        = values[0].id;
+                             String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                             entryNode->newest.entryId = DATABASE_ID_NONE;
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                             List_append(&entryList,entryNode);
 
-                               entryNode = LIST_NEW_NODE(EntryNode);
-                               if (entryNode == NULL)
-                               {
-                                 HALT_INSUFFICIENT_MEMORY();
-                               }
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "entryFragments \
+                                LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_STRING("entries.name")
+                           ),
+                           "entryFragments.storageId=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(storageId)
+                           ),
+                           NULL, // orderGroup
+                           0LL,
+                           DATABASE_UNLIMITED
+                          );
+    }
+    if (error == ERROR_NONE)
+    {
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
 
-                               entryNode->entryId        = values[0].id;
-                               entryNode->name           = String_newCString(values[1].text.data);
-                               entryNode->newest.entryId = DATABASE_ID_NONE;
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
 
-                               List_append(&entryList,entryNode);
+                             entryNode = LIST_NEW_NODE(EntryNode);
+                             if (entryNode == NULL)
+                             {
+                               HALT_INSUFFICIENT_MEMORY();
+                             }
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,CSTRING),
-                             "      SELECT entries.id, \
-                                           entries.name \
-                                    FROM entryFragments \
-                                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                                    WHERE entryFragments.storageId=%lld \
-                              UNION SELECT entries.id, \
-                                           entries.name \
-                                    FROM directoryEntries \
-                                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                                    WHERE directoryEntries.storageId=%lld \
-                              UNION SELECT entries.id, \
-                                           entries.name \
-                                    FROM linkEntries \
-                                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                                    WHERE linkEntries.storageId=%lld \
-                              UNION SELECT entries.id, \
-                                           entries.name \
-                                    FROM specialEntries \
-                                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                                    WHERE specialEntries.storageId=%lld \
-                             ",
-                             storageId,
-                             storageId,
-                             storageId,
-                             storageId
-                            );
+                             entryNode->entryId        = values[0].id;
+                             String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                             entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                             List_append(&entryList,entryNode);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "directoryEntries \
+                                LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_STRING("entries.name")
+                           ),
+                           "directoryEntries.storageId=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(storageId)
+                           ),
+                           NULL, // orderGroup
+                           0LL,
+                           DATABASE_UNLIMITED
+                          );
+    }
+    if (error == ERROR_NONE)
+    {
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             entryNode = LIST_NEW_NODE(EntryNode);
+                             if (entryNode == NULL)
+                             {
+                               HALT_INSUFFICIENT_MEMORY();
+                             }
+
+                             entryNode->entryId        = values[0].id;
+                             String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                             entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                             List_append(&entryList,entryNode);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "linkEntries \
+                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_STRING("entries.name")
+                           ),
+                           "linkEntries.storageId=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(storageId)
+                           ),
+                           NULL, // orderGroup
+                           0LL,
+                           DATABASE_UNLIMITED
+                          );
+    }
+    if (error == ERROR_NONE)
+    {
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             entryNode = LIST_NEW_NODE(EntryNode);
+                             if (entryNode == NULL)
+                             {
+                               HALT_INSUFFICIENT_MEMORY();
+                             }
+
+                             entryNode->entryId        = values[0].id;
+                             String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                             entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                             List_append(&entryList,entryNode);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "specialEntries \
+                                LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY   ("entries.id"),
+                             DATABASE_COLUMN_STRING("entries.name")
+                           ),
+                           "specialEntries.storageId=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(storageId)
+                           ),
+                           NULL, // orderGroup
+                           0LL,
+                           DATABASE_UNLIMITED
+                          );
+    }
   }
   if (error != ERROR_NONE)
   {
+    String_delete(entryName);
     List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
     return error;
   }
-//fprintf(stderr,"%s, %d: remove %d\n",__FILE__,__LINE__,List_count(&entryList));
 
   // find new newest entries for entries to remove
+//fprintf(stderr,"%s, %d: find new newest entries for entries to remove %d\n",__FILE__,__LINE__,List_count(&entryList));
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 9);
+//fprintf(stderr,"c");
+    if ((entryNode->prev == NULL) || !String_equals(entryNode->prev->name,entryNode->name))
+    {
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 9);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
 
-                               entryNode->newest.entryId         = values[0].id;
-                               entryNode->newest.uuidId          = values[1].id;
-                               entryNode->newest.entityId        = values[2].id;
-                               entryNode->newest.indexType       = values[3].u;
-                               entryNode->newest.timeLastChanged = values[4].dateTime;
-                               entryNode->newest.userId          = values[5].u;
-                               entryNode->newest.groupId         = values[6].u;
-                               entryNode->newest.permission      = values[7].u;
-                               entryNode->newest.size            = values[8].u64;
+                             entryNode->newest.entryId         = values[0].id;
+                             entryNode->newest.uuidId          = values[1].id;
+                             entryNode->newest.entityId        = values[2].id;
+                             entryNode->newest.indexType       = (IndexTypes)values[3].u;
+                             entryNode->newest.timeLastChanged = values[4].dateTime;
+                             entryNode->newest.userId          = values[5].u;
+                             entryNode->newest.groupId         = values[6].u;
+                             entryNode->newest.permission      = values[7].u;
+                             entryNode->newest.size            = values[8].u64;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,
-                                                   KEY,
-                                                   KEY,
-                                                   INT,
-                                                   DATETIME,
-                                                   INT,
-                                                   INT,
-                                                   INT,
-                                                   INT64
-                                                  ),
-                             "      SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM entryFragments \
-                                      LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entries.name=%'S \
-                              UNION SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM directoryEntries \
-                                      LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entries.name=%'S \
-                              UNION SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM linkEntries \
-                                      LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entries.name=%'S \
-                              UNION SELECT entries.id, \
-                                           entries.uuidId, \
-                                           entries.entityId, \
-                                           entries.type, \
-                                           UNIX_TIMESTAMP(entries.timeLastChanged) AS timeLastChanged, \
-                                           entries.userId, \
-                                           entries.groupId, \
-                                           entries.permission, \
-                                           entries.size \
-                                    FROM specialEntries \
-                                      LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                                    WHERE     storages.deletedFlag!=1 \
-                                          AND entries.name=%'S \
-                              ORDER BY timeLastChanged DESC \
-                              LIMIT 0,1 \
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "entryFragments \
+                                LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                LEFT JOIN entries ON entries.id=entryFragments.entryId \
                              ",
-                             entryNode->name,
-                             entryNode->name,
-                             entryNode->name,
-                             entryNode->name
-                            );
+                             "directoryEntries \
+                                LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                             ",
+                             "linkEntries \
+                                LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                             ",
+                             "specialEntries \
+                                LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY     ("entries.id"),
+                             DATABASE_COLUMN_KEY     ("entries.uuidId"),
+                             DATABASE_COLUMN_UINT    ("entries.type"),
+                             DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
+                             DATABASE_COLUMN_UINT    ("entries.userId"),
+                             DATABASE_COLUMN_UINT    ("entries.groupId"),
+                             DATABASE_COLUMN_UINT    ("entries.permission"),
+                             DATABASE_COLUMN_UINT64  ("entries.size")
+                           ),
+                           "    storages.deletedFlag!=1 \
+                            AND entries.name=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_STRING(entryNode->name)
+                           ),
+                           "ORDER BY entries.timeLastChanged DESC",
+                           0LL,
+                           1LL
+                          );
+    }
   }
+//fprintf(stderr,"%s, %d: find new newest entries for entries to remove %d done\n",__FILE__,__LINE__,List_count(&entryList));
   if (error != ERROR_NONE)
   {
+    String_delete(entryName);
     List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
     return error;
   }
 
   // remove/update entries from newest entries
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+//fprintf(stderr,"%s, %d: remove/update entries from newest entries %d\n",__FILE__,__LINE__,List_count(&entryList));
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
-    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+//fprintf(stderr,"d");
+    error = Database_delete(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entriesNewest",
+                            DATABASE_FLAG_NONE,
+                            "entryId=? \
+                            ",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryNode->entryId)
+                            ),
+                            0
+                           );
+    if (error != ERROR_NONE)
     {
-      if (error == ERROR_NONE)
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DELETE FROM entriesNewest \
-                                  WHERE entryId=%lld \
-                                 ",
-                                 entryNode->entryId
-                                );
-      }
+      return error;
+    }
 
-      if (error == ERROR_NONE)
+    if (entryNode->newest.entryId != DATABASE_ID_NONE)
+    {
+      error = Database_insert(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entriesNewest",
+                              DATABASE_FLAG_REPLACE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_STRING("entryId",        entryNode->newest.entryId),
+                                DATABASE_VALUE_KEY   ("uuidId",         entryNode->newest.uuidId),
+                                DATABASE_VALUE_KEY   ("entityId",       entryNode->newest.entityId),
+                                DATABASE_VALUE_UINT  ("type",           entryNode->newest.indexType),
+                                DATABASE_VALUE_STRING("name",           entryNode->name),
+                                DATABASE_VALUE_UINT64("timeLastChanged",entryNode->newest.timeLastChanged),
+                                DATABASE_VALUE_UINT  ("userId",         entryNode->newest.userId),
+                                DATABASE_VALUE_UINT  ("groupId",        entryNode->newest.groupId),
+                                DATABASE_VALUE_UINT  ("permission",     entryNode->newest.permission),
+                                DATABASE_VALUE_UINT64("size",           entryNode->newest.size)
+                              )
+                             );
+      if (error != ERROR_NONE)
       {
-        if (entryNode->newest.entryId != DATABASE_ID_NONE)
-        {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "INSERT OR REPLACE INTO entriesNewest \
-                                      ( \
-                                       entryId, \
-                                       uuidId, \
-                                       entityId, \
-                                       type, \
-                                       name, \
-                                       timeLastChanged, \
-                                       userId, \
-                                       groupId, \
-                                       permission, \
-                                       size \
-                                      ) \
-                                    VALUES \
-                                      ( \
-                                        %lld, \
-                                        %lld, \
-                                        %lld, \
-                                        %u, \
-                                        %'S, \
-                                        %llu, \
-                                        %lu, \
-                                        %lu, \
-                                        %lu, \
-                                        %llu \
-                                      ) \
-                                   ",
-                                   entryNode->newest.entryId,
-                                   entryNode->newest.uuidId,
-                                   entryNode->newest.entityId,
-                                   entryNode->newest.indexType,
-                                   entryNode->name,
-                                   entryNode->newest.timeLastChanged,
-                                   entryNode->newest.userId,
-                                   entryNode->newest.groupId,
-                                   entryNode->newest.permission,
-                                   entryNode->newest.size
-                                  );
-        }
+        return error;
       }
     }
   }
+  if (error != ERROR_NONE)
+  {
+    String_delete(entryName);
+    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+    return error;
+  }
 
   // free resources
+  String_delete(entryName);
   List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 
   return ERROR_NONE;
@@ -2839,7 +2943,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     n = 0L;
     ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
     {
-      error = addStorageToNewest(databaseHandle,storageId);
+      error = addToNewest(databaseHandle,storageId);
       n++;
       printPercentage(n,Array_length(&storageIds));
     }
@@ -2862,11 +2966,11 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
       printInfo("  %lld...",storageId);
       if (error == ERROR_NONE)
       {
-        error = removeStorageFromNewest(databaseHandle,storageId);
+        error = removeFromNewest(databaseHandle,storageId);
       }
       if (error == ERROR_NONE)
       {
-        error = addStorageToNewest(databaseHandle,storageId);
+        error = addToNewest(databaseHandle,storageId);
       }
       if (error != ERROR_NONE)
       {
@@ -2900,7 +3004,9 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, const Array entityIds)
 {
   Errors error;
-  ulong  totalCount;
+  uint   fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
+  uint   entityCount;
+  uint   totalCount;
   ulong  n;
 
   UNUSED_VARIABLE(entityIds);
@@ -2908,52 +3014,126 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   // calculate directory content size/count aggregated data
   printInfo("Create aggregates for directory content...");
 
+  error = ERROR_NONE;
+
   // get total count
-  totalCount = 0L;
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
-
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             totalCount = values[0].u;
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT  2*(SELECT COUNT(entries.id) FROM fileEntries      LEFT JOIN entries ON entries.id=fileEntries.entryId      WHERE entries.id  IS NOT NULL) \
-                                   +2*(SELECT COUNT(entries.id) FROM directoryEntries LEFT JOIN entries ON entries.id=directoryEntries.entryId WHERE entries.id  IS NOT NULL) \
-                                   +2*(SELECT COUNT(entries.id) FROM linkEntries      LEFT JOIN entries ON entries.id=linkEntries.entryId      WHERE entries.id  IS NOT NULL) \
-                                   +2*(SELECT COUNT(entries.id) FROM hardlinkEntries  LEFT JOIN entries ON entries.id=hardlinkEntries.entryId  WHERE entries.id  IS NOT NULL) \
-                                   +2*(SELECT COUNT(entries.id) FROM specialEntries   LEFT JOIN entries ON entries.id=specialEntries.entryId   WHERE entries.id  IS NOT NULL) \
-                                   +(SELECT COUNT(id)           FROM entities                                                                  WHERE entities.id IS NOT NULL) \
-                           "
-                          );
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &fileEntryCount,
+                             "fileEntries \
+                                LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                             ",
+                             "COUNT(entries.id)",
+                             "entries.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &directoryEntryCount,
+                             "directoryEntries \
+                                LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                             ",
+                             "COUNT(entries.id)",
+                             "entries.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &linkEntryCount,
+                             "linkEntries \
+                                LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                             ",
+                             "COUNT(entries.id)",
+                             "entries.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &hardlinkEntryCount,
+                             "hardlinkEntries \
+                                LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
+                             ",
+                             "COUNT(entries.id)",
+                             "entries.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &specialEntryCount,
+                             "specialEntries \
+                                LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                             ",
+                             "COUNT(entries.id)",
+                             "entries.id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_getUInt(databaseHandle,
+                             &entityCount,
+                             "entities",
+                             "COUNT(id)",
+                             "id IS NOT NULL",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL  // group
+                            );
+  }
   if (error != ERROR_NONE)
   {
     printError("create aggregates fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  totalCount =  2*fileEntryCount
+               +2*directoryEntryCount
+               +2*linkEntryCount
+               +2*hardlinkEntryCount
+               +2*specialEntryCount
+               +2*entityCount;
   n = 0L;
 
   // clear directory content size/count aggregated data
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(),
-                             "UPDATE directoryEntries \
-                              SET totalEntryCount      =0, \
-                                  totalEntrySize       =0, \
-                                  totalEntryCountNewest=0, \
-                                  totalEntrySizeNewest =0 \
-                             "
-                            );
+    error = Database_update(databaseHandle,
+                            NULL,  // changedRowCount
+                            "directoryEntries",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES
+                            (
+                              DATABASE_VALUE_UINT  ("totalEntryCount",0),
+                              DATABASE_VALUE_UINT64("totalEntrySize",0LL),
+                              DATABASE_VALUE_UINT  ("totalEntryCountNewest",0),
+                              DATABASE_VALUE_UINT64("totalEntrySizeNewest",0LL)
+                            ),
+                            DATABASE_FILTERS_NONE
+                           );
   }
   if (error != ERROR_NONE)
   {
@@ -2966,139 +3146,171 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   // update directory content size/count aggegrated data: files
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
-                               uint64     totalSize;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
-                               assert(values != NULL);
-                               assert(valueCount == 3);
+                           assert(values != NULL);
+                           assert(valueCount == 3);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
-                               totalSize = values[2].u64;
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
+                           totalSize = values[2].u64;
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 //if (String_equalsCString(name,"/home/torsten/tmp/blender/yofrankie/trunk/textures/level_nut/X.png"))
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCount=totalEntryCount+1, \
-                                                               totalEntrySize =totalEntrySize +%llu \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          totalSize,
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE       ("totalEntryCount","totalEntryCount+1"),
+                                                       DATABASE_VALUE_UINT64("totalEntrySize", "totalEntrySize+?",totalSize)
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,CSTRING,UINT64),
-                             "SELECT entryFragments.storageId, \
-                                     entries.name, \
-                                     SUM(entryFragments.size) \
-                              FROM fileEntries \
-                                LEFT JOIN entries        ON entries.id=fileEntries.entryId \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              WHERE     entries.id IS NOT NULL \
-                                    AND entryFragments.storageId IS NOT NULL \
-                              GROUP BY entries.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "fileEntries \
+                              LEFT JOIN entries        ON entries.id=fileEntries.entryId \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
+                           DATABASE_COLUMN_STRING("entries.name"),
+                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)"),
+                         ),
+                         "    entries.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
+                         ",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entries.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
-                               uint64     totalSize;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
-                               assert(values != NULL);
-                               assert(valueCount == 3);
+                           assert(values != NULL);
+                           assert(valueCount == 3);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
-                               totalSize = values[2].u64;
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
+                           totalSize = values[2].u64;
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
-                               // update directory content count/size aggregates in all newest directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
+                           // update directory content count/size aggregates in all newest directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCountNewest=totalEntryCountNewest+1, \
-                                                               totalEntrySizeNewest =totalEntrySizeNewest +%llu \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          totalSize,
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE       ("totalEntryCountNewest","totalEntryCountNewest+1"),
+                                                       DATABASE_VALUE_UINT64("totalEntrySizeNewest", "totalEntrySizeNewest+?",totalSize),
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,CSTRING,UINT64),
-                             "SELECT entryFragments.storageId, \
-                                     entriesNewest.name, \
-                                     SUM(entryFragments.size) \
-                              FROM fileEntries \
-                                LEFT JOIN entriesNewest  ON entriesNewest.entryId=fileEntries.entryId \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                              WHERE     entriesNewest.id IS NOT NULL \
-                                    AND entryFragments.storageId IS NOT NULL \
-                              GROUP BY entriesNewest.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "fileEntries \
+                              LEFT JOIN entriesNewest  ON entriesNewest.entryId=fileEntries.entryId \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
+                           DATABASE_COLUMN_STRING("entriesNewest.name"),
+                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                         ),
+                         "    entriesNewest.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
+                         ",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entriesNewest.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   clearPercentage();
@@ -3113,120 +3325,152 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   // update directory content size/count aggregated data: directories
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
 
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+                           assert(values != NULL);
+                           assert(valueCount == 2);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCount=totalEntryCount+1 \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s'(error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE("totalEntryCount","totalEntryCount+1")
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s'(error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,CSTRING),
-                             "SELECT directoryEntries.storageId, \
-                                     entries.name \
-                              FROM directoryEntries \
-                                LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                              WHERE entries.id IS NOT NULL \
-                              GROUP BY entries.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "directoryEntries \
+                              LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
+                           DATABASE_COLUMN_STRING("entries.name")
+                         ),
+                         "entries.id IS NOT NULL",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entries.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
 
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+                           assert(values != NULL);
+                           assert(valueCount == 2);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE("totalEntryCountNewest","totalEntryCountNewest+1")
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,INT),
-                             "SELECT directoryEntries.storageId, \
-                                     COUNT(entriesNewest.id) \
-                              FROM directoryEntries \
-                                LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
-                              WHERE entriesNewest.id IS NOT NULL \
-                              GROUP BY entriesNewest.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "directoryEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
+                           DATABASE_COLUMN_STRING("entriesNewest.name")
+                         ),
+                         "entriesNewest.id IS NOT NULL",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entriesNewest.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   clearPercentage();
@@ -3241,122 +3485,154 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   // update directory content size/count aggregated data: links
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
 
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+                           assert(values != NULL);
+                           assert(valueCount == 2);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCount=totalEntryCount+1 \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE("totalEntryCount","totalEntryCount+1")
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,INT),
-                             "SELECT linkEntries.storageId, \
-                                     COUNT(entries.id) \
-                              FROM linkEntries \
-                                LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                              WHERE entries.id IS NOT NULL \
-                              GROUP BY entries.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "linkEntries \
+                              LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
+                           DATABASE_COLUMN_STRING("entries.name")
+                         ),
+                         "entries.id IS NOT NULL",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entries.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
 
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+                           assert(values != NULL);
+                           assert(valueCount == 2);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE("totalEntryCountNewest","totalEntryCountNewest+1")
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,INT),
-                             "SELECT linkEntries.storageId, \
-                                     COUNT(entriesNewest.id) \
-                              FROM linkEntries \
-                                LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
-                              WHERE entriesNewest.id IS NOT NULL \
-                              GROUP BY entriesNewest.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "linkEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
+                           DATABASE_COLUMN_STRING("entriesNewest.name")
+                         ),
+                         "entriesNewest.id IS NOT NULL",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entriesNewest.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   clearPercentage();
@@ -3371,138 +3647,168 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   // update directory content size/count aggregated data: hardlinks
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
-                               uint64     totalSize;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
-                               assert(values != NULL);
-                               assert(valueCount == 3);
+                           assert(values != NULL);
+                           assert(valueCount == 3);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-// TODO: name not in select
-                               name      = String_newCString(values[1].text.data);
-                               totalSize = values[2].u64;
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
+                           totalSize = values[2].u64;
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCount=totalEntryCount+1, \
-                                                               totalEntrySize =totalEntrySize +%llu \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          totalSize,
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE       ("totalEntryCount","totalEntryCount+1"),
+                                                       DATABASE_VALUE_UINT64("totalEntrySize", "totalEntrySize+?",totalSize)
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,UINT,UINT64),
-                             "SELECT entryFragments.storageId, \
-                                     COUNT(entries.id), \
-                                     SUM(entryFragments.size) \
-                              FROM hardlinkEntries \
-                                LEFT JOIN entries        ON entries.id=hardlinkEntries.entryId \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              WHERE     entries.id IS NOT NULL \
-                                    AND entryFragments.storageId IS NOT NULL \
-                              GROUP BY entries.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "hardlinkEntries \
+                              LEFT JOIN entries        ON entries.id=hardlinkEntries.entryId \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
+                           DATABASE_COLUMN_STRING("entries.name"),
+                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                         ),
+                         "    entries.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
+                         ",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entries.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
-                               uint64     totalSize;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
+                           uint64     totalSize;
 
-                               assert(values != NULL);
-                               assert(valueCount == 3);
+                           assert(values != NULL);
+                           assert(valueCount == 3);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-// TODO: naem not in select
-                               name      = String_newCString(values[1].text.data);
-                               totalSize = values[2].u64;
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
+                           totalSize = values[2].u64;
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
 //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCountNewest=totalEntryCountNewest+1, \
-                                                               totalEntrySizeNewest =totalEntrySizeNewest +%llu \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          totalSize,
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE       ("totalEntryCountNewest","totalEntryCountNewest+1"),
+                                                       DATABASE_VALUE_UINT64("totalEntrySizeNewest", "totalEntrySizeNewest+?",totalSize)
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,UINT,UINT64),
-                             "SELECT entryFragments.storageId, \
-                                     COUNT(entriesNewest.id), \
-                                     SUM(entryFragments.size) \
-                              FROM hardlinkEntries \
-                                LEFT JOIN entriesNewest  ON entriesNewest.entryId=hardlinkEntries.entryId \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                              WHERE     entriesNewest.id IS NOT NULL \
-                                    AND entryFragments.storageId IS NOT NULL \
-                              GROUP BY entriesNewest.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "hardlinkEntries \
+                              LEFT JOIN entriesNewest  ON entriesNewest.entryId=hardlinkEntries.entryId \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
+                           DATABASE_COLUMN_STRING("entriesNewest.name"),
+                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                         ),
+                         "    entriesNewest.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
+                         ",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entriesNewest.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   clearPercentage();
@@ -3517,120 +3823,152 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   // update directory content size/count aggregated data: special
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
 
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+                           assert(values != NULL);
+                           assert(valueCount == 2);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCount=totalEntryCount+1 \
-                                                           WHERE     storageId=%llu \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE("totalEntryCount","totalEntryCount+1")
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,INT),
-                             "SELECT specialEntries.storageId, \
-                                     COUNT(entries.id) \
-                              FROM specialEntries \
-                                LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                              WHERE entries.id IS NOT NULL \
-                              GROUP BY entries.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "specialEntries \
+                              LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
+                           DATABASE_COLUMN_STRING("entries.name")
+                         ),
+                         "entries.id IS NOT NULL",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entries.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
-                               String     name;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           String     name;
 
-                               assert(values != NULL);
-                               assert(valueCount == 2);
+                           assert(values != NULL);
+                           assert(valueCount == 2);
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               storageId = values[0].id;
-                               name      = String_newCString(values[1].text.data);
+                           storageId = values[0].id;
+                           name      = String_newCString(values[1].text.data);
 //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
-                               // update directory content count/size aggregates in all directories
-                               while (!String_isEmpty(File_getDirectoryName(name,name)))
-                               {
-                                 error = Database_execute(databaseHandle,
-                                                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                          NULL,  // changedRowCount
-                                                          DATABASE_COLUMN_TYPES(),
-                                                          "UPDATE directoryEntries \
-                                                           SET totalEntryCountNewest=totalEntryCountNewest+1 \
-                                                           WHERE     storageId=%lld \
-                                                                 AND name=%'S \
-                                                          ",
-                                                          storageId,
-                                                          name
-                                                         );
-                                 if (error != ERROR_NONE)
-                                 {
-                                   printInfo("FAIL!\n");
-                                   printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
-                                   return error;
-                                 }
-                               }
+                           // update directory content count/size aggregates in all directories
+                           while (!String_isEmpty(File_getDirectoryName(name,name)))
+                           {
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "directoryEntries",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE("totalEntryCountNewest","totalEntryCountNewest+1")
+                                                     ),
+                                                     "    storageId=? \
+                                                      AND name=? \
+                                                     ",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY   (storageId),
+                                                       DATABASE_FILTER_STRING(name)
+                                                     )
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               printInfo("FAIL!\n");
+                               printError("create aggregates fail for entries '%s' (error: %s)!",String_cString(name),Error_getText(error));
+                               return error;
+                             }
+                           }
 
-                               String_delete(name);
+                           String_delete(name);
 
-                               n++;
-                               printPercentage(n,totalCount);
+                           n++;
+                           printPercentage(n,totalCount);
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY,INT),
-                             "SELECT specialEntries.storageId, \
-                                     COUNT(entriesNewest.id) \
-                              FROM specialEntries \
-                                LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
-                              WHERE entriesNewest.id IS NOT NULL \
-                              GROUP BY entriesNewest.name \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "specialEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
+                           DATABASE_COLUMN_STRING("entriesNewest.name")
+                         ),
+                         "entriesNewest.id IS NOT NULL",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         "GROUP BY entriesNewest.name",
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   clearPercentage();
@@ -3661,7 +3999,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   ulong      i;
   DatabaseId entityId;
   Errors     error;
-  ulong      totalCount;
+  uint       totalCount;
+  char       filterString[256];
   ulong      n;
 
   // init variables
@@ -3675,29 +4014,23 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   printInfo("Create aggregates for entities...");
 
   // get entities total count
-  totalCount = 0L;
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
-
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             totalCount = values[0].u;
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM entities \
-                            WHERE     (%d OR id IN (%s)) \
-                                  AND deletedFlag!=1 \
-                           ",
-                           String_isEmpty(entityIdsString) ? 1 : 0,
-                           !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
+  totalCount = 0;
+  error = Database_getUInt(databaseHandle,
+                           &totalCount,
+                           "entities",
+                           "COUNT(id)",
+                           stringFormat(filterString,sizeof(filterString),
+                                        "    (%d OR id IN (%s)) \
+                                         AND deletedFlag=? \
+                                        ",
+                                        String_isEmpty(entityIdsString) ? 1 : 0,
+                                        !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_BOOL(FALSE)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
@@ -3711,240 +4044,30 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   // update entities total count/size aggregates
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-#if 0
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId entityId;
-
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
-
-                               entityId = values[0].id;
-
-                               // total count/size
-                               uint64 totalFileCount;
-                               uint64 totalImageCount;
-                               uint64 totalDirectoryCount;
-                               uint64 totalLinkCount;
-                               uint64 totalHardlinkCount;
-                               uint64 totalSpecialCount;
-                               uint64 totalFileSize;
-                               uint64 totalImageSize;
-                               uint64 totalHardlinkSize;
-
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,     entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageCount,    "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,    entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalDirectoryCount,"entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_DIRECTORY,entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalLinkCount,     "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_LINK,     entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkCount, "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK, entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalSpecialCount,  "entries","COUNT(entries.id)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_SPECIAL,  entityId);
-
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalFileSize,    "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_FILE,    entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalImageSize,   "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_IMAGE,   entityId);
-                               if (error == ERROR_NONE) error = Database_getInteger64(databaseHandle,&totalHardlinkSize,"entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","WHERE entries.type=%d AND entries.entityId=%lld",INDEX_CONST_TYPE_HARDLINK,entityId);
-
-                               if (error == ERROR_NONE)
-                               {
-                                 error = Database_update(databaseHandle,
-                                                         NULL,  // changedRowCount
-                                                         "entities",
-                                                         DATABASE_FLAG_NONE,
-                                                         DATABASE_VALUES
-                                                         (
-                                                           DATABASE_VALUE?UINT64("totalFileCount",      totalFileCount),
-                                                           DATABASE_VALUE?UINT64("totalImageCount",     totalImageCount),
-                                                           DATABASE_VALUE?UINT64("totalDirectoryCount", totalDirectoryCount),
-                                                           DATABASE_VALUE?UINT64("totalLinkCount",      totalLinkCount),
-                                                           DATABASE_VALUE?UINT64("totalHardlinkCount",  totalHardlinkCount),
-                                                           DATABASE_VALUE?UINT64("totalSpecialCount",   totalSpecialCount),
-                                                           DATABASE_VALUE?UINT64(
-                                                           DATABASE_VALUE?UINT64("totalFileSize",       totalFileSize),
-                                                           DATABASE_VALUE?UINT64("totalImageSize",      totalImageSize),
-                                                           DATABASE_VALUE?UINT64("totalHardlinkSize",   totalHardlinkSize)
-                                                         ),
-                                                         "id=?",
-                                                         DATABASE_FILTERS
-                                                         (
-                                                           DATABASE_FILTER_KEY(entityId)
-                                                         )
-                                                        );
-                               }
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
-
-                               error = Database_update(databaseHandle,
-                                                       NULL,  // changedRowCount
-                                                       "entities",
-                                                       DATABASE_FLAG_NONE,
-                                                       DATABASE_VALUES
-                                                       (
-                                                         UINT64("totalEntryCount",  totalFileCount
-                                                                                   +totalImageCount
-                                                                                   +totalDirectoryCount
-                                                                                   +totalLinkCount
-                                                                                   +totalHardlinkCount
-                                                                                   +totalSpecialCount
-                                                               ),
-                                                         UINT64("totalEntrySize",  totalFileSize
-                                                                                  +totalImageSize
-                                                                                  +totalHardlinkSize
-                                                               )
-                                                       ),
-                                                       "id=?",
-                                                       DATABASE_FILTERS
-                                                       (
-                                                         DATABASE_FILTER_KEY(entityId)
-                                                       )
-                                                      );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create aggregates fail for entity #%"PRIi64": (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
-
-                               // total count/size newest
-// TODO:
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                        NULL,  // changedRowCount
-                                                        DATABASE_COLUMN_TYPES(),
-                                                        "UPDATE entities \
-                                                         SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalImageCountNewest    =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalDirectoryCountNewest=(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalLinkCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalHardlinkCountNewest =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalSpecialCountNewest  =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             \
-                                                             totalFileSizeNewest      =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalImageSizeNewest     =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ), \
-                                                             totalHardlinkSizeNewest  =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                       ) \
-                                                         WHERE id=%lld \
-                                                        ",
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_DIRECTORY,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_LINK,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_SPECIAL,
-                                                        entityId,
-
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        entityId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        entityId,
-
-                                                        entityId
-                                                       );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
-
-                               error = Database_update(databaseHandle,
-                                                       NULL,  // changedRowCount
-                                                       "entities",
-                                                       DATABASE_FLAG_NONE,
-                                                       DATABASE_VALUES
-                                                       (
-                                                         UINT64("totalEntryCountNewest",  totalFileCount
-                                                                                         +totalImageCount
-                                                                                         +totalDirectoryCount
-                                                                                         +totalLinkCount
-                                                                                         +totalHardlinkCount
-                                                                                         +totalSpecialCount
-                                                               ),
-                                                         UINT64("totalEntrySizeNewest",  totalFileSize
-                                                                                        +totalImageSize
-                                                                                        +totalHardlinkSize
-                                                               )
-                                                       ),
-                                                       "id=?",
-                                                       DATABASE_FILTERS
-                                                       (
-                                                         DATABASE_FILTER_KEY(entityId)
-                                                       )
-                                                      );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
-                                 return error;
-                               }
-
-                               n++;
-                               printPercentage(n,totalCount);
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY),
-                             "SELECT id \
-                              FROM entities \
-                              WHERE     (%d OR id IN (%s)) \
-                                    AND deletedFlag!=1 \
-                             ", \
-                             String_isEmpty(entityIdsString) ? 1 : 0,
-                             !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
-                            );
-#else
-fprintf(stderr,"%s:%d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
                            DatabaseId entityId;
+
+                           uint   totalFileCount;
+                           uint   totalImageCount;
+                           uint   totalDirectoryCount;
+                           uint   totalLinkCount;
+                           uint   totalHardlinkCount;
+                           uint   totalSpecialCount;
+                           uint64 totalFileSize;
+                           uint64 totalImageSize;
+                           uint64 totalHardlinkSize;
+
+                           uint   totalFileCountNewest;
+                           uint   totalImageCountNewest;
+                           uint   totalDirectoryCountNewest;
+                           uint   totalLinkCountNewest;
+                           uint   totalHardlinkCountNewest;
+                           uint   totalSpecialCountNewest;
+                           uint64 totalFileSizeNewest;
+                           uint64 totalImageSizeNewest;
+                           uint64 totalHardlinkSizeNewest;
 
                            assert(values != NULL);
                            assert(valueCount == 1);
@@ -3954,30 +4077,149 @@ fprintf(stderr,"%s:%d: xxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
                            entityId = values[0].id;
 
-fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
-
                            // total count/size
-{
-                           int64 totalFileCount;
-                           int64 totalImageCount;
-                           int64 totalDirectoryCount;
-                           int64 totalLinkCount;
-                           int64 totalHardlinkCount;
-                           int64 totalSpecialCount;
-                           int64 totalFileSize;
-                           int64 totalImageSize;
-                           int64 totalHardlinkSize;
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalFileCount,
+                                                      "entries",
+                                                      "COUNT(entries.id)",
+                                                      "entries.type=? AND entries.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalImageCount,
+                                                      "entries",
+                                                      "COUNT(entries.id)",
+                                                      "entries.type=? AND entries.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalDirectoryCount,
+                                                      "entries",
+                                                      "COUNT(entries.id)",
+                                                      "entries.type=? AND entries.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_DIRECTORY),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalLinkCount,
+                                                      "entries",
+                                                      "COUNT(entries.id)",
+                                                      "entries.type=? AND entries.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_LINK     ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalHardlinkCount,
+                                                      "entries",
+                                                      "COUNT(entries.id)",
+                                                      "entries.type=? AND entries.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),
+                                                       DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalSpecialCount,
+                                                      "entries",
+                                                      "COUNT(entries.id)",
+                                                      "entries.type=? AND entries.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                      DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),
+                                                      DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
 
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalFileCount,     "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),DATABASE_FILTER_KEY(entityId)),NULL);
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalImageCount,    "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),DATABASE_FILTER_KEY(entityId)),NULL);
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalDirectoryCount,"entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_DIRECTORY),DATABASE_FILTER_KEY(entityId)),NULL);
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalLinkCount,     "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_LINK     ),DATABASE_FILTER_KEY(entityId)),NULL);
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalHardlinkCount, "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),DATABASE_FILTER_KEY(entityId)),NULL);
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalSpecialCount,  "entries","COUNT(entries.id)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),DATABASE_FILTER_KEY(entityId)),NULL);
-
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalFileSize,    "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),DATABASE_FILTER_KEY(entityId)),NULL);
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalImageSize,   "entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),DATABASE_FILTER_KEY(entityId)),NULL);
-                           if (error == ERROR_NONE) error = Database_getInt64(databaseHandle,&totalHardlinkSize,"entries LEFT JOIN entryFragments ON entryFragments.entryId=entries.id","SUM(entryFragments.size)","entries.type=? AND entries.entityId=?",DATABASE_FILTERS(DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),DATABASE_FILTER_KEY(entityId)),NULL);
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt64(databaseHandle,
+                                                        &totalFileSize,
+                                                        "entries \
+                                                           LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                        ",
+                                                        "SUM(entryFragments.size)",
+                                                        "entries.type=? AND entries.entityId=?",
+                                                        DATABASE_FILTERS
+                                                        (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                        ),
+                                                        NULL
+                                                       );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt64(databaseHandle,
+                                                        &totalImageSize,
+                                                        "entries \
+                                                           LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                        ",
+                                                        "SUM(entryFragments.size)",
+                                                        "entries.type=? AND entries.entityId=?",
+                                                        DATABASE_FILTERS
+                                                        (
+                                                          DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),
+                                                          DATABASE_FILTER_KEY(entityId)
+                                                        ),
+                                                        NULL
+                                                      );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt64(databaseHandle,
+                                                        &totalHardlinkSize,
+                                                        "entries \
+                                                           LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                        ",
+                                                        "SUM(entryFragments.size)",
+                                                        "entries.type=? AND entries.entityId=?",
+                                                        DATABASE_FILTERS
+                                                        (
+                                                          DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),
+                                                          DATABASE_FILTER_KEY(entityId)
+                                                        ),
+                                                        NULL
+                                                       );
+                           }
 
                            if (error == ERROR_NONE)
                            {
@@ -3987,16 +4229,28 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                                                      DATABASE_FLAG_NONE,
                                                      DATABASE_VALUES
                                                      (
-                                                       DATABASE_VALUE_INT64("totalFileCount",      totalFileCount),
-                                                       DATABASE_VALUE_INT64("totalImageCount",     totalImageCount),
-                                                       DATABASE_VALUE_INT64("totalDirectoryCount", totalDirectoryCount),
-                                                       DATABASE_VALUE_INT64("totalLinkCount",      totalLinkCount),
-                                                       DATABASE_VALUE_INT64("totalHardlinkCount",  totalHardlinkCount),
-                                                       DATABASE_VALUE_INT64("totalSpecialCount",   totalSpecialCount),
+                                                       DATABASE_VALUE_UINT64("totalEntryCount",      totalFileCount
+                                                                                                    +totalImageCount
+                                                                                                    +totalDirectoryCount
+                                                                                                    +totalLinkCount
+                                                                                                    +totalHardlinkCount
+                                                                                                    +totalSpecialCount
+                                                                            ),
+                                                       DATABASE_VALUE_UINT64("totalEntrySize",       totalFileSize
+                                                                                                    +totalImageSize
+                                                                                                    +totalHardlinkSize
+                                                                            ),
 
-                                                       DATABASE_VALUE_INT64("totalFileSize",       totalFileSize),
-                                                       DATABASE_VALUE_INT64("totalImageSize",      totalImageSize),
-                                                       DATABASE_VALUE_INT64("totalHardlinkSize",   totalHardlinkSize)
+                                                       DATABASE_VALUE_UINT  ("totalFileCount",      totalFileCount),
+                                                       DATABASE_VALUE_UINT  ("totalImageCount",     totalImageCount),
+                                                       DATABASE_VALUE_UINT  ("totalDirectoryCount", totalDirectoryCount),
+                                                       DATABASE_VALUE_UINT  ("totalLinkCount",      totalLinkCount),
+                                                       DATABASE_VALUE_UINT  ("totalHardlinkCount",  totalHardlinkCount),
+                                                       DATABASE_VALUE_UINT  ("totalSpecialCount",   totalSpecialCount),
+
+                                                       DATABASE_VALUE_UINT64("totalFileSize",       totalFileSize),
+                                                       DATABASE_VALUE_UINT64("totalImageSize",      totalImageSize),
+                                                       DATABASE_VALUE_UINT64("totalHardlinkSize",   totalHardlinkSize)
                                                      ),
                                                      "id=?",
                                                      DATABASE_FILTERS
@@ -4012,149 +4266,194 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                              return error;
                            }
 
-                           error = Database_update(databaseHandle,
-                                                   NULL,  // changedRowCount
-                                                   "entities",
-                                                   DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES
-                                                   (
-                                                     DATABASE_VALUE_UINT64("totalEntryCount", totalFileCount
-                                                                                             +totalImageCount
-                                                                                             +totalDirectoryCount
-                                                                                             +totalLinkCount
-                                                                                             +totalHardlinkCount
-                                                                                             +totalSpecialCount
-                                                           ),
-                                                     DATABASE_VALUE_UINT64("totalEntrySize", totalFileSize
-                                                                                            +totalImageSize
-                                                                                            +totalHardlinkSize
-                                                           )
-                                                   ),
-                                                   "id=?",
-                                                   DATABASE_FILTERS
-                                                   (
-                                                     DATABASE_FILTER_KEY(entityId)
-                                                   )
-                                                  );
-                           if (error != ERROR_NONE)
-                           {
-                             printInfo("FAIL!\n");
-                             printError("create aggregates fail for entity #%"PRIi64": (error: %s)!",entityId,Error_getText(error));
-                             return error;
-                           }
-
                            // total count/size newest
-// TODO:
-                           error = Database_execute(databaseHandle,
-                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                    NULL,  // changedRowCount
-                                                    DATABASE_COLUMN_TYPES(),
-                                                    "UPDATE entities \
-                                                     SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                    FROM entriesNewest \
-                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         totalImageCountNewest    =(SELECT COUNT(entriesNewest.id) \
-                                                                                    FROM entriesNewest \
-                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         totalDirectoryCountNewest=(SELECT COUNT(entriesNewest.id) \
-                                                                                    FROM entriesNewest \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         totalLinkCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                    FROM entriesNewest \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         totalHardlinkCountNewest =(SELECT COUNT(entriesNewest.id) \
-                                                                                    FROM entriesNewest \
-                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         totalSpecialCountNewest  =(SELECT COUNT(entriesNewest.id) \
-                                                                                    FROM entriesNewest \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         \
-                                                         totalFileSizeNewest      =(SELECT SUM(entryFragments.size) \
-                                                                                    FROM entriesNewest \
-                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         totalImageSizeNewest     =(SELECT SUM(entryFragments.size) \
-                                                                                    FROM entriesNewest \
-                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ), \
-                                                         totalHardlinkSizeNewest  =(SELECT SUM(entryFragments.size) \
-                                                                                    FROM entriesNewest \
-                                                                                      LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                    WHERE entriesNewest.type=%d AND entriesNewest.entityId=%lld \
-                                                                                   ) \
-                                                     WHERE id=%lld \
-                                                    ",
-                                                    INDEX_CONST_TYPE_FILE,
-                                                    entityId,
-                                                    INDEX_CONST_TYPE_IMAGE,
-                                                    entityId,
-                                                    INDEX_CONST_TYPE_DIRECTORY,
-                                                    entityId,
-                                                    INDEX_CONST_TYPE_LINK,
-                                                    entityId,
-                                                    INDEX_CONST_TYPE_HARDLINK,
-                                                    entityId,
-                                                    INDEX_CONST_TYPE_SPECIAL,
-                                                    entityId,
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalFileCountNewest,
+                                                      "entriesNewest",
+                                                      "COUNT(entriesNewest.id)",
+                                                      "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalImageCountNewest,
+                                                      "entriesNewest",
+                                                      "COUNT(entriesNewest.id)",
+                                                      "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalDirectoryCountNewest,
+                                                      "entriesNewest",
+                                                      "COUNT(entriesNewest.id)",
+                                                      "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_DIRECTORY),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalLinkCountNewest,
+                                                      "entriesNewest",
+                                                      "COUNT(entriesNewest.id)",
+                                                      "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_LINK     ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalHardlinkCountNewest,
+                                                      "entriesNewest",
+                                                      "COUNT(entriesNewest.id)",
+                                                      "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),
+                                                       DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt(databaseHandle,
+                                                      &totalSpecialCountNewest,
+                                                      "entriesNewest",
+                                                      "COUNT(entriesNewest.id)",
+                                                      "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                      DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),
+                                                      DATABASE_FILTER_KEY(entityId)
+                                                      ),
+                                                      NULL
+                                                     );
+                           }
 
-                                                    INDEX_CONST_TYPE_FILE,
-                                                    entityId,
-                                                    INDEX_CONST_TYPE_IMAGE,
-                                                    entityId,
-                                                    INDEX_CONST_TYPE_HARDLINK,
-                                                    entityId,
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt64(databaseHandle,
+                                                        &totalFileSizeNewest,
+                                                        "entriesNewest \
+                                                           LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                        ",
+                                                        "SUM(entryFragments.size)",
+                                                        "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                        DATABASE_FILTERS
+                                                        (
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_FILE     ),
+                                                        DATABASE_FILTER_KEY(entityId)
+                                                        ),
+                                                        NULL
+                                                       );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt64(databaseHandle,
+                                                        &totalImageSizeNewest,
+                                                        "entriesNewest \
+                                                           LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                        ",
+                                                        "SUM(entryFragments.size)",
+                                                        "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                        DATABASE_FILTERS
+                                                        (
+                                                          DATABASE_FILTER_KEY(INDEX_CONST_TYPE_IMAGE    ),
+                                                          DATABASE_FILTER_KEY(entityId)
+                                                        ),
+                                                        NULL
+                                                      );
+                           }
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_getUInt64(databaseHandle,
+                                                        &totalHardlinkSizeNewest,
+                                                        "entriesNewest \
+                                                           LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                        ",
+                                                        "SUM(entryFragments.size)",
+                                                        "entriesNewest.type=? AND entriesNewest.entityId=?",
+                                                        DATABASE_FILTERS
+                                                        (
+                                                          DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),
+                                                          DATABASE_FILTER_KEY(entityId)
+                                                        ),
+                                                        NULL
+                                                       );
+                           }
 
-                                                    entityId
-                                                   );
+                           if (error == ERROR_NONE)
+                           {
+                             error = Database_update(databaseHandle,
+                                                     NULL,  // changedRowCount
+                                                     "entities",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE_UINT64("totalEntryCountNewest",      totalFileCountNewest
+                                                                                                          +totalImageCountNewest
+                                                                                                          +totalDirectoryCountNewest
+                                                                                                          +totalLinkCountNewest
+                                                                                                          +totalHardlinkCountNewest
+                                                                                                          +totalSpecialCountNewest
+                                                                            ),
+                                                       DATABASE_VALUE_UINT64("totalEntrySizeNewest",       totalFileSizeNewest
+                                                                                                          +totalImageSizeNewest
+                                                                                                          +totalHardlinkSizeNewest
+                                                                            ),
+
+                                                       DATABASE_VALUE_UINT  ("totalFileCountNewest",      totalFileCountNewest),
+                                                       DATABASE_VALUE_UINT  ("totalImageCountNewest",     totalImageCountNewest),
+                                                       DATABASE_VALUE_UINT  ("totalDirectoryCountNewest", totalDirectoryCountNewest),
+                                                       DATABASE_VALUE_UINT  ("totalLinkCountNewest",      totalLinkCountNewest),
+                                                       DATABASE_VALUE_UINT  ("totalHardlinkCountNewest",  totalHardlinkCountNewest),
+                                                       DATABASE_VALUE_UINT  ("totalSpecialCountNewest",   totalSpecialCountNewest),
+
+                                                       DATABASE_VALUE_UINT64("totalFileSizeNewest",       totalFileSizeNewest),
+                                                       DATABASE_VALUE_UINT64("totalImageSizeNewest",      totalImageSizeNewest),
+                                                       DATABASE_VALUE_UINT64("totalHardlinkSizeNewest",   totalHardlinkSizeNewest)
+                                                     ),
+                                                     "id=?",
+                                                     DATABASE_FILTERS
+                                                     (
+                                                       DATABASE_FILTER_KEY(entityId)
+                                                     )
+                                                    );
+                           }
                            if (error != ERROR_NONE)
                            {
                              printInfo("FAIL!\n");
                              printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
                              return error;
                            }
-
-                           error = Database_update(databaseHandle,
-                                                   NULL,  // changedRowCount
-                                                   "entities",
-                                                   DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES
-                                                   (
-                                                     DATABASE_VALUE_UINT64("totalEntryCountNewest", totalFileCount
-                                                                                                   +totalImageCount
-                                                                                                   +totalDirectoryCount
-                                                                                                   +totalLinkCount
-                                                                                                   +totalHardlinkCount
-                                                                                                   +totalSpecialCount
-                                                           ),
-                                                     DATABASE_VALUE_UINT64("totalEntrySizeNewest",  totalFileSize
-                                                                                                   +totalImageSize
-                                                                                                   +totalHardlinkSize
-                                                           )
-                                                   ),
-                                                   "id=?",
-                                                   DATABASE_FILTERS
-                                                   (
-                                                     DATABASE_FILTER_KEY(entityId)
-                                                   )
-                                                  );
-                           if (error != ERROR_NONE)
-                           {
-                             printInfo("FAIL!\n");
-                             printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
-                             return error;
-                           }
-}
 
                            n++;
                            printPercentage(n,totalCount);
@@ -4183,7 +4482,6 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
                          0LL,
                          DATABASE_UNLIMITED
                         );
-#endif
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   clearPercentage();
@@ -4215,10 +4513,11 @@ fprintf(stderr,"%s:%d: entityId=%lu\n",__FILE__,__LINE__,entityId);
 LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array storageIds)
 {
   String     storageIdsString;
-  ulong      i;
+  uint       i;
   DatabaseId storageId;
   Errors     error;
   ulong      totalCount;
+  char       filterString[256];
   ulong      n;
 
   storageIdsString = String_new();
@@ -4231,29 +4530,23 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   printInfo("Create aggregates for storages...");
 
   // get storage total count
-  totalCount = 0L;
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 1);
-
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             totalCount = values[0].u;
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(UINT),
-                           "SELECT COUNT(id) \
-                            FROM storages \
-                            WHERE     (%d OR id IN (%s)) \
-                                  AND deletedFlag!=1 \
-                           ",
-                           String_isEmpty(storageIdsString) ? 1 : 0,
-                           !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
+  totalCount = 0;
+  error = Database_getUInt(databaseHandle,
+                           &totalCount,
+                           "storages",
+                           "COUNT(id)",
+                           stringFormat(filterString,sizeof(filterString),
+                                        "    (%d OR id IN (%s)) \
+                                         AND deletedFlag=? \
+                                        ",
+                                        String_isEmpty(storageIdsString) ? 1 : 0,
+                                        !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
+                                       ),
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_BOOL(FALSE)
+                           ),
+                           NULL  // group
                           );
   if (error != ERROR_NONE)
   {
@@ -4267,250 +4560,462 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   // update storage total count/size aggregates
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               DatabaseId storageId;
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           DatabaseId storageId;
+                           uint       totalFileCount;
+                           uint       totalImageCount;
+                           uint       totalDirectoryCount;
+                           uint       totalLinkCount;
+                           uint       totalHardlinkCount;
+                           uint       totalSpecialCount;
+                           uint64     totalFileSize;
+                           uint64     totalImageSize;
+                           uint64     totalHardlinkSize;
 
-                               assert(values != NULL);
-                               assert(valueCount == 1);
+                           uint       totalFileCountNewest;
+                           uint       totalImageCountNewest;
+                           uint       totalDirectoryCountNewest;
+                           uint       totalLinkCountNewest;
+                           uint       totalHardlinkCountNewest;
+                           uint       totalSpecialCountNewest;
+                           uint64     totalFileSizeNewest;
+                           uint64     totalImageSizeNewest;
+                           uint64     totalHardlinkSizeNewest;
 
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+                           assert(values != NULL);
+                           assert(valueCount == 1);
 
-                               storageId = values[0].id;
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
-                               // total count/size
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                        NULL,  // changedRowCount
-                                                        DATABASE_COLUMN_TYPES(),
-                                                        "UPDATE storages \
-                                                         SET totalFileCount     =(SELECT COUNT(DISTINCT entries.id) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
-                                                                                  WHERE entries.type=%d AND entryFragments.storageId=%lld \
-                                                                                 ), \
-                                                             totalImageCount    =(SELECT COUNT(DISTINCT entries.id) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
-                                                                                  WHERE entries.type=%d AND entryFragments.storageId=%lld \
-                                                                                 ), \
-                                                             totalDirectoryCount=(SELECT COUNT(DISTINCT entries.id) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                                                                  WHERE entries.type=%d AND directoryEntries.storageId=%lld \
-                                                                                 ), \
-                                                             totalLinkCount     =(SELECT COUNT(DISTINCT entries.id) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN linkEntries      ON linkEntries.entryId     =entries.id \
-                                                                                  WHERE entries.type=%d AND linkEntries.storageId=%lld \
-                                                                                 ), \
-                                                             totalHardlinkCount =(SELECT COUNT(DISTINCT entries.id) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
-                                                                                  WHERE entries.type=%d AND entryFragments.storageId=%lld \
-                                                                                 ), \
-                                                             totalSpecialCount  =(SELECT COUNT(DISTINCT entries.id) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id \
-                                                                                  WHERE entries.type=%d AND specialEntries.storageId=%lld \
-                                                                                 ), \
-                                                             \
-                                                             totalFileSize      =(SELECT SUM(entryFragments.size) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
-                                                                                  WHERE entries.type=%d AND entryFragments.storageId=%lld \
-                                                                                 ), \
-                                                             totalImageSize     =(SELECT SUM(entryFragments.size) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
-                                                                                  WHERE entries.type=%d AND entryFragments.storageId=%lld \
-                                                                                 ), \
-                                                             totalHardlinkSize  =(SELECT SUM(entryFragments.size) \
-                                                                                  FROM entries \
-                                                                                    LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
-                                                                                  WHERE entries.type=%d AND entryFragments.storageId=%lld \
-                                                                                 ) \
-                                                         WHERE id=%lld \
-                                                        ",
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_DIRECTORY,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_LINK,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_SPECIAL,
-                                                        storageId,
+                           storageId = values[0].id;
 
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        storageId,
+                           // get count/sizes
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalFileCount,
+                                                    "entries \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entries.id)",
+                                                    "entries.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalImageCount,
+                                                    "entries \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entries.id)",
+                                                    "entries.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalDirectoryCount,
+                                                    "entries \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entries.id)",
+                                                    "entries.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalLinkCount,
+                                                    "entries \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entries.id)",
+                                                    "entries.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalHardlinkCount,
+                                                    "entries \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entries.id)",
+                                                    "entries.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalSpecialCount,
+                                                    "entries \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entries.id)",
+                                                    "entries.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
 
-                                                        storageId
-                                                       );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
-                                 return error;
-                               }
+                           error = Database_getUInt64(databaseHandle,
+                                                      &totalFileSize,
+                                                      "entries \
+                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                      ",
+                                                      "SUM(entryFragments.size)",
+                                                      "entries.type=? AND entryFragments.storageId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
+                                                        DATABASE_FILTER_KEY   (storageId)
+                                                      ),
+                                                      NULL  // group
+                                                     );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt64(databaseHandle,
+                                                      &totalImageSize,
+                                                      "entries \
+                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                      ",
+                                                      "SUM(entryFragments.size)",
+                                                      "entries.type=? AND entryFragments.storageId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
+                                                        DATABASE_FILTER_KEY   (storageId)
+                                                      ),
+                                                      NULL  // group
+                                                     );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt64(databaseHandle,
+                                                      &totalHardlinkSize,
+                                                      "entries \
+                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                                                      ",
+                                                      "SUM(entryFragments.size)",
+                                                      "entries.type=? AND entryFragments.storageId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
+                                                        DATABASE_FILTER_KEY   (storageId)
+                                                      ),
+                                                      NULL  // group
+                                                     );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
 
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                        NULL,  // changedRowCount
-                                                        DATABASE_COLUMN_TYPES(),
-                                                        "UPDATE storages \
-                                                         SET totalEntryCount= totalFileCount \
-                                                                             +totalImageCount \
-                                                                             +totalDirectoryCount \
-                                                                             +totalLinkCount\
-                                                                             +totalHardlinkCount \
-                                                                             +totalSpecialCount, \
-                                                             totalEntrySize = totalFileSize \
-                                                                             +totalImageSize \
-                                                                             +totalHardlinkSize \
-                                                         WHERE id=%llu \
-                                                        ",
-                                                        storageId
-                                                       );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create aggregates fail for storage #%"PRIi64": (error: %s)!",storageId,Error_getText(error));
-                                 return error;
-                               }
+                           // get count/sizes newest
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalFileCountNewest,
+                                                    "entriesNewest \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entriesNewest.id)",
+                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalImageCountNewest,
+                                                    "entriesNewest \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entriesNewest.id)",
+                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalDirectoryCountNewest,
+                                                    "entriesNewest \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entriesNewest.id)",
+                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalLinkCountNewest,
+                                                    "entriesNewest \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entriesNewest.id)",
+                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalHardlinkCountNewest,
+                                                    "entriesNewest \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entriesNewest.id)",
+                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt(databaseHandle,
+                                                    &totalSpecialCountNewest,
+                                                    "entriesNewest \
+                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                    ",
+                                                    "COUNT(DISTINCT entriesNewest.id)",
+                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                    DATABASE_FILTERS
+                                                    (
+                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
+                                                      DATABASE_FILTER_KEY   (storageId)
+                                                    ),
+                                                    NULL  // group
+                                                   );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
 
-                               // total count/size newest
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                        NULL,  // changedRowCount
-                                                        DATABASE_COLUMN_TYPES(),
-                                                        "UPDATE storages \
-                                                         SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
-                                                                                       ), \
-                                                             totalImageCountNewest    =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
-                                                                                       ), \
-                                                             totalDirectoryCountNewest=(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND directoryEntries.storageId=%lld \
-                                                                                       ), \
-                                                             totalLinkCountNewest     =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN linkEntries      ON linkEntries.entryId     =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND linkEntries.storageId=%lld \
-                                                                                       ), \
-                                                             totalHardlinkCountNewest =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
-                                                                                       ), \
-                                                             totalSpecialCountNewest  =(SELECT COUNT(entriesNewest.id) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN specialEntries   ON specialEntries.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND specialEntries.storageId=%lld \
-                                                                                       ), \
-                                                             \
-                                                             totalFileSizeNewest      =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
-                                                                                       ), \
-                                                             totalImageSizeNewest     =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
-                                                                                       ), \
-                                                             totalHardlinkSizeNewest  =(SELECT SUM(entryFragments.size) \
-                                                                                        FROM entriesNewest \
-                                                                                          LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
-                                                                                        WHERE entriesNewest.type=%d AND entryFragments.storageId=%lld \
-                                                                                       ) \
-                                                         WHERE id=%lld \
-                                                        ",
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_DIRECTORY,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_LINK,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_SPECIAL,
-                                                        storageId,
+                           error = Database_getUInt64(databaseHandle,
+                                                      &totalFileSizeNewest,
+                                                      "entriesNewest \
+                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                      ",
+                                                      "SUM(entryFragments.size)",
+                                                      "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
+                                                        DATABASE_FILTER_KEY   (storageId)
+                                                      ),
+                                                      NULL  // group
+                                                     );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt64(databaseHandle,
+                                                      &totalImageSizeNewest,
+                                                      "entriesNewest \
+                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                      ",
+                                                      "SUM(entryFragments.size)",
+                                                      "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
+                                                        DATABASE_FILTER_KEY   (storageId)
+                                                      ),
+                                                      NULL  // group
+                                                     );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+                           error = Database_getUInt64(databaseHandle,
+                                                      &totalHardlinkSizeNewest,
+                                                      "entriesNewest \
+                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
+                                                      ",
+                                                      "SUM(entryFragments.size)",
+                                                      "entriesNewest.type=? AND entryFragments.storageId=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
+                                                        DATABASE_FILTER_KEY   (storageId)
+                                                      ),
+                                                      NULL  // group
+                                                     );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
 
-                                                        INDEX_CONST_TYPE_FILE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_IMAGE,
-                                                        storageId,
-                                                        INDEX_CONST_TYPE_HARDLINK,
-                                                        storageId,
+                           // update total count/size
+                           error = Database_update(databaseHandle,
+                                                   NULL,  // changedRowCount
+                                                   "storages",
+                                                   DATABASE_FLAG_NONE,
+                                                   DATABASE_VALUES
+                                                   (
+                                                     DATABASE_VALUE_UINT  ("totalEntryCount",           totalFileCount
+                                                                                                       +totalImageCount
+                                                                                                       +totalDirectoryCount
+                                                                                                       +totalLinkCount
+                                                                                                       +totalHardlinkCount
+                                                                                                       +totalSpecialCount
+                                                                          ),
+                                                     DATABASE_VALUE_UINT64("totalEntrySize",            totalFileSize
+                                                                                                       +totalImageSize
+                                                                                                       +totalHardlinkSize
+                                                                          ),
+                                                     DATABASE_VALUE_UINT  ("totalFileCount",           totalFileCount),
+                                                     DATABASE_VALUE_UINT  ("totalImageCount",          totalImageCount),
+                                                     DATABASE_VALUE_UINT  ("totalDirectoryCount",      totalDirectoryCount),
+                                                     DATABASE_VALUE_UINT  ("totalLinkCount",           totalLinkCount),
+                                                     DATABASE_VALUE_UINT  ("totalHardlinkCount",       totalHardlinkCount),
+                                                     DATABASE_VALUE_UINT  ("totalSpecialCount",        totalSpecialCount),
 
-                                                        storageId
-                                                       );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create newest aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
-                                 return error;
-                               }
+                                                     DATABASE_VALUE_UINT64("totalFileSize",            totalFileSize),
+                                                     DATABASE_VALUE_UINT64("totalImageSize",           totalImageSize),
+                                                     DATABASE_VALUE_UINT64("totalHardlinkSize",        totalHardlinkSize),
 
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                        NULL,  // changedRowCount
-                                                        DATABASE_COLUMN_TYPES(),
-                                                        "UPDATE storages \
-                                                         SET totalEntryCountNewest= totalFileCountNewest \
-                                                                                   +totalImageCountNewest \
-                                                                                   +totalDirectoryCountNewest \
-                                                                                   +totalLinkCountNewest \
-                                                                                   +totalHardlinkCountNewest \
-                                                                                   +totalSpecialCountNewest, \
-                                                             totalEntrySizeNewest = totalFileSizeNewest \
-                                                                                   +totalImageSizeNewest \
-                                                                                   +totalHardlinkSizeNewest \
-                                                         WHERE id=%lld \
-                                                        ",
-                                                        storageId
-                                                       );
-                               if (error != ERROR_NONE)
-                               {
-                                 printInfo("FAIL!\n");
-                                 printError("create newest aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
-                                 return error;
-                               }
+                                                     DATABASE_VALUE_UINT  ("totalEntryCountNewest",     totalFileCountNewest
+                                                                                                       +totalImageCountNewest
+                                                                                                       +totalDirectoryCountNewest
+                                                                                                       +totalLinkCountNewest
+                                                                                                       +totalHardlinkCountNewest
+                                                                                                       +totalSpecialCountNewest
+                                                                          ),
+                                                     DATABASE_VALUE_UINT64("totalEntrySizeNewest",      totalFileSizeNewest
+                                                                                                       +totalImageSizeNewest
+                                                                                                       +totalHardlinkSizeNewest
+                                                                          ),
+                                                     DATABASE_VALUE_UINT  ("totalFileCountNewest",     totalFileCountNewest),
+                                                     DATABASE_VALUE_UINT  ("totalImageCountNewest",    totalImageCountNewest),
+                                                     DATABASE_VALUE_UINT  ("totalDirectoryCountNewest",totalDirectoryCountNewest),
+                                                     DATABASE_VALUE_UINT  ("totalLinkCountNewest",     totalLinkCountNewest),
+                                                     DATABASE_VALUE_UINT  ("totalHardlinkCountNewest", totalHardlinkCountNewest),
+                                                     DATABASE_VALUE_UINT  ("totalSpecialCountNewest",  totalSpecialCountNewest),
 
-                               n++;
-                               printPercentage(n,totalCount);
+                                                     DATABASE_VALUE_UINT64("totalFileSizeNewest",      totalFileSizeNewest),
+                                                     DATABASE_VALUE_UINT64("totalImageSizeNewest",     totalImageSizeNewest),
+                                                     DATABASE_VALUE_UINT64("totalHardlinkSizeNewest",  totalHardlinkSizeNewest)
+                                                   ),
+                                                   "id=?",
+                                                   DATABASE_FILTERS
+                                                   (
+                                                     DATABASE_FILTER_KEY(storageId)
+                                                   )
+                                                  );
+                           if (error != ERROR_NONE)
+                           {
+                             printInfo("FAIL!\n");
+                             printError("create aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
+                             return error;
+                           }
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_COLUMN_TYPES(KEY),
-                             "SELECT id \
-                              FROM storages \
-                              WHERE     (%d OR id IN (%s)) \
-                                    AND deletedFlag!=1 \
-                             ",
-                             String_isEmpty(storageIdsString) ? 1 : 0,
-                             !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
-                            );
+                           n++;
+                           printPercentage(n,totalCount);
+
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                            "storages"
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY("id")
+                         ),
+                         stringFormat(filterString,sizeof(filterString),
+                                      "    (%d OR id IN (%s)) \
+                                       AND deletedFlag=? \
+                                      ",
+                                      String_isEmpty(storageIdsString) ? 1 : 0,
+                                      !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
+                                     ),
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_BOOL(FALSE)
+                         ),
+                         NULL,  // groupOrder
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
   }
   clearPercentage();
@@ -4544,13 +5049,13 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   Errors        error;
   ulong         total;
   ulong         n;
-  Array         entryIds;
+  Array         ids;
   ArrayIterator arrayIterator;
   DatabaseId    databaseId;
 
   // initialize variables
   storageName = String_new();
-  Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&ids,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   total       = 0;
 
   printInfo("Clean-up orphaned:\n");
@@ -4560,54 +5065,122 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM entryFragments \
-                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                            WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
-                           "
-                          );
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "entryFragments \
+                             LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                          ",
+                          "entryFragments.id",
+                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                          DATABASE_FILTERS
+                          (
+                          )
+                         );
+    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+    {
+      (void)Database_delete(databaseHandle,
+                            &n,
+                            "entryFragments",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(databaseId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
+    }
   }
   (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM directoryEntries \
-                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                            WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
-                           "
-                          );
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "directoryEntries \
+                             LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                          ",
+                          "directoryEntries.id",
+                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                          DATABASE_FILTERS
+                          (
+                          )
+                         );
+    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+    {
+      (void)Database_delete(databaseHandle,
+                            &n,
+                            "directoryEntries",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(databaseId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
+    }
   }
   (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM linkEntries \
-                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                            WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
-                           "
-                          );
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "linkEntries \
+                             LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                          ",
+                          "linkEntries.id",
+                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                          DATABASE_FILTERS
+                          (
+                          )
+                         );
+    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+    {
+      (void)Database_delete(databaseHandle,
+                            &n,
+                            "linkEntries",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(databaseId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
+    }
   }
   (void)Database_flush(databaseHandle);
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM specialEntries \
-                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                            WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
-                           "
-                          );
+    Array_clear(&ids);
+    (void)Database_getIds(databaseHandle,
+                          &ids,
+                          "specialEntries \
+                             LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                          ",
+                          "specialEntries.id",
+                          "storages.id IS NULL OR storages.name IS NULL OR storages.name=''",
+                          DATABASE_FILTERS
+                          (
+                          )
+                         );
+    ARRAY_ITERATE(&ids,arrayIterator,databaseId)
+    {
+      (void)Database_delete(databaseHandle,
+                            &n,
+                            "specialEntries",
+                            DATABASE_FLAG_NONE,
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(databaseId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
+    }
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -4618,14 +5191,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM fileEntries \
-                            WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1) \
-                           "
-                          );
+    (void)Database_delete(databaseHandle,
+                          &n,
+                          "fileEntries",
+                          DATABASE_FLAG_NONE,
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1)",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -4634,14 +5209,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM imageEntries \
-                            WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1) \
-                           "
-                          );
+    (void)Database_delete(databaseHandle,
+                          &n,
+                          "imageEntries",
+                          DATABASE_FLAG_NONE,
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1)",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -4650,15 +5227,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM hardlinkEntries \
-                            WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1) \
-                           "
-                          );
-
+    (void)Database_delete(databaseHandle,
+                          &n,
+                          "hardlinkEntries",
+                          DATABASE_FLAG_NONE,
+                          "NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1)",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -4666,12 +5244,13 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // clean entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...");
-  Array_clear(&entryIds);
+  Array_clear(&ids);
   error = Database_getIds(databaseHandle,
-                          &entryIds,
+                          &ids,
                           "entries",
                           "id",
-                          "entries.type=? AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                          "    entries.type=? \
+                           AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -4683,19 +5262,21 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-      printPercentage(0,Array_length(&entryIds));
-      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      printPercentage(0,Array_length(&ids));
+      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
       {
-        (void)Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               &n,
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM entries \
-                                WHERE id=%lld \
-                               ",
-                               databaseId
-                              );
-        printPercentage(n,Array_length(&entryIds));
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entries",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+        printPercentage(n,Array_length(&ids));
       }
     }
     (void)Database_flush(databaseHandle);
@@ -4705,12 +5286,13 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   total += n;
 
   printInfo("  entries without image entry...");
-  Array_clear(&entryIds);
+  Array_clear(&ids);
   error = Database_getIds(databaseHandle,
-                          &entryIds,
+                          &ids,
                           "entries",
                           "id",
-                          "entries.type=? AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                          "    entries.type=? \
+                           AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -4722,19 +5304,21 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-      printPercentage(0,Array_length(&entryIds));
-      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      printPercentage(0,Array_length(&ids));
+      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
       {
-        (void)Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               &n,
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM entries \
-                                WHERE id=%lld \
-                               ",
-                               databaseId
-                              );
-        printPercentage(n,Array_length(&entryIds));
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entries",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+        printPercentage(n,Array_length(&ids));
       }
       clearPercentage();
     }
@@ -4745,12 +5329,13 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   total += n;
 
   printInfo("  entries without directory entry...");
-  Array_clear(&entryIds);
+  Array_clear(&ids);
   error = Database_getIds(databaseHandle,
-                          &entryIds,
+                          &ids,
                           "entries",
                           "id",
-                          "entries.type=? AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                          "    entries.type=? \
+                           AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -4762,20 +5347,22 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&entryIds));
-      printPercentage(0,Array_length(&entryIds));
-      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&ids));
+      printPercentage(0,Array_length(&ids));
+      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
       {
-        (void)Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               &n,
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM entries \
-                                WHERE id=%lld \
-                               ",
-                               databaseId
-                              );
-        printPercentage(n,Array_length(&entryIds));
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entries",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+        printPercentage(n,Array_length(&ids));
       }
     }
     (void)Database_flush(databaseHandle);
@@ -4785,12 +5372,13 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   total += n;
 
   printInfo("  entries without link entry...");
-  Array_clear(&entryIds);
+  Array_clear(&ids);
   error = Database_getIds(databaseHandle,
-                          &entryIds,
+                          &ids,
                           "entries",
                           "id",
-                          "entries.type=? AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                          "    entries.type=? \
+                           AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -4802,19 +5390,21 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-      printPercentage(0,Array_length(&entryIds));
-      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      printPercentage(0,Array_length(&ids));
+      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
       {
-        (void)Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               &n,
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM entries \
-                                WHERE id=%lld \
-                               ",
-                               databaseId
-                              );
-        printPercentage(n,Array_length(&entryIds));
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entries",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+        printPercentage(n,Array_length(&ids));
       }
     }
     (void)Database_flush(databaseHandle);
@@ -4824,12 +5414,13 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   total += n;
 
   printInfo("  entries without hardlink entry...");
-  Array_clear(&entryIds);
+  Array_clear(&ids);
   error = Database_getIds(databaseHandle,
-                          &entryIds,
+                          &ids,
                           "entries",
                           "id",
-                          "entries.type=? AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                          "    entries.type=? \
+                           AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -4841,19 +5432,21 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-      printPercentage(0,Array_length(&entryIds));
-      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      printPercentage(0,Array_length(&ids));
+      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
       {
-        (void)Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               &n,
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM entries \
-                                WHERE id=%lld \
-                               ",
-                               databaseId
-                              );
-        printPercentage(n,Array_length(&entryIds));
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entries",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+        printPercentage(n,Array_length(&ids));
       }
     }
     (void)Database_flush(databaseHandle);
@@ -4863,12 +5456,13 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   total += n;
 
   printInfo("  entries without special entry...");
-  Array_clear(&entryIds);
+  Array_clear(&ids);
   error = Database_getIds(databaseHandle,
-                          &entryIds,
+                          &ids,
                           "entries",
                           "id",
-                          "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                          "    entries.type=? \
+                           AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
                           ",
                           DATABASE_FILTERS
                           (
@@ -4880,19 +5474,21 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     n = 0L;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-      printPercentage(0,Array_length(&entryIds));
-      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      printPercentage(0,Array_length(&ids));
+      ARRAY_ITERATE(&ids,arrayIterator,databaseId)
       {
-        (void)Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               &n,
-                               DATABASE_COLUMN_TYPES(),
-                               "DELETE FROM entries \
-                                WHERE id=%lld \
-                               ",
-                               databaseId
-                              );
-        printPercentage(n,Array_length(&entryIds));
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entries",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(databaseId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+        printPercentage(n,Array_length(&ids));
       }
     }
     (void)Database_flush(databaseHandle);
@@ -4906,14 +5502,16 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM storages \
-                            WHERE name IS NULL OR name='' \
-                           "
-                          );
+    (void)Database_delete(databaseHandle,
+                          &n,
+                          "storages",
+                          DATABASE_FLAG_NONE,
+                          "name IS NULL OR name=''",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
@@ -4924,302 +5522,420 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM storages \
-                            WHERE (state<%u) OR (state>%u) \
-                           ",
-                           INDEX_CONST_STATE_OK,
-                           INDEX_CONST_STATE_ERROR
-                          );
+    (void)Database_delete(databaseHandle,
+                          &n,
+                          "storages",
+                          DATABASE_FLAG_NONE,
+                          "(state<?) OR (state>?)",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK),
+                            DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR)
+                          ),
+                          DATABASE_UNLIMITED
+                         );
   }
   (void)Database_flush(databaseHandle);
   printInfo("%lu\n",n);
   total += n;
 
-  // clean FTS entries without entry
-  printInfo("  FTS entries without entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  switch (Database_getType(databaseHandle))
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM FTS_entries \
-                            WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1) \
-                           "
-                          );
-  }
-  (void)Database_flush(databaseHandle);
-  printInfo("%lu\n",n);
-  total += n;
+    case DATABASE_TYPE_SQLITE3:
+      // clean FTS entries without entry
+      printInfo("  FTS entries without entry...");
+      n = 0L;
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+      {
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "FTS_entries",
+                              DATABASE_FLAG_NONE,
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      }
+      (void)Database_flush(databaseHandle);
+      printInfo("%lu\n",n);
+      total += n;
 
-  // clean FTS storages without entry
-  printInfo("  FTS storages without storage...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-  {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM FTS_storages \
-                            WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1) \
-                           "
-                          );
-  }
-  (void)Database_flush(databaseHandle);
-  printInfo("%lu\n",n);
-  total += n;
+      // clean FTS storages without entry
+      printInfo("  FTS storages without storage...");
+      n = 0L;
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+      {
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "FTS_storages",
+                              DATABASE_FLAG_NONE,
+                              "NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      }
+      (void)Database_flush(databaseHandle);
+      printInfo("%lu\n",n);
+      total += n;
 
-  // clean newest entries without entry
-  printInfo("  FTS entries without entry...");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-  {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM entriesNewest \
-                            WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1) \
-                           "
-                          );
+      // clean newest entries without entry
+      printInfo("  FTS entries without entry...");
+      n = 0L;
+      DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+      {
+        (void)Database_delete(databaseHandle,
+                              &n,
+                              "entriesNewest",
+                              DATABASE_FLAG_NONE,
+                              "NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)",
+                              DATABASE_FILTERS
+                              (
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+      }
+      (void)Database_flush(databaseHandle);
+      printInfo("%lu\n",n);
+      total += n;
+      break;
+    case DATABASE_TYPE_MYSQL:
+      // nothing to do (use views)
+      break;
   }
-  (void)Database_flush(databaseHandle);
-  printInfo("%lu\n",n);
-  total += n;
 
 //TODO: obsolete, remove
 #if 0
   // clean *Entries without entry
   printInfo("  orphaned entries...");
   n = 0L;
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           int64  databaseId;
-                           Errors error;
+  (void)Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       int64  databaseId;
+                       Errors error;
 
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+                       assert(values != NULL);
+                       assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
+                       UNUSED_VARIABLE(userData);
 
-                           databaseId = values[0].key;
+                       databaseId = values[0].id;
 
-                           error = Database_execute(databaseHandle,
-                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                    NULL,  // changedRowCount
-                                                    "DELETE FROM fileEntries WHERE id=%lld",
-                                                    databaseId
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
+                       error = Database_delete(databaseHandle,
+                                               NULL,  // changedRowCount
+                                               "fileEntries",
+                                               DATABASE_FLAG_NONE,
+                                               "id=?",
+                                               DATABASE_FILTERS
+                                               (
+                                                 DATABASE_FILTER_KEY(databaseId)
+                                               ),
+                                               DATABASE_UNLIMITED
+                                              );
+                       if (error != ERROR_NONE)
+                       {
+                         return error;
+                       }
 
-                           n++;
+                       n++;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(KEY),
-                         "SELECT fileEntries.id \
-                          FROM fileEntries \
-                            LEFT JOIN entries ON entries.id=fileEntries.entryId \
-                          WHERE entries.id IS NULL \
-                         "
-                        );
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           int64  databaseId;
-                           Errors error;
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "fileEntries \
+                          LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                       "
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY  ("fileEntries.id")
+                     ),
+                     "entries.id IS NULL ",
+                     DATABASE_FILTERS
+                     (
+                     ),
+                     NULL,  // orderGroup
+                     0LL,
+                     DATABASE_UNLIMITED
+                    );
+  (void)Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       int64  databaseId;
+                       Errors error;
 
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+                       assert(values != NULL);
+                       assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
+                       UNUSED_VARIABLE(userData);
 
-                           databaseId = values[0].key;
+                       databaseId = values[0].id;
 
-                           error = Database_execute(databaseHandle,
-                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                    NULL,  // changedRowCount
-                                                    "DELETE FROM imageEntries WHERE id=%lld",
-                                                    databaseId
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
+                       error = Database_delete(databaseHandle,
+                                               NULL,  // changedRowCount
+                                               "imageEntries",
+                                               DATABASE_FLAG_NONE,
+                                               "id=?",
+                                               DATABASE_FILTERS
+                                               (
+                                                 DATABASE_FILTER_KEY(databaseId)
+                                               ),
+                                               DATABASE_UNLIMITED
+                                              );
+                       if (error != ERROR_NONE)
+                       {
+                         return error;
+                       }
 
-                           n++;
+                       n++;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(KEY),
-                         "SELECT imageEntries.id \
-                          FROM imageEntries \
-                            LEFT JOIN entries ON entries.id=imageEntries.entryId \
-                          WHERE entries.id IS NULL \
-                         "
-                        );
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           int64  databaseId;
-                           Errors error;
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "imageEntries \
+                          LEFT JOIN entries ON entries.id=imageEntries.entryId \
+                       "
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY  ("imageEntries.id")
+                     ),
+                     "entries.id IS NULL ",
+                     DATABASE_FILTERS
+                     (
+                     ),
+                     NULL,  // orderGroup
+                     0LL,
+                     DATABASE_UNLIMITED
+                    );
+  (void)Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       int64  databaseId;
+                       Errors error;
 
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+                       assert(values != NULL);
+                       assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
+                       UNUSED_VARIABLE(userData);
 
-                           databaseId = values[0].key;
+                       databaseId = values[0].id;
 
-                           error = Database_execute(databaseHandle,
-                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                    NULL,  // changedRowCount
-                                                    "DELETE FROM directoryEntries WHERE id=%lld",
-                                                    databaseId
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
+                       error = Database_delete(databaseHandle,
+                                               NULL,  // changedRowCount
+                                               "directoryEntries",
+                                               DATABASE_FLAG_NONE,
+                                               "id=?",
+                                               DATABASE_FILTERS
+                                               (
+                                                 DATABASE_FILTER_KEY(databaseId)
+                                               ),
+                                               DATABASE_UNLIMITED
+                                              );
+                       if (error != ERROR_NONE)
+                       {
+                         return error;
+                       }
 
-                           n++;
+                       n++;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(KEY),
-                         "SELECT directoryEntries.id \
-                          FROM directoryEntries \
-                            LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                          WHERE entries.id IS NULL \
-                         "
-                        );
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           int64  databaseId;
-                           Errors error;
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "directoryEntries \
+                          LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                       "
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY  ("directoryEntries.id")
+                     ),
+                     "entries.id IS NULL ",
+                     DATABASE_FILTERS
+                     (
+                     ),
+                     NULL,  // orderGroup
+                     0LL,
+                     DATABASE_UNLIMITED
+                    );
+  (void)Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       int64  databaseId;
+                       Errors error;
 
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+                       assert(values != NULL);
+                       assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
+                       UNUSED_VARIABLE(userData);
 
-                           databaseId = values[0].key;
+                       databaseId = values[0].id;
 
-                           error = Database_execute(databaseHandle,
-                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                    NULL,  // changedRowCount
-                                                    "DELETE FROM linkEntries WHERE id=%lld",
-                                                    databaseId
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
+                       error = Database_delete(databaseHandle,
+                                               NULL,  // changedRowCount
+                                               "linkEntries",
+                                               DATABASE_FLAG_NONE,
+                                               "id=?",
+                                               DATABASE_FILTERS
+                                               (
+                                                 DATABASE_FILTER_KEY(databaseId)
+                                               ),
+                                               DATABASE_UNLIMITED
+                                              );
+                       if (error != ERROR_NONE)
+                       {
+                         return error;
+                       }
 
-                           n++;
+                       n++;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(KEY),
-                         "SELECT linkEntries.id \
-                          FROM linkEntries \
-                            LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                          WHERE entries.id IS NULL \
-                         "
-                        );
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           int64  databaseId;
-                           Errors error;
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "linkEntries \
+                          LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                       "
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY  ("linkEntries.id")
+                     ),
+                     "entries.id IS NULL ",
+                     DATABASE_FILTERS
+                     (
+                     ),
+                     NULL,  // orderGroup
+                     0LL,
+                     DATABASE_UNLIMITED
+                    );
+  (void)Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       int64  databaseId;
+                       Errors error;
 
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+                       assert(values != NULL);
+                       assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
+                       UNUSED_VARIABLE(userData);
 
-                           databaseId = values[0].key;
+                       databaseId = values[0].id;
 
-                           error = Database_execute(databaseHandle,
-                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                    NULL,  // changedRowCount
-                                                    "DELETE FROM hardlinkEntries WHERE id=%lld",
-                                                    databaseId
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
+                       error = Database_delete(databaseHandle,
+                                               NULL,  // changedRowCount
+                                               "hardlinkEntries",
+                                               DATABASE_FLAG_NONE,
+                                               "id=?",
+                                               DATABASE_FILTERS
+                                               (
+                                                 DATABASE_FILTER_KEY(databaseId)
+                                               ),
+                                               DATABASE_UNLIMITED
+                                              );
+                       if (error != ERROR_NONE)
+                       {
+                         return error;
+                       }
 
-                           n++;
+                       n++;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(KEY),
-                         "SELECT hardlinkEntries.id \
-                          FROM hardlinkEntries \
-                            LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
-                          WHERE entries.id IS NULL \
-                         "
-                        );
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                         {
-                           int64  databaseId;
-                           Errors error;
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "linkEntries \
+                          LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                       "
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY  ("linkEntries.id")
+                     ),
+                     "entries.id IS NULL ",
+                     DATABASE_FILTERS
+                     (
+                     ),
+                     NULL,  // orderGroup
+                     0LL,
+                     DATABASE_UNLIMITED
+                    );
+  (void)Database_get(databaseHandle,
+                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                     {
+                       int64  databaseId;
+                       Errors error;
 
-                           assert(values != NULL);
-                           assert(valueCount == 1);
+                       assert(values != NULL);
+                       assert(valueCount == 1);
 
-                           UNUSED_VARIABLE(valueCount);
-                           UNUSED_VARIABLE(userData);
+                       UNUSED_VARIABLE(valueCount);
+                       UNUSED_VARIABLE(userData);
 
-                           databaseId = values[0].key;
+                       databaseId = values[0].id;
 
-                           error = Database_execute(databaseHandle,
-                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                    NULL,  // changedRowCount
-                                                    "DELETE FROM specialEntries WHERE id=%lld",
-                                                    databaseId
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
+                       error = Database_delete(databaseHandle,
+                                               NULL,  // changedRowCount
+                                               "specialEntries",
+                                               DATABASE_FLAG_NONE,
+                                               "id=?",
+                                               DATABASE_FILTERS
+                                               (
+                                                 DATABASE_FILTER_KEY(databaseId)
+                                               ),
+                                               DATABASE_UNLIMITED
+                                              );
+                       if (error != ERROR_NONE)
+                       {
+                         return error;
+                       }
 
-                           n++;
+                       n++;
 
-                           return ERROR_NONE;
-                         },NULL),
-                         NULL,  // changedRowCount
-                         DATABASE_COLUMN_TYPES(KEY),
-                         "SELECT specialEntries.id \
-                          FROM specialEntries \
-                            LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                          WHERE entries.id IS NULL \
-                         "
-                        );
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     DATABASE_TABLES
+                     (
+                       "specialEntries \
+                          LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                       "
+                     ),
+                     DATABASE_FLAG_NONE,
+                     DATABASE_COLUMNS
+                     (
+                       DATABASE_COLUMN_KEY  ("specialEntries.id")
+                     ),
+                     "entries.id IS NULL ",
+                     DATABASE_FILTERS
+                     (
+                     ),
+                     NULL,  // orderGroup
+                     0LL,
+                     DATABASE_UNLIMITED
+                    );
   printInfo("%lu\n",n);
   total += n;
 #endif
@@ -5227,7 +5943,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   fprintf(stdout,"Total %lu orphaned entries removed\n",total);
 
   // free resources
-  Array_done(&entryIds);
+  Array_done(&ids);
   String_delete(storageName);
 }
 
@@ -5256,51 +5972,66 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
   // check duplicate storages
   printInfo("  storages:\n");
   n = 0L;
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         DatabaseId storageId;
+
+                         assert(values != NULL);
+                         assert(valueCount == 2);
+
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
+
+                         storageId = values[0].id;
+
+                         if (String_equalsCString(name,values[1].text.data))
+                         {
+                           error = Database_update(databaseHandle,
+                                                   NULL,  // changedRowCount
+                                                   "storages",
+                                                   DATABASE_FLAG_NONE,
+                                                   DATABASE_VALUES
+                                                   (
+                                                     DATABASE_VALUE_BOOL("deletedFlag",TRUE)
+                                                   ),
+                                                   "id=?",
+                                                   DATABASE_FILTERS
+                                                   (
+                                                     DATABASE_FILTER_KEY  (storageId)
+                                                   )
+                                                  );
+                           if (error != ERROR_NONE)
                            {
-                             DatabaseId storageId;
+                             return error;
+                           }
+                           n++;
+                           printInfo("    %s\n",values[1].text.data);
+                         }
+                         String_setCString(name,values[1].text.data);
 
-                             assert(values != NULL);
-                             assert(valueCount == 2);
-
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
-
-                             storageId = values[0].id;
-
-                             if (String_equalsCString(name,values[1].text.data))
-                             {
-                               error = Database_execute(databaseHandle,
-                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                        NULL,  // changedRowCount
-                                                        DATABASE_COLUMN_TYPES(),
-                                                        "UPDATE storages \
-                                                         SET deletedFlag=1 \
-                                                         WHERE id=%lld \
-                                                        ",
-                                                        storageId
-                                                       );
-                               if (error != ERROR_NONE)
-                               {
-                                 return error;
-                               }
-                               n++;
-                               printInfo("    %s\n",values[1]);
-                             }
-                             String_setCString(name,values[1].text.data);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,
-                                                 CSTRING
-                                                ),
-                           "SELECT id,name FROM storages \
-                            WHERE deletedFlag!=1 \
-                            ORDER BY name \
-                           "
-                          );
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "storages"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_KEY   ("id"),
+                         DATABASE_COLUMN_STRING("name")
+                       ),
+                       "deletedFlag=?",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       "ORDER BY name",
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -5365,7 +6096,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    &entryIds,
                                    "entryFragments",
                                    "entryId",
-                                   "WHERE storageId=?",
+                                   "storageId=?",
                                    DATABASE_FILTERS
                                    (
                                      DATABASE_FILTER_KEY(storageId)
@@ -5393,7 +6124,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                    &entryIds,
                                    "linkEntries",
                                    "entryId",
-                                   "WHERE storageId=?",
+                                   "storageId=?",
                                    DATABASE_FILTERS
                                    (
                                      DATABASE_FILTER_KEY(storageId)
@@ -5432,104 +6163,130 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                  );
         }
 
-        // purge FTS entries
-        if (error == ERROR_NONE)
+        switch (Database_getType(databaseHandle))
         {
-          printPercentage(0*Array_length(&entryIds),2*Array_length(&entryIds));
-          ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
-          {
-            if (!Database_existsValue(databaseHandle,
-                                      "entryFragments",
-                                      "id",
-                                      "entryId=?",
-                                      DATABASE_FILTERS
-                                      (
-                                        DATABASE_FILTER_KEY(entryId)
-                                      )
-                                     )
-               )
+          case DATABASE_TYPE_SQLITE3:
+            // purge FTS entries
+            if (error == ERROR_NONE)
             {
-              error = Database_execute(databaseHandle,
-                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                       &n,
-                                       DATABASE_COLUMN_TYPES(),
-// TODO:
-                                       "DELETE FROM FTS_entries \
-                                        WHERE entryId MATCH %lld \
-                                       ",
-                                       entryId
-                                      );
+              printPercentage(0*Array_length(&entryIds),2*Array_length(&entryIds));
+              ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
+              {
+                if (!Database_existsValue(databaseHandle,
+                                          "entryFragments",
+                                          "id",
+                                          "entryId=?",
+                                          DATABASE_FILTERS
+                                          (
+                                            DATABASE_FILTER_KEY(entryId)
+                                          )
+                                         )
+                   )
+                {
+                  error = Database_delete(databaseHandle,
+                                          &n,
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          "entryId MATCH ?",
+                                          DATABASE_FILTERS
+                                          (
+                                            DATABASE_FILTER_KEY(entryId)
+                                          ),
+                                          0
+                                         );
+                }
+                printPercentage(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
+              }
+              printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
             }
-            printPercentage(0*Array_length(&entryIds)+n,2*Array_length(&entryIds));
-          }
-          printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
+            break;
+          case DATABASE_TYPE_MYSQL:
+            // nothing to do (use views)
+            break;
         }
 
         // purge directory/link/special entries
         if (error == ERROR_NONE)
         {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount,
-                                   DATABASE_COLUMN_TYPES(),
-                                   "DELETE FROM directoryEntries \
-                                    WHERE storageId=%lld \
-                                   ",
-                                   storageId
-                                  );
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "directoryEntries",
+                                  DATABASE_FLAG_NONE,
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  ),
+                                  0
+                                 );
         }
         if (error == ERROR_NONE)
         {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount,
-                                   DATABASE_COLUMN_TYPES(),
-                                   "DELETE FROM linkEntries \
-                                    WHERE storageId=%lld \
-                                   ",
-                                   storageId
-                                  );
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "linkEntries",
+                                  DATABASE_FLAG_NONE,
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  ),
+                                  0
+                                 );
         }
         if (error == ERROR_NONE)
         {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount,
-                                   DATABASE_COLUMN_TYPES(),
-                                   "DELETE FROM specialEntries \
-                                    WHERE storageId=%lld \
-                                   ",
-                                   storageId
-                                  );
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "specialEntries",
+                                  DATABASE_FLAG_NONE,
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  ),
+                                  0
+                                 );
         }
 
-        // purge FTS storages
-        if (error == ERROR_NONE)
+        switch (Database_getType(databaseHandle))
         {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   &n,
-                                   DATABASE_COLUMN_TYPES(),
-// TODO:
-                                   "DELETE FROM FTS_storages \
-                                    WHERE storageId MATCH %lld \
-                                   ",
-                                   storageId
-                                  );
+          case DATABASE_TYPE_SQLITE3:
+            // purge FTS storages
+            if (error == ERROR_NONE)
+            {
+              error = Database_delete(databaseHandle,
+                                      &n,
+                                      "FTS_storages",
+                                      DATABASE_FLAG_NONE,
+                                      "storageId MATCH ?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(storageId)
+                                      ),
+                                      0
+                                     );
+            }
+            break;
+          case DATABASE_TYPE_MYSQL:
+            // nothing to do (use views)
+            break;
         }
 
         // purge storage
         if (error == ERROR_NONE)
         {
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount,
-                                   DATABASE_COLUMN_TYPES(),
-                                   "DELETE FROM storages \
-                                    WHERE id=%lld \
-                                   ",
-                                   storageId
-                                  );
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "storages",
+                                  DATABASE_FLAG_NONE,
+                                  "id=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(storageId)
+                                  ),
+                                  0
+                                 );
         }
 
         // purge entries
@@ -5549,15 +6306,17 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                      )
                )
             {
-              error = Database_execute(databaseHandle,
-                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                       &n,
-                                       DATABASE_COLUMN_TYPES(),
-                                       "DELETE FROM entries \
-                                        WHERE id=%lld \
-                                       ",
-                                       entryId
-                                      );
+              error = Database_delete(databaseHandle,
+                                      &n,
+                                      "entries",
+                                      DATABASE_FLAG_NONE,
+                                      "id=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(entryId)
+                                      ),
+                                      0
+                                     );
             }
             printPercentage(1*Array_length(&entryIds)+n,2*Array_length(&entryIds));
           }
@@ -5840,32 +6599,41 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
 {
   Errors error;
   uint   n;
-  uint64 n64;
 
   // show meta data
   printf("Meta:\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             printf("  %-16s: %s\n",
-                                    values[0].text.data,
-                                    values[1].text.data
-                                   );
+                         printf("  %-16s: %s\n",
+                                values[0].text.data,
+                                values[1].text.data
+                               );
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(CSTRING,CSTRING),
-                           "SELECT name,value \
-                            FROM meta \
-                           "
-                          );
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "meta"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_STRING("name"),
+                         DATABASE_COLUMN_STRING("value")
+                       ),
+                       DATABASE_FILTERS_NONE,
+                       NULL,  // groupOrder
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   if (error != ERROR_NONE)
   {
     printError("get meta data fail (error: %s)!",Error_getText(error));
@@ -6017,7 +6785,8 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            "state=? AND deletedFlag=?",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK),
+                             DATABASE_FILTER_UINT  (INDEX_CONST_STATE_OK),
+                             DATABASE_FILTER_BOOL  (FALSE),
                            ),
                            NULL  // group
                           );
@@ -6026,7 +6795,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     printError("get storage data fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  printf("  OK              : %s\n",n);
+  printf("  OK              : %u\n",n);
 
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -6035,8 +6804,8 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            "state=? AND deletedFlag=?",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_UPDATE_REQUESTED),
-                             DATABASE_FILTER_BOOL(FALSE)
+                             DATABASE_FILTER_UINT  (INDEX_CONST_STATE_UPDATE_REQUESTED),
+                             DATABASE_FILTER_BOOL  (FALSE)
                            ),
                            NULL  // group
                           );
@@ -6054,8 +6823,8 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            "state=? AND deletedFlag=?",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR),
-                             DATABASE_FILTER_BOOL(FALSE)
+                             DATABASE_FILTER_UINT  (INDEX_CONST_STATE_ERROR),
+                             DATABASE_FILTER_BOOL  (FALSE)
                            ),
                            NULL  // group
                           );
@@ -6073,7 +6842,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            "deletedFlag=?",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_BOOL(TRUE)
+                             DATABASE_FILTER_BOOL  (TRUE)
                            ),
                            NULL  // group
                           );
@@ -6724,6 +7493,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
   ulong        i;
   DatabaseId   uuidId;
   Errors       error;
+  char         filterString[256];
 
   uuidIdsString = String_new();
   uuidsString = String_new();
@@ -6740,154 +7510,190 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
   }
 
   printf("UUIDs:\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             DatabaseId uuidId;
-                             ulong      totalEntryCount;
-                             uint64     totalEntrySize;
-                             ulong      totalFileCount;
-                             uint64     totalFileSize;
-                             ulong      totalImageCount;
-                             uint64     totalImageSize;
-                             ulong      totalDirectoryCount;
-                             ulong      totalLinkCount;
-                             ulong      totalHardlinkCount;
-                             uint64     totalHardlinkSize;
-                             ulong      totalSpecialCount;
-                             String     idsString;
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         DatabaseId uuidId;
+                         ulong      totalEntryCount;
+                         uint64     totalEntrySize;
+                         ulong      totalFileCount;
+                         uint64     totalFileSize;
+                         ulong      totalImageCount;
+                         uint64     totalImageSize;
+                         ulong      totalDirectoryCount;
+                         ulong      totalLinkCount;
+                         ulong      totalHardlinkCount;
+                         uint64     totalHardlinkSize;
+                         ulong      totalSpecialCount;
+                         String     idsString;
 
-                             assert(values != NULL);
-                             assert(valueCount == 24);
+                         assert(values != NULL);
+                         assert(valueCount == 24);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             uuidId              = values[0].id;
-                             totalEntryCount     = values[2].u;
-                             totalEntrySize      = values[3].u64;
-                             totalFileCount      = values[4].u;
-                             totalFileSize       = values[5].u64;
-                             totalImageCount     = values[6].u;
-                             totalImageSize      = values[7].u64;
-                             totalDirectoryCount = values[8].u;
-                             totalLinkCount      = values[9].u;
-                             totalHardlinkCount  = values[10].u;
-                             totalHardlinkSize   = values[11].u64;
-                             totalSpecialCount   = values[12].u;
+                         uuidId              = values[0].id;
+                         totalEntryCount     = values[2].u;
+                         totalEntrySize      = values[3].u64;
+                         totalFileCount      = values[4].u;
+                         totalFileSize       = values[5].u64;
+                         totalImageCount     = values[6].u;
+                         totalImageSize      = values[7].u64;
+                         totalDirectoryCount = values[8].u;
+                         totalLinkCount      = values[9].u;
+                         totalHardlinkCount  = values[10].u;
+                         totalHardlinkSize   = values[11].u64;
+                         totalSpecialCount   = values[12].u;
 
-                             printf("  Id              : %"PRIi64"\n",uuidId);
-                             printf("    UUID          : %s\n",values[ 1].text.data);
-                             printf("\n");
-                             printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
-                             printf("\n");
-                             printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalFileSize);
-                             printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalImageSize);
-                             printf("    Directories   : %lu\n",totalDirectoryCount);
-                             printf("    Links         : %lu\n",totalLinkCount);
-                             printf("    Hardlinks     : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalHardlinkSize);
-                             printf("    Special       : %lu\n",totalSpecialCount);
-                             printf("\n");
+                         printf("  Id              : %"PRIi64"\n",uuidId);
+                         printf("    UUID          : %s\n",values[ 1].text.data);
+                         printf("\n");
+                         printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                         printf("\n");
+                         printf("    Files         : %u, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                         printf("    Images        : %u, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                         printf("    Directories   : %u\n",totalDirectoryCount);
+                         printf("    Links         : %u\n",totalLinkCount);
+                         printf("    Hardlinks     : %u, %.1lf %s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                         printf("    Special       : %u\n",totalSpecialCount);
+                         printf("\n");
 
-                             idsString = String_new();
-                             String_clear(idsString);
-                             Database_execute(databaseHandle,
-                                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                              {
-                                                assert(values != NULL);
-                                                assert(valueCount == 1);
+                         idsString = String_new();
+                         Database_get(databaseHandle,
+                                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                      {
+                                        assert(values != NULL);
+                                        assert(valueCount == 1);
 
-                                                UNUSED_VARIABLE(valueCount);
-                                                UNUSED_VARIABLE(userData);
+                                        UNUSED_VARIABLE(valueCount);
+                                        UNUSED_VARIABLE(userData);
 
-                                                if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                                String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
+                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
 
-                                                return ERROR_NONE;
-                                              },NULL),
-                                              NULL,  // changedRowCount
-                                              DATABASE_COLUMN_TYPES(KEY),
-                                              "SELECT id \
-                                               FROM entities \
-                                               WHERE     uuidId=%lld \
-                                                     AND deletedFlag!=1 \
-                                              ",
-                                              uuidId
-                                             );
-                             printf("    Entity ids    : %s\n",String_cString(idsString));
-                             String_clear(idsString);
-                             Database_execute(databaseHandle,
-                                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                              {
-                                                assert(values != NULL);
-                                                assert(valueCount == 1);
+                                        return ERROR_NONE;
+                                      },NULL),
+                                      NULL,  // changedRowCount
+                                      DATABASE_TABLES
+                                      (
+                                        "entities"
+                                      ),
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_COLUMNS
+                                      (
+                                        DATABASE_COLUMN_KEY("id")
+                                      ),
+                                      "    uuidId=? \
+                                       AND deletedFlag=? \
+                                      ",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY  (uuidId),
+                                        DATABASE_FILTER_BOOL (FALSE)
+                                      ),
+                                      NULL,  // orderGroup
+                                      0LL,
+                                      DATABASE_UNLIMITED
+                                     );
+                         printf("    Entity ids    : %s\n",String_cString(idsString));
 
-                                                UNUSED_VARIABLE(valueCount);
-                                                UNUSED_VARIABLE(userData);
+                         String_clear(idsString);
+                         Database_get(databaseHandle,
+                                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                      {
+                                        assert(values != NULL);
+                                        assert(valueCount == 1);
 
-                                                if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                                String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        UNUSED_VARIABLE(valueCount);
+                                        UNUSED_VARIABLE(userData);
 
-                                                return ERROR_NONE;
-                                              },NULL),
-                                              NULL,  // changedRowCount
-                                              DATABASE_COLUMN_TYPES(KEY),
-                                              "SELECT id \
-                                               FROM storages \
-                                               WHERE     uuidId=%lld \
-                                                     AND deletedFlag!=1 \
-                                              ",
-                                              uuidId
-                                             );
-                             printf("    Storage ids   : %s\n",String_cString(idsString));
-                             String_delete(idsString);
+                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
+                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,CSTRING,
-                                                 INT,INT64,
-                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
-                                                 INT,INT64,
-                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT
-                                                ),
-                           "SELECT id,\
-                                   jobUUID, \
-                                   \
-                                   (SELECT SUM(totalEntryCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalEntrySize) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   \
-                                   (SELECT SUM(totalFileCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalFileSize) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalImageCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalImageSize) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalDirectoryCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalLinkCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalHardlinkCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalHardlinkSize) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalSpecialCount) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   \
-                                   (SELECT SUM(totalEntryCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalEntrySizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   \
-                                   (SELECT SUM(totalFileCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalFileSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalImageCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalImageSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalDirectoryCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalLinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalHardlinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalHardlinkSizeNewest) FROM entities WHERE entities.uuidId=uuids.id), \
-                                   (SELECT SUM(totalSpecialCountNewest) FROM entities WHERE entities.uuidId=uuids.id) \
-                            FROM uuids \
-                            WHERE     (%d OR id IN (%s)) \
-                                  AND (%d OR jobUUID IN (%s)) \
-                           ",
-                           String_isEmpty(uuidIdsString) ? 1 : 0,
-                           !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0",
-                           String_isEmpty(uuidsString) ? 1 : 0,
-                           !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0"
-                          );
+                                        return ERROR_NONE;
+                                      },NULL),
+                                      NULL,  // changedRowCount
+                                      DATABASE_TABLES
+                                      (
+                                        "storages"
+                                      ),
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_COLUMNS
+                                      (
+                                        DATABASE_COLUMN_KEY("id")
+                                      ),
+                                      "    uuidId=? \
+                                       AND deletedFlag=? \
+                                      ",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY  (uuidId),
+                                        DATABASE_FILTER_BOOL (FALSE)
+                                      ),
+                                      NULL,  // orderGroup
+                                      0LL,
+                                      DATABASE_UNLIMITED
+                                     );
+                         printf("    Storage ids   : %s\n",String_cString(idsString));
+
+                         String_delete(idsString);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "uuids"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_KEY   ("id"),
+                         DATABASE_COLUMN_STRING("jobUUID"),
+
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalEntryCount) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalEntrySize) FROM entities WHERE entities.uuidId=uuids.id)"),
+
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalFileCount) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalFileSize) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalImageCount) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalImageSize) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalDirectoryCount) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalLinkCount) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalHardlinkCount) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalHardlinkSize) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalSpecialCount) FROM entities WHERE entities.uuidId=uuids.id)"),
+
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalEntryCountNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalEntrySizeNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalFileCountNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalFileSizeNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalImageCountNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalImageSizeNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalDirectoryCountNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalLinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalHardlinkCountNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT64("(SELECT SUM(totalHardlinkSizeNewest) FROM entities WHERE entities.uuidId=uuids.id)"),
+                         DATABASE_COLUMN_UINT  ("(SELECT SUM(totalSpecialCountNewest) FROM entities WHERE entities.uuidId=uuids.id)")
+                       ),
+                       stringFormat(filterString,sizeof(filterString),
+                                    "    (%d OR id IN (%s)) \
+                                     AND (%d OR jobUUID IN (%s)) \
+                                    ",
+                                    String_isEmpty(uuidIdsString) ? 1 : 0,
+                                    !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0",
+                                    String_isEmpty(uuidsString) ? 1 : 0,
+                                    !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0"
+                                   ),
+                       DATABASE_FILTERS
+                       (
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   if (error != ERROR_NONE)
   {
     printError("get UUID data fail (error: %s)!",Error_getText(error));
@@ -6917,6 +7723,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
   ulong      i;
   DatabaseId entityId;
   Errors     error;
+  char       filterString[256];
 
   entityIdsString = String_new();
   ARRAY_ITERATE(&entityIds,i,entityId)
@@ -6926,140 +7733,161 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
   }
 
   printf("Entities:\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             DatabaseId entityId;
-                             uint       type;
-                             ulong      totalEntryCount;
-                             uint64     totalEntrySize;
-                             ulong      totalFileCount;
-                             uint64     totalFileSize;
-                             ulong      totalImageCount;
-                             uint64     totalImageSize;
-                             ulong      totalDirectoryCount;
-                             ulong      totalLinkCount;
-                             ulong      totalhardlinkCount;
-                             uint64     totalHardlinkSize;
-                             ulong      totalSpecialCount;
-                             DatabaseId uuidId;
-                             String     idsString;
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         DatabaseId entityId;
+                         uint       type;
+                         ulong      totalEntryCount;
+                         uint64     totalEntrySize;
+                         ulong      totalFileCount;
+                         uint64     totalFileSize;
+                         ulong      totalImageCount;
+                         uint64     totalImageSize;
+                         ulong      totalDirectoryCount;
+                         ulong      totalLinkCount;
+                         ulong      totalhardlinkCount;
+                         uint64     totalHardlinkSize;
+                         ulong      totalSpecialCount;
+                         DatabaseId uuidId;
+                         String     idsString;
 
-                             assert(values != NULL);
-                             assert(valueCount == 27);
+                         assert(values != NULL);
+                         assert(valueCount == 27);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             entityId            = values[0].id;
-                             type                = values[1].u;
-                             totalEntryCount     = values[4].u;
-                             totalEntrySize      = values[5].u64;
-                             totalFileCount      = values[6].u;
-                             totalFileSize       = values[7].u64;
-                             totalImageCount     = values[8].u;
-                             totalImageSize      = values[9].u64;
-                             totalDirectoryCount = values[10].u;
-                             totalLinkCount      = values[11].u;
-                             totalhardlinkCount  = values[12].u;
-                             totalHardlinkSize   = values[13].u64;
-                             totalSpecialCount   = values[14].u;
+                         entityId            = values[0].id;
+                         type                = values[1].u;
+                         totalEntryCount     = values[4].u;
+                         totalEntrySize      = values[5].u64;
+                         totalFileCount      = values[6].u;
+                         totalFileSize       = values[7].u64;
+                         totalImageCount     = values[8].u;
+                         totalImageSize      = values[9].u64;
+                         totalDirectoryCount = values[10].u;
+                         totalLinkCount      = values[11].u;
+                         totalhardlinkCount  = values[12].u;
+                         totalHardlinkSize   = values[13].u64;
+                         totalSpecialCount   = values[14].u;
 
-                             uuidId              = values[26].id;
+                         uuidId              = values[26].id;
 
-                             printf("  Id              : %"PRIi64"\n",entityId);
-                             printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : "xxx");//TODO values[ 1]);
-                             printf("    Job UUID      : %s\n",values[ 2].text.data);
-                             printf("    Schedule UUID : %s\n",values[ 3].text.data);
-                             printf("\n");
-                             printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
-                             printf("\n");
-                             printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
-                             printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
-                             printf("    Directories   : %lu\n",totalDirectoryCount);
-                             printf("    Links         : %lu\n",totalLinkCount);
-                             printf("    Hardlinks     : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalhardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
-                             printf("    Special       : %lu\n",totalSpecialCount);
-                             printf("\n");
-                             printf("    UUID id       : %"PRIi64"\n",uuidId);
+                         printf("  Id              : %"PRIi64"\n",entityId);
+                         printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : "xxx");//TODO values[ 1]);
+                         printf("    Job UUID      : %s\n",values[ 2].text.data);
+                         printf("    Schedule UUID : %s\n",values[ 3].text.data);
+                         printf("\n");
+                         printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                         printf("\n");
+                         printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                         printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                         printf("    Directories   : %lu\n",totalDirectoryCount);
+                         printf("    Links         : %lu\n",totalLinkCount);
+                         printf("    Hardlinks     : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalhardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                         printf("    Special       : %lu\n",totalSpecialCount);
+                         printf("\n");
+                         printf("    UUID id       : %"PRIi64"\n",uuidId);
 
-                             idsString = String_new();
-                             String_clear(idsString);
-                             Database_execute(databaseHandle,
-                                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                              {
-                                                assert(values != NULL);
-                                                assert(valueCount == 1);
+                         idsString = String_new();
+                         Database_get(databaseHandle,
+                                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                      {
+                                        assert(values != NULL);
+                                        assert(valueCount == 1);
 
-                                                UNUSED_VARIABLE(valueCount);
-                                                UNUSED_VARIABLE(userData);
+                                        UNUSED_VARIABLE(valueCount);
+                                        UNUSED_VARIABLE(userData);
 
-                                                if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
-                                                String_formatAppend(idsString,"%"PRIi64,values[0].id);
+                                        if (!String_isEmpty(idsString)) String_appendChar(idsString,',');
+                                        String_formatAppend(idsString,"%"PRIi64,values[0].id);
 
-                                                return ERROR_NONE;
-                                              },NULL),
-                                              NULL,  // changedRowCount
-                                              DATABASE_COLUMN_TYPES(KEY),
-                                              "SELECT id \
-                                               FROM storages \
-                                               WHERE     entityId=%lld \
-                                                     AND deletedFlag!=1 \
-                                              ",
-                                              entityId
-                                             );
-                             printf("    Storage ids   : %s\n",String_cString(idsString));
-                             String_delete(idsString);
+                                        return ERROR_NONE;
+                                      },NULL),
+                                      NULL,  // changedRowCount
+                                      DATABASE_TABLES
+                                      (
+                                        "storages"
+                                      ),
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_COLUMNS
+                                      (
+                                        DATABASE_COLUMN_KEY  ("id")
+                                      ),
+                                      "    entityId=? \
+                                       AND deletedFlag=? \
+                                      ",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY  (entityId),
+                                        DATABASE_FILTER_BOOL (FALSE)
+                                      ),
+                                      NULL,  // groupOrder
+                                      0LL,
+                                      DATABASE_UNLIMITED
+                                     );
+                         printf("    Storage ids   : %s\n",String_cString(idsString));
+                         String_delete(idsString);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,INT,CSTRING,CSTRING,
-                                                 INT,INT64,
-                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
-                                                 INT,INT64,
-                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
-                                                 KEY
-                                                ),
-                           "SELECT id,\
-                                   type, \
-                                   jobUUID, \
-                                   scheduleUUID, \
-                                   \
-                                   totalEntryCount, \
-                                   totalEntrySize, \
-                                   \
-                                   totalFileCount, \
-                                   totalFileSize, \
-                                   totalImageCount, \
-                                   totalImageSize, \
-                                   totalDirectoryCount, \
-                                   totalLinkCount, \
-                                   totalHardlinkCount, \
-                                   totalHardlinkSize, \
-                                   totalSpecialCount, \
-                                   \
-                                   totalEntryCountNewest, \
-                                   totalEntrySizeNewest, \
-                                   \
-                                   totalFileCountNewest, \
-                                   totalFileSizeNewest, \
-                                   totalImageCountNewest, \
-                                   totalImageSizeNewest, \
-                                   totalDirectoryCountNewest, \
-                                   totalLinkCountNewest, \
-                                   totalHardlinkCountNewest, \
-                                   totalHardlinkSizeNewest, \
-                                   totalSpecialCountNewest, \
-                                   \
-                                   uuidId \
-                            FROM entities \
-                            WHERE     (%d OR id IN (%s)) \
-                                  AND deletedFlag!=1 \
-                           ",
-                           String_isEmpty(entityIdsString) ? 1 : 0,
-                           !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
-                          );
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "entities"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_KEY   ("id"),
+                         DATABASE_COLUMN_UINT  ("type"),
+                         DATABASE_COLUMN_STRING("jobUUID"),
+                         DATABASE_COLUMN_STRING("scheduleUUID"),
+
+                         DATABASE_COLUMN_UINT  ("totalEntryCount"),
+                         DATABASE_COLUMN_UINT64("totalEntrySize"),
+
+                         DATABASE_COLUMN_UINT  ("totalFileCount"),
+                         DATABASE_COLUMN_UINT64("totalFileSize"),
+                         DATABASE_COLUMN_UINT  ("totalImageCount"),
+                         DATABASE_COLUMN_UINT64("totalImageSize"),
+                         DATABASE_COLUMN_UINT  ("totalDirectoryCount"),
+                         DATABASE_COLUMN_UINT  ("totalLinkCount"),
+                         DATABASE_COLUMN_UINT  ("totalHardlinkCount"),
+                         DATABASE_COLUMN_UINT64("totalHardlinkSize"),
+                         DATABASE_COLUMN_UINT  ("totalSpecialCount"),
+
+                         DATABASE_COLUMN_UINT  ("totalEntryCountNewest"),
+                         DATABASE_COLUMN_UINT64("totalEntrySizeNewest"),
+
+                         DATABASE_COLUMN_UINT  ("totalFileCountNewest"),
+                         DATABASE_COLUMN_UINT64("totalFileSizeNewest"),
+                         DATABASE_COLUMN_UINT  ("totalImageCountNewest"),
+                         DATABASE_COLUMN_UINT64("totalImageSizeNewest"),
+                         DATABASE_COLUMN_UINT  ("totalDirectoryCountNewest"),
+                         DATABASE_COLUMN_UINT  ("totalLinkCountNewest"),
+                         DATABASE_COLUMN_UINT  ("totalHardlinkCountNewest"),
+                         DATABASE_COLUMN_UINT64("totalHardlinkSizeNewest"),
+                         DATABASE_COLUMN_UINT  ("totalSpecialCountNewest"),
+
+                         DATABASE_COLUMN_KEY   ("uuidId")
+                       ),
+                       stringFormat(filterString,sizeof(filterString),
+                                    "    (%d OR id IN (%s)) \
+                                     AND deletedFlag=? \
+                                    ",
+                                    String_isEmpty(entityIdsString) ? 1 : 0,
+                                    !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
+                                   ),
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // groupOrder
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entity data fail (error: %s)!",Error_getText(error));
@@ -7093,6 +7921,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   ulong      i;
   DatabaseId storageId;
   Errors     error;
+  char       filterString[256];
   char       buffer[64];
 
   storageIdsString = String_new();
@@ -7103,128 +7932,139 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   }
 
   printf("%s:\n",lostFlag ? "Lost storages" : "Storages");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             uint   state;
-                             uint   mode;
-                             ulong  totalEntryCount;
-                             uint64 totalEntrySize;
-                             ulong  totalFileCount;
-                             uint64 totalFileSize;
-                             ulong  totalImageCount;
-                             uint64 totalImageSize;
-                             ulong  totalDirectoryCount;
-                             ulong  totalLinkCount;
-                             ulong  totalHardlinkCount;
-                             uint64 totalHardlinkSize;
-                             ulong  totalSpecialCount;
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         uint   state;
+                         uint   mode;
+                         ulong  totalEntryCount;
+                         uint64 totalEntrySize;
+                         ulong  totalFileCount;
+                         uint64 totalFileSize;
+                         ulong  totalImageCount;
+                         uint64 totalImageSize;
+                         ulong  totalDirectoryCount;
+                         ulong  totalLinkCount;
+                         ulong  totalHardlinkCount;
+                         uint64 totalHardlinkSize;
+                         ulong  totalSpecialCount;
 
-                             assert(values != NULL);
+                         assert(values != NULL);
 //                             assert(valueCount == 14);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             state               = values[10].u;
-                             mode                = values[11].u;
-                             totalEntryCount     = values[14].u;
-                             totalEntrySize      = values[15].u64;
-                             totalFileCount      = values[16].u;
-                             totalFileSize       = values[17].u64;
-                             totalImageCount     = values[18].u;
-                             totalImageSize      = values[19].u64;
-                             totalDirectoryCount = values[20].u;
-                             totalLinkCount      = values[21].u64;
-                             totalHardlinkCount  = values[22].u;
-                             totalHardlinkSize   = values[23].u64;
-                             totalSpecialCount   = values[24].u;
+                         state               = values[10].u;
+                         mode                = values[11].u;
+                         totalEntryCount     = values[14].u;
+                         totalEntrySize      = values[15].u64;
+                         totalFileCount      = values[16].u;
+                         totalFileSize       = values[17].u64;
+                         totalImageCount     = values[18].u;
+                         totalImageSize      = values[19].u64;
+                         totalDirectoryCount = values[20].u;
+                         totalLinkCount      = values[21].u64;
+                         totalHardlinkCount  = values[22].u;
+                         totalHardlinkSize   = values[23].u64;
+                         totalSpecialCount   = values[24].u;
 
-                             printf("  Id              : %"PRIi64"\n",values[ 0].id);
-                             printf("    Name          : %s\n",values[ 5].text.data);
-                             printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,NULL));
-                             printf("    Host name     : %s\n",(values[ 7].text.data != NULL) ? values[ 7].text.data : "");
-                             printf("    User name     : %s\n",(values[ 8].text.data != NULL) ? values[ 8].text.data : "");
-                             printf("    Comment       : %s\n",(values[ 9].text.data != NULL) ? values[ 9].text.data : "");
-                             printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : "xxx");//TODO values[10].i);
-                             printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : "xxx");//TODO values[11].i);
-                             printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
-                             printf("    Error message : %s\n",(values[13].text.data != NULL) ? values[13].text.data : "");
-                             printf("\n");
-                             printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
-                             printf("\n");
-                             printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
-                             printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
-                             printf("    Directories   : %lu\n",totalDirectoryCount);
-                             printf("    Links         : %lu\n",totalLinkCount);
-                             printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
-                             printf("    Special       : %lu\n",totalSpecialCount);
-                             printf("\n");
-                             printf("    UUID id       : %"PRIi64"\n",values[1].id);
-                             printf("    Entity id     : %"PRIi64"\n",values[2].id);
-                             printf("    Job UUID      : %s\n",values[3].text.data);
-                             printf("    Schedule UUID : %s\n",values[4].text.data);
+                         printf("  Id              : %"PRIi64"\n",values[ 0].id);
+                         printf("    Name          : %s\n",values[ 5].text.data);
+                         printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,NULL));
+                         printf("    Host name     : %s\n",(values[ 7].text.data != NULL) ? values[ 7].text.data : "");
+                         printf("    User name     : %s\n",(values[ 8].text.data != NULL) ? values[ 8].text.data : "");
+                         printf("    Comment       : %s\n",(values[ 9].text.data != NULL) ? values[ 9].text.data : "");
+                         printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : "xxx");//TODO values[10].i);
+                         printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : "xxx");//TODO values[11].i);
+                         printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
+                         printf("    Error message : %s\n",(values[13].text.data != NULL) ? values[13].text.data : "");
+                         printf("\n");
+                         printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
+                         printf("\n");
+                         printf("    Files         : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalFileCount,getByteSize(totalFileSize),getByteUnitShort(totalFileSize),totalFileSize);
+                         printf("    Images        : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalImageCount,getByteSize(totalImageSize),getByteUnitShort(totalImageSize),totalImageSize);
+                         printf("    Directories   : %lu\n",totalDirectoryCount);
+                         printf("    Links         : %lu\n",totalLinkCount);
+                         printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64" bytes)\n",totalHardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
+                         printf("    Special       : %lu\n",totalSpecialCount);
+                         printf("\n");
+                         printf("    UUID id       : %"PRIi64"\n",values[1].id);
+                         printf("    Entity id     : %"PRIi64"\n",values[2].id);
+                         printf("    Job UUID      : %s\n",values[3].text.data);
+                         printf("    Schedule UUID : %s\n",values[4].text.data);
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,KEY,KEY,CSTRING,CSTRING,CSTRING,DATETIME,CSTRING,CSTRING,CSTRING,INT,INT,DATETIME,CSTRING,
-                                                 INT,INT64,
-                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT,
-                                                 INT,INT64,
-                                                 INT,INT64,INT,INT64,INT,INT,INT,INT64,INT
-                                                ),
-                           "SELECT storages.id,\
-                                   storages.uuidId, \
-                                   storages.entityId, \
-                                   entities.jobUUID, \
-                                   entities.scheduleUUID, \
-                                   storages.name, \
-                                   storages.created, \
-                                   storages.hostName, \
-                                   storages.userName, \
-                                   storages.comment, \
-                                   storages.state, \
-                                   storages.mode, \
-                                   storages.lastChecked, \
-                                   storages.errorMessage, \
-                                   \
-                                   storages.totalEntryCount, \
-                                   storages.totalEntrySize, \
-                                   \
-                                   storages.totalFileCount, \
-                                   storages.totalFileSize, \
-                                   storages.totalImageCount, \
-                                   storages.totalImageSize, \
-                                   storages.totalDirectoryCount, \
-                                   storages.totalLinkCount, \
-                                   storages.totalHardlinkCount, \
-                                   storages.totalHardlinkSize, \
-                                   storages.totalSpecialCount, \
-                                   \
-                                   storages.totalEntryCountNewest, \
-                                   storages.totalEntrySizeNewest, \
-                                   \
-                                   storages.totalFileCountNewest, \
-                                   storages.totalFileSizeNewest, \
-                                   storages.totalImageCountNewest, \
-                                   storages.totalImageSizeNewest, \
-                                   storages.totalDirectoryCountNewest, \
-                                   storages.totalLinkCountNewest, \
-                                   storages.totalHardlinkCountNewest, \
-                                   storages.totalHardlinkSizeNewest, \
-                                   storages.totalSpecialCountNewest \
-                            FROM storages \
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "storages \
                             LEFT JOIN entities ON entities.id=storages.entityId \
                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                            WHERE     (%d OR storages.id IN (%s)) \
-                                  AND (%d OR entities.id IS NULL) \
-                                  AND storages.deletedFlag!=1 \
-                           ",
-                           String_isEmpty(storageIdsString) ? 1 : 0,
-                           !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0",
-                           !lostFlag
-                          );
+                         "
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_KEY     ("storages.id"),
+                         DATABASE_COLUMN_KEY     ("storages.uuidId"),
+                         DATABASE_COLUMN_KEY     ("storages.entityId"),
+                         DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                         DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                         DATABASE_COLUMN_STRING  ("storages.name"),
+                         DATABASE_COLUMN_DATETIME("storages.created"),
+                         DATABASE_COLUMN_STRING  ("storages.hostName"),
+                         DATABASE_COLUMN_STRING  ("storages.userName"),
+                         DATABASE_COLUMN_STRING  ("storages.comment"),
+                         DATABASE_COLUMN_UINT    ("storages.state"),
+                         DATABASE_COLUMN_UINT    ("storages.mode"),
+                         DATABASE_COLUMN_DATETIME("storages.lastChecked"),
+                         DATABASE_COLUMN_STRING  ("storages.errorMessage"),
+
+                         DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalEntrySize"),
+
+                         DATABASE_COLUMN_UINT    ("storages.totalFileCount"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalFileSize"),
+                         DATABASE_COLUMN_UINT    ("storages.totalImageCount"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalImageSize"),
+                         DATABASE_COLUMN_UINT    ("storages.totalDirectoryCount"),
+                         DATABASE_COLUMN_UINT    ("storages.totalLinkCount"),
+                         DATABASE_COLUMN_UINT    ("storages.totalHardlinkCount"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalHardlinkSize"),
+                         DATABASE_COLUMN_UINT    ("storages.totalSpecialCount"),
+
+                         DATABASE_COLUMN_UINT    ("storages.totalEntryCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalEntrySizeNewest"),
+
+                         DATABASE_COLUMN_UINT    ("storages.totalFileCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalFileSizeNewest"),
+                         DATABASE_COLUMN_UINT    ("storages.totalImageCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalImageSizeNewest"),
+                         DATABASE_COLUMN_UINT    ("storages.totalDirectoryCountNewest"),
+                         DATABASE_COLUMN_UINT    ("storages.totalLinkCountNewest"),
+                         DATABASE_COLUMN_UINT    ("storages.totalHardlinkCountNewest"),
+                         DATABASE_COLUMN_UINT64  ("storages.totalHardlinkSizeNewest"),
+                         DATABASE_COLUMN_UINT    ("storages.totalSpecialCountNewest")
+                       ),
+                       stringFormat(filterString,sizeof(filterString),
+                                    "     (%d OR storages.id IN (%s)) \
+                                     AND (%d OR entities.id IS NULL) \
+                                     AND storages.deletedFlag=? \
+                                    ",
+                                    String_isEmpty(storageIdsString) ? 1 : 0,
+                                    !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0",
+                                    !lostFlag
+                                   ),
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
@@ -7257,6 +8097,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   ulong      i;
   DatabaseId entityId;
   Errors     error;
+  char       filterString[256];
 
 //TODO: lostFlag
 UNUSED_VARIABLE(lostFlag);
@@ -7283,136 +8124,165 @@ UNUSED_VARIABLE(lostFlag);
   }
 
   printf("Entries:\n");
-  error = Database_execute(databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             DatabaseId entityId;
-                             DatabaseId uuidId;
-                             bool       entityOutputFlag;
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         DatabaseId entityId;
+                         DatabaseId uuidId;
+                         bool       entityOutputFlag;
 
-                             assert(values != NULL);
-                             assert(valueCount == 2);
+                         assert(values != NULL);
+                         assert(valueCount == 2);
 
-                             UNUSED_VARIABLE(valueCount);
-                             UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+                         UNUSED_VARIABLE(userData);
 
-                             entityId = values[0].id;
-                             uuidId   = values[1].id;
+                         entityId = values[0].id;
+                         uuidId   = values[1].id;
 
-                             entityOutputFlag = FALSE;
-                             error = Database_execute(databaseHandle,
-                                                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                                      {
-                                                        uint type;
+                         entityOutputFlag = FALSE;
+                         error = Database_get(databaseHandle,
+                                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                              {
+                                                uint type;
 
-                                                        assert(values != NULL);
-                                                        assert(valueCount == 13);
+                                                assert(values != NULL);
+                                                assert(valueCount == 13);
 
-                                                        UNUSED_VARIABLE(valueCount);
-                                                        UNUSED_VARIABLE(userData);
+                                                UNUSED_VARIABLE(valueCount);
+                                                UNUSED_VARIABLE(userData);
 
-                                                        type = (uint)values[2].u;
-                                                        if (!entityOutputFlag)
-                                                        {
-                                                          printf("  Entity id: %"PRIi64"\n",entityId);
-                                                          printf("  UUID id  : %"PRIi64"\n",uuidId);
-                                                          entityOutputFlag = TRUE;
-                                                        }
-                                                        printf("    Id               : %"PRIi64"\n",values[0].id);
-                                                        printf("      Name           : %s\n",values[1].text.data);
-                                                        printf("      Type           : %s\n",(type <= INDEX_CONST_TYPE_HISTORY) ? TYPE_TEXT[type] : "xxx");//TODO values[2].i);
-                                                        switch (type)
-                                                        {
-                                                          case INDEX_CONST_TYPE_FILE:
-                                                            printf("      Size           : %"PRIi64"\n",values[ 3].u64);
-                                                            printf("      Fragment id    : %"PRIi64"\n",values[ 9].id);
-                                                            printf("      Fragment offset: %"PRIi64"\n",values[11].u64);
-                                                            printf("      Fragment size  : %"PRIi64"\n",values[12].u64);
-                                                            printf("      Storage id:    : %"PRIi64"\n",values[10].id);
-                                                            break;
-                                                          case INDEX_CONST_TYPE_IMAGE:
-                                                            printf("      Size           : %"PRIi64"\n",values[ 4].u64);
-                                                            printf("      Fragment id    : %"PRIi64"\n",values[ 9].id);
-                                                            printf("      Fragment offset: %"PRIi64"\n",values[11].u64);
-                                                            printf("      Fragment size  : %"PRIi64"\n",values[12].u64);
-                                                            printf("      Storage id:    : %"PRIi64"\n",values[10].id);
-                                                            break;
-                                                          case INDEX_CONST_TYPE_DIRECTORY:
-                                                            printf("      Storage id:    : %"PRIi64"\n",values[ 5].id);
-                                                            break;
-                                                          case INDEX_CONST_TYPE_LINK:
-                                                            printf("      Storage id:    : %"PRIi64"\n",values[ 6].id);
-                                                            break;
-                                                          case INDEX_CONST_TYPE_HARDLINK:
-                                                            printf("      Size           : %"PRIi64"\n",values[ 7].u64);
-                                                            printf("      Fragment id    : %"PRIi64"\n",values[ 9].id);
-                                                            printf("      Fragment offset: %"PRIi64"\n",values[11].u64);
-                                                            printf("      Fragment size  : %"PRIi64"\n",values[12].u64);
-                                                            printf("      Storage id:    : %"PRIi64"\n",values[10].id);
-                                                            break;
-                                                            break;
-                                                          case INDEX_CONST_TYPE_SPECIAL:
-                                                            printf("      Storage id:    : %"PRIi64"\n",values[ 8].id);
-                                                            break;
-                                                          default:
-                                                            break;
-                                                        }
+                                                type = (uint)values[2].u;
+                                                if (!entityOutputFlag)
+                                                {
+                                                  printf("  Entity id: %"PRIi64"\n",entityId);
+                                                  printf("  UUID id  : %"PRIi64"\n",uuidId);
+                                                  entityOutputFlag = TRUE;
+                                                }
+                                                printf("    Id               : %"PRIi64"\n",values[0].id);
+                                                printf("      Name           : %s\n",values[1].text.data);
+                                                printf("      Type           : %s\n",(type <= INDEX_CONST_TYPE_HISTORY) ? TYPE_TEXT[type] : "xxx");//TODO values[2].i);
+                                                switch (type)
+                                                {
+                                                  case INDEX_CONST_TYPE_FILE:
+                                                    printf("      Size           : %"PRIi64"\n",values[ 3].u64);
+                                                    printf("      Fragment id    : %"PRIi64"\n",values[ 9].id);
+                                                    printf("      Fragment offset: %"PRIi64"\n",values[11].u64);
+                                                    printf("      Fragment size  : %"PRIi64"\n",values[12].u64);
+                                                    printf("      Storage id:    : %"PRIi64"\n",values[10].id);
+                                                    break;
+                                                  case INDEX_CONST_TYPE_IMAGE:
+                                                    printf("      Size           : %"PRIi64"\n",values[ 4].u64);
+                                                    printf("      Fragment id    : %"PRIi64"\n",values[ 9].id);
+                                                    printf("      Fragment offset: %"PRIi64"\n",values[11].u64);
+                                                    printf("      Fragment size  : %"PRIi64"\n",values[12].u64);
+                                                    printf("      Storage id:    : %"PRIi64"\n",values[10].id);
+                                                    break;
+                                                  case INDEX_CONST_TYPE_DIRECTORY:
+                                                    printf("      Storage id:    : %"PRIi64"\n",values[ 5].id);
+                                                    break;
+                                                  case INDEX_CONST_TYPE_LINK:
+                                                    printf("      Storage id:    : %"PRIi64"\n",values[ 6].id);
+                                                    break;
+                                                  case INDEX_CONST_TYPE_HARDLINK:
+                                                    printf("      Size           : %"PRIi64"\n",values[ 7].u64);
+                                                    printf("      Fragment id    : %"PRIi64"\n",values[ 9].id);
+                                                    printf("      Fragment offset: %"PRIi64"\n",values[11].u64);
+                                                    printf("      Fragment size  : %"PRIi64"\n",values[12].u64);
+                                                    printf("      Storage id:    : %"PRIi64"\n",values[10].id);
+                                                    break;
+                                                    break;
+                                                  case INDEX_CONST_TYPE_SPECIAL:
+                                                    printf("      Storage id:    : %"PRIi64"\n",values[ 8].id);
+                                                    break;
+                                                  default:
+                                                    break;
+                                                }
 
-                                                        return ERROR_NONE;
-                                                      },NULL),
-                                                      NULL,  // changedRowCount
-                                                      DATABASE_COLUMN_TYPES(KEY,CSTRING,INT,
-                                                                            INT64,INT64,KEY,KEY,INT64,KEY,KEY,KEY,INT64,INT64
-                                                                           ),
-                                                      "SELECT entries.id,\
-                                                              entries.name, \
-                                                              entries.type, \
-                                                              \
-                                                              fileEntries.size, \
-                                                              imageEntries.size, \
-                                                              directoryEntries.storageId, \
-                                                              linkEntries.storageId, \
-                                                              hardlinkEntries.size, \
-                                                              specialEntries.storageId, \
-                                                              entryFragments.id, \
-                                                              entryFragments.storageId, \
-                                                              entryFragments.offset, \
-                                                              entryFragments.size \
-                                                              \
-                                                       FROM entries \
-                                                       LEFT JOIN fileEntries      ON fileEntries.entryId     =entries.id \
-                                                       LEFT JOIN imageEntries     ON imageEntries.entryId    =entries.id \
-                                                       LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                                       LEFT JOIN linkEntries      ON linkEntries.entryId     =entries.id \
-                                                       LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId =entries.id \
-                                                       LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id \
-                                                       LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
-                                                       WHERE     entries.entityId=%lld \
-                                                             AND ((%u=0) OR (type=%u)) \
-                                                             AND (%d OR entries.id IN (%S)) \
-                                                      ",
-                                                      entityId,
-                                                      entryType,entryType,
-                                                      String_isEmpty(ftsName) ? 1 : 0,
-                                                      ftsSubSelect
-                                                     );
-                             if (error != ERROR_NONE)
-                             {
-                               return error;
-                             }
+                                                return ERROR_NONE;
+                                              },NULL),
+                                              NULL,  // changedRowCount
+                                              DATABASE_TABLES
+                                              (
+                                                "entries \
+                                                   LEFT JOIN fileEntries      ON fileEntries.entryId     =entries.id \
+                                                   LEFT JOIN imageEntries     ON imageEntries.entryId    =entries.id \
+                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                                   LEFT JOIN linkEntries      ON linkEntries.entryId     =entries.id \
+                                                   LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId =entries.id \
+                                                   LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id \
+                                                   LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
+                                                "
+                                              ),
+                                              DATABASE_FLAG_NONE,
+                                              DATABASE_COLUMNS
+                                              (
+                                                DATABASE_COLUMN_KEY   ("entries.id"),
+                                                DATABASE_COLUMN_STRING("entries.name"),
+                                                DATABASE_COLUMN_UINT  ("entries.type"),
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(KEY,KEY),
-                           "SELECT id,uuidId \
-                            FROM entities \
-                            WHERE     (%d OR id IN (%s)) \
-                                  AND deletedFlag!=1 \
-                           ",
-                           String_isEmpty(entityIdsString) ? 1 : 0,
-                           !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
-                          );
+                                                DATABASE_COLUMN_UINT64("fileEntries.size"),
+                                                DATABASE_COLUMN_UINT64("imageEntries.size"),
+                                                DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
+                                                DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
+                                                DATABASE_COLUMN_UINT64("hardlinkEntries.size"),
+                                                DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
+                                                DATABASE_COLUMN_KEY   ("entryFragments.id"),
+                                                DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
+                                                DATABASE_COLUMN_UINT64("entryFragments.offset"),
+                                                DATABASE_COLUMN_UINT64("entryFragments.size")
+                                              ),
+                                              stringFormat(filterString,sizeof(filterString),
+                                                           "    entries.entityId=? \
+                                                            AND (? OR (type=?)) \
+                                                            AND (%d OR entries.id IN (%S)) \
+                                                           ",
+                                                           String_isEmpty(ftsName) ? 1 : 0,
+                                                           ftsSubSelect
+                                                          ),
+                                              DATABASE_FILTERS
+                                              (
+                                                DATABASE_FILTER_KEY  (entityId),
+                                                DATABASE_FILTER_BOOL (entryType == INDEX_CONST_TYPE_ANY),
+                                                DATABASE_FILTER_KEY  (entryType)
+                                              ),
+                                              NULL,  // groupOrder
+                                              0LL,
+                                              DATABASE_UNLIMITED
+                                             );
+                         if (error != ERROR_NONE)
+                         {
+                           return error;
+                         }
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "entities"
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_KEY("id"),
+                         DATABASE_COLUMN_KEY("uuidId")
+                       ),
+                       stringFormat(filterString,sizeof(filterString),
+                                    "    (%d OR id IN (%s)) \
+                                     AND deletedFlag=? \
+                                    ",
+                                    String_isEmpty(entityIdsString) ? 1 : 0,
+                                    !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
+                                   ),
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_BOOL(FALSE)
+                       ),
+                       NULL,  // orderGroup
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
   if (error != ERROR_NONE)
   {
     printError("get entity data fail (error: %s)!",Error_getText(error));
@@ -7484,6 +8354,7 @@ LOCAL void doneAll(void)
   Thread_doneAll();
 }
 
+// TODO: remove
 LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, uint action)
 {
   Errors error;
@@ -7780,7 +8651,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   if      (action == 1)
   {
 fprintf(stderr,"%s, %d: add newest entries\n",__FILE__,__LINE__);
-    error = addStorageToNewest(databaseHandle,storageId);
+    error = addToNewest(databaseHandle,storageId);
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -7791,7 +8662,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   else if (action == 2)
   {
 fprintf(stderr,"%s, %d: remove newest entries\n",__FILE__,__LINE__);
-    error = removeStorageFromNewest(databaseHandle,storageId);
+    error = removeFromNewest(databaseHandle,storageId);
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -8148,6 +9019,7 @@ uint xxxShow=0;
     else if (stringEquals(argv[i],"--create-aggregates-directory-content"))
     {
       createAggregatesDirectoryContentFlag = TRUE;
+      i++;
     }
     else if (stringStartsWith(argv[i],"--create-aggregates-entities="))
     {
@@ -8185,6 +9057,7 @@ uint xxxShow=0;
     else if (stringEquals(argv[i],"--create-aggregates-storages"))
     {
       createAggregatesStoragesFlag = TRUE;
+      i++;
     }
     else if (stringStartsWith(argv[i],"--create-aggregates="))
     {
@@ -8605,7 +9478,7 @@ else if (stringEquals(argv[i],"--xxx"))
   // check
   if (checkIntegrityFlag)
   {
-    checkDatabaseIntegrity(&databaseHandle);
+    checkIntegrity(&databaseHandle);
   }
   if (checkOrphanedFlag)
   {
@@ -8698,70 +9571,97 @@ if (xxxId != DATABASE_ID_NONE)
     uint64 maxIdLength,maxStorageNameLength;
     char   format[256];
 
-    Database_execute(&databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       double d;
+    Database_get(&databaseHandle,
+                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                 {
+                   double d;
 
-                       assert(values != NULL);
-                       assert(valueCount == 2);
+                   assert(values != NULL);
+                   assert(valueCount == 2);
 
-                       UNUSED_VARIABLE(valueCount);
-                       UNUSED_VARIABLE(userData);
+                   UNUSED_VARIABLE(valueCount);
+                   UNUSED_VARIABLE(userData);
 
-                       d = log10((double)values[0].id);
-                       maxIdLength          = 1+(uint)d;
-                       maxStorageNameLength = (uint)values[1].u;
+                   d = log10((double)values[0].id);
+                   maxIdLength          = 1+(uint)d;
+                   maxStorageNameLength = (uint)values[1].u;
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_COLUMN_TYPES(KEY,
-                                           UINT
-                                          ),
-                     "SELECT MAX(storages.id),MAX(LENGTH(storages.name)) FROM storages \
-                        LEFT JOIN entities on storages.entityId=entities.id \
-                      WHERE %d OR entities.jobUUID=%'s \
-                     ",
-                     jobUUID == NULL,
-                     jobUUID
-                    );
+                   return ERROR_NONE;
+                 },NULL),
+                 NULL,  // changedRowCount
+                 DATABASE_TABLES
+                 (
+                   "storages \
+                      LEFT JOIN entities on entities.id=storages.entityId \
+                   "
+                 ),
+                 DATABASE_FLAG_NONE,
+                 DATABASE_COLUMNS
+                 (
+                   DATABASE_COLUMN_KEY   ("MAX(storages.id)"),
+                   DATABASE_COLUMN_UINT  ("MAX(LENGTH(storages.name))")
+                 ),
+                 "? OR entities.jobUUID=?",
+                 DATABASE_FILTERS
+                 (
+                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
+                   DATABASE_FILTER_STRING(jobUUID)
+                 ),
+                 NULL,  // groupOrder
+                 0LL,
+                 1LL
+                );
 
-    stringFormat(format,sizeof(format),"%%-%ds %%-%ds %%64s %%-10s\n",maxIdLength,maxStorageNameLength);
+    stringFormat(format,sizeof(format),"%%-%dlld %%-%ds %%64s %%-10s\n",maxIdLength,maxStorageNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
-    Database_execute(&databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       uint       archiveType;
-                       const char *s;
+    Database_get(&databaseHandle,
+                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                 {
+                   uint       archiveType;
+                   const char *s;
 
-                       assert(values != NULL);
-                       assert(valueCount == 4);
+                   assert(values != NULL);
+                   assert(valueCount == 4);
 
-                       UNUSED_VARIABLE(valueCount);
-                       UNUSED_VARIABLE(userData);
+                   UNUSED_VARIABLE(valueCount);
+                   UNUSED_VARIABLE(userData);
 
-                       archiveType = values[3].u;
-                       s = "unknown";
-                       for (uint i = CHUNK_CONST_ARCHIVE_TYPE_NONE; i <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS; i++)
-                       {
-                         if (i == archiveType) s = ARCHIVE_TYPES[i];
-                       }
+                   archiveType = values[3].u;
+                   s = "unknown";
+                   for (uint i = CHUNK_CONST_ARCHIVE_TYPE_NONE; i <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS; i++)
+                   {
+                     if (i == archiveType) s = ARCHIVE_TYPES[i];
+                   }
 
-                       printf(format,values[0],values[1],values[2],s);
+                   printf(format,values[0].id,values[1].text.data,values[2].text.data,s);
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_COLUMN_TYPES(UINT,CSTRING,CSTRING,UINT),
-                     "SELECT storages.id,storages.name,entities.jobUUID,entities.type FROM storages \
-                        LEFT JOIN entities on storages.entityId=entities.id \
-                      WHERE %d OR entities.jobUUID=%'s \
-                      ORDER BY storages.name ASC \
-                     ",
-                     jobUUID == NULL,
-                     jobUUID
-                    );
+                   return ERROR_NONE;
+                 },NULL),
+                 NULL,  // changedRowCount
+                 DATABASE_TABLES
+                 (
+                   "storages \
+                      LEFT JOIN entities on entities.id=storages.entityId \
+                   "
+                 ),
+                 DATABASE_FLAG_NONE,
+                 DATABASE_COLUMNS
+                 (
+                   DATABASE_COLUMN_KEY   ("storages.id"),
+                   DATABASE_COLUMN_STRING("storages.name"),
+                   DATABASE_COLUMN_STRING("entities.jobUUID"),
+                   DATABASE_COLUMN_UINT  ("entities.type")
+                 ),
+                 "? OR entities.jobUUID=?",
+                 DATABASE_FILTERS
+                 (
+                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
+                   DATABASE_FILTER_STRING(jobUUID)
+                 ),
+                 "ORDER BY storages.name ASC",
+                 0LL,
+                 DATABASE_UNLIMITED
+                );
   }
 
   if (showEntriesFlag)
@@ -8769,61 +9669,123 @@ if (xxxId != DATABASE_ID_NONE)
     uint64 maxIdLength,maxEntryNameLength,maxStorageNameLength;
     char   format[256];
 
-    Database_execute(&databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       double d;
+    Database_get(&databaseHandle,
+                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                 {
+                   double d;
 
-                       assert(values != NULL);
-                       assert(valueCount == 3);
+                   assert(values != NULL);
+                   assert(valueCount == 3);
 
-                       UNUSED_VARIABLE(valueCount);
-                       UNUSED_VARIABLE(userData);
+                   UNUSED_VARIABLE(valueCount);
+                   UNUSED_VARIABLE(userData);
 
-                       d = log10((double)values[0].id);
-                       maxIdLength          = 1+(uint)d;
-                       maxEntryNameLength   = values[1].u;
-                       maxStorageNameLength = values[2].u;
+                   d = log10((double)values[0].id);
+                   maxIdLength          = 1+(uint)d;
+                   maxEntryNameLength   = values[1].u;
+                   maxStorageNameLength = values[2].u;
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_COLUMN_TYPES(KEY,UINT,UINT),
-                     "SELECT MAX(entries.id),MAX(LENGTH(entries.name)),MAX(LENGTH(storages.name)) FROM entries \
-                        LEFT JOIN storages ON entries.storageId=storages.id \
-                        LEFT JOIN entities ON storages.entityId=entities.id \
-                      WHERE %d OR entities.jobUUID=%'s \
-                     ",
-                     jobUUID == NULL,
-                     jobUUID
-                    );
+                   return ERROR_NONE;
+                 },NULL),
+                 NULL,  // changedRowCount
+                 DATABASE_TABLES
+                 (
+                   "entryFragments \
+                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                      LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   ",
+                   "directoryEntries \
+                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                      LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   ",
+                   "linkEntries \
+                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                      LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   ",
+                   "specialEntries \
+                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                      LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   "
+                 ),
+                 DATABASE_FLAG_NONE,
+                 DATABASE_COLUMNS
+                 (
+                   DATABASE_COLUMN_KEY   ("MAX(entries.id)"),
+                   DATABASE_COLUMN_UINT  ("MAX(LENGTH(entries.name))"),
+                   DATABASE_COLUMN_UINT  ("MAX(LENGTH(storages.name))")
+                 ),
+                 "? OR entities.jobUUID=?",
+                 DATABASE_FILTERS
+                 (
+                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
+                   DATABASE_FILTER_STRING(jobUUID)
+                 ),
+                 NULL,  // groupOrder
+                 0LL,
+                 1LL
+                );
 
-    stringFormat(format,sizeof(format),"%%%ds %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
+    stringFormat(format,sizeof(format),"%%%dlld %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
-    Database_execute(&databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       assert(values != NULL);
-                       assert(valueCount == 3);
+    Database_get(&databaseHandle,
+                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                 {
+                   assert(values != NULL);
+                   assert(valueCount == 3);
 
-                       UNUSED_VARIABLE(valueCount);
-                       UNUSED_VARIABLE(userData);
+                   UNUSED_VARIABLE(valueCount);
+                   UNUSED_VARIABLE(userData);
 
-                       printf(format,values[0],values[1],values[2]);
+                   printf(format,values[0].id,values[1].text.data,values[2].text.data);
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_COLUMN_TYPES(INT,CSTRING,CSTRING),
-                     "SELECT entries.id,entries.name,storages.name FROM entries \
-                        LEFT JOIN storages ON entries.storageId=storages.id \
-                        LEFT JOIN entities ON storages.entityId=entities.id \
-                      WHERE %d OR entities.jobUUID=%'s \
-                      ORDER BY entries.name ASC \
-                     ",
-                     jobUUID == NULL,
-                     jobUUID
-                    );
+                   return ERROR_NONE;
+                 },NULL),
+                 NULL,  // changedRowCount
+                 DATABASE_TABLES
+                 (
+                   "entryFragments \
+                      LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                      LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   ",
+                   "directoryEntries \
+                      LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                      LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   ",
+                   "linkEntries \
+                      LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                      LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   ",
+                   "specialEntries \
+                      LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                      LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   "
+                 ),
+                 DATABASE_FLAG_NONE,
+                 DATABASE_COLUMNS
+                 (
+                   DATABASE_COLUMN_KEY   ("entries.id"),
+                   DATABASE_COLUMN_STRING("entries.name","entryName"),
+                   DATABASE_COLUMN_STRING("storages.name")
+                 ),
+                 "? OR entities.jobUUID=?",
+                 DATABASE_FILTERS
+                 (
+                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
+                   DATABASE_FILTER_STRING(jobUUID)
+                 ),
+                 "ORDER BY entryName ASC",
+                 0LL,
+                 DATABASE_UNLIMITED
+
+                );
   }
 
   if (showEntriesNewestFlag)
@@ -8831,61 +9793,90 @@ if (xxxId != DATABASE_ID_NONE)
     uint64 maxIdLength,maxEntryNameLength,maxStorageNameLength;
     char   format[256];
 
-    Database_execute(&databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       double d;
+    Database_get(&databaseHandle,
+                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                 {
+                   double d;
 
-                       assert(values != NULL);
-                       assert(valueCount == 3);
+                   assert(values != NULL);
+                   assert(valueCount == 3);
 
-                       UNUSED_VARIABLE(valueCount);
-                       UNUSED_VARIABLE(userData);
+                   UNUSED_VARIABLE(valueCount);
+                   UNUSED_VARIABLE(userData);
 
-                       d = log10((double)values[0].id);
-                       maxIdLength          = 1+(uint)d;
-                       maxEntryNameLength   = values[1].u;
-                       maxStorageNameLength = values[2].u;
+                   d = log10((double)values[0].id);
+                   maxIdLength          = 1+(uint)d;
+                   maxEntryNameLength   = values[1].u;
+                   maxStorageNameLength = values[2].u;
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_COLUMN_TYPES(KEY,UINT,UINT),
-                     "SELECT MAX(entriesNewest.id),MAX(LENGTH(entriesNewest.name)),MAX(LENGTH(storages.name)) FROM entriesNewest \
-                        LEFT JOIN storages ON entriesNewest.storageId=storages.id \
-                        LEFT JOIN entities ON storages.entityId=entities.id \
-                      WHERE %d OR entities.jobUUID=%'s \
-                     ",
-                     jobUUID == NULL,
-                     jobUUID
-                    );
+                   return ERROR_NONE;
+                 },NULL),
+                 NULL,  // changedRowCount
+                 DATABASE_TABLES
+                 (
+                   "entriesNewest \
+                      LEFT JOIN storages ON storages.id=entriesNewest.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   "
+                 ),
+                 DATABASE_FLAG_NONE,
+                 DATABASE_COLUMNS
+                 (
+                   DATABASE_COLUMN_KEY   ("MAX(entriesNewest.id)"),
+                   DATABASE_COLUMN_UINT  ("MAX(LENGTH(entriesNewest.name))"),
+                   DATABASE_COLUMN_UINT  ("MAX(LENGTH(storages.name))")
+                 ),
+                 "? OR entities.jobUUID=?",
+                 DATABASE_FILTERS
+                 (
+                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
+                   DATABASE_FILTER_STRING(jobUUID)
+                 ),
+                 NULL,  // groupOrder
+                 0LL,
+                 1LL
+                );
 
     stringFormat(format,sizeof(format),"%%%ds %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
-    Database_execute(&databaseHandle,
-                     CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                     {
-                       assert(values != NULL);
-                       assert(valueCount == 3);
+    Database_get(&databaseHandle,
+                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                 {
+                   assert(values != NULL);
+                   assert(valueCount == 3);
 
-                       UNUSED_VARIABLE(valueCount);
-                       UNUSED_VARIABLE(userData);
+                   UNUSED_VARIABLE(valueCount);
+                   UNUSED_VARIABLE(userData);
 
-                       printf(format,values[0],values[1],values[2]);
+                   printf(format,values[0],values[1],values[2]);
 
-                       return ERROR_NONE;
-                     },NULL),
-                     NULL,  // changedRowCount
-                     DATABASE_COLUMN_TYPES(INT,CSTRING,CSTRING),
-                     "SELECT entriesNewest.id,entriesNewest.name,storages.name FROM entriesNewest \
-                        LEFT JOIN storages ON entriesNewest.storageId=storages.id \
-                        LEFT JOIN entities ON storages.entityId=entities.id \
-                      WHERE %d OR entities.jobUUID=%'s \
-                      ORDER BY entriesNewest.name ASC \
-                     ",
-                     jobUUID == NULL,
-                     jobUUID
-                    );
+                   return ERROR_NONE;
+                 },NULL),
+                 NULL,  // changedRowCount
+                 DATABASE_TABLES
+                 (
+                   "entriesNewest \
+                      LEFT JOIN storages ON storages.id=entriesNewest.storageId \
+                      LEFT JOIN entities ON entities.id=storages.entityId \
+                   "
+                 ),
+                 DATABASE_FLAG_NONE,
+                 DATABASE_COLUMNS
+                 (
+                   DATABASE_COLUMN_KEY   ("entriesNewest.id"),
+                   DATABASE_COLUMN_STRING("entriesNewest.name"),
+                   DATABASE_COLUMN_STRING("storages.name")
+                 ),
+                 "? OR entities.jobUUID=?",
+                 DATABASE_FILTERS
+                 (
+                   DATABASE_FILTER_BOOL  (jobUUID == NULL),
+                   DATABASE_FILTER_STRING(jobUUID)
+                 ),
+                 "ORDER BY entriesNewest.name ASC",
+                 0LL,
+                 DATABASE_UNLIMITED
+                );
   }
 
   if (   !showStoragesFlag
