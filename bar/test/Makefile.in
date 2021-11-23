@@ -588,10 +588,15 @@ functionCleanTestFiles = \
   $(CHMOD) o+w intermediate 2>/dev/null || true
 functionCleanTestDatabases = \
   MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
-    $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "SHOW TABLES"| \
+    $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE'" | $(CUT) -f 1 | \
   MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
     $(XARGS) -n 1 -I "{}" \
-      $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "DROP TABLE {}"
+      $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "DROP TABLE {}"; \
+  MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
+    $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'VIEW'" | $(CUT) -f 1 | \
+  MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
+    $(XARGS) -n 1 -I "{}" \
+      $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "DROP VIEW {}"
 
 functionDoneTestFiles = \
   $(CHMOD) o-w intermediate
