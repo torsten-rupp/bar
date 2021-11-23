@@ -4782,7 +4782,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 *          columnTypes         - result column types; use macro
 *                                DATABASE_COLUMN_TYPES()
 *          columnTypeCount     - number of result columns
-*          command             - SQL command string with %[l]d, %[']S,
+*          sqlCommand          - SQL command string with %[l]d, %[']S,
 *                                %[']s
 *          arguments           - arguments for SQL command
 * Output : -
@@ -4797,7 +4797,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                                long                    timeout,
                                const DatabaseDataTypes *columnTypes,
                                uint                    columnTypeCount,
-                               const char              *command,
+                               const char              *sqlCommand,
                                va_list                 arguments
                               )
 {
@@ -4828,11 +4828,11 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
   assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
   assert(databaseHandle->sqlite.handle != NULL);
-  assert(command != NULL);
+  assert(sqlCommand != NULL);
 
   // format SQL command string
   sqlString = vformatSQLString(String_new(),
-                               command,
+                               sqlCommand,
                                arguments
                               );
 
@@ -4895,7 +4895,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
 
             // allocate call-back data
             valueCount = sqlite3_column_count(statementHandle);
-            assertx(valueCount == columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
+            assertx(valueCount == columnTypeCount,"valueCount=%d columnTypeCount=%d sqlCommand=%s",valueCount,columnTypeCount,sqlCommand);
 
             values = (DatabaseValue*)malloc(valueCount*sizeof(DatabaseValue));
             if (values == NULL)
@@ -5133,7 +5133,7 @@ debugPrintStackTrace();
 
           // allocate call-back data
           valueCount = mysql_stmt_field_count(statementHandle);
-          assertx(valueCount == columnTypeCount,"valueCount=%d columnTypeCount=%d",valueCount,columnTypeCount);
+          assertx(valueCount == columnTypeCount,"valueCount=%d columnTypeCount=%d sqlCommand=%s",valueCount,columnTypeCount,sqlCommand);
 
           bind = (MYSQL_BIND*)calloc(valueCount, sizeof(MYSQL_BIND));
           if (bind == NULL)
@@ -5377,6 +5377,10 @@ abort();
               case DATABASE_DATATYPE_INT:
                 break;
               case DATABASE_DATATYPE_INT64:
+                break;
+              case DATABASE_DATATYPE_UINT:
+                break;
+              case DATABASE_DATATYPE_UINT64:
                 break;
               case DATABASE_DATATYPE_DOUBLE:
                 break;
@@ -6074,15 +6078,6 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
                           const char     *sqlCommand
                          )
 {
-  /* data flow:
-
-     application    ->    values -> database internal     -> values   ->    application
-
-                 insert             sqlite:                          select
-                 update             MySQL: bind, dateTime
-                 delete             Postgres: ?
-
-   */
   #define SLEEP_TIME 500L  // [ms]
 
   bool                          done;
@@ -6158,7 +6153,8 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
         break;
       case DATABASE_TYPE_MYSQL:
         {
-          int mysqlResult;
+          int       mysqlResult;
+          MYSQL_RES *result;
 
 //fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
           mysqlResult = mysql_query(databaseHandle->mysql.handle,sqlCommand);
@@ -6197,6 +6193,10 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           {
             (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
           }
+
+          // get and discard results
+          result = mysql_use_result(databaseHandle->mysql.handle);
+          mysql_free_result(result);
 
           // get last insert id
           databaseHandle->lastInsertId = (DatabaseId)mysql_insert_id(databaseHandle->mysql.handle);
@@ -7346,17 +7346,14 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
     case DATABASE_TYPE_MYSQL:
       {
         DatabaseHandle     databaseHandle;
-        StringList         nameList;
+        StringList         tableNameList;
         StringListIterator iterator;
         String             name;
-
-        StringList_init(&nameList);
 
         // open database
         error = Database_open(&databaseHandle,databaseSpecifier,DATABASE_OPENMODE_READ,NO_WAIT);
         if (error != ERROR_NONE)
         {
-          StringList_done(&nameList);
           return error;
         }
 
@@ -7370,13 +7367,12 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                                 );
         if (error != ERROR_NONE)
         {
-          StringList_done(&nameList);
           return error;
         }
 
         // rename tables
-        error = Database_getTableList(&nameList,&databaseHandle);
-        STRINGLIST_ITERATEX(&nameList,iterator,name,error == ERROR_NONE)
+        error = Database_getTableList(&tableNameList,&databaseHandle);
+        STRINGLIST_ITERATEX(&tableNameList,iterator,name,error == ERROR_NONE)
         {
           error = Database_execute(&databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -7391,15 +7387,15 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
         if (error != ERROR_NONE)
         {
           Database_close(&databaseHandle);
-          StringList_done(&nameList);
+          StringList_done(&tableNameList);
           return error;
         }
+        StringList_done(&tableNameList);
 
         // close database
         Database_close(&databaseHandle);
 
         // free resources
-        StringList_done(&nameList);
 
         String_set(databaseSpecifier->mysql.databaseName,newDatabaseName);
       }
@@ -7876,23 +7872,37 @@ Errors Database_getIndexList(StringList     *indexList,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 1);
+        error = Database_get(databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 1);
 
-                                   UNUSED_VARIABLE(valueCount);
-                                   UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+                               UNUSED_VARIABLE(userData);
 
-                                   StringList_appendCString(indexList,values[0].text.data);
+                               StringList_appendCString(indexList,values[0].text.data);
 
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_COLUMN_TYPES(CSTRING),
-                                 "SELECT name FROM sqlite_master where type='index'"
-                                );
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "sqlite_master"
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_STRING("name")
+                             ),
+                             "type='index'",
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
         break;
       case DATABASE_TYPE_MYSQL:
         if (tableName != NULL)
@@ -7936,7 +7946,7 @@ Errors Database_getIndexList(StringList     *indexList,
                                                                String indexName;
 
                                                                assert(values != NULL);
-                                                               assert(valueCount >= 5);
+                                                               assert(valueCount == 13);
 
                                                                UNUSED_VARIABLE(valueCount);
                                                                UNUSED_VARIABLE(userData);
@@ -7955,7 +7965,20 @@ Errors Database_getIndexList(StringList     *indexList,
                                                                return ERROR_NONE;
                                                              },NULL),
                                                              NULL,  // changedRowCount
-                                                             DATABASE_COLUMN_TYPES(CSTRING,CSTRING,CSTRING,CSTRING,CSTRING),
+                                                             DATABASE_COLUMN_TYPES(STRING,
+                                                                                   BOOL,
+                                                                                   STRING,
+                                                                                   UINT,
+                                                                                   STRING,
+                                                                                   STRING,
+                                                                                   STRING,
+                                                                                   STRING,
+                                                                                   BOOL,
+                                                                                   BOOL,
+                                                                                   STRING,
+                                                                                   STRING,
+                                                                                   STRING
+                                                                                  ),
                                                              "SHOW INDEXES FROM %s",
                                                              tableName
                                                             );
@@ -8934,8 +8957,8 @@ Errors Database_compare(DatabaseHandle *referenceDatabaseHandle,
                        )
 {
   Errors             error;
-  StringList         referenceTableList,tableList;
-  StringNode         *tableNameNode;
+  StringList         referenceTableNameList,tableNameList;
+  StringListIterator stringListIterator;
   String             tableName;
   DatabaseColumnName referenceColumnNames[DATABASE_MAX_TABLE_COLUMNS],columnNames[DATABASE_MAX_TABLE_COLUMNS];
   DatabaseDataTypes  referenceColumnTypes[DATABASE_MAX_TABLE_COLUMNS],columnTypes[DATABASE_MAX_TABLE_COLUMNS];
@@ -8952,22 +8975,22 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   assert(checkDatabaseInitialized(databaseHandle));
 
   // get table lists
-  error = Database_getTableList(&referenceTableList,referenceDatabaseHandle);
+  error = Database_getTableList(&referenceTableNameList,referenceDatabaseHandle);
   if (error != ERROR_NONE)
   {
     return error;
   }
-  error = Database_getTableList(&tableList,databaseHandle);
+  error = Database_getTableList(&tableNameList,databaseHandle);
   if (error != ERROR_NONE)
   {
-    StringList_done(&referenceTableList);
+    StringList_done(&referenceTableNameList);
     return error;
   }
 
   // compare tables
-  STRINGLIST_ITERATEX(&referenceTableList,tableNameNode,tableName,error == ERROR_NONE)
+  STRINGLIST_ITERATEX(&referenceTableNameList,stringListIterator,tableName,error == ERROR_NONE)
   {
-    if (StringList_contains(&tableList,tableName))
+    if (StringList_contains(&tableNameList,tableName))
     {
       // get column lists
       error = getTableColumns(referenceColumnNames,
@@ -9039,17 +9062,17 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   }
 
   // check for obsolete tables
-  STRINGLIST_ITERATEX(&tableList,tableNameNode,tableName,error == ERROR_NONE)
+  STRINGLIST_ITERATEX(&tableNameList,stringListIterator,tableName,error == ERROR_NONE)
   {
-    if (!StringList_contains(&referenceTableList,tableName))
+    if (!StringList_contains(&referenceTableNameList,tableName))
     {
       error = ERRORX_(DATABASE_OBSOLETE_TABLE,0,"%s",String_cString(tableName));
     }
   }
 
   // free resources
-  StringList_done(&tableList);
-  StringList_done(&referenceTableList);
+  StringList_done(&tableNameList);
+  StringList_done(&referenceTableNameList);
 
   return error;
 }
@@ -11840,7 +11863,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
         }
         if (columns[j].alias != NULL)
         {
-          String_formatAppend(sqlString,"AS %s",columns[j].alias);
+          String_formatAppend(sqlString," AS %s",columns[j].alias);
         }
       }
       String_formatAppend(sqlString," FROM %s ",tableNames[i]);
@@ -12616,49 +12639,87 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   error = ERROR_UNKNOWN;
-  switch (Database_getType(databaseHandle))
+
+  DATABASE_DOX(error,
+               ERRORX_(DATABASE_TIMEOUT,0,""),
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
   {
-    case DATABASE_TYPE_SQLITE3:
-      switch (databaseCheck)
-      {
-        case DATABASE_CHECK_QUICK:
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "PRAGMA quick_check"
-                                  );
-          break;
-        case DATABASE_CHECK_KEYS:
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "PRAGMA foreign_key_check"
-                                  );
-          break;
-        case DATABASE_CHECK_FULL:
-          error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_COLUMN_TYPES(),
-                                   "PRAGMA integrity_check"
-                                  );
-          break;
-      }
-      break;
-    case DATABASE_TYPE_MYSQL:
-      switch (databaseCheck)
-      {
-        case DATABASE_CHECK_QUICK:
-          break;
-        case DATABASE_CHECK_KEYS:
-          break;
-        case DATABASE_CHECK_FULL:
-          break;
-      }
-      break;
-  }
+    switch (Database_getType(databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        switch (databaseCheck)
+        {
+          case DATABASE_CHECK_QUICK:
+            return executeQuery(databaseHandle,
+                                NULL,  // changedRowCount
+                                databaseHandle->timeout,
+                                "PRAGMA quick_check"
+                               );
+            break;
+          case DATABASE_CHECK_KEYS:
+            return executeQuery(databaseHandle,
+                                NULL,  // changedRowCount
+                                databaseHandle->timeout,
+                                "PRAGMA foreign_key_check"
+                               );
+            break;
+          case DATABASE_CHECK_FULL:
+            return executeQuery(databaseHandle,
+                                NULL,  // changedRowCount
+                                databaseHandle->timeout,
+                                "PRAGMA integrity_check"
+                               );
+            break;
+        }
+        break;
+      case DATABASE_TYPE_MYSQL:
+        switch (databaseCheck)
+        {
+          case DATABASE_CHECK_QUICK:
+            return ERROR_NONE;
+            break;
+          case DATABASE_CHECK_KEYS:
+            return ERROR_NONE;
+            break;
+          case DATABASE_CHECK_FULL:
+            {
+              StringList         tableNameList;
+              StringListIterator stringListIterator;
+              ConstString        tableName;
+              char               sqlCommand[256];
+
+              // get table names
+              error = Database_getTableList(&tableNameList,databaseHandle);
+              if (error != ERROR_NONE)
+              {
+                return error;
+              }
+
+              // check tables
+              STRINGLIST_ITERATEX(&tableNameList,stringListIterator,tableName,error == ERROR_NONE)
+              {
+                error = executeQuery(databaseHandle,
+                                     NULL,  // changedRowCount
+                                     databaseHandle->timeout,
+                                     stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                  "CHECK TABLE %s",
+                                                  String_cString(tableName)
+                                                 )
+                                    );
+              }
+
+              // free resources
+              StringList_done(&tableNameList);
+
+              return error;
+            }
+            break;
+        }
+        break;
+    }
+  });
 
   return error;
 }
