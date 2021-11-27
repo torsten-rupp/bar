@@ -337,6 +337,7 @@ TEST_INDEX_DATABASE_MYSQL        =  mysql:$(TEST_MYSQL_SERVER):$(TEST_MYSQL_USER
 TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
 
 TEST_INDEX_DATABASES             ?= $(TEST_INDEX_DATABASE_SQLITE) $(TEST_INDEX_DATABASE_MYSQL)
+MIN_TEST_INDEX_DATABASES         ?= $(TEST_INDEX_DATABASE_SQLITE)
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -1961,7 +1962,10 @@ test_all:
 
 test_smoke:
 	@$(MAKE) --no-print-directory -s \
-	  QUIET=1 CRYPT_NAMES="$(MIN_CRYPT_NAMES)" COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+	  QUIET=1 \
+	  CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
+	  COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+	  TEST_INDEX_DATABASES="$(MIN_TEST_INDEX_DATABASES)" \
           test_basic \
           test_compress \
           test_crypt \

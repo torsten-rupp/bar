@@ -6540,9 +6540,11 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
 
   if (printRowData->showHeaderFlag && !printRowData->headerPrintedFlag)
   {
+    uint n;
+
     assert(printRowData->widths != NULL);
 
-    uint n = 0;
+    n = 0;
     for (i = 0; i < valueCount; i++)
     {
       if (i > 0)

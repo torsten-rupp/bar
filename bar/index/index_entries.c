@@ -4417,7 +4417,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                "id",
                                "    entityId=? \
                                 AND type=?\
-                                AND name=? \ \
+                                AND name=? \
                                 AND deletedFlag=? \
                                ",
                                DATABASE_FILTERS

@@ -251,17 +251,17 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors archiveStore(const StorageInfo *storageInfo,
-                          IndexId           uuidId,
-                          ConstString       jobUUID,
-                          ConstString       scheduleUUID,
-                          IndexId           entityId,
-                          ArchiveTypes      archiveType,
-                          IndexId           storageId,
-                          int               partNumber,
-                          ConstString       intermediateFileName,
-                          uint64            intermediateFileSize,
-                          void              *userData
+LOCAL Errors archiveStore(StorageInfo  *storageInfo,
+                          IndexId      uuidId,
+                          ConstString  jobUUID,
+                          ConstString  scheduleUUID,
+                          IndexId      entityId,
+                          ArchiveTypes archiveType,
+                          IndexId      storageId,
+                          int          partNumber,
+                          ConstString  intermediateFileName,
+                          uint64       intermediateFileSize,
+                          void         *userData
                          )
 {
   ConvertInfo *convertInfo = (ConvertInfo*)userData;

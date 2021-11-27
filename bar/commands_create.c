@@ -4007,10 +4007,10 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 archiveGetSize(const StorageInfo *storageInfo,
-                            IndexId           storageId,
-                            int               partNumber,
-                            void              *userData
+LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
+                            IndexId     storageId,
+                            int         partNumber,
+                            void        *userData
                            )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -4079,17 +4079,17 @@ LOCAL uint64 archiveGetSize(const StorageInfo *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors archiveStore(const StorageInfo *storageInfo,
-                          IndexId           uuidId,
-                          ConstString       jobUUID,
-                          ConstString       scheduleUUID,
-                          IndexId           entityId,
-                          ArchiveTypes      archiveType,
-                          IndexId           storageId,
-                          int               partNumber,
-                          ConstString       intermediateFileName,
-                          uint64            intermediateFileSize,
-                          void              *userData
+LOCAL Errors archiveStore(StorageInfo  *storageInfo,
+                          IndexId      uuidId,
+                          ConstString  jobUUID,
+                          ConstString  scheduleUUID,
+                          IndexId      entityId,
+                          ArchiveTypes archiveType,
+                          IndexId      storageId,
+                          int          partNumber,
+                          ConstString  intermediateFileName,
+                          uint64       intermediateFileSize,
+                          void         *userData
                          )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
