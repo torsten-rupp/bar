@@ -54,7 +54,7 @@ typedef struct
 
 typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *userData);
 
-typedef const StringNode* StringListIterator;
+typedef StringNode* StringListIterator;
 
 /***************************** Variables *******************************/
 

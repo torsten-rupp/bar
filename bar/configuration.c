@@ -1828,6 +1828,8 @@ LOCAL void initGlobalOptions(void)
   // debug/test only
   #ifndef NDEBUG
     globalOptions.debug.serverLevel                             = DEFAULT_SERVER_DEBUG_LEVEL;
+    globalOptions.debug.indexUUID                               = NULL;
+    globalOptions.debug.indexEntityId                           = DATABASE_ID_NONE;
     globalOptions.debug.indexWaitOperationsFlag                 = FALSE;
     globalOptions.debug.indexPurgeDeletedStoragesFlag           = FALSE;
     globalOptions.debug.indexAddStorage                         = NULL;
@@ -1852,6 +1854,7 @@ LOCAL void doneGlobalOptions(void)
     String_delete(globalOptions.debug.indexRefreshStorage);
     String_delete(globalOptions.debug.indexRemoveStorage);
     String_delete(globalOptions.debug.indexAddStorage);
+    String_delete(globalOptions.debug.indexUUID);
   #endif
 
   // --- job options default values
@@ -7470,9 +7473,12 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_DEPRECATED   ("mount-device",                      0,  1,2,&globalOptions.mountList,                            cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                    cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
 
+  // only for debugging/testing
   #ifndef NDEBUG
   CMD_OPTION_INCREMENT    ("debug-server",                      0,  2,1,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),
   CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,1,globalOptions.debug.serverFixedIdsFlag,                                                                           "fixed server ids"                                                         ),
+  CMD_OPTION_STRING       ("debug-index-uuid",                  0,  2,1,globalOptions.debug.indexUUID,                                                                                    "uuid","uuid"                                                              ),
+  CMD_OPTION_INTEGER64    ("debug-index-entity-id",             0,  1,2,globalOptions.debug.indexEntityId,                   0LL,MAX_INT64,NULL,                                          "entity id","n"                                                            ),
   CMD_OPTION_BOOLEAN      ("debug-index-wait-operations",       0,  2,1,globalOptions.debug.indexWaitOperationsFlag,                                                                      "wait for index operations"                                                ),
   CMD_OPTION_BOOLEAN      ("debug-index-purge-deleted-storages",0,  2,1,globalOptions.debug.indexPurgeDeletedStoragesFlag,                                                                "wait for index operations"                                                ),
   CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,1,globalOptions.debug.indexAddStorage,                                                                              "add storage to index database","file name"                                ),

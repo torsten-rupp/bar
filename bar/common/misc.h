@@ -70,6 +70,7 @@ typedef enum
 
 // length of UUID string (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 #define MISC_UUID_STRING_LENGTH 36
+#define MISC_UUID_NONE "00000000-0000-0000-0000-000000000000"
 
 // length of machine id
 #define MISC_MACHINE_ID_LENGTH (128/8)

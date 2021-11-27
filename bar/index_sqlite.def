@@ -173,7 +173,7 @@ CREATE INDEX ON entries (type,size,name,timeLastChanged);
 CREATE INDEX ON entries (size,type,name,timeLastChanged);
 CREATE INDEX ON entries (timeLastChanged,name,size,type);
 
-// newest entries (updated by triggers)
+// newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
 
@@ -210,6 +210,7 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS5(
   tokenize=unicode61
 );
 
+/*
 CREATE TRIGGER AFTER UPDATE OF uuidId ON entries
   BEGIN
     // update newest entries
@@ -252,6 +253,7 @@ CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
             AND type=NEW.type
             AND NEW.timeLastChanged>timeLastChanged;
   END;
+*/
 
 //TODO
 // --- skipped entries -------------------------------------------------

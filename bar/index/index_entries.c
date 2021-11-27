@@ -491,7 +491,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            NULL,  // changedRowCount
                            DATABASE_TABLES
                            (
-                             "storages"
+                             "entriesNewest"
                            ),
                            DATABASE_COLUMNS
                            (
@@ -503,6 +503,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                            (
                              DATABASE_FILTER_STRING(name)
                            ),
+                           NULL,  // orderGroup
                            0LL,
                            1LL
                           );
@@ -520,6 +521,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           if (newestEntryId != DATABASE_ID_NONE)
           {
             // update
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_update(&indexHandle->databaseHandle,
                                     NULL,  // changedRowCount
                                     DATABASE_COLUMN_TYPES(),
@@ -545,6 +547,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           else
           {
             // insert
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // changedRowCount
                                     "entriesNewest",
@@ -618,6 +621,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
     }
 
 // TODO:
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = Database_insert(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
                             "entriesNewest",
@@ -679,6 +683,7 @@ fprintf(stderr,"%s:%d: -----------------------\n",__FILE__,__LINE__);
                                   1LL
                                  );
 #else
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = Database_insertSelect(&indexHandle->databaseHandle,
                                   NULL,  // changedRowCount
                                   "entriesNewest",
@@ -4218,12 +4223,14 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                "    entityId=? \
                                 AND type=? \
                                 AND name=? \
+                                AND deletedFlag=? \
                                ",
                                DATABASE_FILTERS
                                (
                                  DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
-                                 DATABASE_FILTER_STRING(name)
+                                 DATABASE_FILTER_STRING(name),
+                                 DATABASE_FILTER_BOOL  (FALSE)
                                )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
@@ -4410,13 +4417,15 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                "id",
                                "    entityId=? \
                                 AND type=?\
-                                AND name=? \
+                                AND name=? \ \
+                                AND deletedFlag=? \
                                ",
                                DATABASE_FILTERS
                                (
                                  DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
-                                 DATABASE_FILTER_STRING(name)
+                                 DATABASE_FILTER_STRING(name),
+                                 DATABASE_FILTER_BOOL  (FALSE)
                                )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
@@ -4880,12 +4889,14 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                "    entityId=? \
                                 AND type=? \
                                 AND name=? \
+                                AND deletedFlag=? \
                                ",
                                DATABASE_FILTERS
                                (
                                  DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
-                                 DATABASE_FILTER_STRING(name)
+                                 DATABASE_FILTER_STRING(name),
+                                 DATABASE_FILTER_BOOL  (FALSE)
                                )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))

@@ -55,8 +55,8 @@
 \***********************************************************************/
 
 Errors Command_convert(const StringList        *archiveFileNameList,
-                       ConstString             newJobUUID,
-                       ConstString             newScheduleUUID,
+                       const char              *newJobUUID,
+                       const char              *newScheduleUUID,
                        uint64                  newCreatedDateTime,
                        JobOptions              *newJobOptions,
                        GetNamePasswordFunction getNamePasswordFunction,

@@ -122,15 +122,15 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
-                                     IndexId      uuidId,
-                                     ConstString  jobUUID,
-                                     ConstString  scheduleUUID,
-                                     IndexId      entityId,
-                                     ArchiveTypes archiveType,
-                                     IndexId      storageId,
-                                     int          partNumber,
-                                     void         *userData
+typedef Errors(*ArchiveInitFunction)(const StorageInfo *storageInfo,
+                                     IndexId           uuidId,
+                                     ConstString       jobUUID,
+                                     ConstString       scheduleUUID,
+                                     IndexId           entityId,
+                                     ArchiveTypes      archiveType,
+                                     IndexId           storageId,
+                                     int               partNumber,
+                                     void              *userData
                                     );
 
 /***********************************************************************\
@@ -151,15 +151,15 @@ typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
-                                     IndexId      uuidId,
-                                     ConstString  jobUUID,
-                                     ConstString  scheduleUUID,
-                                     IndexId      entityId,
-                                     ArchiveTypes archiveType,
-                                     IndexId      storageId,
-                                     int          partNumber,
-                                     void         *userData
+typedef Errors(*ArchiveDoneFunction)(const StorageInfo *storageInfo,
+                                     IndexId           uuidId,
+                                     ConstString       jobUUID,
+                                     ConstString       scheduleUUID,
+                                     IndexId           entityId,
+                                     ArchiveTypes      archiveType,
+                                     IndexId           storageId,
+                                     int               partNumber,
+                                     void              *userData
                                     );
 
 /******************************************************************** ***\
@@ -175,10 +175,10 @@ typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
-                                        IndexId     storageId,
-                                        int         partNumber,
-                                        void        *userData
+typedef uint64(*ArchiveGetSizeFunction)(const StorageInfo *storageInfo,
+                                        IndexId           storageId,
+                                        int               partNumber,
+                                        void              *userData
                                        );
 
 /***********************************************************************\
@@ -201,17 +201,17 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ArchiveStoreFunction)(StorageInfo  *storageInfo,
-                                      IndexId      uuidId,
-                                      ConstString  jobUUID,
-                                      ConstString  scheduleUUID,
-                                      IndexId      entityId,
-                                      ArchiveTypes archiveType,
-                                      IndexId      storageId,
-                                      int          partNumber,
-                                      ConstString  intermediateFileName,
-                                      uint64       intermediateFileSize,
-                                      void         *userData
+typedef Errors(*ArchiveStoreFunction)(const StorageInfo *storageInfo,
+                                      IndexId           uuidId,
+                                      ConstString       jobUUID,
+                                      ConstString       scheduleUUID,
+                                      IndexId           entityId,
+                                      ArchiveTypes      archiveType,
+                                      IndexId           storageId,
+                                      int               partNumber,
+                                      ConstString       intermediateFileName,
+                                      uint64            intermediateFileSize,
+                                      void              *userData
                                      );
 
 // archive index cache list
@@ -227,7 +227,7 @@ typedef struct
 {
   String                   hostName;                                   // host name or NULL
   String                   userName;                                   // user name or NULL
-  StorageInfo              *storageInfo;
+  const StorageInfo        *storageInfo;
   IndexId                  uuidId;                                     // UUID index id
   IndexId                  entityId;                                   // entity index id
 
@@ -666,14 +666,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle           *archiveHandle,
-                        ConstString             hostName,
-                        ConstString             userName,
+                        const char              *hostName,
+                        const char              *userName,
                         StorageInfo             *storageInfo,
-                        ConstString             archiveName,
+                        const char              *archiveName,
                         IndexId                 uuidId,
                         IndexId                 entityId,
-                        ConstString             jobUUID,
-                        ConstString             scheduleUUID,
+                        const char              *jobUUID,
+                        const char              *scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         uint64                  createdDateTime,
@@ -696,14 +696,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_create(const char              *__fileName__,
                           ulong                   __lineNb__,
                           ArchiveHandle           *archiveHandle,
-                          ConstString             hostName,
-                          ConstString             userName,
+                          const char              *hostName,
+                          const char              *userName,
                           StorageInfo             *storageInfo,
-                          ConstString             archiveName,
+                          const char              *archiveName,
                           IndexId                 uuidId,
                           IndexId                 entityId,
-                          ConstString             jobUUID,
-                          ConstString             scheduleUUID,
+                          const char              *jobUUID,
+                          const char              *scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           uint64                  createdDateTime,
@@ -741,7 +741,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_open(ArchiveHandle           *archiveHandle,
-                      StorageInfo             *storageInfo,
+                      const StorageInfo       *storageInfo,
                       ConstString             archiveName,
                       DeltaSourceList         *deltaSourceList,
                       GetNamePasswordFunction getNamePasswordFunction,
@@ -752,7 +752,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_open(const char              *__fileName__,
                         ulong                   __lineNb__,
                         ArchiveHandle           *archiveHandle,
-                        StorageInfo             *storageInfo,
+                        const StorageInfo       *storageInfo,
                         ConstString             archiveName,
                         DeltaSourceList         *deltaSourceList,
                         GetNamePasswordFunction getNamePasswordFunction,
@@ -898,26 +898,26 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                               ArchiveHandle    *archiveHandle,
-                              ConstString      userName,
-                              ConstString      hostName,
-                              ConstString      jobUUID,
-                              ConstString      scheduleUUID,
+                              const char       *userName,
+                              const char       *hostName,
+                              const char       *jobUUID,
+                              const char       *scheduleUUID,
                               ArchiveTypes     archiveType,
                               uint64           createdDateTime,
-                              ConstString      comment
+                              const char       *comment
                              );
 #else /* not NDEBUG */
   Errors __Archive_newMetaEntry(const char       *__fileName__,
                                 ulong            __lineNb__,
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 ArchiveHandle    *archiveHandle,
-                                ConstString      userName,
-                                ConstString      hostName,
-                                ConstString      jobUUID,
-                                ConstString      scheduleUUID,
+                                const char       *userName,
+                                const char       *hostName,
+                                const char       *jobUUID,
+                                const char       *scheduleUUID,
                                 ArchiveTypes     archiveType,
                                 uint64           createdDateTime,
-                                ConstString      comment
+                                const char       *comment
                                );
 #endif /* NDEBUG */
 
@@ -1724,7 +1724,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : Archive_updateIndex
-* Purpose: update storage index
+* Purpose: read archive content and update storage index
 * Input  : indexHandle       - index handle
 *          entityId          - entity index id or INDEX_ID_NONE
 *          storageId         - storage index id
@@ -1743,7 +1743,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                            IndexId           uuidId,
                            IndexId           entityId,
                            IndexId           storageId,
-                           StorageInfo       *storageInfo,
+                           const StorageInfo *storageInfo,
                            ulong             *totalEntryCount,
                            uint64            *totalSize,
                            IsPauseFunction   isPauseFunction,

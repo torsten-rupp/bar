@@ -1203,8 +1203,8 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   if (indexHandle != NULL)
   {
     (void)Index_findUUID(indexHandle,
-                         jobUUID,
-                         scheduleUUID,
+                         String_cString(jobUUID),
+                         String_cString(scheduleUUID),
                          NULL,  // uuidId
                          &aggregateInfo->executionCount.normal,
                          &aggregateInfo->executionCount.full,
@@ -2294,7 +2294,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                         NULL,  // findJobUUID,
                         NULL,  // findScheduleUUID
                         NULL,  // hostName
-                        ARCHIVE_TYPE_NONE,
+                        ARCHIVE_TYPE_ANY,
                         0LL,  // find createdDateTime,
                         jobUUID,
                         NULL,  // scheduleUUID
@@ -2446,7 +2446,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 
   // find UUID
   if (!Index_findUUID(indexHandle,
-                      jobUUID,
+                      String_cString(jobUUID),
                       NULL,  // findScheduleUUID
                       &uuidId,
                       NULL,  // executionCountNormal,
@@ -4520,11 +4520,11 @@ LOCAL void jobThreadCode(void)
 
               // create archive
               jobNode->runningInfo.error = Command_create(jobNode->masterIO,
-                                                          jobUUID,
-                                                          scheduleUUID,
+                                                          String_cString(jobUUID),
+                                                          String_cString(scheduleUUID),
 //TODO:
 NULL,//                                                        scheduleTitle,
-                                                          scheduleCustomText,
+                                                          String_cString(scheduleCustomText),
                                                           storageName,
                                                           &includeEntryList,
                                                           &excludePatternList,
@@ -15254,8 +15254,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
-                                 !jobUUIDAny ? jobUUID : NULL,
-                                 !scheduleUUIDAny ? scheduleUUID : NULL,
+                                 !jobUUIDAny ? String_cString(jobUUID) : NULL,
+                                 !scheduleUUIDAny ? String_cString(scheduleUUID) : NULL,
                                  Array_cArray(&clientInfo->indexIdArray),
                                  Array_length(&clientInfo->indexIdArray),
                                  indexTypeAny ? INDEX_TYPE_SET_ALL : indexTypeSet,
@@ -16642,7 +16642,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                          NULL,  // jobUUID
                          NULL,  // scheduleUUID
                          NULL,  // hostName
-                         ARCHIVE_TYPE_NONE,
+                         ARCHIVE_TYPE_ANY,
                          0LL,  // createdDateTime
                          uuid,
                          NULL,  // scheduleUUID
@@ -17442,10 +17442,10 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 
   // create new entity
   error = Index_newEntity(indexHandle,
-                          jobUUID,
-                          scheduleUUID,
-                          hostName,
-                          userName,
+                          String_cString(jobUUID),
+                          String_cString(scheduleUUID),
+                          String_cString(hostName),
+                          String_cString(userName),
                           archiveType,
                           createdDateTime,
                           FALSE,  // not locked
@@ -17885,9 +17885,9 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     {
       // create entity for other job
       error = Index_newEntity(indexHandle,
-                              toJobUUID,
-                              toScheduleUUID,
-                              toHostName,
+                              String_cString(toJobUUID),
+                              String_cString(toScheduleUUID),
+                              String_cString(toHostName),
                               NULL,  // userName
                               archiveType,
                               createdDateTime,
@@ -18000,9 +18000,9 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     {
       // create entity for other job
       error = Index_newEntity(indexHandle,
-                              toJobUUID,
-                              toScheduleUUID,
-                              toHostName,
+                              String_cString(toJobUUID),
+                              String_cString(toScheduleUUID),
+                              String_cString(toHostName),
                               NULL, // userName
                               archiveType,
                               createdDateTime,
@@ -18332,7 +18332,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    indexHandle,
                                    INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
-                                   jobUUID,
+                                   String_cString(jobUUID),
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
                                    0,  // indexIdCount

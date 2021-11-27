@@ -3193,7 +3193,8 @@ NULL, // masterSocketHandle
             case ARCHIVE_ENTRY_TYPE_META:
               {
                 String       hostName,userName;
-                String       jobUUID,scheduleUUID;
+                StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+                StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
                 ArchiveTypes archiveType;
                 uint64       createdDateTime;
                 String       comment;
@@ -3201,11 +3202,9 @@ NULL, // masterSocketHandle
                 if (globalOptions.metaInfoFlag && !globalOptions.groupFlag)
                 {
                   // read archive file
-                  hostName     = String_new();
-                  userName     = String_new();
-                  jobUUID      = String_new();
-                  scheduleUUID = String_new();
-                  comment      = String_new();
+                  hostName = String_new();
+                  userName = String_new();
+                  comment  = String_new();
                   error = Archive_readMetaEntry(&archiveEntryInfo,
                                                 &archiveHandle,
                                                 hostName,
@@ -3226,8 +3225,6 @@ NULL, // masterSocketHandle
                               );
 #endif
                     String_delete(comment);
-                    String_delete(scheduleUUID);
-                    String_delete(jobUUID);
                     String_delete(userName);
                     String_delete(hostName);
                     break;
@@ -3258,8 +3255,6 @@ NULL, // masterSocketHandle
 
                   // free resources
                   String_delete(comment);
-                  String_delete(scheduleUUID);
-                  String_delete(jobUUID);
                   String_delete(userName);
                   String_delete(hostName);
                 }

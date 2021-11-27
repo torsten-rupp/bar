@@ -676,7 +676,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        jobUUID,
                                                        NULL,  // scheduleUUID
                                                        NULL,  // hostName
-                                                       ARCHIVE_TYPE_NONE,
+                                                       ARCHIVE_TYPE_ANY,
                                                        0LL,  // createdDateTime
                                                        NULL,  // jobUUID
                                                        NULL,  // scheduleUUID

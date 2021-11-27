@@ -42,31 +42,6 @@
   extern "C" {
 #endif
 
-Errors initLog(LogHandle *logHandle)
-{
-  Errors error;
-
-  assert(logHandle != NULL);
-
-  logHandle->logFileName = String_new();
-  error = File_getTmpFileNameCString(logHandle->logFileName,"bar-log",NULL /* directory */);
-  if (error != ERROR_NONE)
-  {
-    String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
-    return error;
-  }
-  logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
-  if (logHandle->logFile == NULL)
-  {
-    error = ERRORX_(CREATE_FILE,errno,"%s",String_cString(logHandle->logFileName));
-    (void)File_delete(logHandle->logFileName,FALSE);
-    String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
 void templateInit(TemplateHandle   *templateHandle,
                   const char       *templateString,
                   ExpandMacroModes expandMacroMode,

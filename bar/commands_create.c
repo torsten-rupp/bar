@@ -93,10 +93,10 @@ typedef struct
 {
   StorageInfo                 storageInfo;                          // storage info
   IndexHandle                 *indexHandle;
-  ConstString                 jobUUID;                              // unique job id to store or NULL
-  ConstString                 scheduleUUID;                         // unique schedule id to store or NULL
-  ConstString                 scheduleTitle;                        // schedule title or NULL
-  ConstString                 scheduleCustomText;                   // schedule custom text or NULL
+  const char                  *jobUUID;                             // unique job id to store or NULL
+  const char                  *scheduleUUID;                        // unique schedule id to store or NULL
+  const char                  *scheduleTitle;                       // schedule title or NULL
+  const char                  *scheduleCustomText;                  // schedule custom text or NULL
   const EntryList             *includeEntryList;                    // list of included entries
   const PatternList           *excludePatternList;                  // list of exclude patterns
   JobOptions                  *jobOptions;
@@ -285,10 +285,10 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
 LOCAL void initCreateInfo(CreateInfo         *createInfo,
                           IndexHandle        *indexHandle,
-                          ConstString        jobUUID,
-                          ConstString        scheduleUUID,
-                          ConstString        scheduleTitle,
-                          ConstString        scheduleCustomText,
+                          const char         *jobUUID,
+                          const char         *scheduleUUID,
+                          const char         *scheduleTitle,
+                          const char         *scheduleCustomText,
                           const EntryList    *includeEntryList,
                           const PatternList  *excludePatternList,
                           JobOptions         *jobOptions,
@@ -1384,8 +1384,8 @@ LOCAL Errors formatArchiveFileName(String           fileName,
                                    ConstString      templateFileName,
                                    ExpandMacroModes expandMacroMode,
                                    ArchiveTypes     archiveType,
-                                   ConstString      scheduleTitle,
-                                   ConstString      scheduleCustomText,
+                                   const char       *scheduleTitle,
+                                   const char       *scheduleCustomText,
                                    uint64           dateTime,
                                    int              partNumber
                                   )
@@ -1420,8 +1420,8 @@ LOCAL Errors formatArchiveFileName(String           fileName,
     TEXT_MACRO_X_CSTRING("%type", Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_CSTRING);
     TEXT_MACRO_X_CSTRING("%T",    Archive_archiveTypeToShortString(archiveType),".");
     TEXT_MACRO_X_STRING ("%uuid", uuid,TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "",TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "",TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("%title",(scheduleTitle != NULL) ? scheduleTitle : "",TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("%text", (scheduleCustomText != NULL) ? scheduleCustomText : "",TEXT_MACRO_PATTERN_CSTRING);
   }
   templateMacros(&templateHandle,
                  textMacros.data,
@@ -1667,13 +1667,13 @@ LOCAL String getIncrementalFileNameFromStorage(String                 fileName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL String getIncrementalFileNameFromJobUUID(String fileName, ConstString jobUUID)
+LOCAL String getIncrementalFileNameFromJobUUID(String fileName, const char *jobUUID)
 {
   assert(fileName != NULL);
   assert(jobUUID != NULL);
 
   File_setFileName(fileName,globalOptions.incrementalDataDirectory);
-  File_appendFileName(fileName,jobUUID);
+  File_appendFileNameCString(fileName,jobUUID);
   String_appendCString(fileName,FILE_NAME_EXTENSION_INCREMENTAL_FILE);
 
   return fileName;
@@ -1756,7 +1756,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     // process entries from continuous database
     if (Continuous_isAvailable())
     {
-      error = Continuous_initList(&databaseStatementHandle,&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID);
+      error = Continuous_initList(&databaseStatementHandle,
+                                  &continuousDatabaseHandle,
+                                  createInfo->jobUUID,
+                                  createInfo->scheduleUUID
+                                 );
       if (error == ERROR_NONE)
       {
         while (Continuous_getNext(&databaseStatementHandle,&databaseId,name))
@@ -4003,10 +4007,10 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
-                            IndexId     storageId,
-                            int         partNumber,
-                            void        *userData
+LOCAL uint64 archiveGetSize(const StorageInfo *storageInfo,
+                            IndexId           storageId,
+                            int               partNumber,
+                            void              *userData
                            )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -4075,17 +4079,17 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors archiveStore(StorageInfo  *storageInfo,
-                          IndexId      uuidId,
-                          ConstString  jobUUID,
-                          ConstString  scheduleUUID,
-                          IndexId      entityId,
-                          ArchiveTypes archiveType,
-                          IndexId      storageId,
-                          int          partNumber,
-                          ConstString  intermediateFileName,
-                          uint64       intermediateFileSize,
-                          void         *userData
+LOCAL Errors archiveStore(const StorageInfo *storageInfo,
+                          IndexId           uuidId,
+                          ConstString       jobUUID,
+                          ConstString       scheduleUUID,
+                          IndexId           entityId,
+                          ArchiveTypes      archiveType,
+                          IndexId           storageId,
+                          int               partNumber,
+                          ConstString       intermediateFileName,
+                          uint64            intermediateFileSize,
+                          void              *userData
                          )
 {
   CreateInfo    *createInfo = (CreateInfo*)userData;
@@ -4565,7 +4569,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
 \***********************************************************************/
 
 LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
-                                 ConstString jobUUID,
+                                 const char  *jobUUID,
                                  uint64      limit,
                                  uint64      maxStorageSize,
                                  LogHandle   *logHandle
@@ -4637,7 +4641,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
                    "Purging storage for job '%s' fail (error: %s)",
-                   String_cString(jobUUID),
+                   jobUUID,
                    Error_getText(error)
                   );
         break;
@@ -7972,10 +7976,10 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 /*---------------------------------------------------------------------*/
 
 Errors Command_create(ServerIO                     *masterIO,
-                      ConstString                  jobUUID,
-                      ConstString                  scheduleUUID,
-                      ConstString                  scheduleTitle,
-                      ConstString                  scheduleCustomText,
+                      const char                   *jobUUID,
+                      const char                   *scheduleUUID,
+                      const char                   *scheduleTitle,
+                      const char                   *scheduleCustomText,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
@@ -8253,8 +8257,8 @@ Errors Command_create(ServerIO                     *masterIO,
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,
-                            hostName,
-                            userName,
+                            String_cString(hostName),
+                            String_cString(userName),
                             archiveType,
                             createdDateTime,
                             TRUE,  // locked
@@ -8280,8 +8284,8 @@ Errors Command_create(ServerIO                     *masterIO,
 
   // create new archive
   error = Archive_create(&createInfo.archiveHandle,
-                         hostName,
-                         userName,
+                         String_cString(hostName),
+                         String_cString(userName),
                          &createInfo.storageInfo,
                          NULL,  // archiveName
                          uuidId,

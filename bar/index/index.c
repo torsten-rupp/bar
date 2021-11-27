@@ -421,7 +421,6 @@ LOCAL void busyHandler(void *userData)
   if ((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_CREATE)
   {
     // create database
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     INDEX_DOX(error,
               indexHandle,
     {
@@ -442,11 +441,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     });
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-
       return error;
     }
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
     // create tables/indicees/triggers
     INDEX_DOX(error,
@@ -460,11 +456,11 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
+                                 DATABASE_FLAG_NONE,
                                  DATABASE_COLUMN_TYPES(),
                                  indexDefinition
                                 );
       }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
       return error;
     });
@@ -624,6 +620,7 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
     error = Database_execute(&databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
+                             DATABASE_FLAG_NONE,
                              DATABASE_COLUMN_TYPES(),
                              indexDefinition
                             );
@@ -2619,8 +2616,8 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
 
 LOCAL void indexThreadCode(void)
 {
-  IndexHandle         indexHandle;
-  Errors              error;
+  IndexHandle indexHandle;
+  Errors      error;
   #ifdef INDEX_IMPORT_OLD_DATABASE
     String              absoluteFileName;
     String              directoryName;
@@ -2630,10 +2627,9 @@ LOCAL void indexThreadCode(void)
     uint                oldDatabaseCount;
     String              failFileName;
   #endif /* INDEX_IMPORT_OLD_DATABASE */
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          storageId,entityId;
-  String              storageName;
-  uint                sleepTime;
+  DatabaseId  storageId,entityId;
+  String      storageName;
+  uint        sleepTime;
 
   assert(indexDatabaseSpecifier != NULL);
 
@@ -2673,7 +2669,7 @@ LOCAL void indexThreadCode(void)
     {
       // get absolute database file name
 // TODO:
-      absoluteFileName = File_getAbsoluteFileNameCString(String_new(),indexDatabaseSpecifier->sqlite.fileName);
+      absoluteFileName = File_getAbsoluteFileName(String_new(),indexDatabaseSpecifier->sqlite.fileName);
 
       // open directory where database is located
       directoryName = File_getDirectoryName(String_new(),absoluteFileName);
@@ -3232,12 +3228,10 @@ Errors Index_init(const char             *uriString,
                   void                   *IndexCommon_isMaintenanceTimeUserData
                  )
 {
-  bool              createFlag;
-  Errors            error;
-  uint              indexVersion;
-  DatabaseSpecifier databaseSpecifierReference = { DATABASE_TYPE_SQLITE3, {(intptr_t)NULL} };
-  IndexHandle       indexHandleReference,indexHandle;
-//  ProgressInfo      progressInfo;
+  bool        createFlag;
+  Errors      error;
+  uint        indexVersion;
+  IndexHandle indexHandle;
 
   assert(uriString != NULL);
 

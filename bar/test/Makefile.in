@@ -591,12 +591,12 @@ functionCleanTestDatabases = \
     $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE'" | $(CUT) -f 1 | \
   MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
     $(XARGS) -n 1 -I "{}" \
-      $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "DROP TABLE {}"; \
+      $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "SET foreign_key_checks = 0; DROP TABLE {}"; \
   MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
     $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'VIEW'" | $(CUT) -f 1 | \
   MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
     $(XARGS) -n 1 -I "{}" \
-      $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "DROP VIEW {}"
+      $(MYSQL) -h $(TEST_MYSQL_SERVER) -u "$(TEST_MYSQL_USER)" bar --batch --silent -e "SET foreign_key_checks = 0; DROP VIEW {}"
 
 functionDoneTestFiles = \
   $(CHMOD) o-w intermediate
@@ -1776,6 +1776,10 @@ test13 test_index:
             TEST_INDEX_DATABASE=$$testIndexDatabase \
             test_index_operations \
             ; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
+          fi; \
         done
 	@$(call functionInfoEnd,OK)
 
@@ -4331,6 +4335,7 @@ yyy: \
 .PHONY: test_index_operations_tool
 test_index_operations_tool: \
   $(TEST_BAR) \
+  $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX) \
   $(TEST_FILES)
 	# bar-index operations
@@ -4339,61 +4344,62 @@ test_index_operations_tool: \
 	@#
 	@$(call functionCleanTestFiles)
 	@$(call functionCleanTestDatabases)
-	@$(call functionExec,$(TEST_BAR)) -c intermediate/test0.bar $(TEST_FILES_SIMPLE) >/dev/null
+	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test0.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@$(TOUCH) data/random128.dat data/zero128.dat
-	@$(call functionExec,$(TEST_BAR)) -c intermediate/test1.bar $(TEST_FILES_SIMPLE) >/dev/null
+	@$(call functionExec,$(TEST_BAR_DEBUG)) -c intermediate/test1.bar --debug-index-uuid=00000001-0000-0000-0000-000000000000 $(TEST_FILES_SIMPLE) >/dev/null
 	@# options
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-triggers $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-newest $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-indizes $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-aggregates $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --clean $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --vacuum $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --optimize $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-jobs $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-entities $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-entries $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-storages $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --info-lost-storages $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --entries $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --entries-newest $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --storages $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --header "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --names "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --time "SELECT * FROM storages" $(LOG)
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --explain-query "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-triggers $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-newest $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-indizes $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-aggregates $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --check $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --clean $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --vacuum $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --optimize $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-jobs $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-entities $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-entries $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-storages $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --info-lost-storages $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --entries $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --entries-newest $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --storages $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --header "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --names "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --time "SELECT * FROM storages" $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --explain-query "SELECT * FROM storages" $(LOG)
 	@# newest entries in index
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create --force $(LOG)
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest") # no entries
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create --force $(LOG)
+	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest") # no entries
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
-           -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
+         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR_DEBUG)) \
+           -C $(SUB_DIR) \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
+           --debug-index-entity-id=1 \
            --debug-index-add-storage intermediate/test0.bar \
            --verbose=1 \
            $(LOG) \
         )
-	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create-newest $(LOG)
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId!=1") # only entries of entity 1
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --create-newest $(LOG)
+	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest WHERE entityId!=1") # only entries of entity 1
 	($(CD) $(UP_DIR); \
          $(ULIMIT) -Sv $(MEMORY_LIMIT); \
-         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
+         $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR_DEBUG)) \
            -C $(SUB_DIR) \
-           -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar \
            $(BAR_OPTIONS) \
            --index-database=$(TEST_INDEX_DATABASE) \
+           --debug-index-entity-id=2 \
            --debug-index-add-storage intermediate/test1.bar \
            --verbose=1 \
            $(LOG) \
         )
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId=1 AND    (name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 1
-	$(call functionIndexQueryEmpty,"SELECT entityId FROM entriesNewest WHERE entityId=2 AND NOT(name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 2
+	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest WHERE entityId=1 AND    (name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 1
+	$(call functionIndexQueryEmpty,"SELECT * FROM entriesNewest WHERE entityId=2 AND NOT(name IN ('data/random128.dat','data/zero128.dat'))") # only entries of entity 2
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 

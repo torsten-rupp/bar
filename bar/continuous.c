@@ -338,6 +338,7 @@ LOCAL void printNotifies(void)
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_FLAG_NONE,
                            DATABASE_COLUMN_TYPES(),
                            CONTINUOUS_TABLE_DEFINITION
                           );
@@ -1180,15 +1181,19 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
   // purge all stored entries
 //fprintf(stderr,"%s, %d: --- jobUUID=%s scheduleUUID=%s delta=%d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,globalOptions.continuousMinTimeDelta);
 //Continuous_dumpEntries(databaseHandle,jobUUID,scheduleUUID);
-  error = Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           DATABASE_COLUMN_TYPES(),
-                           "DELETE FROM names \
-                            WHERE     storedFlag=1 \
-                                  AND DATETIME('now','-%u seconds')>=dateTime;",
-                           globalOptions.continuousMinTimeDelta
-                          );
+  error = Database_delete(databaseHandle,
+                          NULL,  // changedRowCount
+                          "names",
+                          DATABASE_FLAG_NONE,
+                          "    storedFlag=1 \
+                           AND DATETIME('now','-? seconds')>=dateTime \
+                          ",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta)
+                          ),
+                          DATABASE_UNLIMITED
+                         );
   if (error != ERROR_NONE)
   {
     return error;
@@ -1198,6 +1203,7 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
+                           DATABASE_FLAG_NONE,
                            DATABASE_COLUMN_TYPES(),
                            "INSERT INTO names \
                               (\
@@ -1246,6 +1252,7 @@ LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
   return Database_execute(databaseHandle,
                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
+                          DATABASE_FLAG_NONE,
                           DATABASE_COLUMN_TYPES(),
                           "DELETE FROM names WHERE id=%lld;",
                           databaseId
@@ -1271,6 +1278,7 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
   return Database_execute(databaseHandle,
                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
+                          DATABASE_FLAG_NONE,
                           DATABASE_COLUMN_TYPES(),
                           "UPDATE names SET dateTime=DATETIME('now'),storedFlag=1 WHERE id=%lld;",
                           databaseId
@@ -1866,8 +1874,8 @@ Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
 }
 
 bool Continuous_getEntry(DatabaseHandle *databaseHandle,
-                         ConstString    jobUUID,
-                         ConstString    scheduleUUID,
+                         const char     *jobUUID,
+                         const char     *scheduleUUID,
                          DatabaseId     *databaseId,
                          String         name
                         )
@@ -1878,6 +1886,7 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
   assert(initFlag);
   assert(databaseHandle != NULL);
   assert(jobUUID != NULL);
+  assert(scheduleUUID != NULL);
   assert(name != NULL);
 
 // TODO: lock required?
@@ -1917,9 +1926,9 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                      ",
                      DATABASE_FILTERS
                      (
-                       DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
-                       DATABASE_FILTER_STRING(jobUUID),
-                       DATABASE_FILTER_STRING(scheduleUUID)
+                       DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
+                       DATABASE_FILTER_CSTRING(jobUUID),
+                       DATABASE_FILTER_CSTRING(scheduleUUID)
                      ),
                      NULL,  // orderGroup
                      0LL,
@@ -1974,8 +1983,8 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
 
 Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                            DatabaseHandle          *databaseHandle,
-                           ConstString             jobUUID,
-                           ConstString             scheduleUUID
+                           const char              *jobUUID,
+                           const char              *scheduleUUID
                           )
 {
   Errors error;
@@ -1983,8 +1992,8 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
   assert(initFlag);
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
-  assert(!String_isEmpty(jobUUID));
-  assert(!String_isEmpty(scheduleUUID));
+  assert(!stringIsEmpty(jobUUID));
+  assert(!stringIsEmpty(scheduleUUID));
 
   // prepare list
   error = Database_select(databaseStatementHandle,
@@ -2003,9 +2012,9 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                           ",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
-                            DATABASE_FILTER_STRING(jobUUID),
-                            DATABASE_FILTER_STRING(scheduleUUID)
+                            DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
+                            DATABASE_FILTER_CSTRING(jobUUID),
+                            DATABASE_FILTER_CSTRING(scheduleUUID)
                           )
                         );
   if (error != ERROR_NONE)

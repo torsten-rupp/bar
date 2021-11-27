@@ -370,8 +370,8 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
 // ----------------------------------------------------------------------
 
 bool Index_findUUID(IndexHandle  *indexHandle,
-                    ConstString  findJobUUID,
-                    ConstString  findScheduleUUID,
+                    const char   *findJobUUID,
+                    const char   *findScheduleUUID,
                     IndexId      *uuidId,
                     ulong        *executionCountNormal,
                     ulong        *executionCountFull,
@@ -405,8 +405,8 @@ bool Index_findUUID(IndexHandle  *indexHandle,
   {
     // filters
     filterString = String_newCString("1");
-    IndexCommon_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","uuids.jobUUID=%'S",findJobUUID);
-    IndexCommon_filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
+    IndexCommon_filterAppend(filterString,!stringIsEmpty(findJobUUID),"AND","uuids.jobUUID=%'s",findJobUUID);
+    IndexCommon_filterAppend(filterString,!stringIsEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'s",findScheduleUUID);
 
     INDEX_DOX(error,
               indexHandle,
@@ -535,7 +535,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                     },NULL),
                                     "INDEX_FIND_UUID jobUUID=%'S scheduleUUID=%'s",
                                     findJobUUID,
-                                    (findScheduleUUID != NULL) ? String_cString(findScheduleUUID) : ""
+                                    (findScheduleUUID != NULL) ? findScheduleUUID : ""
                                    );
   }
 
@@ -1463,7 +1463,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 }
 
 Errors Index_newUUID(IndexHandle *indexHandle,
-                     ConstString jobUUID,
+                     const char  *jobUUID,
                      IndexId     *uuidId
                     )
 {
@@ -1489,7 +1489,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_STRING("jobUUID", jobUUID),
+                                DATABASE_VALUE_CSTRING("jobUUID", jobUUID),
                               )
                              );
       if (error != ERROR_NONE)
@@ -1522,7 +1522,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
-                                    "INDEX_NEW_UUID jobUUID=%S",
+                                    "INDEX_NEW_UUID jobUUID=%s",
                                     jobUUID
                                    );
   }

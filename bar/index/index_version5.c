@@ -570,7 +570,7 @@ LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                                        jobUUID,
                                                        NULL,  // scheduleUUID
                                                        NULL,  // hostName
-                                                       ARCHIVE_TYPE_NONE,
+                                                       ARCHIVE_TYPE_ANY,
                                                        0LL,  // createdDateTime
                                                        NULL,  // jobUUID
                                                        NULL,  // scheduleUUID

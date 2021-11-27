@@ -944,6 +944,10 @@ typedef struct
   {
     uint                      serverLevel;                    // server debug level (for debug only)
     bool                      serverFixedIdsFlag;             // always generate id=1
+    String                    indexUUID;                      // index UUID
+// TODO:
+//    DatabaseId                indexEntityId;
+    int64                indexEntityId;
     bool                      indexWaitOperationsFlag;        // TRUE to wait for index operation
     bool                      indexPurgeDeletedStoragesFlag;  // TRUE to purge deleted storages
     String                    indexAddStorage;                // add storage to index

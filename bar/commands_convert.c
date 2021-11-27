@@ -52,8 +52,8 @@
 typedef struct
 {
   StorageInfo             storageInfo;
-  ConstString             newJobUUID;
-  ConstString             newScheduleUUID;
+  const char              *newJobUUID;
+  const char              *newScheduleUUID;
   uint64                  newCreatedDateTime;
   const JobOptions        *newJobOptions;
   GetNamePasswordFunction getNamePasswordFunction;
@@ -156,8 +156,8 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 \***********************************************************************/
 
 LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
-                           ConstString             newJobUUID,
-                           ConstString             newScheduleUUID,
+                           const char              *newJobUUID,
+                           const char              *newScheduleUUID,
                            uint64                  newCreatedDateTime,
                            const JobOptions        *newJobOptions,
                            GetNamePasswordFunction getNamePasswordFunction,
@@ -251,17 +251,17 @@ LOCAL void doneConvertInfo(ConvertInfo *convertInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors archiveStore(StorageInfo  *storageInfo,
-                          IndexId      uuidId,
-                          ConstString  jobUUID,
-                          ConstString  scheduleUUID,
-                          IndexId      entityId,
-                          ArchiveTypes archiveType,
-                          IndexId      storageId,
-                          int          partNumber,
-                          ConstString  intermediateFileName,
-                          uint64       intermediateFileSize,
-                          void         *userData
+LOCAL Errors archiveStore(const StorageInfo *storageInfo,
+                          IndexId           uuidId,
+                          ConstString       jobUUID,
+                          ConstString       scheduleUUID,
+                          IndexId           entityId,
+                          ArchiveTypes      archiveType,
+                          IndexId           storageId,
+                          int               partNumber,
+                          ConstString       intermediateFileName,
+                          uint64            intermediateFileSize,
+                          void              *userData
                          )
 {
   ConvertInfo *convertInfo = (ConvertInfo*)userData;
@@ -1672,8 +1672,8 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 
 LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
-                              ConstString      newJobUUID,
-                              ConstString      newScheduleUUID,
+                              const char       *newJobUUID,
+                              const char       *newScheduleUUID,
                               uint64           newCreatedDateTime,
                               const JobOptions *newJobOptions
                              )
@@ -1721,21 +1721,21 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert meta      ...");
 
   // set new job UUID, schedule UUOD, created date/time comment
-  if (!String_isEmpty(newJobUUID)) String_set(jobUUID,newJobUUID);
-  if (!String_isEmpty(newScheduleUUID)) String_set(scheduleUUID,newScheduleUUID);
+  if (!stringIsEmpty(newJobUUID)) String_setCString(jobUUID,newJobUUID);
+  if (!stringIsEmpty(newScheduleUUID)) String_setCString(scheduleUUID,newScheduleUUID);
   if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
   if (CmdOption_isSet(&globalOptions.comment)) String_set(comment,newJobOptions->comment);
 
   // create new meta entry
   error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
-                               hostName,
-                               userName,
-                               jobUUID,
-                               scheduleUUID,
+                               String_cString(hostName),
+                               String_cString(userName),
+                               String_cString(jobUUID),
+                               String_cString(scheduleUUID),
                                archiveType,
                                createdDateTime,
-                               comment
+                               String_cString(comment)
                               );
   if (error != ERROR_NONE)
   {
@@ -2252,8 +2252,8 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
 /*---------------------------------------------------------------------*/
 
 Errors Command_convert(const StringList        *storageNameList,
-                       ConstString             newJobUUID,
-                       ConstString             newScheduleUUID,
+                       const char              *newJobUUID,
+                       const char              *newScheduleUUID,
                        uint64                  newCreatedDateTime,
                        JobOptions              *newJobOptions,
                        GetNamePasswordFunction getNamePasswordFunction,

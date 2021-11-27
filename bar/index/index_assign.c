@@ -641,17 +641,20 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   {
     if (error == ERROR_NONE)
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET type=%d \
-                                WHERE id=%lld \
-                               ",
-                               toArchiveType,
-                               toEntityId
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_UINT("type",toArchiveType)
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(toEntityId)
+                              )
+                             );
     }
   }
 
@@ -750,6 +753,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
+                               DATABASE_FLAG_NONE,
                                DATABASE_COLUMN_TYPES(),
                                "UPDATE entities \
                                 SET uuidId =%lld, \
@@ -778,19 +782,19 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     if (error == ERROR_NONE)
     {
       error = Database_update(&indexHandle->databaseHandle,
-                               NULL,  // changedRowCount
-                               "entities",
-                               DATABASE_FLAG_NONE,
-                               DATABASE_VALUES
-                               (
-                                 DATABASE_VALUE_UINT("type", toArchiveType),
-                               ),
-                               "id=?",
-                               DATABASE_FILTERS
-                               (
-                                 DATABASE_FILTER_KEY(entityId)
-                               )
-                              );
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_UINT("type",toArchiveType)
+                              ),
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entityId)
+                              )
+                             );
     }
   }
 
@@ -891,17 +895,20 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
   {
     if (error == ERROR_NONE)
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET type=%d \
-                                WHERE jobUUID=%'S \
-                               ",
-                               toArchiveType,
-                               jobUUID
-                              );
+      error = Database_update(&indexHandle->databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_UINT("type",toArchiveType)
+                              ),
+                              "jobUUID=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_STRING(jobUUID)
+                              )
+                             );
     }
   }
 
