@@ -65,7 +65,7 @@
   #include "minidump.h"
 #endif /* HAVE_BREAKPAD */
 
-#include "bar_global.h"
+#include "bar_common.h"
 #include "commands_create.h"
 #include "commands_list.h"
 #include "commands_restore.h"
@@ -1038,8 +1038,8 @@ void printWarning(const char *text, ...)
 void printError(const char *text, ...)
 {
   va_list arguments;
-  String  saveLine;
   String  line;
+  String  saveLine;
   size_t  bytesWritten;
 
   assert(text != NULL);
@@ -1277,299 +1277,6 @@ const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
   }
 
   return buffer;
-}
-
-void templateInit(TemplateHandle   *templateHandle,
-                  const char       *templateString,
-                  ExpandMacroModes expandMacroMode,
-                  uint64           dateTime
-                 )
-{
-  assert(templateHandle != NULL);
-
-  // init variables
-  templateHandle->templateString  = templateString;
-  templateHandle->expandMacroMode = expandMacroMode;
-  templateHandle->dateTime        = dateTime;
-  templateHandle->textMacros      = NULL;
-  templateHandle->textMacroCount  = 0;
-}
-
-void templateMacros(TemplateHandle   *templateHandle,
-                    const TextMacro  textMacros[],
-                    uint             textMacroCount
-                   )
-{
-  TextMacro *newTextMacros;
-  uint      newTextMacroCount;
-
-  assert(templateHandle != NULL);
-
-  // add macros
-  newTextMacroCount = templateHandle->textMacroCount+textMacroCount;
-  newTextMacros = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
-  if (newTextMacros == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  memcpy(&newTextMacros[templateHandle->textMacroCount],textMacros,textMacroCount*sizeof(TextMacro));
-  templateHandle->textMacros     = newTextMacros;
-  templateHandle->textMacroCount = newTextMacroCount;
-}
-
-String templateDone(TemplateHandle *templateHandle,
-                    String         string
-                   )
-{
-  TextMacro *newTextMacros;
-  uint      newTextMacroCount;
-  #ifdef HAVE_LOCALTIME_R
-    struct tm tmBuffer;
-  #endif /* HAVE_LOCALTIME_R */
-  struct tm *tm;
-  char      buffer[256];
-  uint      weekNumberU,weekNumberW;
-  ulong     i;
-  char      format[4];
-  size_t    length;
-  uint      z;
-
-  assert(templateHandle != NULL);
-
-  // init variables
-  if (string == NULL) string = String_new();
-
-  // get local time
-  #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r((const time_t*)&templateHandle->dateTime,&tmBuffer);
-  #else /* not HAVE_LOCALTIME_R */
-    tm = localtime((const time_t*)&templateHandle->dateTime);
-  #endif /* HAVE_LOCALTIME_R */
-  assert(tm != NULL);
-
-  // get week numbers
-  strftime(buffer,sizeof(buffer)-1,"%U",tm); buffer[sizeof(buffer)-1] = '\0';
-  weekNumberU = (uint)atoi(buffer);
-  strftime(buffer,sizeof(buffer)-1,"%W",tm); buffer[sizeof(buffer)-1] = '\0';
-  weekNumberW = (uint)atoi(buffer);
-
-  // add week macros
-  newTextMacroCount = templateHandle->textMacroCount+4;
-  newTextMacros = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
-  if (newTextMacros == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+0],"%U2",(weekNumberU%2)+1,"[12]"  );
-  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+1],"%U4",(weekNumberU%4)+1,"[1234]");
-  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+2],"%W2",(weekNumberW%2)+1,"[12]"  );
-  TEXT_MACRO_N_INTEGER(newTextMacros[templateHandle->textMacroCount+3],"%W4",(weekNumberW%4)+1,"[1234]");
-  templateHandle->textMacros     = newTextMacros;
-  templateHandle->textMacroCount = newTextMacroCount;
-
-  // expand macros
-  Misc_expandMacros(string,
-                    templateHandle->templateString,
-                    templateHandle->expandMacroMode,
-                    templateHandle->textMacros,
-                    templateHandle->textMacroCount,
-                    FALSE
-                   );
-
-  // expand date/time macros, replace %% -> %
-  i = 0L;
-  while (i < String_length(string))
-  {
-    switch (String_index(string,i))
-    {
-      case '%':
-        if ((i+1) < String_length(string))
-        {
-          switch (String_index(string,i+1))
-          {
-            case '%':
-              // %% -> %
-              String_remove(string,i,1);
-              i += 1L;
-              break;
-            case 'a':
-            case 'A':
-            case 'b':
-            case 'B':
-            case 'c':
-            case 'C':
-            case 'd':
-            case 'D':
-            case 'e':
-            case 'E':
-            case 'F':
-            case 'g':
-            case 'G':
-            case 'h':
-            case 'H':
-            case 'I':
-            case 'j':
-            case 'k':
-            case 'l':
-            case 'm':
-            case 'M':
-            case 'n':
-            case 'O':
-            case 'p':
-            case 'P':
-            case 'r':
-            case 'R':
-            case 's':
-            case 'S':
-            case 't':
-            case 'T':
-            case 'u':
-            case 'U':
-            case 'V':
-            case 'w':
-            case 'W':
-            case 'x':
-            case 'X':
-            case 'y':
-            case 'Y':
-            case 'z':
-            case 'Z':
-            case '+':
-              // format date/time part
-              switch (String_index(string,i+1))
-              {
-                case 'E':
-                case 'O':
-                  // %Ex, %Ox: extended date/time macros
-                  format[0] = '%';
-                  format[1] = String_index(string,i+1);
-                  format[2] = String_index(string,i+2);
-                  format[3] = '\0';
-
-                  String_remove(string,i,3);
-                  break;
-                default:
-                  // %x: date/time macros
-                  format[0] = '%';
-                  format[1] = String_index(string,i+1);
-                  format[2] = '\0';
-
-                  String_remove(string,i,2);
-                  break;
-              }
-              length = strftime(buffer,sizeof(buffer)-1,format,tm); buffer[sizeof(buffer)-1] = '\0';
-
-              // insert into string
-              switch (templateHandle->expandMacroMode)
-              {
-                case EXPAND_MACRO_MODE_STRING:
-                  String_insertBuffer(string,i,buffer,length);
-                  i += length;
-                  break;
-                case EXPAND_MACRO_MODE_PATTERN:
-                  for (z = 0 ; z < length; z++)
-                  {
-                    if (strchr("*+?{}():[].^$|",buffer[z]) != NULL)
-                    {
-                      String_insertChar(string,i,'\\');
-                      i += 1L;
-                    }
-                    String_insertChar(string,i,buffer[z]);
-                    i += 1L;
-                  }
-                  break;
-                #ifndef NDEBUG
-                  default:
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    break; /* not reached */
-                  #endif /* NDEBUG */
-              }
-              break;
-            default:
-              // keep %x
-              i += 2L;
-              break;
-          }
-        }
-        else
-        {
-          // keep % at end of string
-          i += 1L;
-        }
-        break;
-      default:
-        i += 1L;
-        break;
-    }
-  }
-
-  // free resources
-  free((void*)templateHandle->textMacros);
-
-  return string;
-}
-
-String expandTemplate(const char       *templateString,
-                      ExpandMacroModes expandMacroMode,
-                      time_t           timestamp,
-                      const TextMacro  textMacros[],
-                      uint             textMacroCount
-                     )
-{
-  TemplateHandle templateHandle;
-
-  templateInit(&templateHandle,
-               templateString,
-               expandMacroMode,
-               timestamp
-              );
-  templateMacros(&templateHandle,
-                 textMacros,
-                 textMacroCount
-                );
-
-  return templateDone(&templateHandle,
-                      NULL  // string
-                     );
-}
-
-Errors executeTemplate(const char       *templateString,
-                       time_t           timestamp,
-                       const TextMacro  textMacros[],
-                       uint             textMacroCount
-                      )
-{
-  String script;
-  Errors error;
-
-  if (!stringIsEmpty(templateString))
-  {
-    script = expandTemplate(templateString,
-                            EXPAND_MACRO_MODE_STRING,
-                            timestamp,
-                            textMacros,
-                            textMacroCount
-                           );
-    if (!String_isEmpty(script))
-    {
-      // execute script
-      error = Misc_executeScript(String_cString(script),
-                                 CALLBACK_(executeIOOutput,NULL),
-                                 CALLBACK_(executeIOOutput,NULL)
-                                );
-      String_delete(script);
-    }
-    else
-    {
-      error = ERROR_EXPAND_TEMPLATE;
-    }
-  }
-  else
-  {
-    error = ERROR_NONE;
-  }
-
-  return error;
 }
 
 /***********************************************************************\
@@ -3408,10 +3115,16 @@ LOCAL Errors runJob(ConstString jobUUIDName)
 
   // create archive
   error = Command_create(NULL, // masterIO
-                         NULL, // job UUID
-                         NULL, // schedule UUID
-                         NULL, // scheduleTitle
-                         NULL, // scheduleCustomText
+// TODO: use jobUUID?
+                         #ifndef NDEBUG
+                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                           (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                         #else
+                           NULL,  // job UUID
+                           NULL,  // schedule UUID
+                         #endif
+                         NULL,  // scheduleTitle
+                         NULL,  // scheduleCustomText
                          globalOptions.storageName,
                          &globalOptions.includeEntryList,
                          &globalOptions.excludePatternList,
@@ -3575,8 +3288,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         {
           // create archive
           error = Command_create(NULL, // masterIO
-                                 NULL, // job UUID
-                                 scheduleUUID,
+// TODO: use jobUUID?
+                                 #ifndef NDEBUG
+                                   (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : NULL,
+                                 #else
+                                   NULL, // job UUID
+                                 #endif
+                                 String_cString(scheduleUUID),
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
                                  globalOptions.storageName,
@@ -3594,7 +3312,6 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  CALLBACK_(NULL,NULL),  // isAborted
                                  NULL  // logHandle
                                 );
-
         }
 
         // free resources
@@ -3709,14 +3426,25 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                    );
             break;
           case COMMAND_CONVERT:
-            error = Command_convert(&storageNameList,
-                                    jobUUID,
-                                    scheduleUUID,
-                                    0LL,  // newCreatedDateTime
-                                    &jobOptions,
-                                    CALLBACK_(getCryptPasswordFromConsole,NULL),
-                                    NULL  // logHandle
-                                   );
+            #ifndef NDEBUG
+              error = Command_convert(&storageNameList,
+                                      (globalOptions.debug.indexUUID != NULL) ? String_cString(globalOptions.debug.indexUUID) : String_cString(jobUUID),
+                                      String_cString(scheduleUUID),
+                                      0LL,  // newCreatedDateTime
+                                      &jobOptions,
+                                      CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                      NULL  // logHandle
+                                     );
+            #else
+              error = Command_convert(&storageNameList,
+                                      String_cString(jobUUID),
+                                      String_cString(scheduleUUID),
+                                      0LL,  // newCreatedDateTime
+                                      &jobOptions,
+                                      CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                      NULL  // logHandle
+                                     );
+            #endif
             break;
           default:
             break;
@@ -3777,7 +3505,7 @@ LOCAL Errors runDebug(void)
   Errors           error;
   JobOptions       jobOptions;
   StorageSpecifier storageSpecifier;
-  IndexId          storageId;
+  IndexId          entityId,storageId;
   StorageInfo      storageInfo;
   ulong            totalEntryCount;
   uint64           totalEntrySize;
@@ -3948,10 +3676,87 @@ LOCAL Errors runDebug(void)
     }
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
+    // delete storage if it exists
+    if (Index_findStorageByName(indexHandle,
+                                &storageSpecifier,
+                                globalOptions.debug.indexAddStorage,
+                                NULL,  // uuidId,
+                                &entityId,
+                                NULL,  // jobUUID,
+                                NULL,  // scheduleUUID,
+                                &storageId,
+                                NULL,  // dateTime,
+                                NULL,  // size,
+                                NULL,  // indexState,
+                                NULL,  // indexMode,
+                                NULL,  // lastCheckedDateTime,
+                                NULL,  // errorMessage,
+                                NULL,  // totalEntryCount,
+                                NULL  // totalEntrySize
+                               )
+        && (entityId == INDEX_ID_ENTITY(globalOptions.debug.indexEntityId))
+       )
+    {
+      error = Index_deleteStorage(indexHandle,storageId);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot delete storage '%s' (error: %s)!",
+                   String_cString(globalOptions.debug.indexAddStorage),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+    }
+
+    // create entity
+    if (globalOptions.debug.indexEntityId != DATABASE_ID_NONE)
+    {
+      while (!Index_findEntity(indexHandle,
+                               INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
+                               NULL,  // findJobUUID
+                               NULL,  // findScheduleUUID
+                               NULL,  // findHostName
+                               ARCHIVE_TYPE_ANY,
+                               0LL,  // findCreatedDateTime
+                               NULL,  // jobUUID
+                               NULL,  // scheduleUUID
+                               NULL,  // uuidId
+                               NULL,  // entityId
+                               NULL,  // archiveType
+                               NULL,  // createdDateTime
+                               NULL,  // lastErrorMessage
+                               NULL,  // totalEntryCount
+                               NULL  // totalEntrySize
+                             )
+             )
+      {
+        error = Index_newEntity(indexHandle,
+                                MISC_UUID_NONE,
+                                MISC_UUID_NONE,
+                                NULL,  // hostName,
+                                NULL,  // userName,
+                                ARCHIVE_TYPE_NORMAL,
+                                0LL,  // createdDateTime
+                                FALSE,  // locked
+                                &entityId
+                               );
+        if (error != ERROR_NONE)
+        {
+          printError("Cannot create new entity for storage '%s' (error: %s)!",
+                     String_cString(globalOptions.debug.indexAddStorage),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+      }
+    }
+
     // create storage
     error = Index_newStorage(indexHandle,
                              INDEX_ID_NONE, // uuidId
-                             INDEX_ID_NONE, // entityId
+                             INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
                              NULL,  // hostName
                              NULL,  // userName
                              globalOptions.debug.indexAddStorage,
@@ -3964,7 +3769,7 @@ LOCAL Errors runDebug(void)
     if (error != ERROR_NONE)
     {
       printError("Cannot create new storage '%s' (error: %s)!",
-                 globalOptions.debug.indexAddStorage,
+                 String_cString(globalOptions.debug.indexAddStorage),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -3982,7 +3787,7 @@ LOCAL Errors runDebug(void)
     // index update
     error = Archive_updateIndex(indexHandle,
                                 INDEX_ID_NONE,
-                                INDEX_ID_NONE,
+                                INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
                                 storageId,
                                 &storageInfo,
                                 &totalEntryCount,
@@ -4027,8 +3832,8 @@ LOCAL Errors runDebug(void)
     }
     if (error != ERROR_NONE)
     {
-      printError("Cannot create new storage '%s' (error: %s)!",
-                 globalOptions.debug.indexAddStorage,
+      printError("Cannot set state of storage '%s' (error: %s)!",
+                 String_cString(globalOptions.debug.indexAddStorage),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);

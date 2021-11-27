@@ -3,7 +3,7 @@
 * $Revision: 3438 $
 * $Date: 2015-01-02 10:45:04 +0100 (Fri, 02 Jan 2015) $
 * $Author: torsten $
-* Contents: Backup ARchiver main program
+* Contents: Backup ARchiver common functions
 * Systems: all
 *
 \***********************************************************************/
@@ -29,6 +29,7 @@
 #include "common/semaphores.h"
 #include "common/passwords.h"
 #include "common/patternlists.h"
+#include "common/misc.h"
 
 #include "entrylists.h"
 #include "compress.h"
@@ -111,6 +112,27 @@
 //#define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty -dry-run"
 
 #define MIN_PASSWORD_QUALITY_LEVEL                0.6
+
+// file name extensions
+#define FILE_NAME_EXTENSION_ARCHIVE_FILE          ".bar"
+#define FILE_NAME_EXTENSION_INCREMENTAL_FILE      ".bid"
+
+// program exit codes
+typedef enum
+{
+  EXITCODE_OK                     =   0,
+  EXITCODE_FAIL                   =   1,
+
+  EXITCODE_INVALID_ARGUMENT       =   5,
+  EXITCODE_CONFIG_ERROR,
+
+  EXITCODE_TESTCODE               = 124,
+  EXITCODE_INIT_FAIL              = 125,
+  EXITCODE_FATAL_ERROR            = 126,
+  EXITCODE_FUNCTION_NOT_SUPPORTED = 127,
+
+  EXITCODE_UNKNOWN                = 128
+} ExitCodes;
 
 // run modes
 typedef enum
@@ -681,6 +703,16 @@ typedef struct
 extern const StorageFlags STORAGE_FLAGS_NONE;
 extern const StorageFlags STORAGE_FLAGS_NO_STORAGE;
 
+// template expand handle
+typedef struct
+{
+  const char       *templateString;
+  ExpandMacroModes expandMacroMode;
+  uint64           dateTime;
+  const TextMacro  *textMacros;
+  uint             textMacroCount;
+} TemplateHandle;
+
 // commands
 typedef enum
 {
@@ -912,6 +944,10 @@ typedef struct
   {
     uint                      serverLevel;                    // server debug level (for debug only)
     bool                      serverFixedIdsFlag;             // always generate id=1
+    String                    indexUUID;                      // index UUID
+// TODO:
+//    DatabaseId                indexEntityId;
+    int64                indexEntityId;
     bool                      indexWaitOperationsFlag;        // TRUE to wait for index operation
     bool                      indexPurgeDeletedStoragesFlag;  // TRUE to purge deleted storages
     String                    indexAddStorage;                // add storage to index
@@ -1041,6 +1077,122 @@ typedef bool(*IsAbortedFunction)(void *userData);
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
+
+/***********************************************************************\
+* Name   : templateInit
+* Purpose: init template
+* Input  : templateHandle  - template handle variable
+*          templateString  - template string
+*          expandMacroMode - expand macro mode
+*          dateTime        - date/time [s] or 0
+* Output : templateHandle  - template handle
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void templateInit(TemplateHandle   *templateHandle,
+                  const char       *templateString,
+                  ExpandMacroModes expandMacroMode,
+                  uint64           dateTime
+                 );
+
+/***********************************************************************\
+* Name   : templateMacros
+* Purpose: add template macros
+* Input  : templateHandle - template handle
+*          textMacros     - macros array
+*          textMacroCount - number of macros
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void templateMacros(TemplateHandle   *templateHandle,
+                    const TextMacro  textMacros[],
+                    uint             textMacroCount
+                   );
+
+/***********************************************************************\
+* Name   : templateDone
+* Purpose: template done
+* Input  : templateHandle - template handle
+*          string         - string variable (can be NULL)
+* Output : -
+* Return : expanded templated string
+* Notes  : if string variable is NULL, new string is allocated and must
+*          be freed!
+\***********************************************************************/
+
+String templateDone(TemplateHandle *templateHandle,
+                    String         string
+                   );
+
+/***********************************************************************\
+* Name   : expandTemplate
+* Purpose: expand template
+* Input  : templateString  - template string
+*          expandMacroMode - expand macro mode
+*          timestamp       - timestamp [s] or 0
+*          textMacros      - macros array
+*          textMacroCount  - number of macros
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+String expandTemplate(const char       *templateString,
+                      ExpandMacroModes expandMacroMode,
+                      time_t           timestamp,
+                      const TextMacro  textMacros[],
+                      uint             textMacroCount
+                     );
+
+/***********************************************************************\
+* Name   : executeTemplate
+* Purpose: execute template as script
+* Input  : templateString    - template string
+*          timestamp         - timestamp [s] or 0
+*          textMacros        - macros array
+*          textMacroCount    - number of macros
+*          executeIOFunction - execute I/O function
+*          executeIOUserData - execute I/O function user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors executeTemplate(const char        *templateString,
+                       time_t            timestamp,
+                       const TextMacro   textMacros[],
+                       uint              textMacroCount,
+                       ExecuteIOFunction executeIOFunction,
+                       void              *executeIOUserData
+                      );
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : parseBandWidthNumber
+* Purpose: parse band width number
+* Input  : s - string to parse
+*          commandLineUnits
+* Output : value - number variable
+* Return : TRUE iff number parsed
+* Notes  : -
+\***********************************************************************/
+
+bool parseBandWidthNumber(ConstString s, ulong *n);
+
+/***********************************************************************\
+* Name   : getBandWidth
+* Purpose: get band width from value or external file
+* Input  : bandWidthList - band width list settings or NULL
+* Output : -
+* Return : return band width [bits/s] or 0
+* Notes  : -
+\***********************************************************************/
+
+ulong getBandWidth(BandWidthList *bandWidthList);
 
 #ifdef __cplusplus
   extern "C" {

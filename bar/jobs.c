@@ -41,8 +41,10 @@
 #include "common/patternlists.h"
 #include "common/passwords.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "errors.h"
-#include "bar_global.h"
 #include "configuration.h"
 #include "entrylists.h"
 #include "archive.h"
@@ -51,7 +53,6 @@
 #include "continuous.h"
 #include "server_io.h"
 #include "connector.h"
-#include "bar.h"
 
 #include "jobs.h"
 

@@ -29,12 +29,13 @@
 #include "common/misc.h"
 #include "errors.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "storage.h"
 #include "server_io.h"
 #include "index_definition.h"
 #include "archive.h"
-#include "bar.h"
-#include "bar_global.h"
 
 #include "index/index.h"
 #include "index/index_common.h"
@@ -925,775 +926,6 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       0LL,
                       1LL
                      );
-}
-
-/***********************************************************************\
-* Name   : addToNewest
-* Purpose: add storage entries to newest entries (if newest)
-* Input  : indexHandle  - index handle
-*          storageId    - storage database id
-*          progressInfo - progress info (or NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors addToNewest(IndexHandle  *indexHandle,
-                         DatabaseId   storageId,
-                         ProgressInfo *progressInfo
-                        )
-{
-  typedef struct EntryNode
-  {
-    LIST_NODE_HEADER(struct EntryNode);
-
-    DatabaseId entryId;
-    DatabaseId uuidId;
-    DatabaseId entityId;
-    IndexTypes indexType;
-    String     name;
-    uint64     timeLastChanged;
-    uint32     userId;
-    uint32     groupId;
-    uint32     permission;
-    uint64     size;
-
-    struct
-    {
-      DatabaseId entryId;
-      uint64     timeLastChanged;
-    } newest;
-  } EntryNode;
-
-  typedef struct
-  {
-    LIST_HEADER(EntryNode);
-  } EntryList;
-
-  /***********************************************************************\
-  * Name   : freeEntryNode
-  * Purpose: free entry node
-  * Input  : entryNode - entry node
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  auto void freeEntryNode(EntryNode *entryNode);
-  void freeEntryNode(EntryNode *entryNode)
-  {
-    assert(entryNode != NULL);
-
-    String_delete(entryNode->name);
-  }
-
-  EntryList  entryList;
-  DatabaseId entryId;
-  DatabaseId uuidId;
-  DatabaseId entityId;
-  uint       indexType;
-  String     entryName;
-  uint64     timeLastChanged;
-  uint32     userId;
-  uint32     groupId;
-  uint32     permission;
-  uint64     size;
-  Errors     error;
-  EntryNode  *entryNode;
-  bool       transactionFlag;
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-
-  // init variables
-  List_init(&entryList);
-  entryName = String_new();
-  error     = ERROR_NONE;
-
-// TODO:
-  // get entries info to add
-  if (error == ERROR_NONE)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      return Database_get(&indexHandle->databaseHandle,
-                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                          {
-                            assert(values != NULL);
-                            assert(valueCount == 10);
-
-                            UNUSED_VARIABLE(userData);
-                            UNUSED_VARIABLE(valueCount);
-
-                            entryId         = values[0].id;
-                            uuidId          = values[1].id;
-                            entityId        = values[2].id;
-                            indexType       = values[3].id;
-                            String_setBuffer(entryName,values[4].text.data,values[4].text.length);
-                            timeLastChanged = values[5].dateTime;
-                            userId          = values[6].u;
-                            groupId         = values[7].u;
-                            permission      = values[8].u;
-                            size            = values[9].u64;
-
-                            return ERROR_NONE;
-                          },NULL),
-                          NULL,  // changedRowCount
-                          DATABASE_TABLES
-                          (
-                            "entryFragments \
-                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                              LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                            ",
-                            "directoryEntries \
-                              LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                              LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                            ",
-                            "linkEntries \
-                              LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                              LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                            ",
-                            "specialEntries \
-                              LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                              LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                            "
-                          ),
-                          DATABASE_FLAG_NONE,
-                          DATABASE_COLUMNS
-                          (
-                            DATABASE_COLUMN_KEY     ("entries.id"),
-                            DATABASE_COLUMN_KEY     ("entries.uuidId"),
-                            DATABASE_COLUMN_KEY     ("entries.entityId"),
-                            DATABASE_COLUMN_UINT    ("entries.type"),
-                            DATABASE_COLUMN_STRING  ("entries.name"),
-                            DATABASE_COLUMN_DATETIME("entries.timeLastChanged","timeLastChanged"),
-                            DATABASE_COLUMN_UINT    ("entries.userId"),
-                            DATABASE_COLUMN_UINT    ("entries.groupId"),
-                            DATABASE_COLUMN_UINT    ("entries.permission"),
-                            DATABASE_COLUMN_UINT64  ("entries.size")
-                          ),
-                          "storageId=?",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_KEY(storageId)
-                          ),
-                          "ORDER BY timeLastChanged DESC",
-                          0LL,
-                          1LL
-                         );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      entryNode = LIST_NEW_NODE(EntryNode);
-      if (entryNode == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-
-      entryNode->entryId                = entryId;
-      entryNode->uuidId                 = uuidId;
-      entryNode->entityId               = entityId;
-      entryNode->indexType              = (IndexTypes)indexType;
-      entryNode->name                   = String_duplicate(entryName);
-      entryNode->timeLastChanged        = timeLastChanged;
-      entryNode->userId                 = (uint32)userId;
-      entryNode->groupId                = (uint32)groupId;
-      entryNode->permission             = (uint32)permission;
-      entryNode->size                   = (uint64)size;
-      entryNode->newest.entryId         = DATABASE_ID_NONE;
-      entryNode->newest.timeLastChanged = 0LL;
-
-      List_append(&entryList,entryNode);
-
-      return ERROR_NONE;
-    });
-  }
-  if (error != ERROR_NONE)
-  {
-    String_delete(entryName);
-    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-    return error;
-  }
-
-  // find newest entries for entries to add
-//fprintf(stderr,"%s, %d: find newest entries for entries to add %d\n",__FILE__,__LINE__,List_count(&entryList));
-  IndexCommon_resetProgress(progressInfo,List_count(&entryList));
-  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      return Database_get(&indexHandle->databaseHandle,
-                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                          {
-                            assert(values != NULL);
-                            assert(valueCount == 2);
-
-                            UNUSED_VARIABLE(userData);
-                            UNUSED_VARIABLE(valueCount);
-
-                            entryNode->newest.entryId         = values[0].id;
-                            entryNode->newest.timeLastChanged = values[1].dateTime;
-
-                            return ERROR_NONE;
-                          },NULL),
-                          NULL,  // changedRowCount
-                          DATABASE_TABLES
-                          (
-                            "entryFragments \
-                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                              LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
-                            ",
-                            "directoryEntries \
-                              LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                              LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
-                            ",
-                            "linkEntries \
-                              LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                              LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
-                            ",
-                            "specialEntries \
-                              LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                              LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
-                            "
-                          ),
-                          DATABASE_FLAG_NONE,
-                          DATABASE_COLUMNS
-                          (
-                            DATABASE_COLUMN_KEY     ("entriesNewest.id"),
-                            DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged","timeLastChanged")
-                          ),
-                          "    storages.deletedFlag!=1 \
-                           AND entriesNewest.name=? \
-                          ",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_STRING(entryNode->name)
-                          ),
-                          "ORDER BY timeLastChanged DESC",
-                          0LL,
-                          1LL
-                         );
-    });
-    IndexCommon_progressStep(progressInfo);
-  }
-  if (error != ERROR_NONE)
-  {
-    String_delete(entryName);
-    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-    return error;
-  }
-
-  // add entries to newest entries
-//fprintf(stderr,"%s, %d: add entries to newest entries %d\n",__FILE__,__LINE__,List_count(&entryList));
-  INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,
-  {
-    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
-    {
-//fprintf(stderr,"b");
-      if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
-      {
-        INDEX_DOX(error,
-                  indexHandle,
-        {
-          return Database_insert(&indexHandle->databaseHandle,
-                                 NULL,  // changedRowCount
-                                 "entriesNewest",
-                                 DATABASE_FLAG_REPLACE,
-                                 DATABASE_VALUES
-                                 (
-                                   DATABASE_VALUE_KEY   ("entryId",         entryNode->entryId),
-                                   DATABASE_VALUE_KEY   ("uuidId",          entryNode->uuidId),
-                                   DATABASE_VALUE_KEY   ("entityId",        entryNode->entityId),
-                                   DATABASE_VALUE_UINT  ("type",            entryNode->indexType),
-                                   DATABASE_VALUE_STRING("name",            entryNode->name),
-                                   DATABASE_VALUE_UINT64("timeLastChanged", entryNode->timeLastChanged),
-                                   DATABASE_VALUE_UINT  ("userId",          entryNode->userId),
-                                   DATABASE_VALUE_UINT  ("groupId",         entryNode->groupId),
-                                   DATABASE_VALUE_UINT  ("permission",      entryNode->permission),
-                                   DATABASE_VALUE_UINT64("size",            entryNode->size)
-                                 )
-                                );
-        });
-      }
-
-#if 1
-      if (error == ERROR_NONE)
-      {
-        error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
-      }
-#endif
-    }
-
-    return error;
-  });
-//fprintf(stderr,"%s, %d: add entries to newest entries %d done\n",__FILE__,__LINE__,List_count(&entryList));
-  if (error != ERROR_NONE)
-  {
-    String_delete(entryName);
-    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-    return error;
-  }
-
-  // free resources
-  String_delete(entryName);
-  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : IndexStorage_removeFromNewest
-* Purpose: remove storage entries from newest entries
-* Input  : indexHandle  - index handle
-*          storageId    - storage database id
-*          progressInfo - progress info (or NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors removeFromNewest(IndexHandle  *indexHandle,
-                              DatabaseId   storageId,
-                              ProgressInfo *progressInfo
-                             )
-{
-  typedef struct EntryNode
-  {
-    LIST_NODE_HEADER(struct EntryNode);
-
-    DatabaseId entryId;
-    String     name;
-
-    struct
-    {
-      DatabaseId entryId;
-      DatabaseId uuidId;
-      DatabaseId entityId;
-      IndexTypes indexType;
-      uint64     timeLastChanged;
-      uint32     userId;
-      uint32     groupId;
-      uint32     permission;
-      uint64     size;
-    } newest;
-  } EntryNode;
-
-  typedef struct
-  {
-    LIST_HEADER(EntryNode);
-  } EntryList;
-
-  /***********************************************************************\
-  * Name   : freeEntryNode
-  * Purpose: free entry node
-  * Input  : entryNode - entry node
-  * Output : -
-  * Return : -
-  * Notes  : -
-  \***********************************************************************/
-
-  auto void freeEntryNode(EntryNode *entryNode);
-  void freeEntryNode(EntryNode *entryNode)
-  {
-    assert(entryNode != NULL);
-
-    String_delete(entryNode->name);
-  }
-
-  EntryList  entryList;
-  String     entryName;
-  Errors     error;
-  EntryNode  *entryNode;
-  bool       transactionFlag;
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-
-  // init variables
-  List_init(&entryList);
-  entryName = String_new();
-  error     = ERROR_NONE;
-
-  // get entries info to remove
-  if (error == ERROR_NONE)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      if (error == ERROR_NONE)
-      {
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 2);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               entryNode = LIST_NEW_NODE(EntryNode);
-                               if (entryNode == NULL)
-                               {
-                                 HALT_INSUFFICIENT_MEMORY();
-                               }
-
-                               entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
-                               entryNode->newest.entryId = DATABASE_ID_NONE;
-
-                               List_append(&entryList,entryNode);
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "entryFragments \
-                                  LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY   ("entries.id"),
-                               DATABASE_COLUMN_STRING("entries.name")
-                             ),
-                             "entryFragments.storageId=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(storageId)
-                             ),
-                             NULL, // orderGroup
-                             0LL,
-                             DATABASE_UNLIMITED
-                            );
-      }
-      if (error == ERROR_NONE)
-      {
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 2);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               entryNode = LIST_NEW_NODE(EntryNode);
-                               if (entryNode == NULL)
-                               {
-                                 HALT_INSUFFICIENT_MEMORY();
-                               }
-
-                               entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
-                               entryNode->newest.entryId = DATABASE_ID_NONE;
-
-                               List_append(&entryList,entryNode);
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "directoryEntries \
-                                  LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY   ("entries.id"),
-                               DATABASE_COLUMN_STRING("entries.name")
-                             ),
-                             "directoryEntries.storageId=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(storageId)
-                             ),
-                             NULL, // orderGroup
-                             0LL,
-                             DATABASE_UNLIMITED
-                            );
-      }
-      if (error == ERROR_NONE)
-      {
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 2);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               entryNode = LIST_NEW_NODE(EntryNode);
-                               if (entryNode == NULL)
-                               {
-                                 HALT_INSUFFICIENT_MEMORY();
-                               }
-
-                               entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
-                               entryNode->newest.entryId = DATABASE_ID_NONE;
-
-                               List_append(&entryList,entryNode);
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "linkEntries \
-                                   LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY   ("entries.id"),
-                               DATABASE_COLUMN_STRING("entries.name")
-                             ),
-                             "linkEntries.storageId=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(storageId)
-                             ),
-                             NULL, // orderGroup
-                             0LL,
-                             DATABASE_UNLIMITED
-                            );
-      }
-      if (error == ERROR_NONE)
-      {
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 2);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               entryNode = LIST_NEW_NODE(EntryNode);
-                               if (entryNode == NULL)
-                               {
-                                 HALT_INSUFFICIENT_MEMORY();
-                               }
-
-                               entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
-                               entryNode->newest.entryId = DATABASE_ID_NONE;
-
-                               List_append(&entryList,entryNode);
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "specialEntries \
-                                  LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY   ("entries.id"),
-                               DATABASE_COLUMN_STRING("entries.name")
-                             ),
-                             "specialEntries.storageId=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(storageId)
-                             ),
-                             NULL, // orderGroup
-                             0LL,
-                             DATABASE_UNLIMITED
-                            );
-      }
-
-      return error;
-    });
-  }
-  if (error != ERROR_NONE)
-  {
-    String_delete(entryName);
-    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-    return error;
-  }
-
-  // find new newest entries for entries to remove
-//fprintf(stderr,"%s, %d: find new newest entries for entries to remove %d\n",__FILE__,__LINE__,List_count(&entryList));
-  IndexCommon_resetProgress(progressInfo,List_count(&entryList));
-  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
-  {
-//fprintf(stderr,"c");
-    // wait until index is unused
-    WAIT_NOT_IN_USE(5LL*MS_PER_SECOND);
-
-    if ((entryNode->prev == NULL) || !String_equals(entryNode->prev->name,entryNode->name))
-    {
-      INDEX_DOX(error,
-                indexHandle,
-      {
-        return Database_get(&indexHandle->databaseHandle,
-                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                            {
-                              assert(values != NULL);
-                              assert(valueCount == 9);
-
-                              UNUSED_VARIABLE(userData);
-                              UNUSED_VARIABLE(valueCount);
-
-                              entryNode->newest.entryId         = values[0].id;
-                              entryNode->newest.uuidId          = values[1].id;
-                              entryNode->newest.entityId        = values[2].id;
-                              entryNode->newest.indexType       = (IndexTypes)values[3].u;
-                              entryNode->newest.timeLastChanged = values[4].dateTime;
-                              entryNode->newest.userId          = values[5].u;
-                              entryNode->newest.groupId         = values[6].u;
-                              entryNode->newest.permission      = values[7].u;
-                              entryNode->newest.size            = values[8].u64;
-
-                              return ERROR_NONE;
-                            },NULL),
-                            NULL,  // changedRowCount
-                            DATABASE_TABLES
-                            (
-                              "entryFragments \
-                                 LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                                 LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                              ",
-                              "directoryEntries \
-                                 LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                              ",
-                              "linkEntries \
-                                 LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                              ",
-                              "specialEntries \
-                                 LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                              "
-                            ),
-                            DATABASE_FLAG_NONE,
-                            DATABASE_COLUMNS
-                            (
-                              DATABASE_COLUMN_KEY     ("entries.id"),
-                              DATABASE_COLUMN_KEY     ("entries.uuidId"),
-                              DATABASE_COLUMN_UINT    ("entries.type"),
-                              DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
-                              DATABASE_COLUMN_UINT    ("entries.userId"),
-                              DATABASE_COLUMN_UINT    ("entries.groupId"),
-                              DATABASE_COLUMN_UINT    ("entries.permission"),
-                              DATABASE_COLUMN_UINT64  ("entries.size")
-                            ),
-                            "    storages.deletedFlag!=1 \
-                             AND entries.name=?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_STRING(entryNode->name)
-                            ),
-                            "ORDER BY entries.timeLastChanged DESC",
-                            0LL,
-                            1LL
-                           );
-      });
-    }
-    IndexCommon_progressStep(progressInfo);
-  }
-//fprintf(stderr,"%s, %d: find new newest entries for entries to remove %d done\n",__FILE__,__LINE__,List_count(&entryList));
-  if (error != ERROR_NONE)
-  {
-    String_delete(entryName);
-    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-    return error;
-  }
-
-  // remove/update entries from newest entries
-//fprintf(stderr,"%s, %d: remove/update entries from newest entries %d\n",__FILE__,__LINE__,List_count(&entryList));
-  INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,
-  {
-    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
-    {
-//fprintf(stderr,"d");
-      INDEX_DOX(error,
-                indexHandle,
-      {
-        error = Database_delete(&indexHandle->databaseHandle,
-                                NULL,  // changedRowCount
-                                "entriesNewest",
-                                DATABASE_FLAG_NONE,
-                                "entryId=? \
-                                ",
-                                DATABASE_FILTERS
-                                (
-                                  DATABASE_FILTER_KEY(entryNode->entryId)
-                                ),
-                                0
-                               );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        if (entryNode->newest.entryId != DATABASE_ID_NONE)
-        {
-          error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
-                                  "entriesNewest",
-                                  DATABASE_FLAG_REPLACE,
-                                  DATABASE_VALUES
-                                  (
-                                    DATABASE_VALUE_STRING("entryId",        entryNode->newest.entryId),
-                                    DATABASE_VALUE_KEY   ("uuidId",         entryNode->newest.uuidId),
-                                    DATABASE_VALUE_KEY   ("entityId",       entryNode->newest.entityId),
-                                    DATABASE_VALUE_UINT  ("type",           entryNode->newest.indexType),
-                                    DATABASE_VALUE_STRING("name",           entryNode->name),
-                                    DATABASE_VALUE_UINT64("timeLastChanged",entryNode->newest.timeLastChanged),
-                                    DATABASE_VALUE_UINT  ("userId",         entryNode->newest.userId),
-                                    DATABASE_VALUE_UINT  ("groupId",        entryNode->newest.groupId),
-                                    DATABASE_VALUE_UINT  ("permission",     entryNode->newest.permission),
-                                    DATABASE_VALUE_UINT64("size",           entryNode->newest.size)
-                                  )
-                                 );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-        }
-
-        return ERROR_NONE;
-      });
-
-#if 1
-      if (error == ERROR_NONE)
-      {
-        error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
-      }
-#endif
-    }
-
-    return error;
-  });
-  if (error != ERROR_NONE)
-  {
-    String_delete(entryName);
-    List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-    return error;
-  }
-
-  // free resources
-  String_delete(entryName);
-  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
-
-  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2755,10 +1987,10 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
     #endif
     if (error == ERROR_NONE)
     {
-      error = removeFromNewest(indexHandle,
-                               storageId,
-                               progressInfo
-                              );
+      error = IndexStorage_removeFromNewest(indexHandle,
+                                            storageId,
+                                            progressInfo
+                                           );
     }
     #ifdef INDEX_DEBUG_PURGE
       fprintf(stderr,"%s, %d: error: %s, removed from newest entries: %llums\n",__FILE__,__LINE__,
@@ -3230,6 +2462,719 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
   return ERROR_NONE;
 }
 
+Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
+                                DatabaseId   storageId,
+                                ProgressInfo *progressInfo
+                               )
+{
+  typedef struct EntryNode
+  {
+    LIST_NODE_HEADER(struct EntryNode);
+
+    DatabaseId entryId;
+    DatabaseId uuidId;
+    DatabaseId entityId;
+    IndexTypes indexType;
+    String     name;
+    uint64     timeLastChanged;
+    uint32     userId;
+    uint32     groupId;
+    uint32     permission;
+    uint64     size;
+
+    struct
+    {
+      DatabaseId entryId;
+      uint64     timeLastChanged;
+    } newest;
+  } EntryNode;
+
+  typedef struct
+  {
+    LIST_HEADER(EntryNode);
+  } EntryList;
+
+  /***********************************************************************\
+  * Name   : freeEntryNode
+  * Purpose: free entry node
+  * Input  : entryNode - entry node
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeEntryNode(EntryNode *entryNode);
+  void freeEntryNode(EntryNode *entryNode)
+  {
+    assert(entryNode != NULL);
+
+    String_delete(entryNode->name);
+  }
+
+  EntryList  entryList;
+  DatabaseId entryId;
+  DatabaseId uuidId;
+  DatabaseId entityId;
+  uint       indexType;
+  String     entryName;
+  uint64     timeLastChanged;
+  uint32     userId;
+  uint32     groupId;
+  uint32     permission;
+  uint64     size;
+  Errors     error;
+  EntryNode  *entryNode;
+  bool       transactionFlag;
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  List_init(&entryList);
+  entryName = String_new();
+  error     = ERROR_NONE;
+
+  // get entries info to add
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_get(&indexHandle->databaseHandle,
+                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                          {
+                            assert(values != NULL);
+                            assert(valueCount == 10);
+
+                            UNUSED_VARIABLE(userData);
+                            UNUSED_VARIABLE(valueCount);
+
+                            entryId         = values[0].id;
+                            uuidId          = values[1].id;
+                            entityId        = values[2].id;
+                            indexType       = values[3].id;
+                            String_setBuffer(entryName,values[4].text.data,values[4].text.length);
+                            timeLastChanged = values[5].dateTime;
+                            userId          = values[6].u;
+                            groupId         = values[7].u;
+                            permission      = values[8].u;
+                            size            = values[9].u64;
+                            assert(entryId != DATABASE_ID_NONE);
+
+                            entryNode = LIST_NEW_NODE(EntryNode);
+                            if (entryNode == NULL)
+                            {
+                              HALT_INSUFFICIENT_MEMORY();
+                            }
+
+                            entryNode->entryId                = entryId;
+                            entryNode->uuidId                 = uuidId;
+                            entryNode->entityId               = entityId;
+                            entryNode->indexType              = (IndexTypes)indexType;
+                            entryNode->name                   = String_duplicate(entryName);
+                            entryNode->timeLastChanged        = timeLastChanged;
+                            entryNode->userId                 = (uint32)userId;
+                            entryNode->groupId                = (uint32)groupId;
+                            entryNode->permission             = (uint32)permission;
+                            entryNode->size                   = (uint64)size;
+                            entryNode->newest.entryId         = DATABASE_ID_NONE;
+                            entryNode->newest.timeLastChanged = 0LL;
+
+                            List_append(&entryList,entryNode);
+
+                            return ERROR_NONE;
+                          },NULL),
+                          NULL,  // changedRowCount
+                          DATABASE_TABLES
+                          (
+                            "storages \
+                              LEFT JOIN entryFragments ON entryFragments.storageId=storages.id \
+                              LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                            ",
+                            "storages \
+                              LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
+                              LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                            ",
+                            "storages \
+                              LEFT JOIN linkEntries ON linkEntries.storageId=storages.id \
+                              LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                            ",
+                            "storages \
+                              LEFT JOIN specialEntries ON specialEntries.storageId=storages.id \
+                              LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                            "
+                          ),
+                          DATABASE_FLAG_NONE,
+                          DATABASE_COLUMNS
+                          (
+                            DATABASE_COLUMN_KEY     ("entries.id"),
+                            DATABASE_COLUMN_KEY     ("entries.uuidId"),
+                            DATABASE_COLUMN_KEY     ("entries.entityId"),
+                            DATABASE_COLUMN_UINT    ("entries.type"),
+                            DATABASE_COLUMN_STRING  ("entries.name"),
+                            DATABASE_COLUMN_DATETIME("entries.timeLastChanged","timeLastChanged"),
+                            DATABASE_COLUMN_UINT    ("entries.userId"),
+                            DATABASE_COLUMN_UINT    ("entries.groupId"),
+                            DATABASE_COLUMN_UINT    ("entries.permission"),
+                            DATABASE_COLUMN_UINT64  ("entries.size")
+                          ),
+                          "    storages.id=? \
+                           AND entries.deletedFlag=? \
+                          ",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_KEY   (storageId),
+                            DATABASE_FILTER_BOOL  (FALSE)
+                          ),
+                          "GROUP BY entries.id ORDER BY timeLastChanged DESC",
+                          0LL,
+                          DATABASE_UNLIMITED
+                         );
+    });
+  }
+
+  // find newest entries for entries to add
+  IndexCommon_resetProgress(progressInfo,List_count(&entryList));
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_get(&indexHandle->databaseHandle,
+                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                          {
+                            assert(values != NULL);
+                            assert(valueCount == 2);
+
+                            UNUSED_VARIABLE(userData);
+                            UNUSED_VARIABLE(valueCount);
+
+                            entryNode->newest.entryId         = values[0].id;
+                            entryNode->newest.timeLastChanged = values[1].dateTime;
+
+                            return ERROR_NONE;
+                          },NULL),
+                          NULL,  // changedRowCount
+                          DATABASE_TABLES
+                          (
+                            "entriesNewest",
+                          ),
+                          DATABASE_FLAG_NONE,
+                          DATABASE_COLUMNS
+                          (
+                            DATABASE_COLUMN_KEY     ("id"),
+                            DATABASE_COLUMN_DATETIME("timeLastChanged")
+                          ),
+                          "entriesNewest.name=?",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_STRING(entryNode->name)
+                          ),
+                          NULL,  // orderGroup
+                          0LL,
+                          1LL
+                         );
+    });
+    IndexCommon_progressStep(progressInfo);
+  }
+
+  // update/add entries to newest entries
+  INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,
+  {
+    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+    {
+      if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
+      {
+        INDEX_DOX(error,
+                  indexHandle,
+        {
+          if (entryNode->newest.entryId != DATABASE_ID_NONE)
+          {
+            return Database_update(&indexHandle->databaseHandle,
+                                   NULL,  // changedRowCount
+                                   "entriesNewest",
+                                   DATABASE_FLAG_REPLACE,
+                                   DATABASE_VALUES
+                                   (
+                                     DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
+                                     DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
+                                     DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
+                                     DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
+                                     DATABASE_VALUE_STRING  ("name",            entryNode->name),
+                                     DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
+                                     DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
+                                     DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
+                                     DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
+                                     DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                   ),
+                                   "id=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(entryNode->newest.entryId)
+                                   )
+                                  );
+          }
+          else
+          {
+            return Database_insert(&indexHandle->databaseHandle,
+                                   NULL,  // changedRowCount
+                                   "entriesNewest",
+                                   DATABASE_FLAG_REPLACE,
+                                   DATABASE_VALUES
+                                   (
+                                     DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
+                                     DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
+                                     DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
+                                     DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
+                                     DATABASE_VALUE_STRING  ("name",            entryNode->name),
+                                     DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
+                                     DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
+                                     DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
+                                     DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
+                                     DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                   )
+                                  );
+          }
+        });
+      }
+
+#if 1
+      if (error == ERROR_NONE)
+      {
+        error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
+      }
+#endif
+    }
+
+    return error;
+  });
+//fprintf(stderr,"%s, %d: add entries to newest entries %d done\n",__FILE__,__LINE__,List_count(&entryList));
+
+  // free resources
+  String_delete(entryName);
+  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+
+  return error;
+}
+
+Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
+                                     DatabaseId   storageId,
+                                     ProgressInfo *progressInfo
+                                    )
+{
+  typedef struct EntryNode
+  {
+    LIST_NODE_HEADER(struct EntryNode);
+
+    DatabaseId entryId;
+    String     name;
+
+    struct
+    {
+      DatabaseId entryId;
+      DatabaseId uuidId;
+      DatabaseId entityId;
+      IndexTypes indexType;
+      uint64     timeLastChanged;
+      uint32     userId;
+      uint32     groupId;
+      uint32     permission;
+      uint64     size;
+    } newest;
+  } EntryNode;
+
+  typedef struct
+  {
+    LIST_HEADER(EntryNode);
+  } EntryList;
+
+  /***********************************************************************\
+  * Name   : freeEntryNode
+  * Purpose: free entry node
+  * Input  : entryNode - entry node
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeEntryNode(EntryNode *entryNode);
+  void freeEntryNode(EntryNode *entryNode)
+  {
+    assert(entryNode != NULL);
+
+    String_delete(entryNode->name);
+  }
+
+  EntryList  entryList;
+  String     entryName;
+  Errors     error;
+  EntryNode  *entryNode;
+  bool       transactionFlag;
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // init variables
+  List_init(&entryList);
+  entryName = String_new();
+  error     = ERROR_NONE;
+
+  // get entries info to remove
+  if (error == ERROR_NONE)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      if (error == ERROR_NONE)
+      {
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+                               assert(entryNode->entryId != DATABASE_ID_NONE);
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "entryFragments \
+                                  LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "entryFragments.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             ),
+                             NULL, // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "directoryEntries \
+                                  LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "directoryEntries.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             ),
+                             NULL, // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "linkEntries \
+                                   LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "linkEntries.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             ),
+                             NULL, // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+      }
+      if (error == ERROR_NONE)
+      {
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryNode = LIST_NEW_NODE(EntryNode);
+                               if (entryNode == NULL)
+                               {
+                                 HALT_INSUFFICIENT_MEMORY();
+                               }
+
+                               entryNode->entryId        = values[0].id;
+                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->newest.entryId = DATABASE_ID_NONE;
+
+                               List_append(&entryList,entryNode);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "specialEntries \
+                                  LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id"),
+                               DATABASE_COLUMN_STRING("entries.name")
+                             ),
+                             "specialEntries.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(storageId)
+                             ),
+                             NULL, // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+      }
+
+      return error;
+    });
+  }
+
+  // find new newest entries for entries to remove
+  IndexCommon_resetProgress(progressInfo,List_count(&entryList));
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  {
+    // wait until index is unused
+    WAIT_NOT_IN_USE(5LL*MS_PER_SECOND);
+
+    if ((entryNode->prev == NULL) || !String_equals(entryNode->prev->name,entryNode->name))
+    {
+      INDEX_DOX(error,
+                indexHandle,
+      {
+        return Database_get(&indexHandle->databaseHandle,
+                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                            {
+                              assert(values != NULL);
+                              assert(valueCount == 9);
+
+                              UNUSED_VARIABLE(userData);
+                              UNUSED_VARIABLE(valueCount);
+
+                              entryNode->newest.entryId         = values[0].id;
+                              entryNode->newest.uuidId          = values[1].id;
+                              entryNode->newest.entityId        = values[2].id;
+                              entryNode->newest.indexType       = (IndexTypes)values[3].u;
+                              entryNode->newest.timeLastChanged = values[4].dateTime;
+                              entryNode->newest.userId          = values[5].u;
+                              entryNode->newest.groupId         = values[6].u;
+                              entryNode->newest.permission      = values[7].u;
+                              entryNode->newest.size            = values[8].u64;
+
+                              return ERROR_NONE;
+                            },NULL),
+                            NULL,  // changedRowCount
+                            DATABASE_TABLES
+                            (
+                              "entryFragments \
+                                 LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                 LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                              ",
+                              "directoryEntries \
+                                 LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                              ",
+                              "linkEntries \
+                                 LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                              ",
+                              "specialEntries \
+                                 LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                              "
+                            ),
+                            DATABASE_FLAG_NONE,
+                            DATABASE_COLUMNS
+                            (
+                              DATABASE_COLUMN_KEY     ("entries.id"),
+                              DATABASE_COLUMN_KEY     ("entries.uuidId"),
+                              DATABASE_COLUMN_UINT    ("entries.type"),
+                              DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
+                              DATABASE_COLUMN_UINT    ("entries.userId"),
+                              DATABASE_COLUMN_UINT    ("entries.groupId"),
+                              DATABASE_COLUMN_UINT    ("entries.permission"),
+                              DATABASE_COLUMN_UINT64  ("entries.size")
+                            ),
+                            "    storages.deletedFlag!=1 \
+                             AND entries.name=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_STRING(entryNode->name)
+                            ),
+                            "ORDER BY entries.timeLastChanged DESC",
+                            0LL,
+                            1LL
+                           );
+      });
+    }
+    IndexCommon_progressStep(progressInfo);
+  }
+
+  // remove/update entries from newest entries
+  INDEX_INTERRUPTABLE_OPERATION_DOX(error,indexHandle,transactionFlag,
+  {
+    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+    {
+      INDEX_DOX(error,
+                indexHandle,
+      {
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "entriesNewest",
+                                DATABASE_FLAG_NONE,
+                                "entryId=? \
+                                ",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(entryNode->entryId)
+                                ),
+                                0
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        if (entryNode->newest.entryId != DATABASE_ID_NONE)
+        {
+          error = Database_insert(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entriesNewest",
+                                  DATABASE_FLAG_REPLACE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_STRING("entryId",        entryNode->newest.entryId),
+                                    DATABASE_VALUE_KEY   ("uuidId",         entryNode->newest.uuidId),
+                                    DATABASE_VALUE_KEY   ("entityId",       entryNode->newest.entityId),
+                                    DATABASE_VALUE_UINT  ("type",           entryNode->newest.indexType),
+                                    DATABASE_VALUE_STRING("name",           entryNode->name),
+                                    DATABASE_VALUE_UINT64("timeLastChanged",entryNode->newest.timeLastChanged),
+                                    DATABASE_VALUE_UINT  ("userId",         entryNode->newest.userId),
+                                    DATABASE_VALUE_UINT  ("groupId",        entryNode->newest.groupId),
+                                    DATABASE_VALUE_UINT  ("permission",     entryNode->newest.permission),
+                                    DATABASE_VALUE_UINT64("size",           entryNode->newest.size)
+                                  )
+                                 );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+
+        return ERROR_NONE;
+      });
+
+#if 1
+      if (error == ERROR_NONE)
+      {
+        error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,5LL*MS_PER_SECOND);
+      }
+#endif
+    }
+
+    return error;
+  });
+
+  // free resources
+  String_delete(entryName);
+  List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+
+  return error;
+}
+
 Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                                      DatabaseId  storageId
                                     )
@@ -3505,9 +3450,6 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   }
 
   // update aggregate data
-fprintf(stderr,"%s:%d: totalFileCount=%lu\n",__FILE__,__LINE__,totalFileCount);
-fprintf(stderr,"%s:%d: totalDirectoryCount=%lu\n",__FILE__,__LINE__,totalDirectoryCount);
-fprintf(stderr,"%s:%d: totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount=%lu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount);
   error = Database_update(&indexHandle->databaseHandle,
                           NULL,  // changedRowCount
                           "storages",
@@ -4016,28 +3958,31 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                           UNUSED_VARIABLE(userData);
                           UNUSED_VARIABLE(valueCount);
 
-                          String_setBuffer(storageName,values[5].text.data,values[5].text.length);
-
-                          if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
+                          if (!foundFlag)
                           {
-                            foundFlag = Storage_equalSpecifiers(findStorageSpecifier,findArchiveName,
-                                                                &storageSpecifier,NULL
-                                                               );
-                            if (foundFlag)
+                            String_setBuffer(storageName,values[5].text.data,values[5].text.length);
+
+                            if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
                             {
-                              if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID  (values[0].id);
-                              if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[1].id);
-                              if (jobUUID             != NULL) String_setBuffer(jobUUID,values[2].text.data,values[2].text.length);
-                              if (scheduleUUID        != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
-                              if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
-                              if (dateTime            != NULL) (*dateTime)            = values[6].u64;
-                              if (size                != NULL) (*size)                = values[7].u64;
-                              if (indexState          != NULL) (*indexState)          = values[8].u;
-                              if (indexMode           != NULL) (*indexMode)           = values[9].u;
-                              if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[10].u64;
-                              if (errorMessage        != NULL) String_setBuffer(errorMessage,values[11].text.data,values[11].text.length);
-                              if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
-                              if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
+                              foundFlag = Storage_equalSpecifiers(findStorageSpecifier,findArchiveName,
+                                                                  &storageSpecifier,NULL
+                                                                 );
+                              if (foundFlag)
+                              {
+                                if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID  (values[0].id);
+                                if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[1].id);
+                                if (jobUUID             != NULL) String_setBuffer(jobUUID,values[2].text.data,values[2].text.length);
+                                if (scheduleUUID        != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
+                                if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
+                                if (dateTime            != NULL) (*dateTime)            = values[6].u64;
+                                if (size                != NULL) (*size)                = values[7].u64;
+                                if (indexState          != NULL) (*indexState)          = values[8].u;
+                                if (indexMode           != NULL) (*indexMode)           = values[9].u;
+                                if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[10].u64;
+                                if (errorMessage        != NULL) String_setBuffer(errorMessage,values[11].text.data,values[11].text.length);
+                                if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
+                                if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
+                              }
                             }
                           }
 
@@ -4047,8 +3992,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                         DATABASE_TABLES
                         (
                           "storages \
-                               LEFT JOIN entities ON storages.entityId=entities.id \
-                               LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
+                             LEFT JOIN entities ON storages.entityId=entities.id \
+                             LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
                           "
                         ),
                         DATABASE_FLAG_NONE,
@@ -4069,13 +4014,14 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                           DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
                           DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
-                        "storages.deletedFlag!=1",
+                        "storages.deletedFlag=?",
                         DATABASE_FILTERS
                         (
+                          DATABASE_FILTER_BOOL(FALSE)
                         ),
                         "GROUP BY storages.id",  // orderGroup
                         0LL,
-                        1LL
+                        DATABASE_UNLIMITED
                        );
   });
   if (error != ERROR_NONE)
@@ -4746,8 +4692,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexHandle           *indexHandle,
                               IndexId               uuidId,
                               IndexId               entityId,
-                              ConstString           jobUUID,
-                              ConstString           scheduleUUID,
+                              const char            *jobUUID,
+                              const char            *scheduleUUID,
                               const IndexId         indexIds[],
                               ulong                 indexIdCount,
                               IndexTypeSet          indexTypeSet,
@@ -4827,8 +4773,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   IndexCommon_filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(entityId),"AND","storages.entityId=%lld",Index_getDatabaseId(entityId));
-  IndexCommon_filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
-  IndexCommon_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
+  IndexCommon_filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%s'",jobUUID);
+  IndexCommon_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%s'",scheduleUUID);
   IndexCommon_filterAppend(filterString,!String_isEmpty(hostName),"AND","entities.hostName LIKE %S",hostName);
   IndexCommon_filterAppend(filterString,!String_isEmpty(userName),"AND","storages.userName LIKE %S",userName);
 // TODO:  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
@@ -5350,10 +5296,10 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
 
     if (updateNewest)
     {
-      error = addToNewest(indexHandle,
-                          Index_getDatabaseId(storageId),
-                          NULL  // progressInfo
-                         );
+      error = IndexStorage_addToNewest(indexHandle,
+                                       Index_getDatabaseId(storageId),
+                                       NULL  // progressInfo
+                                      );
       if (error != ERROR_NONE)
       {
         return error;
@@ -5499,25 +5445,387 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
         totalSpecialCount   = 0;
       }
 
-      // set deleted flag
-      error = Database_update(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "storages",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_BOOL("deletedFlag", TRUE),
-                              ),
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(Index_getDatabaseId(storageId))
-                              )
-                             );
-      if (error != ERROR_NONE)
+      DATABASE_TRANSACTION_DO(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        return error;
-      }
+        // set deleted flag in entries
+#if 1
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               DatabaseId entryId;
+                               Errors     error;
+
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryId = values[0].id;
+                               assert(entryId != DATABASE_ID_NONE);
+
+                               // check if entry fragment from other storage exists
+                               if (!Database_existsValue(&indexHandle->databaseHandle,
+                                                         "entryFragments",
+                                                         "id",
+                                                         "    entryId=? \
+                                                          AND storageId!=? \
+                                                         ",
+                                                         DATABASE_FILTERS
+                                                         (
+                                                           DATABASE_FILTER_KEY (entryId),
+                                                           DATABASE_FILTER_KEY (Index_getDatabaseId(storageId))
+                                                         )
+                                                        )
+                                  )
+                               {
+                                 error = Database_update(&indexHandle->databaseHandle,
+                                                         NULL,  // changedRowCount
+                                                         "entries",
+                                                         DATABASE_FLAG_NONE,
+                                                         DATABASE_VALUES
+                                                         (
+                                                           DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
+                                                         ),
+                                                         "id=?",
+                                                         DATABASE_FILTERS
+                                                         (
+                                                           DATABASE_FILTER_KEY   (entryId)
+                                                         )
+                                                        );
+                               }
+                               else
+                               {
+                                 error = ERROR_NONE;
+                               }
+
+                               return error;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "entries \
+                                  LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id")
+                             ),
+                             "entryFragments.storageId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
+
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               DatabaseId entryId;
+                               Errors     error;
+
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryId = values[0].id;
+                               assert(entryId != DATABASE_ID_NONE);
+
+                               return Database_update(&indexHandle->databaseHandle,
+                                                      NULL,  // changedRowCount
+                                                      "entries",
+                                                      DATABASE_FLAG_NONE,
+                                                      DATABASE_VALUES
+                                                      (
+                                                        DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
+                                                      ),
+                                                      "id=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY   (entryId)
+                                                      )
+                                                     );
+
+                               return error;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "entries \
+                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id")
+                             ),
+                             "    entries.type=? \
+                              AND directoryEntries.storageId=? \
+                             ",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
+                               DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
+
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               DatabaseId entryId;
+                               Errors     error;
+
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryId = values[0].id;
+                               assert(entryId != DATABASE_ID_NONE);
+
+                               return Database_update(&indexHandle->databaseHandle,
+                                                      NULL,  // changedRowCount
+                                                      "entries",
+                                                      DATABASE_FLAG_NONE,
+                                                      DATABASE_VALUES
+                                                      (
+                                                        DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
+                                                      ),
+                                                      "id=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY   (entryId)
+                                                      )
+                                                     );
+
+                               return error;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "entries \
+                                  LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id")
+                             ),
+                             "    entries.type=? \
+                              AND linkEntries.storageId=? \
+                             ",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
+                               DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
+
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               DatabaseId entryId;
+                               Errors     error;
+
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryId = values[0].id;
+                               assert(entryId != DATABASE_ID_NONE);
+
+                               return Database_update(&indexHandle->databaseHandle,
+                                                      NULL,  // changedRowCount
+                                                      "entries",
+                                                      DATABASE_FLAG_NONE,
+                                                      DATABASE_VALUES
+                                                      (
+                                                        DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
+                                                      ),
+                                                      "id=?",
+                                                      DATABASE_FILTERS
+                                                      (
+                                                        DATABASE_FILTER_KEY   (entryId)
+                                                      )
+                                                     );
+
+                               return error;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "entries \
+                                  LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id")
+                             ),
+                             "    entries.type=? \
+                              AND specialEntries.storageId=? \
+                             ",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
+                               DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
+#else
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               DatabaseId entryId;
+                               Errors     error;
+
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               entryId = values[0].id;
+                               assert(entryId != DATABASE_ID_NONE);
+
+                               // check if entry fragment from other storage exists
+                               if (!Database_existsValue(&indexHandle->databaseHandle,
+                                                         "entryFragments",
+                                                         "id",
+                                                         "    entryId=? \
+                                                          AND storageId!=? \
+                                                         ",
+                                                         DATABASE_FILTERS
+                                                         (
+                                                           DATABASE_FILTER_KEY (entryId),
+                                                           DATABASE_FILTER_KEY (Index_getDatabaseId(storageId))
+                                                         )
+                                                        )
+                                  )
+                               {
+                                 error = Database_update(&indexHandle->databaseHandle,
+                                                         NULL,  // changedRowCount
+                                                         "entries",
+                                                         DATABASE_FLAG_NONE,
+                                                         DATABASE_VALUES
+                                                         (
+                                                           DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
+                                                         ),
+                                                         "id=?",
+                                                         DATABASE_FILTERS
+                                                         (
+                                                           DATABASE_FILTER_KEY   (entryId)
+                                                         )
+                                                        );
+                               }
+                               else
+                               {
+                                 error = ERROR_NONE;
+                               }
+
+                               return error;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "entryFragments \
+                                 LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                 LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                               ",
+                               "directoryEntries \
+                                 LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                               ",
+                               "linkEntries \
+                                 LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                               ",
+                               "specialEntries \
+                                 LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY   ("entries.id")
+                             ),
+                             "storages.id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
+                             ),
+                             NULL,  // orderGroup
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
+#endif
+        // set deleted flag in storages
+        error = Database_update(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "storages",
+                                DATABASE_FLAG_NONE,
+                                DATABASE_VALUES
+                                (
+                                  DATABASE_VALUE_BOOL("deletedFlag", TRUE),
+                                ),
+                                "id=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(Index_getDatabaseId(storageId))
+                                )
+                               );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
 //fprintf(stderr,"%s, %d: deleted storageId=%lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
 #if 0
 fprintf(stderr,"%s, %d: deleted storage %lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
@@ -5536,68 +5844,48 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
 );
 #endif
 
-      return ERROR_NONE;
-    });
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+        // update aggregates
+        error = Database_update(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "entities",
+                                DATABASE_FLAG_NONE,
+                                DATABASE_VALUES
+                                (
+                                  DATABASE_VALUE_UINT  ("totalEntryCount",      "totalEntryCount-?",     totalEntryCount),
+                                  DATABASE_VALUE_UINT64("totalEntrySize",       "totalEntrySize-?",      totalEntrySize),
+                                  DATABASE_VALUE_UINT  ("totalFileCount",       "totalFileCount-?",      totalFileCount),
+                                  DATABASE_VALUE_UINT64("totalFileSize",        "totalFileSize-?",       totalFileSize),
+                                  DATABASE_VALUE_UINT  ("totalImageCount",      "totalImageCount-?",     totalImageCount),
+                                  DATABASE_VALUE_UINT64("totalImageSize",       "totalImageSize-?",      totalImageSize),
+                                  DATABASE_VALUE_UINT  ("totalDirectoryCount",  "totalDirectoryCount-?", totalDirectoryCount),
+                                  DATABASE_VALUE_UINT  ("totalLinkCount",       "totalLinkCount-?",      totalLinkCount),
+                                  DATABASE_VALUE_UINT  ("totalHardlinkCount",   "totalHardlinkCount-?",  totalHardlinkCount),
+                                  DATABASE_VALUE_UINT64("totalHardlinkSize",    "totalHardlinkSize-?",   totalHardlinkSize),
+                                  DATABASE_VALUE_UINT  ("totalSpecialCount",    "totalSpecialCount-?",   totalSpecialCount),
+                                ),
+                                "id=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(entityId)
+                                )
+                               );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
 
-//TODO: too slow to do it immediately; postpone to index thread
-#if 0
-    // remove from newest entries
-    error = removeFromNewest(indexHandle,
-                             Index_getDatabaseId(storageId),
-                             NULL  // progressInfo
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-#endif
-
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      // update aggregates
-      error = Database_update(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "entities",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_UINT  ("totalEntryCount",      "totalEntryCount-?",     totalEntryCount),
-                                DATABASE_VALUE_UINT64("totalEntrySize",       "totalEntrySize-?",      totalEntrySize),
-                                DATABASE_VALUE_UINT  ("totalFileCount",       "totalFileCount-?",      totalFileCount),
-                                DATABASE_VALUE_UINT64("totalFileSize",        "totalFileSize-?",       totalFileSize),
-                                DATABASE_VALUE_UINT  ("totalImageCount",      "totalImageCount-?",     totalImageCount),
-                                DATABASE_VALUE_UINT64("totalImageSize",       "totalImageSize-?",      totalImageSize),
-                                DATABASE_VALUE_UINT  ("totalDirectoryCount",  "totalDirectoryCount-?", totalDirectoryCount),
-                                DATABASE_VALUE_UINT  ("totalLinkCount",       "totalLinkCount-?",      totalLinkCount),
-                                DATABASE_VALUE_UINT  ("totalHardlinkCount",   "totalHardlinkCount-?",  totalHardlinkCount),
-                                DATABASE_VALUE_UINT64("totalHardlinkSize",    "totalHardlinkSize-?",   totalHardlinkSize),
-                                DATABASE_VALUE_UINT  ("totalSpecialCount",    "totalSpecialCount-?",   totalSpecialCount),
-                              ),
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(entityId)
-                              )
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // prune entity
-      error = IndexEntity_prune(indexHandle,
-                          NULL,  // doneFlag
-                          NULL,  // deletedCounter
-                          entityId
-                         );
-      if (error != ERROR_NONE)
-      {
-        return error;
+        // prune entity
+        error = IndexEntity_prune(indexHandle,
+                                  NULL,  // doneFlag
+                                  NULL,  // deletedCounter
+                                  entityId
+                                 );
+        if (error != ERROR_NONE)
+        {
+          DATABASE_TRANSACTION_ABORT(databaseHandle);
+          return error;
+        }
       }
 
       return ERROR_NONE;

@@ -666,14 +666,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle           *archiveHandle,
-                        ConstString             hostName,
-                        ConstString             userName,
+                        const char              *hostName,
+                        const char              *userName,
                         StorageInfo             *storageInfo,
-                        ConstString             archiveName,
+                        const char              *archiveName,
                         IndexId                 uuidId,
                         IndexId                 entityId,
-                        ConstString             jobUUID,
-                        ConstString             scheduleUUID,
+                        const char              *jobUUID,
+                        const char              *scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         uint64                  createdDateTime,
@@ -696,14 +696,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
   Errors __Archive_create(const char              *__fileName__,
                           ulong                   __lineNb__,
                           ArchiveHandle           *archiveHandle,
-                          ConstString             hostName,
-                          ConstString             userName,
+                          const char              *hostName,
+                          const char              *userName,
                           StorageInfo             *storageInfo,
-                          ConstString             archiveName,
+                          const char              *archiveName,
                           IndexId                 uuidId,
                           IndexId                 entityId,
-                          ConstString             jobUUID,
-                          ConstString             scheduleUUID,
+                          const char              *jobUUID,
+                          const char              *scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           uint64                  createdDateTime,
@@ -898,26 +898,26 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
 #ifdef NDEBUG
   Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                               ArchiveHandle    *archiveHandle,
-                              ConstString      userName,
-                              ConstString      hostName,
-                              ConstString      jobUUID,
-                              ConstString      scheduleUUID,
+                              const char       *userName,
+                              const char       *hostName,
+                              const char       *jobUUID,
+                              const char       *scheduleUUID,
                               ArchiveTypes     archiveType,
                               uint64           createdDateTime,
-                              ConstString      comment
+                              const char       *comment
                              );
 #else /* not NDEBUG */
   Errors __Archive_newMetaEntry(const char       *__fileName__,
                                 ulong            __lineNb__,
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 ArchiveHandle    *archiveHandle,
-                                ConstString      userName,
-                                ConstString      hostName,
-                                ConstString      jobUUID,
-                                ConstString      scheduleUUID,
+                                const char       *userName,
+                                const char       *hostName,
+                                const char       *jobUUID,
+                                const char       *scheduleUUID,
                                 ArchiveTypes     archiveType,
                                 uint64           createdDateTime,
-                                ConstString      comment
+                                const char       *comment
                                );
 #endif /* NDEBUG */
 
@@ -1724,7 +1724,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : Archive_updateIndex
-* Purpose: update storage index
+* Purpose: read archive content and update storage index
 * Input  : indexHandle       - index handle
 *          entityId          - entity index id or INDEX_ID_NONE
 *          storageId         - storage index id

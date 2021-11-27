@@ -32,12 +32,11 @@
 #include "common/misc.h"
 #include "errors.h"
 
+#include "bar_common.h"
 #include "storage.h"
 #include "server_io.h"
 #include "index_definition.h"
 #include "archive.h"
-#include "bar.h"
-#include "bar_global.h"
 
 #include "index/index.h"
 
@@ -201,31 +200,6 @@ extern Semaphore                  indexClearStorageLock;
 extern bool                       indexQuitFlag;
 
 /****************************** Macros *********************************/
-
-/***********************************************************************\
-* Name   : DIMPORT
-* Purpose: debug import index
-* Input  : format - format string
-*          ...    - optional arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
-  #define DIMPORT(format,...) \
-    do \
-    { \
-      logImportIndex(__FILE__,__LINE__,format, ## __VA_ARGS__); \
-    } \
-    while (0)
-#else /* not INDEX_DEBUG_IMPORT_OLD_DATABASE */
-  #define DIMPORT(format,...) \
-    do \
-    { \
-    } \
-    while (0)
-#endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
 
 /***********************************************************************\
 * Name   : INDEX_DO

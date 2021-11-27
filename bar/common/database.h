@@ -132,10 +132,11 @@ typedef enum
   DATABASE_DATATYPE_UNKNOWN
 } DatabaseDataTypes;
 
-#define DATABASE_FLAG_NONE    0
-#define DATABASE_FLAG_IGNORE  (1 << 0)
-#define DATABASE_FLAG_REPLACE (1 << 1)
-#define DATABASE_FLAG_PLAIN   (1 << 2)
+#define DATABASE_FLAG_NONE         0
+#define DATABASE_FLAG_IGNORE       (1 << 0)
+#define DATABASE_FLAG_REPLACE      (1 << 1)
+#define DATABASE_FLAG_PLAIN        (1 << 2)
+#define DATABASE_FLAG_COLUMN_NAMES (1 << 3)
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -533,6 +534,7 @@ typedef struct
     struct
     {
       MYSQL_STMT        *statementHandle;
+// TODO:
 DatabaseDataTypes *dataTypes;
       struct
       {
@@ -559,6 +561,7 @@ DatabaseDataTypes *dataTypes;
   uint                filterIndex;
 #endif
 
+  char                **columnNames;
   DatabaseValue       *results;
   uint                resultCount;
   uint                resultIndex;
@@ -587,7 +590,7 @@ DatabaseDataTypes *dataTypes;
 
 typedef Errors(*DatabaseRowFunction)(const DatabaseValue values[], uint valueCount, void *userData);
 
-// tables columns
+// table column info
 typedef struct
 {
   const DatabaseColumnName *names;
@@ -1823,6 +1826,7 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                         DatabaseRowFunction     databaseRowFunction,
                         void                    *databaseRowUserData,
                         ulong                   *changedRowCount,
+                        uint                    flags,
                         const DatabaseDataTypes columnTypes[],
                         uint                    columnTypeCount,
                         const char              *command,
@@ -1833,6 +1837,7 @@ Errors Database_vexecute(DatabaseHandle          *databaseHandle,
                          DatabaseRowFunction     databaseRowFunction,
                          void                    *databaseRowUserData,
                          ulong                   *changedRowCount,
+                         uint                    flags,
                          const DatabaseDataTypes columnTypes[],
                          uint                    columnTypeCount,
                          const char              *command,
@@ -1924,12 +1929,12 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
 *          changedRowCount - row count variable (can be NULL)
 *          tableName       - table name,
 *          flags           - insert flags; see DATABASE_FLAG__...
-*          values          - values to insert
-*          valueCount      - value count
+*          toColumns       - columns to insert
+*          toColumnsCount  - columns to insert count
 *          tableNames      - select table names
 *          tableNameCount  - select table names count
-*          columns         - select columns
-*          columnCount     - select columns couont
+*          fromColumns     - select columns
+*          fromColumnCount - select columns couont
 *          filter          - SQL filter expression
 *          filters         - filter values
 *          filterCount     - filter values count
@@ -1945,12 +1950,12 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
                              ulong                *changedRowCount,
                              const char           *tableName,
                              uint                 flags,
-                             const DatabaseValue  values[],
-                             uint                 valueCount,
+                             const DatabaseColumn toColumns[],
+                             uint                 toColumnCount,
                              const char           *tableNames[],
                              uint                 tableNameCount,
-                             DatabaseColumn       columns[],
-                             uint                 columnCount,
+                             DatabaseColumn       fromColumns[],
+                             uint                 fromColumnCount,
                              const char           *filter,
                              const DatabaseFilter filters[],
                              uint                 filterCount,
@@ -2009,7 +2014,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
                        const char           *filter,
                        const DatabaseFilter filters[],
                        uint                 filterCount,
-                       uint                 limit
+                       uint64               limit
                       );
 
 /***********************************************************************\
@@ -2036,7 +2041,6 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
                        DatabaseHandle          *databaseHandle,
                        const char              *tables,
                        uint                    flags,
-// TODO: select value datatype: name, type
                        DatabaseColumn          columns[],
                        uint                    columnCount,
                        const char              *filter,
@@ -2087,23 +2091,23 @@ bool Database_existsValue(DatabaseHandle      *databaseHandle,
 /***********************************************************************\
 * Name   : Database_get
 * Purpose: get values from database table
-* Input  : databaseHandle - database handle
-*          databaseRowFunction
-*          databaseRowUserData
-// TODO:
-*          changedRowCount
-*          tableNames        - table names
-*          tableNameCount    - table names count
-*          flags             - flags; see DATABASE_FLAG__...
-*          selectColumns     - select columns
-*          selectColumnCount - select columns count
-*          filter            - filter string
-*          filters           - filter values
-*          filterCount       - filter values count
-*          orderGroup        - order/group SQL string or NULL
-*          offset            - offset or 0
-*          limit             - limit or 0
-* Output : value - database id or DATABASE_ID_NONE
+* Input  : databaseHandle      - database handle
+*          databaseRowFunction - callback function for row data (can be
+*                                NULL)
+*          databaseRowUserData - user data for callback function
+*          changedRowCount     - number of changd rows (can be NULL)
+*          tableNames          - table names
+*          tableNameCount      - table names count
+*          flags               - flags; see DATABASE_FLAG__...
+*          columns             - select columns
+*          columnCount         - select columns count
+*          filter              - filter string
+*          filters             - filter values
+*          filterCount         - filter values count
+*          orderGroup          - order/group SQL string or NULL
+*          offset              - offset or 0
+*          limit               - limit or 0
+* Output : value - database    d or DATABASE_ID_NONE
 * Return : ERROR_NONE or error code
 * Notes  : use DATABASE_FILTERS() for filters
 \***********************************************************************/
@@ -2115,9 +2119,8 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     const char           *tableNames[],
                     uint                 tableNameCount,
                     uint                 flags,
-// TODO: select value datatype: name, type
-                    DatabaseColumn       selectColumns[],
-                    uint                 selectColumnCount,
+                    DatabaseColumn       columns[],
+                    uint                 columnCount,
                     const char           *filter,
                     const DatabaseFilter filters[],
                     uint                 filterCount,

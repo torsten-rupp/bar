@@ -804,8 +804,8 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 \***********************************************************************/
 
 bool Index_findUUID(IndexHandle  *indexHandle,
-                    ConstString  findJobUUID,
-                    ConstString  findScheduleUUID,
+                    const char   *findJobUUID,
+                    const char   *findScheduleUUID,
                     IndexId      *uuidId,
                     ulong        *executionCountNormal,
                     ulong        *executionCountFull,
@@ -1364,7 +1364,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 Errors Index_newUUID(IndexHandle *indexHandle,
-                     ConstString jobUUID,
+                     const char  *jobUUID,
                      IndexId     *uuidId
                     );
 
@@ -1522,7 +1522,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newEntity
 * Purpose: create new entity index and new uuid index (if need)
 * Input  : indexHandle     - index handle
-*          jobUUID         - unique job UUID (can be NULL)
+*          jobUUID         - unique job UUID
 *          scheduleUUID    - unique schedule UUID (can be NULL)
 *          hostName        - host name (can be NULL)
 *          userName        - user name (can be NULL)
@@ -1535,10 +1535,10 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 Errors Index_newEntity(IndexHandle  *indexHandle,
-                       ConstString  jobUUID,
-                       ConstString  scheduleUUID,
-                       ConstString  hostName,
-                       ConstString  userName,
+                       const char   *jobUUID,
+                       const char   *scheduleUUID,
+                       const char   *hostName,
+                       const char   *userName,
                        ArchiveTypes archiveType,
                        uint64       createdDateTime,
                        bool         locked,
@@ -1563,10 +1563,10 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 
 Errors Index_updateEntity(IndexHandle  *indexHandle,
                           IndexId      entityId,
-                          ConstString  jobUUID,
-                          ConstString  scheduleUUID,
-                          ConstString  hostName,
-                          ConstString  userName,
+                          const char   *jobUUID,
+                          const char   *scheduleUUID,
+                          const char   *hostName,
+                          const char   *userName,
                           ArchiveTypes archiveType,
                           uint64       createdDateTime
                          );
@@ -1730,8 +1730,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexHandle           *indexHandle,
                               IndexId               uuidId,
                               IndexId               entityId,
-                              ConstString           jobUUID,
-                              ConstString           scheduleUUID,
+                              const char            *jobUUID,
+                              const char            *scheduleUUID,
                               const IndexId         indexIds[],
                               ulong                 indexIdCount,
                               IndexTypeSet          indexTypeSet,

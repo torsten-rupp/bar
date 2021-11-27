@@ -34,11 +34,11 @@
 #include "common/files.h"
 #include "common/fragmentlists.h"
 
+#include "bar.h"
 #include "errors.h"
 #include "entrylists.h"
 #include "deltasourcelists.h"
 #include "archive.h"
-#include "bar.h"
 
 #include "commands_test.h"
 

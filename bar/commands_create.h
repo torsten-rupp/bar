@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "bar_common.h"
 #include "errors.h"
 #include "entrylists.h"
 #include "common/patternlists.h"
@@ -26,7 +27,6 @@
 #include "crypt.h"
 #include "storage.h"
 #include "server.h"
-#include "bar_global.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -91,10 +91,10 @@
 \***********************************************************************/
 
 Errors Command_create(ServerIO                     *masterIO,
-                      ConstString                  jobUUID,
-                      ConstString                  scheduleUUID,
-                      ConstString                  scheduleTitle,
-                      ConstString                  scheduleCustomText,
+                      const char                   *jobUUID,
+                      const char                   *scheduleUUID,
+                      const char                   *scheduleTitle,
+                      const char                   *scheduleCustomText,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,

@@ -21,6 +21,8 @@
 #include "common/global.h"
 #include "errors.h"
 
+#include "index/index_common.h"
+
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
@@ -68,6 +70,38 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
                           DatabaseId   storageId,
                           ProgressInfo *progressInfo
                          );
+
+/***********************************************************************\
+* Name   : IndexStroage_addToNewest
+* Purpose: add storage entries to newest entries (if newest)
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
+                                DatabaseId   storageId,
+                                ProgressInfo *progressInfo
+                               );
+
+/***********************************************************************\
+* Name   : IndexStorage_removeFromNewest
+* Purpose: remove storage entries from newest entries
+* Input  : indexHandle  - index handle
+*          storageId    - storage database id
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
+                                     DatabaseId   storageId,
+                                     ProgressInfo *progressInfo
+                                    );
 
 /***********************************************************************\
 * Name   : IndexStorage_updateAggregates

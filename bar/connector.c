@@ -1045,8 +1045,8 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   {
     // find job data
     if (Index_findUUID(indexHandle,
-                       jobUUID,
-                       scheduleUUUID,
+                       String_cString(jobUUID),
+                       String_cString(scheduleUUUID),
                        &uuidId,
                        &executionCountNormal,
                        &executionCountFull,
@@ -1142,7 +1142,10 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
   if (indexHandle != NULL)
   {
     // create new UUID
-    error = Index_newUUID(indexHandle,jobUUID,&uuidId);
+    error = Index_newUUID(indexHandle,
+                          String_cString(jobUUID),
+                          &uuidId
+                         );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -1182,7 +1185,11 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
 *            entityId=<n>
 \***********************************************************************/
 
-LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_indexNewEntity(ConnectorInfo   *connectorInfo,
+                                           IndexHandle     *indexHandle,
+                                           uint            id,
+                                           const StringMap argumentMap
+                                          )
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
@@ -1235,10 +1242,10 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   {
     // create new entity
     error = Index_newEntity(indexHandle,
-                            jobUUID,
-                            scheduleUUID,
-                            hostName,
-                            userName,
+                            String_cString(jobUUID),
+                            String_cString(scheduleUUID),
+                            String_cString(hostName),
+                            String_cString(userName),
                             archiveType,
                             createdDateTime,
                             locked,

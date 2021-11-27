@@ -1010,34 +1010,6 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const c
 }
 
 /***********************************************************************\
-* Name   : parseBandWidthNumber
-* Purpose: parse band width number
-* Input  : s - string to parse
-*          commandLineUnits
-* Output : value - number variable
-* Return : TRUE iff number parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseBandWidthNumber(ConstString s, ulong *n)
-{
-  const StringUnit UNITS[] =
-  {
-    {"T",1024LL*1024LL*1024LL*1024LL},
-    {"G",1024LL*1024LL*1024LL},
-    {"M",1024LL*1024LL},
-    {"K",1024LL},
-  };
-
-  assert(s != NULL);
-  assert(n != NULL);
-
-  (*n) = (ulong)String_toInteger64(s,STRING_BEGIN,NULL,UNITS,SIZE_OF_ARRAY(UNITS));
-
-  return TRUE;
-}
-
-/***********************************************************************\
 * Name   : newBandWidthNode
 * Purpose: create new band width node
 * Input  : -
@@ -1856,6 +1828,8 @@ LOCAL void initGlobalOptions(void)
   // debug/test only
   #ifndef NDEBUG
     globalOptions.debug.serverLevel                             = DEFAULT_SERVER_DEBUG_LEVEL;
+    globalOptions.debug.indexUUID                               = NULL;
+    globalOptions.debug.indexEntityId                           = DATABASE_ID_NONE;
     globalOptions.debug.indexWaitOperationsFlag                 = FALSE;
     globalOptions.debug.indexPurgeDeletedStoragesFlag           = FALSE;
     globalOptions.debug.indexAddStorage                         = NULL;
@@ -1880,6 +1854,7 @@ LOCAL void doneGlobalOptions(void)
     String_delete(globalOptions.debug.indexRefreshStorage);
     String_delete(globalOptions.debug.indexRemoveStorage);
     String_delete(globalOptions.debug.indexAddStorage);
+    String_delete(globalOptions.debug.indexUUID);
   #endif
 
   // --- job options default values
@@ -4368,150 +4343,6 @@ String getConfigFileName(String fileName)
 }
 
 /*---------------------------------------------------------------------*/
-
-ulong getBandWidth(BandWidthList *bandWidthList)
-{
-  uint          currentYear,currentMonth,currentDay;
-  WeekDays      currentWeekDay;
-  uint          currentHour,currentMinute;
-  BandWidthNode *matchingBandWidthNode;
-  bool          dateMatchFlag,weekDayMatchFlag,timeMatchFlag;
-  BandWidthNode *bandWidthNode;
-  ulong         n;
-  uint64        timestamp;
-  FileHandle    fileHandle;
-  String        line;
-
-  assert(bandWidthList != NULL);
-
-  n = 0L;
-
-  // get current date/time values
-  Misc_splitDateTime(Misc_getCurrentDateTime(),
-                     &currentYear,
-                     &currentMonth,
-                     &currentDay,
-                     &currentHour,
-                     &currentMinute,
-                     NULL,  // second
-                     &currentWeekDay,
-                     NULL  // isDayLightSaving
-                    );
-
-  // find best matching band width node
-  matchingBandWidthNode = NULL;
-  LIST_ITERATE(bandWidthList,bandWidthNode)
-  {
-
-    // match date
-    dateMatchFlag =       (matchingBandWidthNode == NULL)
-                       || (   (   (bandWidthNode->year == DATE_ANY)
-                               || (   (currentYear >= (uint)bandWidthNode->year)
-                                   && (   (matchingBandWidthNode->year == DATE_ANY)
-                                       || (bandWidthNode->year > matchingBandWidthNode->year)
-                                      )
-                                  )
-                              )
-                           && (   (bandWidthNode->month == DATE_ANY)
-                               || (   (bandWidthNode->year == DATE_ANY)
-                                   || (currentYear > (uint)bandWidthNode->year)
-                                   || (   (currentMonth >= (uint)bandWidthNode->month)
-                                       && (   (matchingBandWidthNode->month == DATE_ANY)
-                                           || (bandWidthNode->month > matchingBandWidthNode->month)
-                                          )
-                                      )
-                                  )
-                              )
-                           && (   (bandWidthNode->day    == DATE_ANY)
-                               || (   (bandWidthNode->month == DATE_ANY)
-                                   || (currentMonth > (uint)bandWidthNode->month)
-                                   || (   (currentDay >= (uint)bandWidthNode->day)
-                                       && (   (matchingBandWidthNode->day == DATE_ANY)
-                                           || (bandWidthNode->day > matchingBandWidthNode->day)
-                                          )
-                                      )
-                                  )
-                              )
-                          );
-
-    // check week day
-    weekDayMatchFlag =    (matchingBandWidthNode == NULL)
-                       || (   (bandWidthNode->weekDaySet == WEEKDAY_SET_ANY)
-                           && IN_SET(bandWidthNode->weekDaySet,currentWeekDay)
-                          );
-
-    // check time
-    timeMatchFlag =    (matchingBandWidthNode == NULL)
-                    || (   (   (bandWidthNode->hour  == TIME_ANY)
-                            || (   (currentHour >= (uint)bandWidthNode->hour)
-                                && (   (matchingBandWidthNode->hour == TIME_ANY)
-                                    || (bandWidthNode->hour > matchingBandWidthNode->hour)
-                                    )
-                               )
-                           )
-                        && (   (bandWidthNode->minute == TIME_ANY)
-                            || (   (bandWidthNode->hour == TIME_ANY)
-                                || (currentHour > (uint)bandWidthNode->hour)
-                                || (   (currentMinute >= (uint)bandWidthNode->minute)
-                                    && (   (matchingBandWidthNode->minute == TIME_ANY)
-                                        || (bandWidthNode->minute > matchingBandWidthNode->minute)
-                                       )
-                                   )
-                               )
-                           )
-                       );
-
-    // check if matching band width node found
-    if (dateMatchFlag && weekDayMatchFlag && timeMatchFlag)
-    {
-      matchingBandWidthNode = bandWidthNode;
-    }
-  }
-
-  if (matchingBandWidthNode != NULL)
-  {
-    // read band width
-    if (matchingBandWidthNode->fileName != NULL)
-    {
-      // read from external file
-      timestamp = Misc_getTimestamp();
-      if (timestamp > (bandWidthList->lastReadTimestamp+5*US_PER_SECOND))
-      {
-        bandWidthList->n = 0LL;
-
-        // open file
-        if (File_open(&fileHandle,matchingBandWidthNode->fileName,FILE_OPEN_READ) == ERROR_NONE)
-        {
-          line = String_new();
-          while (File_getLine(&fileHandle,line,NULL,"#;"))
-          {
-            // parse band width
-            if (!parseBandWidthNumber(line,&bandWidthList->n))
-            {
-              continue;
-            }
-          }
-          String_delete(line);
-
-          // close file
-          (void)File_close(&fileHandle);
-
-          // store timestamp of last read
-          bandWidthList->lastReadTimestamp = timestamp;
-        }
-      }
-
-      n = bandWidthList->n;
-    }
-    else
-    {
-      // use value
-      n = matchingBandWidthNode->n;
-    }
-  }
-
-  return n;
-}
 
 /***********************************************************************\
 * Name   : configValuePasswordParse
@@ -7642,9 +7473,12 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_DEPRECATED   ("mount-device",                      0,  1,2,&globalOptions.mountList,                            cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                    cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
 
+  // only for debugging/testing
   #ifndef NDEBUG
   CMD_OPTION_INCREMENT    ("debug-server",                      0,  2,1,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),
   CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,1,globalOptions.debug.serverFixedIdsFlag,                                                                           "fixed server ids"                                                         ),
+  CMD_OPTION_STRING       ("debug-index-uuid",                  0,  2,1,globalOptions.debug.indexUUID,                                                                                    "uuid","uuid"                                                              ),
+  CMD_OPTION_INTEGER64    ("debug-index-entity-id",             0,  1,2,globalOptions.debug.indexEntityId,                   0LL,MAX_INT64,NULL,                                          "entity id","n"                                                            ),
   CMD_OPTION_BOOLEAN      ("debug-index-wait-operations",       0,  2,1,globalOptions.debug.indexWaitOperationsFlag,                                                                      "wait for index operations"                                                ),
   CMD_OPTION_BOOLEAN      ("debug-index-purge-deleted-storages",0,  2,1,globalOptions.debug.indexPurgeDeletedStoragesFlag,                                                                "wait for index operations"                                                ),
   CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,1,globalOptions.debug.indexAddStorage,                                                                              "add storage to index database","file name"                                ),

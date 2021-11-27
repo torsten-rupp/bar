@@ -133,7 +133,7 @@ CREATE TRIGGER AFTER INSERT ON entities
 CREATE TABLE IF NOT EXISTS storages(
   id                        INT AUTO_INCREMENT PRIMARY KEY,
 
-  entityId                  INT REFERENCES entities(id) ON DELETE CASCADE,
+  entityId                  INT,
   name                      VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
   created                   DATETIME,
   size                      BIGINT DEFAULT 0,
@@ -178,6 +178,8 @@ CREATE TABLE IF NOT EXISTS storages(
   // Note: redundancy for faster access
   uuidId                    INT DEFAULT 0,
 
+  FOREIGN KEY(entityId) REFERENCES entities(id) ON DELETE CASCADE,
+
   INDEX(uuidId,entityId,name,created,state),
   INDEX(entityId,name,created,state),
   INDEX(name,totalEntryCount,created,state),
@@ -199,7 +201,7 @@ CREATE VIEW FTS_storages(
 CREATE TABLE IF NOT EXISTS entries(
   id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entityId        INT REFERENCES entities(id) ON DELETE CASCADE,
+  entityId        INT,
   type            INT,
   name            VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
   timeLastAccess  DATETIME,
@@ -217,6 +219,8 @@ CREATE TABLE IF NOT EXISTS entries(
   uuidId          INT DEFAULT 0,
   size            BIGINT DEFAULT 0,
 
+  FOREIGN KEY(entityId) REFERENCES entities(id) ON DELETE CASCADE,
+
   INDEX(uuidId,entityId,type,name),
   INDEX(entityId,type,name),
   INDEX(name,size,type,timeLastChanged),
@@ -226,11 +230,11 @@ CREATE TABLE IF NOT EXISTS entries(
   FULLTEXT(name)
 ) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
 
-// newest entries (updated by triggers)
+// newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INT REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
+  entryId         INT,  // no 'NOT NULL'
 
   // Note: redundancy for faster access
   uuidId          INT DEFAULT 0,
@@ -243,6 +247,8 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   permission      INT DEFAULT 0,
 
   size            BIGINT DEFAULT 0,       // file/image/hardlink size
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
 
   CONSTRAINT entriesNewest UNIQUE (name),
 
@@ -303,11 +309,13 @@ CREATE TRIGGER AFTER UPDATE ON entries
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  entityId    INT NOT NULL REFERENCES entities(id),
+  entityId    INT NOT NULL,
   name        VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
   type        INT,
 
   deletedFlag INT DEFAULT 0,
+
+  FOREIGN KEY(entityId) REFERENCES entities(id),
 
   INDEX(entityId,type,name),
   INDEX(name),
@@ -317,10 +325,13 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
 // --- entry fragments -------------------------------------------------
 CREATE TABLE IF NOT EXISTS entryFragments(
   id        INT AUTO_INCREMENT PRIMARY KEY,
-  entryId   INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  entryId   INT NOT NULL,
+  storageId INT NOT NULL,
   offset    BIGINT,
   size      BIGINT,
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY(storageId) REFERENCES storages(id) ON DELETE CASCADE,
 
   CONSTRAINT entryFragments UNIQUE (entryId,offset),
 
@@ -332,8 +343,10 @@ CREATE TABLE IF NOT EXISTS entryFragments(
 CREATE TABLE IF NOT EXISTS fileEntries(
   id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  entryId         INT NOT NULL,
   size            BIGINT,
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
 
   CONSTRAINT fileEntries UNIQUE (entryId),
 
@@ -344,10 +357,12 @@ CREATE TABLE IF NOT EXISTS fileEntries(
 CREATE TABLE IF NOT EXISTS imageEntries(
   id             INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId        INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  entryId        INT NOT NULL,
   size           BIGINT,
   fileSystemType INT,
   blockSize      INT,                 // size of image block
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
 
   CONSTRAINT imageEntries UNIQUE (entryId),
 
@@ -358,8 +373,8 @@ CREATE TABLE IF NOT EXISTS imageEntries(
 CREATE TABLE IF NOT EXISTS directoryEntries(
   id                    INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId               INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId             INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  entryId               INT NOT NULL,
+  storageId             INT NOT NULL,
 
   // Note: redundancy for faster access
   name                  VARCHAR($MAX_TEXT_LENGTH),
@@ -369,6 +384,9 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   totalEntrySize        BIGINT DEFAULT 0,  // total size of directory entries [bytes]
   totalEntryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
   totalEntrySizeNewest  BIGINT DEFAULT 0,  // total size of newest directory entries [bytes]
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY(storageId) REFERENCES storages(id) ON DELETE CASCADE,
 
   CONSTRAINT directoryEntries UNIQUE (entryId),
 
@@ -381,9 +399,12 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
 CREATE TABLE IF NOT EXISTS linkEntries(
   id              INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId       INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  entryId         INT NOT NULL,
+  storageId       INT NOT NULL,
   destinationName TEXT,
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY(storageId) REFERENCES storages(id) ON DELETE CASCADE,
 
   CONSTRAINT linkEntries UNIQUE (entryId),
 
@@ -395,8 +416,10 @@ CREATE TABLE IF NOT EXISTS linkEntries(
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
   id      INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  entryId INT NOT NULL,
   size    BIGINT,
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
 
   CONSTRAINT hardlinkEntries UNIQUE (entryId),
 
@@ -407,11 +430,14 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
 CREATE TABLE IF NOT EXISTS specialEntries(
   id          INT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId     INT NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId   INT NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  entryId     INT NOT NULL,
+  storageId   INT NOT NULL,
   specialType INT,
   major       INT,
   minor       INT,
+
+  FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY(storageId) REFERENCES storages(id) ON DELETE CASCADE,
 
   CONSTRAINT specialEntries UNIQUE (entryId),
 

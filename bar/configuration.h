@@ -33,7 +33,7 @@
 #include "entrylists.h"
 #include "compress.h"
 #include "crypt.h"
-#include "bar_global.h"
+#include "bar_common.h"
 
 /****************** Conditional compilation switches *******************/
 

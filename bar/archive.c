@@ -27,6 +27,9 @@
 #include "common/semaphores.h"
 #include "common/passwords.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "errors.h"
 #include "configuration.h"
 #include "chunks.h"
@@ -35,8 +38,6 @@
 #include "archive_format.h"
 #include "storage.h"
 #include "index/index.h"
-#include "bar_global.h"
-#include "bar.h"
 
 #include "archive.h"
 
@@ -1570,6 +1571,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
+  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
 
   error = ERROR_NONE;
 
@@ -1739,6 +1741,9 @@ LOCAL Errors autoFlushArchiveIndexList(ArchiveHandle *archiveHandle,
                                        IndexId       storageId
                                       )
 {
+  assert(archiveHandle != NULL);
+  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
+
   return flushArchiveIndexList(archiveHandle,uuidId,entityId,storageId,MAX_INDEX_LIST);
 }
 
@@ -1754,7 +1759,8 @@ LOCAL Errors autoFlushArchiveIndexList(ArchiveHandle *archiveHandle,
 
 LOCAL void addArchiveIndexNode(ArchiveHandle *archiveHandle, ArchiveIndexNode *archiveIndexNode)
 {
-  // append to list
+  assert(archiveHandle != NULL);
+
   SEMAPHORE_LOCKED_DO(&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     List_append(&archiveHandle->archiveIndexList,archiveIndexNode);
@@ -3060,17 +3066,20 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
   (*archiveSize) = 0LL;
 
   // flush index entries
-  error = flushArchiveIndexList(archiveHandle,
-                                archiveHandle->uuidId,
-                                archiveHandle->entityId,
-                                archiveHandle->storageId,
-                                0
-                               );
-  if (error != ERROR_NONE)
+  if (archiveHandle->storageId != INDEX_ID_NONE)
   {
-    (void)File_close(&archiveHandle->create.tmpFileHandle);
-    archiveHandle->create.openFlag = FALSE;
-    return error;
+    error = flushArchiveIndexList(archiveHandle,
+                                  archiveHandle->uuidId,
+                                  archiveHandle->entityId,
+                                  archiveHandle->storageId,
+                                  0
+                                 );
+    if (error != ERROR_NONE)
+    {
+      (void)File_close(&archiveHandle->create.tmpFileHandle);
+      archiveHandle->create.openFlag = FALSE;
+      return error;
+    }
   }
 
   if (archiveHandle->create.openFlag)
@@ -5503,14 +5512,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle           *archiveHandle,
-                        ConstString             hostName,
-                        ConstString             userName,
+                        const char              *hostName,
+                        const char              *userName,
                         StorageInfo             *storageInfo,
-                        ConstString             archiveName,
+                        const char              *archiveName,
                         IndexId                 uuidId,
                         IndexId                 entityId,
-                        ConstString             jobUUID,
-                        ConstString             scheduleUUID,
+                        const char              *jobUUID,
+                        const char              *scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
                         uint64                  createdDateTime,
@@ -5533,14 +5542,14 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   Errors __Archive_create(const char              *__fileName__,
                           ulong                    __lineNb__,
                           ArchiveHandle           *archiveHandle,
-                          ConstString             hostName,
-                          ConstString             userName,
+                          const char              *hostName,
+                          const char              *userName,
                           StorageInfo             *storageInfo,
-                          ConstString             archiveName,
+                          const char              *archiveName,
                           IndexId                 uuidId,
                           IndexId                 entityId,
-                          ConstString             jobUUID,
-                          ConstString             scheduleUUID,
+                          const char              *jobUUID,
+                          const char              *scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
                           uint64                  createdDateTime,
@@ -5582,18 +5591,16 @@ UNUSED_VARIABLE(storageInfo);
   AutoFree_init(&autoFreeList);
 
   // init archive info
-  archiveHandle->hostName                = String_duplicate(hostName);
+  archiveHandle->hostName                = String_newCString(hostName);
   AUTOFREE_ADD(&autoFreeList,archiveHandle->hostName,{ String_delete(archiveHandle->hostName); });
-  archiveHandle->userName                = String_duplicate(userName);
+  archiveHandle->userName                = String_newCString(userName);
   AUTOFREE_ADD(&autoFreeList,archiveHandle->userName,{ String_delete(archiveHandle->userName); });
   archiveHandle->storageInfo             = storageInfo;
   archiveHandle->uuidId                  = uuidId;
   archiveHandle->entityId                = entityId;
 
-  archiveHandle->jobUUID                 = String_duplicate(jobUUID);
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->jobUUID,{ String_delete(archiveHandle->jobUUID); });
-  archiveHandle->scheduleUUID            = String_duplicate(scheduleUUID);
-  AUTOFREE_ADD(&autoFreeList,archiveHandle->scheduleUUID,{ String_delete(archiveHandle->scheduleUUID); });
+  archiveHandle->jobUUID                 = String_newCString(jobUUID);
+  archiveHandle->scheduleUUID            = String_newCString(scheduleUUID);
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
@@ -5629,7 +5636,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->mode                    = ARCHIVE_MODE_CREATE;
   Semaphore_init(&archiveHandle->lock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_done(&archiveHandle->lock); });
-  archiveHandle->archiveName             = String_duplicate(archiveName);
+  archiveHandle->archiveName             = String_newCString(archiveName);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveName,{ String_delete(archiveHandle->archiveName); });
   archiveHandle->printableStorageName    = NULL;
   archiveHandle->create.tmpFileName      = String_new();
@@ -6228,8 +6235,6 @@ UNUSED_VARIABLE(storageInfo);
   if (archiveHandle->cryptPassword != NULL) Password_delete(archiveHandle->cryptPassword);
   Semaphore_done(&archiveHandle->passwordLock);
   List_done(&archiveHandle->archiveCryptInfoList,(ListNodeFreeFunction)freeArchiveCryptInfoNode,NULL);
-  if (archiveHandle->scheduleUUID != NULL) String_delete(archiveHandle->scheduleUUID);
-  if (archiveHandle->jobUUID != NULL) String_delete(archiveHandle->jobUUID);
   String_delete(archiveHandle->userName);
   String_delete(archiveHandle->hostName);
 
@@ -8509,26 +8514,26 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 #ifdef NDEBUG
   Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                               ArchiveHandle    *archiveHandle,
-                              ConstString      hostName,
-                              ConstString      userName,
-                              ConstString      jobUUID,
-                              ConstString      scheduleUUID,
+                              const char       *hostName,
+                              const char       *userName,
+                              const char       *jobUUID,
+                              const char       *scheduleUUID,
                               ArchiveTypes     archiveType,
                               uint64           createdDateTime,
-                              ConstString      comment
+                              const char       *comment
                              )
 #else /* not NDEBUG */
   Errors __Archive_newMetaEntry(const char       *__fileName__,
                                 ulong            __lineNb__,
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 ArchiveHandle    *archiveHandle,
-                                ConstString      hostName,
-                                ConstString      userName,
-                                ConstString      jobUUID,
-                                ConstString      scheduleUUID,
+                                const char       *hostName,
+                                const char       *userName,
+                                const char       *jobUUID,
+                                const char       *scheduleUUID,
                                 ArchiveTypes     archiveType,
                                 uint64           createdDateTime,
-                                ConstString      comment
+                                const char       *comment
                                )
 #endif /* NDEBUG */
 {
@@ -8616,13 +8621,13 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  String_set(archiveEntryInfo->meta.chunkMetaEntry.hostName,hostName);
-  String_set(archiveEntryInfo->meta.chunkMetaEntry.userName,userName);
-  String_set(archiveEntryInfo->meta.chunkMetaEntry.jobUUID,jobUUID);
-  String_set(archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,scheduleUUID);
+  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.hostName,hostName);
+  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.userName,userName);
+  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.jobUUID,jobUUID);
+  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,scheduleUUID);
   archiveEntryInfo->meta.chunkMetaEntry.archiveType     = archiveType;
   archiveEntryInfo->meta.chunkMetaEntry.createdDateTime = createdDateTime;
-  String_set(archiveEntryInfo->meta.chunkMetaEntry.comment,comment);
+  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.comment,comment);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->meta.chunkMetaEntry.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info); });
 
   // calculate header size
@@ -13261,7 +13266,9 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
       }
 
       // flush index list
-      if (error == ERROR_NONE)
+      if (   (error == ERROR_NONE)
+          && (archiveEntryInfo->archiveHandle->storageId != INDEX_ID_NONE)
+         )
       {
         error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
                                           archiveEntryInfo->archiveHandle->uuidId,
@@ -14829,7 +14836,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
 
   assert(indexHandle != NULL);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
+  assertx(Index_getType(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId);
   assert(storageInfo != NULL);
 
   // init variables
@@ -15242,28 +15249,15 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             break;
           }
 
-          // flush index list (if entity known)
-          error = flushArchiveIndexList(&archiveHandle,
-                                        uuidId,
-                                        entityId,
-                                        storageId,
-                                        0
-                                       );
-          if (error != ERROR_NONE)
-          {
-            (void)Archive_closeEntry(&archiveEntryInfo);
-            break;
-          }
-
           if (!INDEX_ID_IS_NONE(entityId))
           {
             // update entity
             error = Index_updateEntity(indexHandle,
                                        entityId,
-                                       jobUUID,
-                                       scheduleUUID,
-                                       hostName,
-                                       userName,
+                                       String_cString(jobUUID),
+                                       String_cString(scheduleUUID),
+                                       String_cString(hostName),
+                                       String_cString(userName),
                                        archiveType,
                                        createdDateTime
                                       );
@@ -15292,10 +15286,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             {
               // create new entity
               error = Index_newEntity(indexHandle,
-                                      jobUUID,
-                                      scheduleUUID,
-                                      hostName,
-                                      userName,
+                                      String_cString(jobUUID),
+                                      String_cString(scheduleUUID),
+                                      String_cString(hostName),
+                                      String_cString(userName),
                                       archiveType,
                                       createdDateTime,
                                       TRUE,  // locked
@@ -15308,6 +15302,19 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
               error = ERROR_NONE;
             }
           }
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+
+          // flush index list
+          error = flushArchiveIndexList(&archiveHandle,
+                                        uuidId,
+                                        entityId,
+                                        storageId,
+                                        0
+                                       );
           if (error != ERROR_NONE)
           {
             (void)Archive_closeEntry(&archiveEntryInfo);
@@ -15402,7 +15409,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
 
-  // flush index list
+  // final flush index list
   if (error == ERROR_NONE)
   {
     error = flushArchiveIndexList(&archiveHandle,

@@ -445,7 +445,7 @@ sub processFile($$)
             print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
             print CFILE_HANDLE "\"\\\n";
             print CFILE_HANDLE "CREATE VIRTUAL TABLE IF NOT EXISTS $tableName USING $ftsType(\\\n";
-            print CFLILE_HANDLE $definition."\\\n";
+            print CFILE_HANDLE $definition."\\\n";
             print CFILE_HANDLE "\"\n";
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
             print CFILE_HANDLE "\n";
@@ -913,7 +913,6 @@ const IndexDefinitions INDEX_DEFINITION_TRIGGER_NAMES[] =
   INDEX_DEFINITION_TRIGGER_NAMES_SQLITE,
   INDEX_DEFINITION_TRIGGER_NAMES_MYSQL
 };
-
 ";
 
 # close files

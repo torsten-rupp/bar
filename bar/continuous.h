@@ -201,8 +201,8 @@ Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 bool Continuous_getEntry(DatabaseHandle *databaseHandle,
-                         ConstString    jobUUID,
-                         ConstString    scheduleUUID,
+                         const char     *jobUUID,
+                         const char     *scheduleUUID,
                          DatabaseId     *databaseId,
                          String         name
                         );
@@ -236,8 +236,8 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
 
 Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                            DatabaseHandle          *databaseHandle,
-                           ConstString             jobUUID,
-                           ConstString             scheduleUUID
+                           const char              *jobUUID,
+                           const char              *scheduleUUID
                           );
 
 /***********************************************************************\

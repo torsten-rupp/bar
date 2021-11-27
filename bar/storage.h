@@ -65,7 +65,7 @@
 #include "configuration.h"
 #include "crypt.h"
 #include "server_io.h"
-#include "bar_global.h"
+#include "bar_common.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -1196,7 +1196,7 @@ INLINE StorageTypes Storage_getType(const StorageInfo *storageInfo)
 * Notes  : -
 \***********************************************************************/
 
-bool Storage_isServerAllocationPending(StorageInfo *storageInfo);
+bool Storage_isServerAllocationPending(const StorageInfo *storageInfo);
 
 /***********************************************************************\
 * Name   : Storage_getStorageSpecifier

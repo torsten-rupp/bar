@@ -71,5 +71,6 @@ const TYPE_HARDLINK  = 9
 const TYPE_SPECIAL   = 10
 const TYPE_HISTORY   = 11
 
-// default entity
+// default values
+const DEFAULT_UUID_DATABASE_ID   = 0
 const DEFAULT_ENTITY_DATABASE_ID = 0

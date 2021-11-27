@@ -29,12 +29,13 @@
 #include "common/misc.h"
 #include "errors.h"
 
+// TODO: remove bar.h
+#include "bar.h"
+#include "bar_common.h"
 #include "storage.h"
 #include "server_io.h"
 #include "index_definition.h"
 #include "archive.h"
-#include "bar.h"
-#include "bar_global.h"
 
 #include "index/index.h"
 #include "index/index_common.h"
@@ -1327,7 +1328,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                               )
 {
   String       string;
-  int64        lockedCount;
+  uint         lockedCount;
   Errors       error;
   DatabaseId   uuidId;
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -1342,25 +1343,25 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
   if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
   {
     // get locked count
-    error = Database_getInt64(&indexHandle->databaseHandle,
-                              &lockedCount,
-                              "entities",
-                              "lockedCount",
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(entityId)
-                              ),
-                              NULL  // group
-                             );
+    error = Database_getUInt(&indexHandle->databaseHandle,
+                             &lockedCount,
+                             "entities",
+                             "lockedCount",
+                             "id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(entityId)
+                             ),
+                             NULL  // group
+                            );
     if (error != ERROR_NONE)
     {
       String_delete(string);
       return error;
     }
 
-    // prune if not locked entity and empty
-    if ((lockedCount == 0LL) && isEmptyEntity(indexHandle,entityId))
+    // prune if not locked and entity is empty
+    if ((lockedCount == 0L) && isEmptyEntity(indexHandle,entityId))
     {
       // get uuid id, job UUID, created date/time, archive type
       error = Database_get(&indexHandle->databaseHandle,
@@ -2182,10 +2183,9 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       uint64       *totalEntrySize
                      )
 {
-  String     filterString;
-  Errors     error;
-  bool       result;
-  DatabaseId uuidDatabaseId,entityDatabaseId;
+  String filterString;
+  Errors error;
+  bool   result;
 
   assert(indexHandle != NULL);
 
@@ -2201,8 +2201,9 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   IndexCommon_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
   IndexCommon_filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
   IndexCommon_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
-  IndexCommon_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_NONE,"AND","entities.type=%u",findArchiveType);
+  IndexCommon_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",findArchiveType);
   IndexCommon_filterAppend(filterString,findCreatedDateTime != 0LL,"AND","entities.created=%llu",findCreatedDateTime);
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(filterString));
 
   result = FALSE;
 
@@ -2220,15 +2221,15 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                           UNUSED_VARIABLE(userData);
                           UNUSED_VARIABLE(valueCount);
 
-                          uuidDatabaseId          = values[0].id;
+                          if (uuidId           != NULL) (*uuidId)          = INDEX_ID_UUID(values[0].id);
                           if (jobUUID          != NULL) String_setBuffer(jobUUID,values[1].text.data,values[1].text.length);
-                          entityDatabaseId        = values[2].id;
+                          if (entityId         != NULL) (*entityId)        = INDEX_ID_ENTITY(values[2].id);
                           if (scheduleUUID     != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
-                          if (createdDateTime  != NULL) (*createdDateTime)         = values[4].id;
-                          if (archiveType      != NULL) (*archiveType)             = values[5].u;
+                          if (createdDateTime  != NULL) (*createdDateTime) = values[4].id;
+                          if (archiveType      != NULL) (*archiveType)     = values[5].u;
                           if (lastErrorMessage != NULL) String_setBuffer(lastErrorMessage,values[6].text.data,values[6].text.length);
-                          if (totalEntryCount  != NULL) (*totalEntryCount)         = values[7].u;
-                          if (totalEntrySize   != NULL) (*totalEntrySize)          = values[8].u64;
+                          if (totalEntryCount  != NULL) (*totalEntryCount) = values[7].u;
+                          if (totalEntrySize   != NULL) (*totalEntrySize)  = values[8].u64;
 
                           result = TRUE;
 
@@ -2238,8 +2239,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                         DATABASE_TABLES
                         (
                           "entities \
-                             LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
-                             LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                           "
                         ),
                         DATABASE_FLAG_NONE,
@@ -2252,16 +2252,17 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                           DATABASE_COLUMN_DATETIME("entities.created"),
                           DATABASE_COLUMN_UINT    ("entities.type"),
                           DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
-                          DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
-                          DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)")
+                          DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)"),
+                          DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize)  FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)")
                         ),
                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                     "    entities.deletedFlag!=1 \
+                                     "    entities.deletedFlag=? \
                                       AND %s",
                                       String_cString(filterString)
                                     ),
                         DATABASE_FILTERS
                         (
+                          DATABASE_FILTER_BOOL(FALSE)
                         ),
                         NULL,  // orderGroup
                         0LL,
@@ -2273,9 +2274,6 @@ bool Index_findEntity(IndexHandle  *indexHandle,
     String_delete(filterString);
     return FALSE;
   }
-
-  if (uuidId   != NULL) (*uuidId  ) = INDEX_ID_UUID(uuidDatabaseId    );
-  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityDatabaseId);
 
   // free resources
   String_delete(filterString);
@@ -2531,10 +2529,10 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 }
 
 Errors Index_newEntity(IndexHandle  *indexHandle,
-                       ConstString  jobUUID,
-                       ConstString  scheduleUUID,
-                       ConstString  hostName,
-                       ConstString  userName,
+                       const char   *jobUUID,
+                       const char   *scheduleUUID,
+                       const char   *hostName,
+                       const char   *userName,
                        ArchiveTypes archiveType,
                        uint64       createdDateTime,
                        bool         locked,
@@ -2566,7 +2564,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                               DATABASE_FLAG_IGNORE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_STRING("jobUUID", jobUUID)
+                                DATABASE_VALUE_CSTRING("jobUUID", jobUUID)
                               )
                              );
       if (error != ERROR_NONE)
@@ -2582,7 +2580,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                              "jobUUID=?",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_STRING(jobUUID)
+                               DATABASE_FILTER_CSTRING(jobUUID)
                              )
                             );
       if (error != ERROR_NONE)
@@ -2599,10 +2597,10 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_KEY     ("uuidId",       uuidId),
-                                DATABASE_VALUE_STRING  ("jobUUID",      jobUUID),
-                                DATABASE_VALUE_STRING  ("scheduleUUID", scheduleUUID),
-                                DATABASE_VALUE_STRING  ("hostName",     hostName),
-                                DATABASE_VALUE_STRING  ("userName",     userName),
+                                DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
+                                DATABASE_VALUE_CSTRING ("scheduleUUID", scheduleUUID),
+                                DATABASE_VALUE_CSTRING ("hostName",     hostName),
+                                DATABASE_VALUE_CSTRING ("userName",     userName),
                                 DATABASE_VALUE_DATETIME("created",      createdDateTime),
                                 DATABASE_VALUE_UINT    ("type",         archiveType),
                                 DATABASE_VALUE_UINT    ("lockedCount",  locked ? 1 : 0)
@@ -2638,9 +2636,9 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
-                                    "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s hostName=%S userName=%S archiveType=%s createdDateTime=%llu locked=%y",
+                                    "INDEX_NEW_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%llu locked=%y",
                                     jobUUID,
-                                    (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
+                                    (scheduleUUID != NULL) ? scheduleUUID : "",
                                     hostName,
                                     userName,
                                     Archive_archiveTypeToString(archiveType),
@@ -2658,10 +2656,10 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 
 Errors Index_updateEntity(IndexHandle  *indexHandle,
                           IndexId      entityId,
-                          ConstString  jobUUID,
-                          ConstString  scheduleUUID,
-                          ConstString  hostName,
-                          ConstString  userName,
+                          const char   *jobUUID,
+                          const char   *scheduleUUID,
+                          const char   *hostName,
+                          const char   *userName,
                           ArchiveTypes archiveType,
                           uint64       createdDateTime
                          )
@@ -2688,10 +2686,10 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_STRING  ("jobUUID",      jobUUID),
-                                DATABASE_VALUE_STRING  ("scheduleUUID", scheduleUUID),
-                                DATABASE_VALUE_STRING  ("hostName",     hostName),
-                                DATABASE_VALUE_STRING  ("userName",     userName),
+                                DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
+                                DATABASE_VALUE_CSTRING ("scheduleUUID", scheduleUUID),
+                                DATABASE_VALUE_CSTRING ("hostName",     hostName),
+                                DATABASE_VALUE_CSTRING ("userName",     userName),
                                 DATABASE_VALUE_DATETIME("created",      (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime()),
                                 DATABASE_VALUE_UINT    ("type",         archiveType)
                               ),
@@ -2715,9 +2713,9 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),
-                                    "INDEX_UPDATE_ENTITY jobUUID=%S scheduleUUID=%s hostName=%'S userName=%'S archiveType=%s createdDateTime=%llu",
+                                    "INDEX_UPDATE_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%llu",
                                     jobUUID,
-                                    (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
+                                    (scheduleUUID != NULL) ? scheduleUUID : "",
                                     hostName,
                                     userName,
                                     Archive_archiveTypeToString(archiveType),
