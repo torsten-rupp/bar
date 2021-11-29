@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS meta(
   name  TEXT UNIQUE,
   value TEXT
 );
-INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',${VERSION});
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
 // --- uuids -----------------------------------------------------------
@@ -67,7 +67,7 @@ CREATE INDEX ON entities (hostName);
 CREATE INDEX ON entities (deletedFlag);
 
 // insert default entity
-INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_DATABASE_ID,'','',0,0,0,0);
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (${DEFAULT_ENTITY_DATABASE_ID},'','',0,0,0,0);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON entities
@@ -89,8 +89,8 @@ CREATE TABLE IF NOT EXISTS storages(
 //TODO: use
   userName                  TEXT,
   comment                   TEXT,
-  state                     INTEGER DEFAULT $STATE_CREATE,
-  mode                      INTEGER DEFAULT $MODE_MANUAL,
+  state                     INTEGER DEFAULT ${STATE_CREATE},
+  mode                      INTEGER DEFAULT ${MODE_MANUAL},
   lastChecked               INTEGER DEFAULT 0,
   errorMessage              TEXT,
   deletedFlag               INTEGER DEFAULT 0,
@@ -411,7 +411,7 @@ CREATE TABLE IF NOT EXISTS meta(
   name  TEXT UNIQUE,
   value TEXT
 );
-INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',${VERSION});
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
 CREATE TABLE IF NOT EXISTS entities(

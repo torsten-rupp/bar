@@ -54,7 +54,7 @@ sub expandMacros($)
 
   foreach $name (keys %constants)
   {
-    $string =~ s/\$$name/$constants{$name}/g;
+    $string =~ s/\$\{$name\}/$constants{$name}/g;
   }
   $string =~ s/"/\\"/g;
 
@@ -394,7 +394,7 @@ sub processFile($$)
             )
       {
         # end table/FTS/trigger/view
-        $definition = append($definition,")".$1);
+        $definition = append($definition,")".expandMacros($1));
 
         if    ($type eq $TYPE_TABLE)
         {
@@ -497,7 +497,7 @@ sub processFile($$)
             )
       {
         # end table
-        $definition = append($definition,")".$1);
+        $definition = append($definition,")".expandMacros($1));
 
         if    ($suffix eq "SQLITE")
         {
@@ -538,7 +538,7 @@ sub processFile($$)
             )
       {
         # end FTS
-        $definition = append($definition,")".$1);
+        $definition = append($definition,")".expandMacros($1));
 
         if    ($suffix eq "SQLITE")
         {
