@@ -58,6 +58,10 @@ RUN apt-get -y install \
   txt2man \
   valgrind \
   ;
+RUN apt-get -y install \
+  libmysqlclient-dev \
+  libpq-dev \
+  ;
 
 # fix systemd
 RUN (cd /lib/systemd/system/sysinit.target.wants/; \

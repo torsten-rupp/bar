@@ -1594,7 +1594,7 @@ fi
 
 # add extern include/library+local include search directory
 CC_INCLUDES="$CC_INCLUDES $cwd/extern/include $cwd/bar"
-LIBRARY_PATHS="$cwd/extern/lib $LIBRARY_PATHS"
+LIBRARY_PATHS="$cwd/extern/lib /usr/lib64/mysql /usr/lib/mysql $LIBRARY_PATHS"
 
 # set variables for compile extern
 AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
@@ -3127,7 +3127,7 @@ if test $ENABLE_CURL = "yes"; then
       if test $result2 -eq 1; then
         if test "$host" == "$build"; then
           # compile build
-          (cd curl; ./configure \
+          (cd curl; PKG_CONFIG_PATH=$cwd/openssl ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3138,6 +3138,7 @@ if test $ENABLE_CURL = "yes"; then
             --without-librtmp \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
+            --disable-openssl-auto-load-config \
             --with-ssl=$cwd/extern \
             --with-gnutls=$cwd/extern \
             --with-libssh2=$cwd/extern \

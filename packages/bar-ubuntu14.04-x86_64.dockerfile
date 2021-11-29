@@ -48,6 +48,10 @@ RUN apt-get -y install \
   txt2man \
   valgrind \
   ;
+RUN apt-get -y install \
+  libmysqlclient-dev \
+  libpq-dev \
+  ;
 
 # mount /media/home
 RUN mkdir /media/home  && chown root /media/home

@@ -1,4 +1,4 @@
-2020-xx-xx 0.22
+2020-11-30 0.22
   * added option --save-configuration: format and
     save configuration file
   * fixed reading cryption keys via config file

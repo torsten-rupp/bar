@@ -197,11 +197,11 @@ fi
 %{_bindir}/bar.sym
 %{_bindir}/bar-debug
 %{_bindir}/bar-debug.sym
+%{_bindir}/bar-index
 %{_bindir}/barcontrol
 %{_bindir}/barcontrol-linux.jar
 %{_bindir}/barcontrol-linux_64.jar
 %{_bindir}/bar-keygen
-%{_bindir}/bar-sqlite3
 
 %dir %{_sysconfdir}/bar
 %dir %attr(0700,root,root) %{_sysconfdir}/bar/jobs

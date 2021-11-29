@@ -1,4 +1,4 @@
-FROM centos:6
+FROM fedora:33
 ENV container docker
 
 # add user for build process
@@ -40,6 +40,10 @@ RUN yum -y install \
   unoconv \
   txt2man \
   valgrind \
+  ;
+RUN yum -y install \
+  mysql-devel \
+  postgresql-devel \
   ;
 
 # fix systemd

@@ -56,6 +56,22 @@ def build()
 
     stage("Tests")
     {
+      // simple build (without external packages)
+      docker.image(dockerImageName).inside
+      {
+        checkout scm
+        script
+        {
+          sh "./configure"
+
+          // make
+//TODO
+//          sh "make -j`nproc --ignore=1`"
+          sh "make"
+        }
+      }
+
+      // run tests
       script
       {
         if (params.TESTS)

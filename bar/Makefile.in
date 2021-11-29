@@ -427,6 +427,7 @@ BAR_SOURCES                 = bar.c \
                               crypt.c \
                               storage.c \
                               index/index.c \
+                              index/index.h \
                               index/index_uuids.c \
                               index/index_entities.c \
                               index/index_entries.c \
@@ -591,6 +592,8 @@ BAR_MINIDUMP_SOURCES_COMMON = common/minidump.cpp \
 
 BAR_MINIDUMP_HEADERS        = \
 
+BAR_MINIDUMP_HEADERS_COMMON = \
+
 BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
                                 $(addprefix release/,$(foreach z,$(filter %.c,  $(BAR_MINIDUMP_SOURCES)),$(patsubst %.c,  %.o,$z))) \
                                 $(addprefix release/,$(foreach z,$(filter %.cpp,$(BAR_MINIDUMP_SOURCES)),$(patsubst %.cpp,%.o,$z))) \
@@ -604,9 +607,7 @@ BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
 BAR_INDEX_SOURCES           = bar-index.c \
                               bar_common.c \
 
-BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
-                              index_definition.def \
-                              index/index_current.c \
+BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
 
 BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/cmdoptions.c \
@@ -624,7 +625,13 @@ BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/semaphores.c \
                               common/stacktraces.c \
 
-BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
+BAR_INDEX_HEADERS_COMMON    = \
+
+BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
+                              index_common.def \
+                              index_sqlite.def \
+                              index_mysql.def \
+                              index/index_current.c \
 
 BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
                               $(SQLITE3_OBJECTS) \
@@ -650,6 +657,23 @@ INTERMEDIATE_HEADERS        = errors.h \
                               archive_format.h \
                               archive_format_const.h \
                               index_definition.h \
+
+ALL_SOURCES                 = $(BAR_SOURCES) \
+															$(BAR_HEADERS) \
+															$(BAR_SOURCES_OTHER) \
+															$(DESTROYER_SOURCES) \
+															$(DESTROYER_HEADERS) \
+															$(BAR_MINIDUMP_SOURCES) \
+															$(BAR_MINIDUMP_SOURCES_COMMON) \
+															$(BAR_MINIDUMP_HEADERS) \
+															$(BAR_INDEX_SOURCES) \
+															$(BAR_INDEX_SOURCES_COMMON) \
+															$(BAR_INDEX_HEADERS) \
+															$(BAR_INDEX_HEADERS_COMMON) \
+															$(BAR_INDEX_SOURCES_OTHER) \
+                              $(COMMON_SOURCES) \
+															$(COMMON_HEADERS) \
+															$(COMMON_SOURCES_OTHER) \
 
 TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
                               bar-debug@EXEEXT@ bar-debug.sym \
@@ -2512,31 +2536,15 @@ uninstall:
 dist:
 ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar
-	$(INSTALL) -m 664 \
-                   -t $(DIRECTORY)/bar \
-                   Makefile.in \
-                   config.h.in \
-                   $(sort $(BAR_SOURCES) \
-                          $(BAR_HEADERS) \
-                          $(BAR_SOURCES_OTHER) \
-                          $(EXTERN_SOURCES) \
-                          $(EXTERN_HEADERS) \
-                          $(DESTROYER_SOURCES) \
-                          $(DESTROYER_HEADERS) \
-                          $(DESTROYER_SOURCES) \
-                          $(BAR_MINIDUMP_SOURCES) \
-                          $(BAR_MINIDUMP_HEADERS) \
-                          $(BAR_INDEX_SOURCES) \
-                          $(BAR_INDEX_SOURCES_OTHER) \
-                          $(BAR_INDEX_HEADERS) \
-                   )
-	$(INSTALL) -d $(DIRECTORY)/bar/common
-	$(INSTALL) -m 644 \
-                   -t $(DIRECTORY)/bar/common \
-                   $(sort $(COMMON_SOURCES) \
-	                  $(COMMON_HEADERS) \
-                          $(COMMON_SOURCES_OTHER) \
-	           )
+	$(INSTALL) -d $(addprefix $(DIRECTORY)/bar/, \
+	                 $(sort $(dir $(ALL_SOURCES)) \
+	                 ) \
+	              )
+	$(foreach name,Makefile.in \
+                       config.h.in \
+                       $(sort $(ALL_SOURCES)), \
+                       $(INSTALL) -m 664 -t $(DIRECTORY)/bar/$(dir $(name)) $(name); \
+        )
 	$(INSTALL) -d $(DIRECTORY)/bar/po
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/bar/po \
