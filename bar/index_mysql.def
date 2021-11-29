@@ -48,30 +48,31 @@
 
 const UUID_LENGTH     = 36
 // how to increase that? limit 3072/4-1
-const MAX_TEXT_LENGTH = 512
+const MAX_TEXT_LENGTH = 500
+const CHARACTER_SET = utf8mb4
 
 // --- meta ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta(
-  name  VARCHAR(255) UNIQUE,
+  name  VARCHAR(${MAX_TEXT_LENGTH}) UNIQUE,
   value TEXT
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
-INSERT OR IGNORE INTO meta (name,value) VALUES ('version',$VERSION);
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+INSERT OR IGNORE INTO meta (name,value) VALUES ('version',${VERSION});
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',NOW());
 
 // --- uuids -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uuids(
   id      INT AUTO_INCREMENT PRIMARY KEY,
-  jobUUID VARCHAR($UUID_LENGTH) UNIQUE NOT NULL,
+  jobUUID VARCHAR(${UUID_LENGTH}) UNIQUE NOT NULL,
 
   INDEX(jobUUID)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
   id                        INT AUTO_INCREMENT PRIMARY KEY,
-  jobUUID                   VARCHAR($UUID_LENGTH) NOT NULL,
-  scheduleUUID              VARCHAR($UUID_LENGTH) NOT NULL DEFAULT '',
-  hostName                  VARCHAR($MAX_TEXT_LENGTH) DEFAULT '',
+  jobUUID                   VARCHAR(${UUID_LENGTH}) NOT NULL,
+  scheduleUUID              VARCHAR(${UUID_LENGTH}) NOT NULL DEFAULT '',
+  hostName                  VARCHAR(${MAX_TEXT_LENGTH}) DEFAULT '',
 //TODO: use
   userName                  TEXT,
   created                   DATETIME,
@@ -114,10 +115,10 @@ CREATE TABLE IF NOT EXISTS entities(
   INDEX(jobUUID,created,type),
   INDEX(hostName),
   INDEX(deletedFlag)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // insert default entity
-INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_DATABASE_ID,'','',0,0,0,0);
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (${DEFAULT_ENTITY_DATABASE_ID},'','',0,0,0,0);
 
 // insert/delete/update triggeres
 /*
@@ -134,7 +135,7 @@ CREATE TABLE IF NOT EXISTS storages(
   id                        INT AUTO_INCREMENT PRIMARY KEY,
 
   entityId                  INT,
-  name                      VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  name                      VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
   created                   DATETIME,
   size                      BIGINT DEFAULT 0,
 //TODO: use
@@ -142,8 +143,8 @@ CREATE TABLE IF NOT EXISTS storages(
 //TODO: use
   userName                  VARCHAR(255),
   comment                   TEXT,
-  state                     INT DEFAULT $STATE_CREATE,
-  mode                      INT DEFAULT $MODE_MANUAL,
+  state                     INT DEFAULT ${STATE_CREATE},
+  mode                      INT DEFAULT ${MODE_MANUAL},
   lastChecked               DATETIME DEFAULT "1970-01-01 00:00:00",
   errorMessage              TEXT,
   deletedFlag               BOOL DEFAULT FALSE,
@@ -188,7 +189,7 @@ CREATE TABLE IF NOT EXISTS storages(
   INDEX(state,name,totalEntryCount,created),
   INDEX(deletedFlag),
   FULLTEXT(name)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // full-text-search (using a view)
 CREATE VIEW FTS_storages(
@@ -203,7 +204,7 @@ CREATE TABLE IF NOT EXISTS entries(
 
   entityId        INT,
   type            INT,
-  name            VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  name            VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
   timeLastAccess  DATETIME,
   timeModified    DATETIME,
   timeLastChanged DATETIME,
@@ -228,7 +229,7 @@ CREATE TABLE IF NOT EXISTS entries(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type),
   FULLTEXT(name)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
@@ -240,7 +241,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   uuidId          INT DEFAULT 0,
   entityId        INT DEFAULT 0,
   type            INT DEFAULT 0,
-  name            VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  name            VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
   timeLastChanged DATETIME DEFAULT "1970-01-01 00:00:00",
   userId          INT DEFAULT 0,
   groupId         INT DEFAULT 0,
@@ -259,7 +260,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type),
   INDEX(entityId,type,entryId,name,size,timeLastChanged)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // full-text-search (using a view)
 CREATE VIEW FTS_entries(
@@ -310,7 +311,7 @@ CREATE TRIGGER AFTER UPDATE ON entries
 CREATE TABLE IF NOT EXISTS skippedEntries(
   id          INT AUTO_INCREMENT PRIMARY KEY,
   entityId    INT NOT NULL,
-  name        VARCHAR($MAX_TEXT_LENGTH) NOT NULL,
+  name        VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
   type        INT,
 
   deletedFlag INT DEFAULT 0,
@@ -320,7 +321,7 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
   INDEX(entityId,type,name),
   INDEX(name),
   INDEX(type,name)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- entry fragments -------------------------------------------------
 CREATE TABLE IF NOT EXISTS entryFragments(
@@ -337,7 +338,7 @@ CREATE TABLE IF NOT EXISTS entryFragments(
 
   INDEX(entryId),
   INDEX(storageId)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
@@ -351,7 +352,7 @@ CREATE TABLE IF NOT EXISTS fileEntries(
   CONSTRAINT fileEntries UNIQUE (entryId),
 
   INDEX(entryId)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
@@ -367,7 +368,7 @@ CREATE TABLE IF NOT EXISTS imageEntries(
   CONSTRAINT imageEntries UNIQUE (entryId),
 
   INDEX(entryId)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
@@ -377,7 +378,7 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   storageId             INT NOT NULL,
 
   // Note: redundancy for faster access
-  name                  VARCHAR($MAX_TEXT_LENGTH),
+  name                  VARCHAR(${MAX_TEXT_LENGTH}),
 
   // updated by updateDirectoryContentAggregates()
   totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
@@ -393,7 +394,7 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   INDEX(entryId),
   INDEX(storageId,name),
   INDEX(name)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
@@ -410,7 +411,7 @@ CREATE TABLE IF NOT EXISTS linkEntries(
 
   INDEX(entryId),
   INDEX(storageId)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
@@ -424,7 +425,7 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
   CONSTRAINT hardlinkEntries UNIQUE (entryId),
 
   INDEX(entryId)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
@@ -443,18 +444,18 @@ CREATE TABLE IF NOT EXISTS specialEntries(
 
   INDEX(entryId),
   INDEX(storageId)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
   id                INT AUTO_INCREMENT PRIMARY KEY,
-  jobUUID           VARCHAR($UUID_LENGTH) NOT NULL,
+  jobUUID           VARCHAR(${UUID_LENGTH}) NOT NULL,
   scheduleUUID      TEXT,
   hostName          TEXT,
   userName          TEXT,
   type              INT,
   created           DATETIME,
-  errorMessage      VARCHAR($MAX_TEXT_LENGTH),
+  errorMessage      VARCHAR(${MAX_TEXT_LENGTH}),
   duration          BIGINT,
   totalEntryCount   BIGINT,
   totalEntrySize    BIGINT,
@@ -466,11 +467,11 @@ CREATE TABLE IF NOT EXISTS history(
   INDEX(jobUUID,created,type),
   INDEX(created),
   INDEX(errorMessage)
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // --- debug only ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS log(
   text TEXT
-) CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_bin';
+) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

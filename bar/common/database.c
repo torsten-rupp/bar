@@ -1899,18 +1899,36 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           // create database if requested
           if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
           {
-            stringFormat(sqlCommand,sizeof(sqlCommand),
-                         "CREATE DATABASE IF NOT EXISTS %s \
-                          CHARACTER SET 'utf8mb4' \
-                          COLLATE 'utf8mb4_bin' \
-                         ",
-                         !String_isEmpty(databaseName)
-                           ? String_cString(databaseName)
-                           : String_cString(databaseSpecifier->mysql.databaseName)
-                        );
-            mysqlResult = mysql_query(databaseHandle->mysql.handle,
-                                      sqlCommand
-                                     );
+            /* try to create with character set uft8mb4 (4-byte UTF8),
+               then utf8 as a fallback for older MySQL versions.
+            */
+            const char *CHARACTER_SETS[] =
+            {
+              "utf8mb4",
+              "utf8"
+            };
+
+            uint i = 0;
+            do
+            {
+              stringFormat(sqlCommand,sizeof(sqlCommand),
+                           "CREATE DATABASE IF NOT EXISTS %s \
+                            CHARACTER SET '%s' \
+                            COLLATE '%s_bin' \
+                           ",
+                           !String_isEmpty(databaseName)
+                             ? String_cString(databaseName)
+                             : String_cString(databaseSpecifier->mysql.databaseName),
+                           CHARACTER_SETS[i]
+                          );
+              mysqlResult = mysql_query(databaseHandle->mysql.handle,
+                                        sqlCommand
+                                       );
+              i++;
+            }
+            while (   (mysqlResult != 0)
+                   && (i < SIZE_OF_ARRAY(CHARACTER_SETS))
+                  );
             if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
             {
               HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
@@ -1979,6 +1997,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
             break;
         }
       #endif /* DATABASE_DEBUG_LOG */
+// TODO:
 #if 0
       // set busy handler
       sqliteResult = sqlite3_busy_handler(databaseHandle->sqlite.handle,busyHandler,databaseHandle);
