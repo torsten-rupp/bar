@@ -42,6 +42,10 @@ RUN yum -y install \
   make \
   rpm-build \
   ;
+RUN yum -y install \
+  mysql-devel \
+  postgresql-devel \
+  ;
 
 # fix systemd
 RUN (cd /lib/systemd/system/sysinit.target.wants/; \

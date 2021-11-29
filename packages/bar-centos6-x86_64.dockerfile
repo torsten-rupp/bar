@@ -51,6 +51,10 @@ RUN yum -y install \
   make \
   rpm-build \
   ;
+RUN yum -y install \
+  mysql-devel \
+  postgresql-devel \
+  ;
 
 # required for gcc 7
 RUN yum -y install \

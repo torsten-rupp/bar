@@ -45,6 +45,10 @@ RUN yum -y install \
   rpm-build \
   valgrind \
   ;
+RUN yum -y install \
+  mysql-devel \
+  postgresql-devel \
+  ;
 
 # fix systemd
 RUN (cd /lib/systemd/system/sysinit.target.wants/; \

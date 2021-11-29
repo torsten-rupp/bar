@@ -15,7 +15,7 @@ Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "A
 [Files]
 Source: "tmp\usr\bin\bar.exe";             DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\usr\bin\bar-debug.exe";       DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\bar-sqlite3.exe";     DestDir: "{app}"; Flags: ignoreversion
+Source: "tmp\usr\bin\bar-index.exe";       DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\usr\bin\bar-keygen.cmd";      DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\usr\bin\libgcc_s_sjlj-1.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "tmp\usr\bin\libstdc++-6.dll";     DestDir: "{app}"; Flags: ignoreversion
