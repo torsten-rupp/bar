@@ -9319,7 +9319,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 
   // get parameter mapping/to-table primary key column index
   toColumnPrimaryKeyIndex = UNUSED;
-fprintf(stderr,"%s:%d: toColumnCount=%d\n",__FILE__,__LINE__,toColumnCount);
   parameterMapCount = 0;
   for (i = 0; i < toColumnCount; i++)
   {
