@@ -1873,7 +1873,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
 
           // enable UTF8
           mysqlResult = mysql_query(databaseHandle->mysql.handle,
-                                    "SET NAMES 'UTF8'"
+                                    "SET NAMES 'utf8'"
                                    );
           if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
           {
@@ -1881,7 +1881,12 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           }
           else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
           {
-            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            error = ERRORX_(DATABASE_CONNECTION_LOST,
+                            mysql_errno(databaseHandle->mysql.handle),
+                            "%s: %s",
+                            mysql_error(databaseHandle->mysql.handle),
+                            "SET NAMES 'utf8'"
+                           );
             mysql_close(databaseHandle->mysql.handle);
             Semaphore_unlock(&databaseList.lock);
             sem_destroy(&databaseHandle->wakeUp);
@@ -1889,7 +1894,12 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           }
           else if (mysqlResult != 0)
           {
-            error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            error = ERRORX_(DATABASE,
+                            mysql_errno(databaseHandle->mysql.handle),
+                            "%s: %s",
+                            mysql_error(databaseHandle->mysql.handle),
+                            "SET NAMES 'utf8'"
+                           );
             mysql_close(databaseHandle->mysql.handle);
             Semaphore_unlock(&databaseList.lock);
             sem_destroy(&databaseHandle->wakeUp);
@@ -1919,31 +1929,45 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                            !String_isEmpty(databaseName)
                              ? String_cString(databaseName)
                              : String_cString(databaseSpecifier->mysql.databaseName),
+                           CHARACTER_SETS[i],
                            CHARACTER_SETS[i]
                           );
               mysqlResult = mysql_query(databaseHandle->mysql.handle,
                                         sqlCommand
                                        );
+              if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+              {
+                HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
+              }
+              else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+              {
+                error = ERRORX_(DATABASE_CONNECTION_LOST,
+                                mysql_errno(databaseHandle->mysql.handle),
+                                "%s: %s",mysql_error(databaseHandle->mysql.handle),
+                                sqlCommand
+                               );
+              }
+              else if (mysqlResult != 0)
+              {
+                error = ERRORX_(DATABASE,
+                                mysql_errno(databaseHandle->mysql.handle),
+                                "%s: %s",
+                                mysql_error(databaseHandle->mysql.handle),
+                                sqlCommand
+                               );
+              }
+              else
+              {
+                error = ERROR_NONE;
+              }
+
               i++;
             }
-            while (   (mysqlResult != 0)
+            while (   (error != ERROR_NONE)
                    && (i < SIZE_OF_ARRAY(CHARACTER_SETS))
                   );
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            if (error != ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
-              mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
-            else if (mysqlResult != 0)
-            {
-              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
               mysql_close(databaseHandle->mysql.handle);
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
@@ -1963,7 +1987,11 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           }
           else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
           {
-            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            error = ERRORX_(DATABASE_CONNECTION_LOST,
+                            mysql_errno(databaseHandle->mysql.handle),
+                            "%s",
+                            mysql_error(databaseHandle->mysql.handle)
+                           );
             mysql_close(databaseHandle->mysql.handle);
             Semaphore_unlock(&databaseList.lock);
             sem_destroy(&databaseHandle->wakeUp);
@@ -1971,7 +1999,11 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           }
           else if (mysqlResult != 0)
           {
-            error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s: %s",mysql_error(databaseHandle->mysql.handle),"SET NAMES 'UTF8'");
+            error = ERRORX_(DATABASE,
+                            mysql_errno(databaseHandle->mysql.handle),
+                            "%s",
+                            mysql_error(databaseHandle->mysql.handle)
+                           );
             mysql_close(databaseHandle->mysql.handle);
             Semaphore_unlock(&databaseList.lock);
             sem_destroy(&databaseHandle->wakeUp);
@@ -3827,10 +3859,11 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
           return error;
         }
 
-        // get value/result count and allocate bind data
+        // get value/result count
         databaseStatementHandle->valueCount  = sqlite3_bind_parameter_count(databaseStatementHandle->sqlite.statementHandle);
         databaseStatementHandle->resultCount = sqlite3_column_count(databaseStatementHandle->sqlite.statementHandle);
 
+        // allocate bind data
         databaseStatementHandle->sqlite.bind = (DatabaseValue**)calloc(databaseStatementHandle->resultCount+databaseStatementHandle->valueCount,
                                                                        sizeof(DatabaseValue*)
                                                                       );
@@ -3910,8 +3943,11 @@ debugPrintStackTrace();
           return error;
         }
 
-        // get value/result count and allocate bind data
-        databaseStatementHandle->valueCount = mysql_stmt_param_count(databaseStatementHandle->mysql.statementHandle);
+        // get value/result count
+        databaseStatementHandle->valueCount  = mysql_stmt_param_count(databaseStatementHandle->mysql.statementHandle);
+        databaseStatementHandle->resultCount = mysql_stmt_field_count(databaseStatementHandle->mysql.statementHandle);
+
+        // allocate bind data
         databaseStatementHandle->mysql.values.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->valueCount,
                                                                          sizeof(MYSQL_BIND)
                                                                         );
@@ -3927,7 +3963,6 @@ debugPrintStackTrace();
           HALT_INSUFFICIENT_MEMORY();
         }
 
-        databaseStatementHandle->resultCount = mysql_stmt_field_count(databaseStatementHandle->mysql.statementHandle);
         databaseStatementHandle->mysql.results.bind = (MYSQL_BIND*)calloc(databaseStatementHandle->resultCount,
                                                                           sizeof(MYSQL_BIND)
                                                                          );
@@ -3942,8 +3977,6 @@ debugPrintStackTrace();
         {
           HALT_INSUFFICIENT_MEMORY();
         }
-
-databaseStatementHandle->mysql.xxxexecutedFlag = FALSE;
       }
       break;
   }
@@ -3990,7 +4023,7 @@ fprintf(stderr,"%s:%d: value Count=%d\n",__FILE__,__LINE__,databaseStatementHand
 
         for (i = 0; i < databaseStatementHandle->valueCount; i++)
         {
-//          Database_valueToCString(buffer,sizeof(buffer),&databaseStatementHandle->values[i]);
+//          Database_valueToCString(buffer,sizeof(buffer),&databaseStatementHandle->mysql.values[i]);
 //fprintf(stderr,"%s:%d: %d: %s=%s\n",__FILE__,__LINE__,i,DATABASE_DATATYPE_NAMES[databaseStatementHandle->values[i].type],buffer);
 
         }
@@ -9477,6 +9510,15 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
           }
           return error;
         }
+
+        for (i = 0; i < parameterMapCount; i++)
+        {
+          memCopyFast(&parameterValues[i].data,
+                      sizeof(parameterValues[i].data),
+                      &toColumnInfo.values[parameterMap[toColumnMap[i]]].data,
+                      sizeof(toColumnInfo.values[parameterMap[toColumnMap[i]]].data)
+                   );
+        }
       }
 
       // insert row
@@ -9955,7 +9997,6 @@ bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *colum
   }
   else
   {
-abort();
     return FALSE;
   }
 }
