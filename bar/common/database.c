@@ -1666,15 +1666,6 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
       List_init(&databaseNode->progressHandlerList);
       Semaphore_init(&databaseNode->progressHandlerList.lock,SEMAPHORE_TYPE_BINARY);
 
-      switch (databaseSpecifier->type)
-      {
-        case DATABASE_TYPE_SQLITE3:
-          break;
-        case DATABASE_TYPE_MYSQL:
-          mysql_init(&databaseNode->mysql);
-          break;
-      }
-
       #ifdef DATABASE_DEBUG_LOCK
         memClear(databaseNode->readLPWIds,sizeof(databaseNode->readLPWIds));
         memClear(databaseNode->readWriteLPWIds,sizeof(databaseNode->readWriteLPWIds));
@@ -5524,6 +5515,7 @@ abort();
          && (error == ERROR_NONE)
          && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
         );
+  String_delete(sqlString);
 
   if      (error != ERROR_NONE)
   {
@@ -9371,7 +9363,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     va_end(arguments);
   }
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
-fprintf(stderr,"%s:%d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
+//fprintf(stderr,"%s:%d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sqlSelectString));
 
   sqlInsertString = String_format(String_new(),"INSERT INTO %s (",toTableName);
   for (i = 0; i < parameterMapCount; i++)
@@ -9387,7 +9379,7 @@ fprintf(stderr,"%s:%d: sqlSelectString=%s\n",__FILE__,__LINE__,String_cString(sq
   }
   String_formatAppend(sqlInsertString,")");
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlInsertString);
-fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
+//fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sqlInsertString));
 
   // create select+insert statements
   error = prepareStatement(&fromDatabaseStatementHandle,
