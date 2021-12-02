@@ -301,13 +301,6 @@ typedef struct DatabaseNode
   DatabaseBusyHandlerList     busyHandlerList;
   DatabaseProgressHandlerList progressHandlerList;
 
-  union
-  {
-    #ifdef HAVE_MYSQL
-      MYSQL mysql;
-    #endif /* HAVE_MYSQL */
-  };
-
   // simple locking information: LWP ids only
   #ifdef DATABASE_DEBUG_LOCK
     ThreadLWPId readLPWIds[32];
@@ -546,20 +539,12 @@ DatabaseDataTypes *dataTypes;
         MYSQL_BIND      *bind;
         MYSQL_TIME      *time;
       }                 results;
-      bool xxxexecutedFlag;
     }
     mysql;
   };
 
-//  const DatabaseValue **values;
   uint                valueCount;
   uint                valueIndex;
-
-#if 0
-  const DatabaseFilter **filters;
-  uint                filterCount;
-  uint                filterIndex;
-#endif
 
   char                **columnNames;
   DatabaseValue       *results;
@@ -569,7 +554,6 @@ DatabaseDataTypes *dataTypes;
   uint          *valueMap;
   uint          valueMapCount;
 
-//  DatabaseValue *results;
   #ifndef NDEBUG
     String sqlString;
     uint64 t0,t1;
