@@ -117,8 +117,9 @@ CREATE TABLE IF NOT EXISTS entities(
   INDEX(deletedFlag)
 ) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
 
-// insert default entity
-INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (${DEFAULT_ENTITY_DATABASE_ID},'','',0,0,0,0);
+// insert default entity (Note: requires an update, because MySQL does not allow to insert with id=0)
+INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (1,'','',0,0,0,0);
+UPDATE entities SET id=${DEFAULT_ENTITY_DATABASE_ID} WHERE id=1;
 
 // insert/delete/update triggeres
 /*
@@ -229,7 +230,7 @@ CREATE TABLE IF NOT EXISTS entries(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type),
   FULLTEXT(name)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+) CHARACTER SET '${CHARACTER_SET}';
 
 // newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
@@ -282,10 +283,6 @@ CREATE TRIGGER AFTER UPDATE ON entries
     UPDATE entriesNewest
       SET entityId=NEW.entityId
       WHERE entryId=OLD.id;
-
-    // update FTS
-//    DELETE FROM FTS_entries WHERE entryId=OLD.id;
-//    INSERT INTO FTS_entries (id,name) VALUES (NEW.id,NEW.name);
 
 // insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
     // update if entry is newer
@@ -377,14 +374,14 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   entryId               INT NOT NULL,
   storageId             INT NOT NULL,
 
-  // Note: redundancy for faster access
-  name                  VARCHAR(${MAX_TEXT_LENGTH}),
-
   // updated by updateDirectoryContentAggregates()
   totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
   totalEntrySize        BIGINT DEFAULT 0,  // total size of directory entries [bytes]
   totalEntryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
   totalEntrySizeNewest  BIGINT DEFAULT 0,  // total size of newest directory entries [bytes]
+
+  // Note: redundancy for faster access
+  name                  VARCHAR(${MAX_TEXT_LENGTH}),
 
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
   FOREIGN KEY(storageId) REFERENCES storages(id) ON DELETE CASCADE,
