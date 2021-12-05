@@ -69,6 +69,7 @@ typedef struct
     {
       String fileName;
     } sqlite;
+    #if defined(HAVE_MYSQL)
     struct
     {
       String   serverName;
@@ -76,6 +77,7 @@ typedef struct
       Password password;
       String   databaseName;
     } mysql;
+    #endif /* HAVE_MYSQL */
   };
 } DatabaseSpecifier;
 
@@ -381,11 +383,13 @@ typedef struct DatabaseHandle
     {
       sqlite3                 *handle;
     } sqlite;
+    #if defined(HAVE_MYSQL)
     struct
     {
       MYSQL                   *handle;
     }
     mysql;
+    #endif /* HAVE_MYSQL */
   };
   uint                        readLockCount;
   uint                        readWriteLockCount;
@@ -527,6 +531,7 @@ typedef struct
       DatabaseValue     **bind;
     }
     sqlite;
+    #if defined(HAVE_MYSQL)
     struct
     {
       MYSQL_STMT        *statementHandle;
@@ -544,6 +549,7 @@ DatabaseDataTypes *dataTypes;
       }                 results;
     }
     mysql;
+    #endif /* HAVE_MYSQL */
   };
 
   uint                valueCount;

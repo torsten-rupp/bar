@@ -543,10 +543,14 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString,
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
-      if (String_isEmpty(databaseSpecifier.mysql.databaseName))
-      {
-        String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
-      }
+      #if defined(HAVE_MYSQL)
+        if (String_isEmpty(databaseSpecifier.mysql.databaseName))
+        {
+          String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+        }
+      #else /* HAVE_MYSQL */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_MYSQL */
       break;
   }
 
@@ -1048,7 +1052,11 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriS
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
-      if (String_isEmpty(databaseSpecifier.mysql.databaseName)) String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+      #if defined(HAVE_MYSQL)
+        if (String_isEmpty(databaseSpecifier.mysql.databaseName)) String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
+      #else /* HAVE_MYSQL */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_MYSQL */
       break;
   }
 
@@ -1589,6 +1597,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                 );
         break;
       case DATABASE_TYPE_MYSQL:
+        // nothing to do
         break;
     }
     if (error != ERROR_NONE)
@@ -1635,6 +1644,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                 );
         break;
       case DATABASE_TYPE_MYSQL:
+        // nothing to do
         break;
     }
     if (error != ERROR_NONE)
@@ -1779,14 +1789,6 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
     printInfo("FAIL\n");
     printError("create triggers fail (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
-  }
-
-  switch (Database_getType(databaseHandle))
-  {
-    case DATABASE_TYPE_SQLITE3:
-      break;
-    case DATABASE_TYPE_MYSQL:
-      break;
   }
 
   printInfo("OK\n");
@@ -1961,6 +1963,10 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         }
         break;
       case DATABASE_TYPE_MYSQL:
+        #if defined(HAVE_MYSQL)
+        #else /* HAVE_MYSQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MYSQL */
 // TODO:
         break;
     }
@@ -2020,6 +2026,10 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         }
         break;
       case DATABASE_TYPE_MYSQL:
+        #if defined(HAVE_MYSQL)
+        #else /* HAVE_MYSQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MYSQL */
 // TODO:
         break;
     }
@@ -2103,6 +2113,10 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         }
         break;
       case DATABASE_TYPE_MYSQL:
+        #if defined(HAVE_MYSQL)
+        #else /* HAVE_MYSQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MYSQL */
         // nothing to do (use views)
         break;
     }
@@ -8106,7 +8120,11 @@ UNUSED_VARIABLE(lostFlag);
       String_format(ftsSubSelect,"SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S'",ftsName);
       break;
     case DATABASE_TYPE_MYSQL:
-      String_format(ftsSubSelect,"SELECT id FROM entries WHERE MATCH(name) AGAINST ('%S')",ftsName);
+      #if defined(HAVE_MYSQL)
+        String_format(ftsSubSelect,"SELECT id FROM entries WHERE MATCH(name) AGAINST ('%S')",ftsName);
+      #else /* HAVE_MYSQL */
+        return;
+      #endif /* HAVE_MYSQL */
       break;
   }
 
@@ -9928,7 +9946,10 @@ if (xxxId != DATABASE_ID_NONE)
             String_insertCString(s,STRING_BEGIN,"EXPLAIN QUERY PLAN ");
             break;
           case DATABASE_TYPE_MYSQL:
-            String_insertCString(s,STRING_BEGIN,"EXPLAIN  ");
+            #if defined(HAVE_MYSQL)
+              String_insertCString(s,STRING_BEGIN,"EXPLAIN  ");
+            #else /* HAVE_MYSQL */
+            #endif /* HAVE_MYSQL */
             break;
         }
       }

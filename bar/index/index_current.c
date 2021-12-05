@@ -720,18 +720,12 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
   {
     entryFragmentsCount = 0LL;
   }
-// TODO:
-#if 0
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "%lld entities/%lld storages/%lld entries/%lld fragments to import",
+  printInfo("%lld entities/%lld storages/%lld entries/%lld fragments to import",
               entityCount,
               storageCount,
               entriesCount,
               entryFragmentsCount
              );
-#endif
   DIMPORT("import %"PRIu64" entities",         entityCount);
   DIMPORT("import %"PRIu64" storages",         storageCount);
   DIMPORT("import %"PRIu64" entries",          entriesCount);
@@ -777,22 +771,8 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
   KeyData            keyData;
   ValueData          valueData;
   String             storageIdsString;
-  DatabaseId         toEntityId;
 
   error = ERROR_NONE;
-
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-// TODO:
-#if 0
-  // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storage");     IndexCommon_progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"files");       IndexCommon_progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"images");      IndexCommon_progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"directories"); IndexCommon_progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"links");       IndexCommon_progressStep(&importProgressInfo);
-  fixBrokenIds(oldIndexHandle,"special");     IndexCommon_progressStep(&importProgressInfo);
-  DIMPORT("fixed broken ids");
-#endif
 
   // transfer uuids (if not exists, ignore errors)
   (void)Database_copyTable(oldDatabaseHandle,
@@ -859,6 +839,11 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                assert(fromEntityId != DATABASE_ID_NONE);
                                toEntityId = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                assert(toEntityId != DATABASE_ID_NONE);
+
+                               logImportProgress("Import entity #%"PRIi64": '%s' ",
+                                                 toEntityId,
+                                                 Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
+                                                );
 
                                // transfer storages of entity
                                t0 = Misc_getTimestamp();
@@ -986,6 +971,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                             assert(toEntryId != DATABASE_ID_NONE);
 
                                                             error = ERROR_NONE;
+
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
@@ -1028,6 +1014,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
                                                                                              fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                                                                              assert(fromStorageId != DATABASE_ID_NONE);
+
                                                                                              if (Dictionary_find(&storageIdDictionary,
                                                                                                                  &fromStorageId,
                                                                                                                  sizeof(DatabaseId),
@@ -1178,6 +1165,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
                                                           CALLBACK_(progressStep,NULL),
                                                           "WHERE entityId=%lld",
+//"WHERE entityId=%lld AND type=9",
                                                           fromEntityId
                                                          );
                                if (error != ERROR_NONE)
@@ -1186,9 +1174,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                }
                                t1 = Misc_getTimestamp();
 
-                               logImportProgress("Imported entity #%"PRIi64": '%s' (%llus)",
-                                                 toEntityId,
-                                                 Database_getTableColumnCString(fromColumnInfo,"jobUUID",""),
+                               logImportProgress("(%llus)\n",
                                                  (t1-t0)/US_PER_SECOND
                                                 );
 
@@ -1205,6 +1191,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     return error;
   }
 
+#if 0
   // transfer storages and entries without entity
   error = Database_copyTable(oldDatabaseHandle,
                              newDatabaseHandle,
@@ -1256,6 +1243,11 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                toStorageId   = Database_getTableColumnId(toColumnInfo,"id",DATABASE_ID_NONE);
                                assert(toStorageId != DATABASE_ID_NONE);
 
+                               logImportProgress("Import storage #%"PRIi64": '%s' ",
+                                                 toStorageId,
+                                                 Database_getTableColumnCString(fromColumnInfo,"name","")
+                                                );
+
                                t0 = Misc_getTimestamp();
                                error = Database_copyTable(oldDatabaseHandle,
                                                           newDatabaseHandle,
@@ -1301,9 +1293,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
                                                             error = ERROR_NONE;
 
-// TODO:
-#if 1
-fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                             switch (type)
                                                             {
                                                               case INDEX_TYPE_FILE:
@@ -1486,9 +1475,7 @@ fprintf(stderr,"%s:%d: tzpe1 %d\n",__FILE__,__LINE__,type);
                                                                 #endif /* not NDEBUG */
                                                                 break;
                                                             }
-#else
-error = ERROR_NONE;
-#endif
+
                                                             return error;
                                                           },NULL),
                                                           CALLBACK_(NULL,NULL),  // pause
@@ -1503,9 +1490,7 @@ error = ERROR_NONE;
                                }
                                t1 = Misc_getTimestamp();
 
-                               logImportProgress("Imported storage #%"PRIi64": '%s' (%llus)",
-                                                 toStorageId,
-                                                 Database_getTableColumnCString(fromColumnInfo,"name",""),
+                               logImportProgress("(%llus)\n",
                                                  (t1-t0)/US_PER_SECOND
                                                 );
 
@@ -1521,6 +1506,7 @@ error = ERROR_NONE;
   {
     return error;
   }
+#endif
 
   return error;
 }
