@@ -17,14 +17,8 @@ def build()
         checkout scm
         script
         {
-          // use existing extern packages if possible
-          sh "if test -d /extern; then \
-                install -d extern; \
-                cp -r /extern/* extern; \
-              fi \
-             "
-
           // configure
+          sh "./download-third-party-packages.sh --local-directory /extern"
           sh "./download-third-party-packages.sh"
           sh "./configure"
 
