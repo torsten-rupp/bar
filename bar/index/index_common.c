@@ -569,15 +569,16 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
 
 void IndexCommon_initProgress(ProgressInfo *progressInfo, const char *text)
 {
-  assert(progressInfo != NULL);
-
-  progressInfo->text                  = text;
-  progressInfo->startTimestamp        = 0ll;
-  progressInfo->steps                 = 0;
-  progressInfo->maxSteps              = 0;
-  progressInfo->lastProgressSum       = 0L;
-  progressInfo->lastProgressCount     = 0;
-  progressInfo->lastProgressTimestamp = 0LL;
+  if (progressInfo != NULL)
+  {
+    progressInfo->text                  = text;
+    progressInfo->startTimestamp        = 0ll;
+    progressInfo->steps                 = 0;
+    progressInfo->maxSteps              = 0;
+    progressInfo->lastProgressSum       = 0L;
+    progressInfo->lastProgressCount     = 0;
+    progressInfo->lastProgressTimestamp = 0LL;
+  }
 }
 
 void IndexCommon_resetProgress(ProgressInfo *progressInfo, uint64 maxSteps)
@@ -597,6 +598,7 @@ void IndexCommon_doneProgress(ProgressInfo *progressInfo)
 {
   if (progressInfo != NULL)
   {
+    UNUSED_VARIABLE(progressInfo);
   }
 }
 
