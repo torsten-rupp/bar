@@ -18,7 +18,7 @@ def build()
         script
         {
           // configure
-          sh "./download-third-party-packages.sh --local-directory /extern"
+          sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
           sh "./configure"
 
