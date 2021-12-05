@@ -1,12 +1,12 @@
 #!/bin/bash
+#!/bin/bash
 
-set -x
-
-BASE_PATH=/media/home
-
+# constants
+BUILD_DIR=$PWD
 ADDITIONAL_DOWNLOAD_FLAGS=
 
 # parse arugments
+sourcePath=$PWD
 packageName=""
 distributionFileName=""
 version=""
@@ -45,23 +45,23 @@ while test $# != 0; do
     *)
       case $n in
         0)
-          packageName="$1"
+          sourcePath="$1"
           n=1
           ;;
         1)
-          distributionFileName="$1"
+          packageName="$1"
           n=2
           ;;
         2)
-          version="$1"
+          distributionFileName=`readlink -f "$1"`
           n=3
           ;;
         3)
-          userGroup="$1"
+          version="$1"
           n=4
           ;;
         4)
-          wine="$1"
+          userGroup="$1"
           n=5
           ;;
         5)
@@ -76,23 +76,23 @@ done
 while test $# != 0; do
   case $n in
     0)
-      packageName="$1"
+      sourcePath="$1"
       n=1
       ;;
     1)
-      distributionFileName="$1"
-      n=1
+      packageName="$1"
+      n=2
       ;;
     2)
-      version="$1"
+      distributionFileName=`readlink -f "$1"`
       n=3
       ;;
     3)
-      userGroup="$1"
+      version="$1"
       n=4
       ;;
     4)
-      wine="$1"
+      userGroup="$1"
       n=5
       ;;
     5)
@@ -103,11 +103,17 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <distribution name> <version> <user:group> <iscc> <setup name>"
+  echo "Usage: $0 [options] <source path> <distribution name> <version> <user:group> <setup name>"
   echo ""
-  echo "Options:  -t|--test  execute tests"
-  echo "          -h|--help  print help"
+  echo "Options:  -t|--test   execute tests"
+  echo "          -d|--debug  enable debug"
+  echo "          -h|--help   print help"
   exit 0
+fi
+
+# enable traciing
+if test $debugFlag -eq 1; then
+  set -x
 fi
 
 # check arguments
@@ -127,12 +133,15 @@ if test -z "$userGroup"; then
   echo >&2 ERROR: no user:group id given!
   exit 1
 fi
-if test -z "$wine"; then
-  echo >&2 ERROR: no wine name given!
-  exit 1
-fi
 if test -z "$setupName"; then
   echo >&2 ERROR: no setup name given!
+  exit 1
+fi
+
+# get tools
+wine=`which wine`
+if test -z "$wine"; then
+  echo >&2 ERROR: wine not found!
   exit 1
 fi
 
@@ -155,53 +164,61 @@ fi
 trap /bin/bash ERR
 set -e
 
-# get sources
-cd /tmp
-if test $fromSourceFlag -eq 1; then
-  PROJECT_ROOT=$BASE_PATH
-else
-  # extract sources
-  tar xjf $BASE_PATH/$distributionFileName
-  cd $packageName-$version
-  PROJECT_ROOT=$PWD
-fi
+# create temporary directory
+tmpDir=`mktemp -d /tmp/win32-XXXXXX`
 
-# build Win32
-$PROJECT_ROOT/download-third-party-packages.sh \
-  --clean
-$PROJECT_ROOT/download-third-party-packages.sh \
-  --no-verbose \
-  $ADDITIONAL_DOWNLOAD_FLAGS
-$PROJECT_ROOT/configure \
-  --host=i686-w64-mingw32 \
-  --build=x86_64-linux \
-  --disable-link-static \
-  --enable-link-dynamic \
-  --disable-bfd \
+(
+  cd $tmpDir
+
+# TODO: out-of-source build, build from source instead of extrac distribution file
+  # get sources
+  if test $fromSourceFlag -eq 1; then
+    projectRoot=$SOURCE_PATH
+  else
+    # extract sources
+    tar xjf $distributionFileName
+    cd $packageName-$version
+    projectRoot=$PWD
+  fi
+
+  # build Win32
+  ./download-third-party-packages.sh \
+    --local-directory /media/extern \
+    --no-verbose \
+    $ADDITIONAL_DOWNLOAD_FLAGS
+  $projectRoot/configure \
+    --host=i686-w64-mingw32 \
+    --build=x86_64-linux \
+    --disable-link-static \
+    --enable-link-dynamic \
+    --disable-bfd \
 --disable-epm \
-  ;
-make
-make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
+    ;
+  make
+  make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
-if test $fromSourceFlag -ne 1; then
-set -x       .
-install packages/backup-archiver.iss backup-archiver.iss
-$wine "$iscc" \
-  /O$BASE_PATH \
-  /F$setupName \
-  backup-archiver.iss
+  if test $fromSourceFlag -ne 1; then
+  set -x       .
+  install packages/backup-archiver.iss backup-archiver.iss
+  $wine "$iscc" \
+    /O$sourcePath \
+    /F$setupName \
+    backup-archiver.iss
 
-# get result
-chown $userGroup $BASE_PATH/${setupName}.exe
+  # get result
+  chown $userGroup $sourcePath/${setupName}.exe
 
-# get MD5 hash
-md5sum $BASE_PATH/${setupName}.exe
-fi
+  # get MD5 hash
+  md5sum $BUIsourcePathLD_DIR/${setupName}.exe
+  fi
 
-# debug
-if test $debugFlag -eq 1; then
-  /bin/bash
-fi
+  # debug
+  if test $debugFlag -eq 1; then
+    /bin/bash
+  fi
+)
 
-#TODO: remove
-/bin/bash
+# clean-up
+rm -rf $tmpDir
+
+exit 0

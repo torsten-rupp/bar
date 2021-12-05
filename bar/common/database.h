@@ -21,6 +21,10 @@
 #include <semaphore.h>
 #include <assert.h>
 
+#if defined(HAVE_MYSQL_MYSQL_H) && defined(HAVE_MYSQL_ERRMSG_H)
+  #include "mysql/mysql.h"
+#endif /* HAVE_MYSQL_H */
+
 #include "common/global.h"
 #include "common/passwords.h"
 #include "common/strings.h"
@@ -31,7 +35,6 @@
 #include "errors.h"
 
 #include "sqlite3.h"
-#include "mysql/mysql.h"
 
 /****************** Conditional compilation switches *******************/
 #define _DATABASE_LOCK_PER_INSTANCE   // if defined use lock per database instance, otherwise a global lock for all database is used

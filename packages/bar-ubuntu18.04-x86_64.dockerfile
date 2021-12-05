@@ -21,6 +21,7 @@ RUN apt-get -y update
 RUN apt-get -y install \
   bc \
   bzip2 \
+  coreutils \
   curl \
   debhelper \
   devscripts \
@@ -58,8 +59,8 @@ RUN apt-get -y install \
   libpq-dev \
   ;
 
-# mount /media/home
-RUN mkdir /media/home  && chown root /media/home
+# mounts
+RUN install -d /media/home  && chown root /media/home
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]

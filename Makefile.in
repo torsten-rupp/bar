@@ -209,7 +209,8 @@ clean: \
   clean_keys \
   clean_doc \
   clean_rpm \
-  clean_deb
+  clean_deb \
+  clean_win32
 	-$(MAKE) -C bar clean
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol clean
@@ -230,6 +231,7 @@ endif
 	$(RMF) epm.list
 	$(RMF) config.status
 	$(RMF) config.log
+	$(RMRF) build
 
 # help
 .PHONY: help
@@ -764,6 +766,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
             tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
 	# download not existing packages
+	./download-third-party-packages.sh --local-directory extern -d tmp/$(DISTRIBUTION_NAME).orig -n
 	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig -n
 	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
 	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
@@ -811,11 +814,11 @@ update_docker:
 	$(DOCKER) pull ubuntu:20.04
 	#
 	# base images
-	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile             -t bar-centos:6            .)
+#	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile             -t bar-centos:6            .)
 	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile      -t bar-centos-x86_64:6     .)
-	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile             -t bar-debian:8            .)
+#	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile             -t bar-debian:8            .)
 	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile      -t bar-debian-x86_64:8     .)
-	(cd packages; $(DOCKER) build -f bar-ubuntu18.04-mingw32.dockerfile -t bar-mingw32             .)
+#	(cd packages; $(DOCKER) build -f bar-ubuntu18.04-mingw32.dockerfile -t bar-mingw32             .)
 	#
 	# test images
 	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
@@ -894,10 +897,10 @@ rpm64d:
 	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm DEBUG=1
 
 clean_rpm:
-	$(RMF) $(DISTRIBUTION_NAME).rpm
-	$(RMF) $(DISTRIBUTION_NAME).rpm.log
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm.log
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm.log
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm.log
 
 $(DISTRIBUTION_NAME).rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
@@ -907,15 +910,9 @@ $(DISTRIBUTION_NAME).rpm: \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             -e CFLAGS="-m32" \
+            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-centos:6 setarch i686 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME).rpm \
-              $(if $(DEBUG),--debug) \
-              ;" \
+            bar-centos:6 setarch i686 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -926,17 +923,28 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "source scl_source enable devtoolset-7; /media/home/packages/build_rpm.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME)-x86_64.rpm \
-              $(if $(DEBUG),--debug) \
-              ;" \
+            bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
+
+.PHONY: build_rpm
+build_rpm:
+	install -d build/rpm
+	# Note: scl_source to enable gcc 7
+	(cd build/rpm; \
+	 source scl_source enable devtoolset-7; \
+         ../../packages/build_rpm.sh \
+           ../.. \
+           $(PACKAGE_NAME) \
+           ../../$(DISTRIBUTION_NAME).tar.bz2 \
+           $(VERSION) \
+           $(shell id -u):$(shell id -g) \
+           $(DISTRIBUTION_NAME)-x86_64.rpm \
+           $(if $(DEBUG),--debug) \
+           ; \
+        )
 
 # DEB
 .PHONY: deb debd clean_deb
@@ -966,12 +974,12 @@ deb-gui64d:
 	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb DEBUG=1
 
 clean_deb:
-	$(RMF) $(DISTRIBUTION_NAME).deb
-	$(RMF) $(DISTRIBUTION_NAME_GUI).deb
-	$(RMF) $(DISTRIBUTION_NAME).deb.log
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb
-	$(RMF) $(DISTRIBUTION_NAME_GUI)-x86_64.deb
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb.log
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME).deb
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME_GUI).deb
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME).deb.log
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME_GUI)-x86_64.deb
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb.log
 
 $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
   $(DISTRIBUTION_NAME).tar.bz2
@@ -979,16 +987,9 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-debian:8 setarch i686 -- /media/home/packages/build_deb.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME).deb \
-              $(DISTRIBUTION_NAME_GUI).deb \
-              $(if $(DEBUG),--debug) \
-              ; \
+            bar-debian:8 setarch i686 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -998,18 +999,27 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-debian-x86_64:8 setarch x86_64 -- /media/home/packages/build_deb.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(DISTRIBUTION_NAME)-x86_64.deb \
-              $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
-              $(if $(DEBUG),--debug) \
-              ; \
+            bar-debian-x86_64:8 setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
+
+# TODO: out-of-source build, distribution file
+.PHONY: build_deb
+build_deb:
+	install -d build/deb
+	(cd build/deb; \
+	 ../../packages/build_deb.sh \
+           ../.. \
+           $(PACKAGE_NAME) \
+           ../../$(DISTRIBUTION_NAME).tar.bz2 \
+           $(VERSION) \
+           $(shell id -u):$(shell id -g) \
+           $(DISTRIBUTION_NAME)-x86_64.deb \
+           $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
+           $(if $(DEBUG),--debug); \
+        )
 
 # Windows setup
 .PHONY: win32 clean_win32
@@ -1017,11 +1027,12 @@ win32: \
   $(DISTRIBUTION_NAME)-setup.exe
 
 clean_win32:
-	$(RMF) $(DISTRIBUTION_NAME).rpm
-	$(RMF) $(DISTRIBUTION_NAME).rpm.log
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm
-	$(RMF) $(DISTRIBUTION_NAME)-x86_64.rpm.log
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm.log
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm.log
 
+#TODO: remove /media/wine and move to build_win32.sh
 $(DISTRIBUTION_NAME)-setup.exe: \
   $(DISTRIBUTION_NAME).tar.bz2
 	@$(call functionPrintInfo,Build Win32 on mingw32)
@@ -1029,17 +1040,26 @@ $(DISTRIBUTION_NAME)-setup.exe: \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             -e CFLAGS="-m32" \
+            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
-            bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(WINE) \
-              $(DISTRIBUTION_NAME)-setup; \
+            bar-mingw32 setarch i686 -- /bin/bash -c "make -C /media/home build_win32 DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
+
+.PHONY: build_win32
+build_win32:
+	install -d build/win32
+	(cd build/win32; \
+	 ../../packages/build_win32.sh \
+           ../.. \
+           $(PACKAGE_NAME) \
+           ../../$(DISTRIBUTION_NAME).tar.bz2 \
+           $(VERSION) \
+           $(shell id -u):$(shell id -g) \
+           $(DISTRIBUTION_NAME)-setup \
+           $(if $(DEBUG),--debug); \
+        )
 
 # install test
 .PHONY: install_test

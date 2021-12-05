@@ -1,12 +1,10 @@
 #!/bin/bash
 
-#set -x
-
-BASE_PATH=/media/home
-
-TMP=/tmp/debian
+# constants
+BUILD_DIR=$PWD
 
 # parse arugments
+sourcePath=$PWD
 packageName=""
 distributionFileName=""
 version=""
@@ -42,28 +40,32 @@ while test $# != 0; do
     *)
       case $n in
         0)
-          packageName="$1"
+          sourcePath=`readlink -f "$1"`
           n=1
           ;;
         1)
-          distributionFileName="$1"
+          packageName="$1"
           n=2
           ;;
         2)
-          version="$1"
+          distributionFileName=`readlink -f "$1"`
           n=3
           ;;
         3)
-          userGroup="$1"
+          version="$1"
           n=4
           ;;
         4)
-          debFileName="$1"
+          userGroup="$1"
           n=5
           ;;
         5)
-          debFileNameGUI="$1"
+          debFileName="$1"
           n=6
+          ;;
+        6)
+          debFileNameGUI="$1"
+          n=7
           ;;
       esac
       shift
@@ -73,38 +75,48 @@ done
 while test $# != 0; do
   case $n in
     0)
-      packageName="$1"
+      sourcePath=`readlink -f "$1"`
       n=1
       ;;
     1)
-      distributionFileName="$1"
+      packageName="$1"
       n=2
       ;;
     2)
-      version="$1"
+      distributionFileName=`readlink -f "$1"`
       n=3
       ;;
     3)
-      userGroup="$1"
+      version="$1"
       n=4
       ;;
     4)
-      debFileName="$1"
+      userGroup="$1"
       n=5
       ;;
     5)
-      debFileNameGUI="$1"
+      debFileName="$1"
       n=6
+      ;;
+    6)
+      debFileNameGUI="$1"
+      n=7
       ;;
   esac
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <distribution name> <version> <user:group> <package name> [<package name GUI>]"
+  echo "Usage: $0 [options] <source path> <distribution name> <version> <user:group> <package name> [<package name GUI>]"
   echo ""
-  echo "Options:  -t|--test  execute tests"
-  echo "          -h|--help  print help"
+  echo "Options:  -t|--test   execute tests"
+  echo "          -d|--debug  enable debug"
+  echo "          -h|--help   print help"
   exit 0
+fi
+
+# enable traciing
+if test $debugFlag -eq 1; then
+  set -x
 fi
 
 # check arguments
@@ -129,72 +141,82 @@ if test -z "$debFileName"; then
   exit 1
 fi
 
+# get tools
+
+# TODO: out-of-source build, use existing checkout
+
 # set error handler: execute bash shell
 #trap /bin/bash ERR
 #set -e
 
-# create build directory
-set -x
-install -d $TMP
-cd $TMP
+# create temporary directory
+tmpDir=`mktemp -d /tmp/deb-XXXXXX`
 
-# extract sources
-tar xjf $BASE_PATH/$distributionFileName
-cd $packageName-$version
+# build deb package
+(
+  cd $tmpDir
 
-# create debian files with changelog
-install -d debian
-install -t debian \
-        packages/debian/compat \
-        packages/debian/control \
-        packages/debian/copyright \
-        packages/debian/preinst \
-        packages/debian/postinst \
-        packages/debian/prerm \
-        packages/debian/postrm \
-        packages/debian/rules
-install -d debian/source
-install -t debian/source \
-        packages/debian/source/format
+  # extract sources
+  tar xjf $distributionFileName
+  cd $packageName-$version
 
-# create changelog
-LANG=en_US.utf8 ./packages/changelog.pl --type deb < $BASE_PATH/ChangeLog > debian/changelog
+  # create debian files with changelog
+  install -d debian
+  install -t debian \
+          packages/debian/compat \
+          packages/debian/control \
+          packages/debian/copyright \
+          packages/debian/preinst \
+          packages/debian/postinst \
+          packages/debian/prerm \
+          packages/debian/postrm \
+          packages/debian/rules
+  install -d debian/source
+  install -t debian/source \
+          packages/debian/source/format
 
-# build deb
-#debuild \
-#  -rfakeroot \
-#  -e SOURCE_DIR=$BASE_PATH \
-#  -e testsFlag=$testsFlag \
-#  -us -uc
-#ln -s packages/debian
-debuild \
-  -e SOURCE_DIR=$BASE_PATH \
-  -e packageName=$packageName \
-  -e distributionFileName=$distributionFileName \
-  -e version=$version \
-  -e debFileName=$debFileName \
-  -e testsFlag=$testsFlag \
-  -us -uc
-#  -i -us -uc -b
+  # create changelog
+  LANG=en_US.utf8 ./packages/changelog.pl --type deb < ChangeLog > debian/changelog
 
-# get result
-cp -f $TMP/${packageName}_[0-9]*.deb $BASE_PATH/$debFileName
-chown $userGroup $BASE_PATH/$debFileName
-if test -n "$debFileNameGUI"; then
-  cp -f $TMP/${packageName}-gui_[0-9]*.deb $BASE_PATH/$debFileNameGUI
-  chown $userGroup $BASE_PATH/$debFileNameGUI
-fi
+# TODO: out-of-source build, build from source instead of extrac distribution file
+  # build deb
+  #debuild \
+  #  -rfakeroot \
+  #  -e SOURCE_DIR=$sourcePath \
+  #  -e testsFlag=$testsFlag \
+  #  -us -uc
+  #ln -s packages/debian
+  debuild \
+    -e SOURCE_DIR=$sourcePath \
+    -e packageName=$packageName \
+    -e distributionFileName=$distributionFileName \
+    -e version=$version \
+    -e debFileName=$debFileName \
+    -e testsFlag=$testsFlag \
+    -us -uc
+  #  -i -us -uc -b
 
-# get MD5 hash
-md5sum $BASE_PATH/$debFileName
-if test -n "$debFileNameGUI"; then
-  md5sum $BASE_PATH/$debFileNameGUI
-fi
+  # get result
+  cp -f $tmpDir/${packageName}_[0-9]*.deb $sourcePath/$debFileName
+  chown $userGroup $sourcePath/$debFileName
+  if test -n "$debFileNameGUI"; then
+    cp -f $tmpDir/${packageName}-gui_[0-9]*.deb $sourcePath/$debFileNameGUI
+    chown $userGroup $sourcePath/$debFileNameGUI
+  fi
 
-# debug
-if test $debugFlag -eq 1; then
-  /bin/bash
-fi
+  # get MD5 hash
+  md5sum $sourcePath/$debFileName
+  if test -n "$debFileNameGUI"; then
+    md5sum $sourcePath/$debFileNameGUI
+  fi
+
+  # debug
+  if test $debugFlag -eq 1; then
+    /bin/bash
+  fi
+)
 
 # clean-up
-rm -rf $TMP
+rm -rf $tmpDir
+
+exit 0

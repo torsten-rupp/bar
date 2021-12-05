@@ -51,14 +51,12 @@ creating automated backups in the background.
 #echo version=%{version}
 #echo testsFlag=%{testsFlag}
 #echo packageName=%{packageName}
-./download-third-party-packages.sh \
-  --clean
-./download-third-party-packages.sh \
-  --local-directory /media/home/extern \
-  --no-verbose \
-  %{ADDITIONAL_DOWNLOAD_FLAGS}
 
 %build
+./download-third-party-packages.sh \
+  --local-directory /media/extern \
+  --no-verbose \
+  %{ADDITIONAL_DOWNLOAD_FLAGS}
 %configure  \
   --enable-extern-check \
   --disable-crashdump \

@@ -1,12 +1,10 @@
 #!/bin/bash
 
-#set -x
-
-BASE_PATH=/media/home
-
-TMP=/tmp/rpm
+# constants
+BUILD_DIR=$PWD
 
 # parse arugments
+sourcePath=$PWD
 packageName=""
 distributionFileName=""
 version=""
@@ -41,24 +39,28 @@ while test $# != 0; do
     *)
       case $n in
         0)
-          packageName="$1"
+          sourcePath=`readlink -f "$1"`
           n=1
           ;;
         1)
-          distributionFileName="$1"
+          packageName="$1"
           n=2
           ;;
         2)
-          version="$1"
+          distributionFileName=`readlink -f "$1"`
           n=3
           ;;
         3)
-          userGroup="$1"
+          version="$1"
           n=4
           ;;
         4)
-          rpmFileName="$1"
+          userGroup="$1"
           n=5
+          ;;
+        5)
+          rpmFileName="$1"
+          n=6
           ;;
       esac
       shift
@@ -68,34 +70,44 @@ done
 while test $# != 0; do
   case $n in
     0)
-      packageName="$1"
+      sourcePath=`readlink -f "$1"`
       n=1
       ;;
     1)
-      distributionFileName="$1"
+      packageName="$1"
       n=2
       ;;
     2)
-      version="$1"
+      distributionFileName=`readlink -f "$1"`
       n=3
       ;;
     3)
-      userGroup="$1"
+      version="$1"
       n=4
       ;;
     4)
-      rpmFileName="$1"
+      userGroup="$1"
       n=5
+      ;;
+    5)
+      rpmFileName="$1"
+      n=6
       ;;
   esac
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <distribution name> <version> <user:group> <package name>"
+  echo "Usage: $0 [options] <source path>:<distribution name> <version> <user:group> <package name>"
   echo ""
-  echo "Options:  -t|--test  execute tests"
-  echo "          -h|--help  print help"
+  echo "Options:  -t|--test   execute tests"
+  echo "          -d|--debug  enable debug"
+  echo "          -h|--help   print help"
   exit 0
+fi
+
+# enable traciing
+if test $debugFlag -eq 1; then
+  set -x
 fi
 
 # check arguments
@@ -120,40 +132,53 @@ if test -z "$rpmFileName"; then
   exit 1
 fi
 
+# get tools
+
+# TODO: out-of-source build, use existing checkout
+
 # set error handler: execute bash shell
 #trap /bin/bash ERR
 #set -e
 
-# create build directory
-install -d $TMP
-cd $TMP
+# create temporary directory
+tmpDir=`mktemp -d /tmp/rpm-XXXXXX`
 
 # create .spec-file with changelog
-sed '/^%changelog/q1' < $BASE_PATH/packages/backup-archiver.spec > backup-archiver.spec
-LANG=en_US.utf8 $BASE_PATH/packages/changelog.pl --type rpm < $BASE_PATH/ChangeLog >> backup-archiver.spec
+sed '/^%changelog/q1' < $sourcePath/packages/backup-archiver.spec > $tmpDir/backup-archiver.spec
+LANG=en_US.utf8 $sourcePath/packages/changelog.pl --type rpm < $sourcePath/ChangeLog >> $tmpDir/backup-archiver.spec
 
-# build rpm
-rpmbuild \
-  -bb \
-  --define "_sourcedir $BASE_PATH" \
-  --define "packageName $packageName" \
-  --define "distributionFileName $distributionFileName" \
-  --define "version $version" \
-  --define "rpmFileName $rpmFileName" \
-  --define "testsFlag $testsFlag" \
-  backup-archiver.spec
+# build rpm package (Note: rpmbuild require access)
+chmod 666 $distributionFileName
+(
+  cd $tmpDir
 
-# get result
-cp -f /root/rpmbuild/RPMS/*/backup-archiver-[0-9]*.rpm $BASE_PATH/$rpmFileName
-chown $userGroup $BASE_PATH/$rpmFileName
+# TODO: out-of-source build, build from source instead of extract distribution file
+  # build rpm
+  rpmbuild \
+    -bb \
+    --define "_sourcedir $sourcePath" \
+    --define "_topdir `pwd`" \
+    --define "packageName $packageName" \
+    --define "distributionFileName $distributionFileName" \
+    --define "version $version" \
+    --define "rpmFileName $rpmFileName" \
+    --define "testsFlag $testsFlag" \
+    backup-archiver.spec
 
-# get MD5 hash
-md5sum $BASE_PATH/$rpmFileName
+  # get result
+  cp -f $tmpDir/RPMS/*/backup-archiver-[0-9]*.rpm $sourcePath/$rpmFileName
+  chown $userGroup $sourcePath/$rpmFileName
 
-# debug
-if test $debugFlag -eq 1; then
-  /bin/bash
-fi
+  # get MD5 hash
+  md5sum $sourcePath/$rpmFileName
+
+  # debug
+  if test $debugFlag -eq 1; then
+    /bin/bash
+  fi
+)
 
 # clean-up
-rm -rf $TMP
+rm -rf $tmpDir
+
+exit 0

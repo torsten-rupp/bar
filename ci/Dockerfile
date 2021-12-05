@@ -4,14 +4,6 @@ ENV container docker
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
-#autogen
-#libc6
-#libc6-dev
-#binutils
-#libssl-dev
-#openssl
-#subversion
-
 # install packages
 RUN apt-get -y update
 RUN apt-get -y install \
@@ -57,6 +49,3 @@ RUN apt-get -y install \
   ;
 
 RUN mkdir /.cache;
-
-COPY ./download-third-party-packages.sh .
-RUN ./download-third-party-packages.sh
