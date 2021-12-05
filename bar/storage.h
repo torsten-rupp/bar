@@ -982,7 +982,7 @@ StorageTypes Storage_parseType(ConstString storageName);
 
 /***********************************************************************\
 * Name   : Storage_parseName
-* Purpose: parse storage name and get storage type
+* Purpose: parse storage name and get storage specifier
 * Input  : storageSpecifier - storage specific variable
 *          storageName      - storage name (may include pattern)
 * Output : storageSpecifier - storage specific data
