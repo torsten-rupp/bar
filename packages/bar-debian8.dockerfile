@@ -24,6 +24,7 @@ RUN apt-get -y install \
 RUN apt-get -y install \
   bc \
   bzip2 \
+  coreutils \
   curl \
   debhelper \
   devscripts \
@@ -77,8 +78,8 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; \
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 VOLUME [ "/sys/fs/cgroup" ]
 
-# mount /media/home
-RUN mkdir /media/home  && chown root /media/home
+# mounts
+RUN install -d /media/home  && chown root /media/home
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]

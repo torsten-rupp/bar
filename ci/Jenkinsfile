@@ -1,6 +1,9 @@
 #!groovy
 
-dockerImageName='dockerregistry.macio.de:5000/backup_archiver:latest'
+DOCKER_IMAGE_NAME='dockerregistry.macio.de:5000/backup_archiver:latest'
+DOCKER_IMAGE_NAME_RPM='dockerregistry.macio.de:5000/backup_archiver_rpm:latest'
+DOCKER_IMAGE_NAME_DEB='dockerregistry.macio.de:5000/backup_archiver_deb:latest'
+DOCKER_IMAGE_NAME_WIN32='dockerregistry.macio.de:5000/backup_archiver_win32:latest'
 
 // build
 def build()
@@ -9,7 +12,7 @@ def build()
   {
     stage("Build")
     {
-      docker.image(dockerImageName).inside
+      docker.image(DOCKER_IMAGE_NAME).inside
       {
         checkout scm
         script
@@ -42,22 +45,10 @@ def build()
       }
     }
 
-    stage("Packages")
-    {
-      docker.image(dockerImageName).inside
-      {
-//TODO: how to run a docker from inside a docker?
-//        sh "make update_docker"
-//        sh "make rpm"
-//        sh "make deb"
-        sh "make gui"
-      }
-    }
-
     stage("Tests")
     {
       // simple build (without external packages)
-      docker.image(dockerImageName).inside
+      docker.image(DOCKER_IMAGE_NAME).inside
       {
         checkout scm
         script
@@ -99,13 +90,13 @@ def build()
           {
             case "SMOKE":
             default:
-              docker.image(dockerImageName).inside
+              docker.image(DOCKER_IMAGE_NAME).inside
               {
                 sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
               }
               break;
             case "FULL":
-              docker.image(dockerImageName).inside
+              docker.image(DOCKER_IMAGE_NAME).inside
               {
                 sh "make test_basic"           +binaryExtension+" O='--verbose=1'"
                 sh "make test_compress"        +binaryExtension+" O='--verbose=1'"
@@ -123,7 +114,7 @@ def build()
         }
         else
         {
-          docker.image(dockerImageName).inside
+          docker.image(DOCKER_IMAGE_NAME).inside
           {
             sh "make test_smoke-debug O='--verbose=1'"
           }
@@ -137,7 +128,7 @@ def build()
       {
         if (params.CODE_COVERAGE)
         {
-          docker.image(dockerImageName).inside
+          docker.image(DOCKER_IMAGE_NAME).inside
           {
             sh "make -C bar gcov_clean"
             sh "make -C bar gcov_basic"
@@ -172,7 +163,7 @@ def build()
       {
         if (params.PROFILING)
         {
-          docker.image(dockerImageName).inside
+          docker.image(DOCKER_IMAGE_NAME).inside
           {
             sh "make -C bar gprof_clean"
             sh "make -C bar gprof_basic"

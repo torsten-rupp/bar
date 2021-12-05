@@ -8,20 +8,13 @@ RUN useradd -g 1000 -u 1000 build
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
-#autogen
-#libc6
-#libc6-dev
-#binutils
-#libssl-dev
-#openssl
-#subversion
-
 # install packages
 RUN dpkg --add-architecture i386;
-RUN apt-get -y update
+RUN apt-get -y update;
 RUN apt-get -y install \
   bc \
   bzip2 \
+  coreutils \
   curl \
   debhelper \
   devscripts \
@@ -70,8 +63,8 @@ RUN apt-get -y install \
 RUN mkdir /media/home  && chown root /media/home
 VOLUME [ "/media/home" ]
 
-# mount /media/wine
-RUN mkdir /media/wine  && chown root /media/wine
-VOLUME [ "/media/wine" ]
+# mounts
+RUN install -d /media/home  && chown root /media/home
+VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]

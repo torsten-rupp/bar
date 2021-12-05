@@ -10,6 +10,7 @@ RUN yum -y update
 RUN yum -y install \
   bc \
   bzip2 \
+  coreutils \
   curl \
   e2fsprogs \
   gettext \
@@ -60,8 +61,8 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; \
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 VOLUME [ "/sys/fs/cgroup" ]
 
-# mount /media/home
-RUN mkdir /media/home  && chown root /media/home
+# mounts
+RUN install -d /media/home  && chown root /media/home
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]

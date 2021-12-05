@@ -1,0 +1,95 @@
+#!groovy
+
+DOCKER_IMAGE_NAME='dockerregistry.macio.de:5000/backup_archiver:latest'
+DOCKER_IMAGE_NAME_RPM='dockerregistry.macio.de:5000/backup_archiver_rpm:latest'
+DOCKER_IMAGE_NAME_DEB='dockerregistry.macio.de:5000/backup_archiver_deb:latest'
+DOCKER_IMAGE_NAME_WIN32='dockerregistry.macio.de:5000/backup_archiver_win32:latest'
+
+// build
+def build()
+{
+  try
+  {
+    stage("Distribution")
+    {
+      docker.image(DOCKER_IMAGE_NAME).inside
+      {
+        checkout scm
+        script
+        {
+          // configure
+          sh "./download-third-party-packages.sh --local-directory /media/extern"
+          sh "./download-third-party-packages.sh"
+          sh "./configure"
+
+          // make
+//TODO
+//          sh "make -j`nproc --ignore=1`"
+          sh "make"
+          sh "make dist"
+        }
+      }
+    }
+
+    stage("RPM package")
+    {
+      docker.image(DOCKER_IMAGE_NAME_RPM).inside
+      {
+        script
+        {
+          sh "make build_rpm"
+        }
+      }
+    }
+    stage("DEB package")
+    {
+      docker.image(DOCKER_IMAGE_NAME_DEB).inside
+      {
+        script
+        {
+          sh "make build_deb"
+        }
+      }
+    }
+    stage("Win32 package")
+    {
+      docker.image(DOCKER_IMAGE_NAME_WIN32).inside
+      {
+        script
+        {
+          sh "make build_win32"
+        }
+      }
+    }
+    stage("GUI package")
+    {
+      docker.image(DOCKER_IMAGE_NAME).inside
+      {
+        sh "make gui"
+      }
+    }
+  }
+  finally
+  {
+    script
+    {
+      archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.exe, *.zip', allowEmptyArchive: true
+    }
+    cleanWs notFailBuild: true
+  }
+}
+
+// main
+properties([gitLabConnection('GitLab-DMZ')])
+try
+{
+  node('docker')
+  {
+    build()
+  }
+}
+catch (error)
+{
+  echo "ERROR: ${error.message}"
+  currentBuild.result = 'FAILED'
+}

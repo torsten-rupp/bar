@@ -22,9 +22,7 @@ build-stamp:
 
 	# --- begin custom part for compiling
 	./download-third-party-packages.sh \
-          --clean
-	./download-third-party-packages.sh \
-          --local-directory /media/home/extern \
+          --local-directory /media/extern \
           --no-verbose \
           $(ADDITIONAL_DOWNLOAD_FLAGS)
 	./configure \
