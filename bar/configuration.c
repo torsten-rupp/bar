@@ -7402,7 +7402,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("jobs-directory",                    0,  1,1,globalOptions.jobsDirectory,                                                                                      "server job directory","path name"                                         ),
   CMD_OPTION_STRING       ("incremental-data-directory",        0,  1,1,globalOptions.incrementalDataDirectory,                                                                           "server incremental data directory","path name"                            ),
 
-  CMD_OPTION_CSTRING      ("index-database",                    0,  1,1,globalOptions.indexDatabaseSpecifier,                                                                                   "index database URI","URI"                                                 ),
+  CMD_OPTION_CSTRING      ("index-database",                    0,  1,1,globalOptions.indexDatabaseURI,                                                                                   "index database URI","URI"                                                 ),
   CMD_OPTION_BOOLEAN      ("index-database-update",             0,  1,1,globalOptions.indexDatabaseUpdateFlag,                                                                            "enabled update index database"                                            ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",        0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,                                                                        "enabled automatic update index database"                                  ),
   CMD_OPTION_SPECIAL      ("index-database-max-band-width",     0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,        cmdOptionParseBandWidth,NULL,1,                              "max. band width to use for index updates [bis/s]","number or file name"   ),
@@ -7553,7 +7553,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SEPARATOR("index database"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseSpecifier,-1,                            "<URI>"),
+  CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseURI,-1,                            "<URI>"),
   CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1,                     "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1,                 "yes|no"),
   CONFIG_VALUE_COMMENT("max. network band width to use for index update"),

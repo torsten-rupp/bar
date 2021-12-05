@@ -1659,7 +1659,7 @@ bool Continuous_isAvailable(void)
   return continuousDatabaseSpecifier != NULL;
 }
 
-Errors Continuous_init(const char *uriString)
+Errors Continuous_init(const char *databaseURI)
 {
   Errors error;
   uint   continuousVersion;
@@ -1671,7 +1671,7 @@ Errors Continuous_init(const char *uriString)
 
     // get database specifier
     assert(continuousDatabaseSpecifier == NULL);
-    continuousDatabaseSpecifier = Database_newSpecifier(uriString);
+    continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,INDEX_DEFAULT_DATABASE_NAME);
     if (continuousDatabaseSpecifier == NULL)
     {
       return ERROR_DATABASE;
