@@ -763,7 +763,7 @@ typedef struct
   Server                      defaultWebDAVServer;
   Device                      defaultDevice;
 
-  const char                  *indexDatabaseSpecifier;
+  const char                  *indexDatabaseURI;
   bool                        indexDatabaseUpdateFlag;        // TRUE for update of index database
   bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index database
   BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]

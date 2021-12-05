@@ -594,6 +594,37 @@ sub processFile($$)
         $type       = "";
         $definition = "";
       }
+      elsif ($line =~ /^\s*INSERT\s+INTO\s+(\S+)\s+(.*?);$/)
+      {
+        # insert statement
+        my $tableName = expandMacros($1);
+        my $values    = expandMacros($2);
+
+        my $insertName = getName("insert");
+
+        push(@definitions, "INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName));
+
+        if    ($suffix eq "SQLITE")
+        {
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "INSERT INTO $tableName $values\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+        elsif ($suffix eq "MYSQL")
+        {
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "INSERT INTO $tableName $values\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+
+        $definition = "";
+      }
       elsif ($line =~ /^\s*INSERT\s+OR\s+IGNORE\s+INTO\s+(\S+)\s+(.*?);$/)
       {
         # insert statement
@@ -602,24 +633,55 @@ sub processFile($$)
 
         my $insertName = getName("insert");
 
-        push(@definitions, "INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName));
+        push(@definitions, "INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName));
 
         if    ($suffix eq "SQLITE")
         {
-          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
           print CFILE_HANDLE "INSERT OR IGNORE INTO $tableName $values\\\n";
           print CFILE_HANDLE "\"\n";
-          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
         }
         elsif ($suffix eq "MYSQL")
         {
-          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
           print CFILE_HANDLE "INSERT IGNORE INTO $tableName $values\\\n";
           print CFILE_HANDLE "\"\n";
-          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+
+        $definition = "";
+      }
+      elsif ($line =~ /^\s*UPDATE\s+(\S+)\s+(.*?);$/)
+      {
+        # insert statement
+        my $tableName = expandMacros($1);
+        my $values    = expandMacros($2);
+
+        my $insertName = getName("update");
+
+        push(@definitions, "INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName));
+
+        if    ($suffix eq "SQLITE")
+        {
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "UPDATE $tableName $values\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+        elsif ($suffix eq "MYSQL")
+        {
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "UPDATE $tableName $values\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
         }
 

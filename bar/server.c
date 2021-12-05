@@ -1670,7 +1670,6 @@ fprintf(stderr,"%s:%d: %d %d %d : %d %d : %x\n",__FILE__,__LINE__,scheduleNode->
 //fprintf(stderr,"%s:%d: currentDateTime=%llu\n",__FILE__,__LINE__,currentDateTime);
 //fprintf(stderr,"%s:%d: dateTime=%d %d %d - %d %d\n",__FILE__,__LINE__,dateTime.year,dateTime.month,dateTime.day,dateTime.hour,dateTime.minute);
 //fprintf(stderr,"%s:%d: lastScheduleDateTime %d %d %d : %d %d\n",__FILE__,__LINE__,lastScheduleDateTime.year,lastScheduleDateTime.month,lastScheduleDateTime.day,lastScheduleDateTime.hour,lastScheduleDateTime.minute);
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
             // check if matching with some schedule list node
             year   = dateTime.year;
             month  = dateTime.month;
@@ -20200,19 +20199,30 @@ Errors Server_socket(void)
   }
 
   // init index database
-  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier))
+  if (!stringIsEmpty(globalOptions.indexDatabaseURI))
   {
-    error = Index_init(globalOptions.indexDatabaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
+    DatabaseSpecifier databaseSpecifier;
+    String            printableDatabaseURI;
+
+    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+
+    error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
       printError("Cannot init index database '%s' (error: %s)!",
-                 globalOptions.indexDatabaseSpecifier,
+                 String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
+      String_delete(printableDatabaseURI);
+      Database_doneSpecifier(&databaseSpecifier);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseSpecifier,{ Index_done(); });
+    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseURI,{ Index_done(); });
+
+    String_delete(printableDatabaseURI);
+    Database_doneSpecifier(&databaseSpecifier);
   }
 
   // open index
@@ -20962,7 +20972,7 @@ Errors Server_socket(void)
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
-  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier)) Index_done();
+  if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
   List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
@@ -21018,21 +21028,29 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   // init index database
-  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier))
+  if (!stringIsEmpty(globalOptions.indexDatabaseURI))
   {
-    error = Index_init(globalOptions.indexDatabaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
+    DatabaseSpecifier databaseSpecifier;
+    String            printableDatabaseURI;
+
+    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+
+    error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL!\n");
       printError("Cannot init index database '%s' (error: %s)!",
-                 globalOptions.indexDatabaseSpecifier,
+                 String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
+      String_delete(printableDatabaseURI);
+      Database_doneSpecifier(&databaseSpecifier);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    printInfo(1,"OK\n");
-    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseSpecifier,{ Index_done(); });
+
+    String_delete(printableDatabaseURI);
+    Database_doneSpecifier(&databaseSpecifier);
   }
 
   // open index
@@ -21191,7 +21209,7 @@ processCommand(&clientInfo,commandString);
 
   // free resources
   doneClient(&clientInfo);
-  if (!stringIsEmpty(globalOptions.indexDatabaseSpecifier)) Index_done();
+  if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
   Semaphore_done(&serverStateLock);
   List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
