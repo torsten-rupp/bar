@@ -3499,40 +3499,47 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 #ifndef NDEBUG
 LOCAL Errors runDebug(void)
 {
-  AutoFreeList     autoFreeList;
-  IndexHandle      *indexHandle;
-  ulong            deletedStorageCount;
-  Errors           error;
-  JobOptions       jobOptions;
-  StorageSpecifier storageSpecifier;
-  IndexId          entityId,storageId;
-  StorageInfo      storageInfo;
-  ulong            totalEntryCount;
-  uint64           totalEntrySize;
+  AutoFreeList      autoFreeList;
+  DatabaseSpecifier databaseSpecifier;
+  String            printableDatabaseURI;
+  IndexHandle       *indexHandle;
+  ulong             deletedStorageCount;
+  Errors            error;
+  JobOptions        jobOptions;
+  StorageSpecifier  storageSpecifier;
+  IndexId           entityId,storageId;
+  StorageInfo       storageInfo;
+  ulong             totalEntryCount;
+  uint64            totalEntrySize;
 
   // initialize variables
   AutoFree_init(&autoFreeList);
   indexHandle = NULL;
 
   // init index database
-  if (stringIsEmpty(globalOptions.indexDatabaseSpecifier))
+  if (stringIsEmpty(globalOptions.indexDatabaseURI))
   {
     printError("No index database!");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_DATABASE;
   }
 
-  error = Index_init(globalOptions.indexDatabaseSpecifier,CALLBACK_(NULL,NULL));
+  Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+  AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
+  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+  AUTOFREE_ADD(&autoFreeList,printableDatabaseURI,{ String_delete(printableDatabaseURI); });
+
+  error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));
   if (error != ERROR_NONE)
   {
     printError("Cannot init index database '%s' (error: %s)!",
-               globalOptions.indexDatabaseSpecifier,
+               String_cString(printableDatabaseURI),
                Error_getText(error)
               );
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseSpecifier,{ Index_done(); });
+  AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseURI,{ Index_done(); });
 
   // open index
   indexHandle = NULL;

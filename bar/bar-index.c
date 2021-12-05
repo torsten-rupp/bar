@@ -46,8 +46,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DEFAULT_DATABASE_NAME "bar"
-
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
 #define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
 
@@ -523,21 +521,22 @@ LOCAL void clearPercentage(void)
 /***********************************************************************\
 * Name   : openDatabase
 * Purpose: open database
-* Input  : uriString  - database URI string
-*          createFlag - TRUE to create database if it does not exists
-* Output : databaseHandle   - database handle
+* Input  : databaseURI - database URI string
+*          createFlag  - TRUE to create database if it does not exists
+* Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString, bool createFlag)
+LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseURI, bool createFlag)
 {
   DatabaseSpecifier databaseSpecifier;
+  String            printableDataseURI;
   DatabaseOpenModes openMode;
   Errors            error;
 
   // parse URI and fill int default values
-  Database_parseSpecifier(&databaseSpecifier,uriString);
+  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
   switch (databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -549,9 +548,10 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString,
       }
       break;
   }
+  printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
 
   // open database
-  printInfo("Open database '%s'...",uriString);
+  printInfo("Open database '%s'...",String_cString(printableDataseURI));
   openMode = (createFlag)
                ? DATABASE_OPENMODE_FORCE_CREATE
                : DATABASE_OPENMODE_READWRITE;
@@ -564,13 +564,15 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *uriString,
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("cannot open database '%s' (error: %s)!",uriString,Error_getText(error));
+    printError("cannot open database '%s' (error: %s)!",String_cString(printableDataseURI),Error_getText(error));
+    String_delete(printableDataseURI);
     Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
   printInfo("OK  \n");
 
   // free resources
+  String_delete(printableDataseURI);
   Database_doneSpecifier(&databaseSpecifier);
 
   return ERROR_NONE;
@@ -783,25 +785,6 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : fixBrokenIds
-* Purpose: fix broken ids
-* Input  : indexHandle - index handle
-*          tableName   - table name
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-// TODO: unused
-#ifndef WERROR
-LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
-{
-  UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(tableName);
-}
-#endif
-
-/***********************************************************************\
 * Name   : initProgress
 * Purpose: init progress
 * Input  : text - text
@@ -864,10 +847,19 @@ LOCAL void doneProgress(ProgressInfo *progressInfo)
 * Notes  : increment step counter for each call!
 \***********************************************************************/
 
-// TODO: use IndexCommon_progressStep
+// TODO: use IndexCommon_progressStep with percentage and time estimation
 LOCAL void progressStep(void *userData)
 {
+  const char *WHEEL = "|/-\\";
+  static uint i = 0;
+
   UNUSED_VARIABLE(userData);
+
+  if ((i % 10) == 0)
+  {
+    fwrite(&WHEEL[i/10],1,1,stdout); fwrite("\b",1,1,stdout); fflush(stdout);
+  }
+  i = (i+1) % 40;
 }
 
 /***********************************************************************\
@@ -887,7 +879,6 @@ LOCAL void logImportProgress(const char *format, ...)
   va_start(arguments,format);
   vprintf(format,arguments);
   va_end(arguments);
-  printf("\n");
 }
 
 /***********************************************************************\
@@ -1033,24 +1024,25 @@ LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriString)
+LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *databaseURI)
 {
   DatabaseSpecifier databaseSpecifier;
+  String            printableDatabaseURI;
   Errors            error;
   DatabaseHandle    oldDatabaseHandle;
 
-  printInfo("Import database '%s':\n",uriString);
-
   // parse URI and fill int default values
-  Database_parseSpecifier(&databaseSpecifier,uriString);
+  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
   switch (databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
-      if (String_isEmpty(databaseSpecifier.mysql.databaseName)) String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
       break;
   }
+  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
+
+  printInfo("Import database '%s':\n",String_cString(printableDatabaseURI));
 
   error = Database_open(&oldDatabaseHandle,
                         &databaseSpecifier,
@@ -1069,6 +1061,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *uriS
   }
 
   // free resources
+  String_delete(printableDatabaseURI);
   Database_doneSpecifier(&databaseSpecifier);
 
   return error;
@@ -8680,7 +8673,7 @@ int main(int argc, const char *argv[])
   CStringTokenizer stringTokenizer;
   const char       *token;
   DatabaseId       databaseId;
-  const char       *databaseFileName;
+  const char       *databaseURI;
   String           command;
   char             line[MAX_LINE_LENGTH];
   Errors           error;
@@ -8700,9 +8693,9 @@ uint xxxShow=0;
   Array_init(&uuIds,MISC_UUID_STRING_LENGTH,64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&entityIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  entryName        = String_new();
-  databaseFileName = NULL;
-  command          = String_new();
+  entryName   = String_new();
+  databaseURI = NULL;
+  command     = String_new();
 
 // TODO: use CmdOption?parse
 #if 0
@@ -9241,7 +9234,7 @@ else if (stringEquals(argv[i],"--xxx"))
       switch (n)
       {
         case 0:
-          databaseFileName = argv[i];
+          databaseURI = argv[i];
           n++;
           i++;
           break;
@@ -9266,7 +9259,7 @@ else if (stringEquals(argv[i],"--xxx"))
     switch (n)
     {
       case 0:
-        databaseFileName = argv[i];
+        databaseURI = argv[i];
         n++;
         i++;
         break;
@@ -9287,7 +9280,7 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // check arguments
-  if (databaseFileName == NULL)
+  if (databaseURI == NULL)
   {
     printError("no database file name given!");
     Array_done(&storageIds);
@@ -9312,7 +9305,7 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // open database
-  error = openDatabase(&databaseHandle,databaseFileName,createFlag);
+  error = openDatabase(&databaseHandle,databaseURI,createFlag);
   if (error != ERROR_NONE)
   {
     Array_done(&storageIds);

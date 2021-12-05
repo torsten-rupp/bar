@@ -64,8 +64,6 @@
 #endif
 
 /***************************** Constants *******************************/
-#define DEFAULT_DATABASE_NAME "bar"
-
 const char *DATABASE_SAVE_EXTENSIONS[] =
 {
   ".old%03d",
@@ -885,7 +883,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   uint64            t1;
   IndexId           uuidId,entityId,storageId;
 
-  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI));
+  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
 
   // open old index (Note: must be read/write to fix errors in database)
   error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
@@ -3223,17 +3221,18 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
   }
 }
 
-Errors Index_init(const char             *uriString,
-                  IndexIsMaintenanceTime IndexCommon_isMaintenanceTimeFunction,
-                  void                   *IndexCommon_isMaintenanceTimeUserData
+Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
+                  IndexIsMaintenanceTime  IndexCommon_isMaintenanceTimeFunction,
+                  void                    *IndexCommon_isMaintenanceTimeUserData
                  )
 {
+  String      printableDatabaseURI;
   bool        createFlag;
   Errors      error;
   uint        indexVersion;
   IndexHandle indexHandle;
 
-  assert(uriString != NULL);
+  assert(databaseSpecifier != NULL);
 
   // init variables
   indexIsMaintenanceTimeFunction = IndexCommon_isMaintenanceTimeFunction;
@@ -3242,11 +3241,12 @@ Errors Index_init(const char             *uriString,
 
   // get database specifier
   assert(indexDatabaseSpecifier == NULL);
-  indexDatabaseSpecifier = Database_newSpecifier(uriString);
+  indexDatabaseSpecifier = Database_duplicateSpecifier(databaseSpecifier);
   if (indexDatabaseSpecifier == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  printableDatabaseURI = Database_getPrintableName(String_new(),indexDatabaseSpecifier);
 
   createFlag = FALSE;
 
@@ -3286,7 +3286,9 @@ Errors Index_init(const char             *uriString,
                 if (error != ERROR_NONE)
                 {
                   String_delete(saveDatabaseName);
+                  String_delete(printableDatabaseURI);
                   Database_deleteSpecifier(indexDatabaseSpecifier);
+                  indexDatabaseSpecifier = NULL;
                   return error;
                 }
 
@@ -3315,7 +3317,9 @@ Errors Index_init(const char             *uriString,
                 if (error != ERROR_NONE)
                 {
                   String_delete(saveDatabaseName);
+                  String_delete(printableDatabaseURI);
                   Database_deleteSpecifier(indexDatabaseSpecifier);
+                  indexDatabaseSpecifier = NULL;
                   return error;
                 }
 
@@ -3331,7 +3335,7 @@ Errors Index_init(const char             *uriString,
                       "INDEX",
                       "Old index database version %d in '%s' - create new",
                       indexVersion,
-                      indexDatabaseSpecifier
+                      String_cString(printableDatabaseURI)
                      );
         }
       }
@@ -3343,13 +3347,20 @@ Errors Index_init(const char             *uriString,
                     LOG_TYPE_ERROR,
                     "INDEX",
                     "Unknown index database version in '%s' - create new",
-                    indexDatabaseSpecifier
+                    String_cString(printableDatabaseURI)
                    );
       }
     }
     else
     {
       // does not exists -> create new
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_ERROR,
+                  "INDEX",
+                  "Index database '%s' does not exist - create new",
+                  String_cString(printableDatabaseURI)
+                 );
       createFlag = TRUE;
     }
   }
@@ -3389,7 +3400,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         if (error != ERROR_NONE)
         {
           String_delete(saveDatabaseName);
+          String_delete(printableDatabaseURI);
           Database_deleteSpecifier(indexDatabaseSpecifier);
+          indexDatabaseSpecifier = NULL;
           return error;
         }
         String_delete(saveDatabaseName);
@@ -3400,7 +3413,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                     LOG_TYPE_ERROR,
                     "INDEX",
                     "Outdated or corrupt index database '%s' (error: %s) - create new",
-                    indexDatabaseSpecifier,
+                    String_cString(printableDatabaseURI),
                     Error_getText(error)
                    );
       }
@@ -3411,18 +3424,12 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   if (createFlag)
   {
     // create new index database
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
     if (error != ERROR_NONE)
     {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_ERROR,
-                  "INDEX",
-                  "Create new index database '%s' fail: %s",
-                  indexDatabaseSpecifier,
-                  Error_getText(error)
-                 );
+      String_delete(printableDatabaseURI);
       Database_deleteSpecifier(indexDatabaseSpecifier);
+      indexDatabaseSpecifier = NULL;
       return error;
     }
     closeIndex(&indexHandle);
@@ -3431,7 +3438,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Created new index database '%s' (version %d)",
-                indexDatabaseSpecifier,
+                String_cString(printableDatabaseURI),
                 INDEX_VERSION
                );
   }
@@ -3441,14 +3448,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = getIndexVersion(&indexVersion,indexDatabaseSpecifier);
     if (error != ERROR_NONE)
     {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_ERROR,
-                  "INDEX",
-                  "Cannot get index database version from '%s': %s",
-                  indexDatabaseSpecifier,
-                  Error_getText(error)
-                 );
+      String_delete(printableDatabaseURI);
       Database_deleteSpecifier(indexDatabaseSpecifier);
+      indexDatabaseSpecifier = NULL;
       return error;
     }
 
@@ -3456,7 +3458,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Opened index database '%s' (version %d)",
-                indexDatabaseSpecifier,
+                String_cString(printableDatabaseURI),
                 indexVersion
                );
   }
@@ -3467,13 +3469,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
   if (error != ERROR_NONE)
   {
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_ERROR,
-                "INDEX",
-                "Cannot get index database version from '%s': %s",
-                indexDatabaseSpecifier,
-                Error_getText(error)
-               );
+    String_delete(printableDatabaseURI);
     Database_deleteSpecifier(indexDatabaseSpecifier);
     indexDatabaseSpecifier = NULL;
     return error;
@@ -3514,6 +3510,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       HALT_FATAL_ERROR("Cannot initialize index thread!");
     }
   #endif /* INDEX_INTIIAL_CLEANUP */
+
+  // free resources
+  String_delete(printableDatabaseURI);
 
   return ERROR_NONE;
 }

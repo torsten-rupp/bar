@@ -23,7 +23,7 @@
 
 #if defined(HAVE_MYSQL_MYSQL_H) && defined(HAVE_MYSQL_ERRMSG_H)
   #include "mysql/mysql.h"
-#endif /* HAVE_MYSQL_H */
+#endif
 
 #include "common/global.h"
 #include "common/passwords.h"
@@ -392,6 +392,8 @@ typedef struct DatabaseHandle
   uint                        transcationCount;
   long                        timeout;                    // timeout [ms]
   void                        *busyHandlerUserData;
+  bool                        enabledSync;
+  bool                        enabledForeignKeys;
   uint64                      lastCheckpointTimestamp;    // last time forced execution of a checkpoint
   sem_t                       wakeUp;                     // unlock wake-up
   DatabaseId                  lastInsertId;
@@ -979,19 +981,21 @@ void Database_doneAll(void);
 
 /***********************************************************************\
 * Name   : Database_parseSpecifier
-* Purpose: init and parse datatabase URI into database specifier
-* Input  : databaseSpecifier - database specifier variable
-*          uriString         - database URI string:
-*                                - [(sqlite|sqlite3):]file name, NULL for
-*                                  sqlite3 "in memory",
-*                                - mysql:<server>:<user>:<database>
+* Purpose: init database specifier and parse datatabase URI
+* Input  : databaseSpecifier   - database specifier variable
+*          databaseURI         - database URI string:
+*                                  - [(sqlite|sqlite3):]file name, NULL
+*                                    for sqlite3 "in memory",
+*                                  - mysql:<server>:<user>:<passwored>[:<database>]
+*          defaultDatabaseName - default database name
 * Output : databaseSpecifier - database specifier
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
-                             const char        *uriString
+                             const char        *databaseURI,
+                             const char        *defaultDatabaseName
                             );
 
 /***********************************************************************\
@@ -1023,16 +1027,17 @@ void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier);
 /***********************************************************************\
 * Name   : Database_newSpecifier
 * Purpose: allocate and parse datatabase URI
-* Input  : uriString - database URI string:
-*                        - [(sqlite|sqlite3):]file name, NULL for
-*                          sqlite3 "in memory",
-*                        - mysql:<server>:<user>:<database>
+* Input  : datbaseURI          - database URI string:
+*                                  - [(sqlite|sqlite3):]file name, NULL
+*                                    for sqlite3 "in memory",
+*                                  - mysql:<server>:<user>:<password>[:<database>]
+           defaultDatabaseName - default database name
 * Output : -
 * Return : database specifier or NULL
 * Notes  : -
 \***********************************************************************/
 
-DatabaseSpecifier *Database_newSpecifier(const char *uriString);
+DatabaseSpecifier *Database_newSpecifier(const char *datbaseURI, const char *defaultDatabaseName);
 
 /***********************************************************************\
 * Name   : Database_duplicateSpecifier
@@ -1066,6 +1071,20 @@ void Database_deleteSpecifier(DatabaseSpecifier *databaseSpecifier);
 \***********************************************************************/
 
 bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const DatabaseSpecifier *databaseSpecifier1);
+
+/***********************************************************************\
+* Name   : Database_getPrintableName
+* Purpose: get printable database name (without password)
+* Input  : string            - name variable (can be NULL)
+*          databaseSpecifier - database specifier
+* Output : -
+* Return : printable database name
+* Notes  : -
+\***********************************************************************/
+
+String Database_getPrintableName(String                  string,
+                                 const DatabaseSpecifier *databaseSpecifier
+                                );
 
 /***********************************************************************\
 * Name   : Database_exists

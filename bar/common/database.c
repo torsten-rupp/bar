@@ -92,14 +92,18 @@ LOCAL const char *TEMPORARY_TABLE_NAMES[] =
 LOCAL const char *DATABASE_DATATYPE_NAMES[] =
 {
   "NONE",
+  "-",
   "PRIMARY KEY",
   "KEY",
   "BOOL",
   "INT",
   "INT64",
+  "UINT",
+  "UINT64",
   "DOUBLE",
   "DATETIME",
-  "TEXT",
+  "STRING",
+  "CSTRING",
   "BLOB",
   "UNKNOWN"
 };
@@ -1584,6 +1588,8 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
   databaseHandle->sqlite.handle           = NULL;
   databaseHandle->mysql.handle            = NULL;
   databaseHandle->timeout                 = timeout;
+  databaseHandle->enabledSync             = FALSE;
+  databaseHandle->enabledForeignKeys      = FALSE;
   databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
   if (sem_init(&databaseHandle->wakeUp,0,0) != 0)
   {
@@ -1967,6 +1973,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
           }
 
           // select database
+          assert((databaseName != NULL) || !String_isEmpty(databaseSpecifier->mysql.databaseName));
           mysqlResult = mysql_select_db(databaseHandle->mysql.handle,
                                         !String_isEmpty(databaseName)
                                           ? String_cString(databaseName)
@@ -5299,7 +5306,12 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               free(dateTime);
               free(bind);
               mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+              error = ERRORX_(DATABASE_CONNECTION_LOST,
+                              mysql_stmt_errno(statementHandle),
+                              "%s: %s",
+                              mysql_stmt_error(statementHandle),
+                              String_cString(sqlString)
+                             );
               break;
             }
           }
@@ -5328,7 +5340,12 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             free(dateTime);
             free(bind);
             mysql_stmt_close(statementHandle);
-            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+            error = ERRORX_(DATABASE_CONNECTION_LOST,
+                            mysql_stmt_errno(statementHandle),
+                            "%s: %s",
+                            mysql_stmt_error(statementHandle),
+                            String_cString(sqlString)
+                           );
             break;
           }
           else if (mysqlResult != 0)
@@ -5337,7 +5354,12 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             free(dateTime);
             free(bind);
             mysql_stmt_close(statementHandle);
-            error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+            error = ERRORX_(DATABASE,
+                            mysql_stmt_errno(statementHandle),
+                            "%s: %s",
+                            mysql_stmt_error(statementHandle),
+                            String_cString(sqlString)
+                           );
             break;
           }
 
@@ -5401,11 +5423,21 @@ abort();
               }
               else if (mysqlResult == 1)
               {
-                error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+                error = ERRORX_(DATABASE,
+                                mysql_stmt_errno(statementHandle),
+                                "%s: %s",
+                                mysql_stmt_error(statementHandle),
+                                String_cString(sqlString)
+                               );
               }
               else if (mysqlResult == MYSQL_DATA_TRUNCATED)
               {
-                error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+                error = ERRORX_(DATABASE,
+                                mysql_stmt_errno(statementHandle),
+                                "%s: %s",
+                                mysql_stmt_error(statementHandle),
+                                String_cString(sqlString)
+                               );
               }
             }
             while (   (mysqlResult == 0)
@@ -5508,7 +5540,12 @@ abort();
     else if (Error_getCode(error) == ERROR_CODE_DATABASE_INTERRUPTED)
     {
       // report interrupt
-      error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s: %s",sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString));
+      error = ERRORX_(DATABASE,
+                      sqlite3_errcode(databaseHandle->sqlite.handle),
+                      "%s: %s",
+                      sqlite3_errmsg(databaseHandle->sqlite.handle),
+                      String_cString(sqlString)
+                     );
     }
   }
   while (   !done
@@ -6488,8 +6525,6 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                             "%s",
                             mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
                            );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
             break;
           }
 
@@ -7187,17 +7222,18 @@ void Database_doneAll(void)
 }
 
 void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
-                             const char        *uriString
+                             const char        *databaseURI,
+                             const char        *defaultDatabaseName
                             )
 {
   const char *s1,*s2,*s3,*s4;
   size_t     n1,n2,n3,n4;
 
-  assert(databaseSpecifier != NULL);
+  assert(databaseURI != NULL);
 
   // get database type and open/connect data
-  if      (   (uriString != NULL)
-           && stringMatch(uriString,
+  if      (   (databaseURI != NULL)
+           && stringMatch(databaseURI,
                           "^(sqlite|sqlite3):(.*)",
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
@@ -7211,8 +7247,8 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
     databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
     databaseSpecifier->sqlite.fileName = String_setBuffer(String_new(),s1,n1);
   }
-  else if (   (uriString != NULL)
-           && stringMatch(uriString,
+  else if (   (databaseURI != NULL)
+           && stringMatch(databaseURI,
                           "^mysql:([^:]+):([^:]+):([^:]*):(.*)",
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
@@ -7231,8 +7267,8 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
     Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
     databaseSpecifier->mysql.databaseName = String_setBuffer(String_new(),s4,n4);
   }
-  else if (   (uriString != NULL)
-           && stringMatch(uriString,
+  else if (   (databaseURI != NULL)
+           && stringMatch(databaseURI,
                           "^mysql:([^:]+):([^:]+):(.*)",
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
@@ -7248,12 +7284,12 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
     databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
     Password_init(&databaseSpecifier->mysql.password);
     Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
-    databaseSpecifier->mysql.databaseName = String_new();
+    databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
   }
   else
   {
     databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
-    databaseSpecifier->sqlite.fileName = String_setCString(String_new(),uriString);
+    databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
   }
 }
 
@@ -7297,7 +7333,7 @@ void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier)
   }
 }
 
-DatabaseSpecifier *Database_newSpecifier(const char *uriString)
+DatabaseSpecifier *Database_newSpecifier(const char *databaseURI, const char *defaultDatabaseName)
 {
   DatabaseSpecifier *databaseSpecifier;
 
@@ -7307,7 +7343,7 @@ DatabaseSpecifier *Database_newSpecifier(const char *uriString)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  Database_parseSpecifier(databaseSpecifier,uriString);
+  Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName);
 
   return databaseSpecifier;
 }
@@ -7379,6 +7415,34 @@ bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const
                   && String_equals(databaseSpecifier0->mysql.databaseName,databaseSpecifier1->mysql.databaseName)
                  )
              );
+}
+
+String Database_getPrintableName(String                  string,
+                                 const DatabaseSpecifier *databaseSpecifier
+                                )
+{
+  assert(string != NULL);
+  assert(databaseSpecifier != NULL);
+
+  switch (databaseSpecifier->type)
+  {
+    case DATABASE_TYPE_SQLITE3:
+      String_format(string,
+                    "sqlite:%S",
+                    databaseSpecifier->sqlite.fileName
+                   );
+      break;
+    case DATABASE_TYPE_MYSQL:
+      String_format(string,
+                    "mysql:%S:%S:*:%S",
+                    databaseSpecifier->mysql.serverName,
+                    databaseSpecifier->mysql.userName,
+                    databaseSpecifier->mysql.databaseName
+                   );
+      break;
+  }
+
+  return string;
 }
 
 Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
@@ -8751,11 +8815,15 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
       }
       break;
     case DATABASE_TYPE_MYSQL:
-// TODO: required? how to do?
+      // nothing to do
       break;
   }
+  if (error == ERROR_NONE)
+  {
+    databaseHandle->enabledSync = enabled;
+  }
 
-  return ERROR_NONE;
+  return error;
 }
 
 Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
@@ -8792,6 +8860,10 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
                                enabled ? 1 : 0
                               );
       break;
+  }
+  if (error == ERROR_NONE)
+  {
+    databaseHandle->enabledForeignKeys = enabled;
   }
 
   return error;
@@ -8883,31 +8955,24 @@ Errors Database_dropTables(DatabaseHandle *databaseHandle)
   error = Database_getTableList(&tableNameList,databaseHandle);
   if ((error == ERROR_NONE) && !StringList_isEmpty(&tableNameList))
   {
-    bool deletedFlag;
+    bool savedEnabledForeignKeys;
 
-    // iterated deleted to avoid foreign key dependencies problems in tables
-    do
+    savedEnabledForeignKeys = databaseHandle->enabledForeignKeys;
+    Database_setEnabledForeignKeys(databaseHandle,FALSE);
+
+    STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,error == ERROR_NONE)
     {
-      // try to delete single table
-      deletedFlag = FALSE;
-      STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,!deletedFlag)
-      {
-        error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
-                                 "DROP TABLE %s",
-                                 String_cString(tableName)
-                                );
-        if (error == ERROR_NONE)
-        {
-          StringList_remove(&tableNameList,iteratorTableName);
-          deletedFlag = TRUE;
-        }
-      }
+      error = Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               DATABASE_FLAG_NONE,
+                               DATABASE_COLUMN_TYPES(),
+                               "DROP TABLE %s",
+                               String_cString(tableName)
+                              );
     }
-    while (!StringList_isEmpty(&tableNameList) && deletedFlag);
+
+    Database_setEnabledForeignKeys(databaseHandle,savedEnabledForeignKeys);
   }
 
   return error;
@@ -9189,9 +9254,11 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
    * [id|a|b| | | | ] from table
    *                  ^
    *                  | toColumnMap
+   *                  |
    * [id|b|a| | | | ] to table
    *                  ^
    *                  | parameterMap
+   *                  |
    * [b|a| | | | ]    insert statement (with pimary key)
    */
 
@@ -9414,6 +9481,11 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   toColumnInfo.values = toValues;
   toColumnInfo.count  = toValueCount;
 
+// TODO: for progress
+  uint64 nn;
+  Database_getUInt64(fromDatabaseHandle,&nn,fromTableName,"COUNT(*)",NULL,DATABASE_FILTERS_NONE);
+//fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,nn);
+
   // select rows in from-table and copy to to-table
   BLOCK_DOX(error,
             { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ,WAIT_FOREVER);
@@ -9505,11 +9577,21 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 
         for (i = 0; i < parameterMapCount; i++)
         {
+// TODO:
+//fprintf(stderr,"%s:%d: copy %d -> %d: %d\n",__FILE__,__LINE__,i,parameterMap[i],toColumnInfo.values[parameterMap[i]].type);
+#if 0
           memCopyFast(&parameterValues[i].data,
                       sizeof(parameterValues[i].data),
                       &toColumnInfo.values[parameterMap[toColumnMap[i]]].data,
                       sizeof(toColumnInfo.values[parameterMap[toColumnMap[i]]].data)
                    );
+#else
+          memCopyFast(&parameterValues[i].data,
+                      sizeof(parameterValues[i].data),
+                      &toColumnInfo.values[parameterMap[i]].data,
+                      sizeof(toColumnInfo.values[parameterMap[i]].data)
+                   );
+#endif
         }
       }
 
@@ -11953,7 +12035,6 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
         switch (columns[j].type)
         {
           case DATABASE_DATATYPE_DATETIME:
-// TODO:fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
             String_formatAppend(sqlString,"UNIX_TIMESTAMP(%s)",columns[j].name);
             break;
           default:

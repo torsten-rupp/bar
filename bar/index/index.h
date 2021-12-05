@@ -34,7 +34,7 @@
 
 // switch on for debugging only!
 #define _INDEX_DEBUG_LOCK
-#define INDEX_DEBUG_IMPORT_OLD_DATABASE
+#define _INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
   #define _INDEX_DEBUG_LIST_INFO  // enable to output list info
@@ -42,6 +42,8 @@
 #endif
 
 /***************************** Constants *******************************/
+#define INDEX_DEFAULT_DATABASE_NAME "bar"
+
 // index version
 #define INDEX_VERSION INDEX_CONST_VERSION
 
@@ -497,7 +499,7 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
 /***********************************************************************\
 * Name   : Index_init
 * Purpose: initialize index database
-* Input  : uri                       - database URI
+* Input  : databaseSpecifier         - database specifier
 *          isMaintenanceTimeFunction - check if maintenance time
 *                                      function or NULL
 *          isMaintenanceTimeUserData - user data for check if
@@ -507,9 +509,9 @@ bool Index_parseOrdering(const char *name, DatabaseOrdering *databaseOrdering, v
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_init(const char             *uri,
-                  IndexIsMaintenanceTime isMaintenanceTimeFunction,
-                  void                   *isMaintenanceTimeUserData
+Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
+                  IndexIsMaintenanceTime  isMaintenanceTimeFunction,
+                  void                    *isMaintenanceTimeUserData
                  );
 
 /***********************************************************************\
