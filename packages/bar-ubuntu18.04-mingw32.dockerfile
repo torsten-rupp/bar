@@ -59,8 +59,9 @@ RUN apt-get -y install \
   libpq-dev \
   ;
 
-COPY 'Inno Setup 5.zip' /root
-RUN cd /root; unzip 'Inno Setup 5.zip';
+COPY Inno_Setup_5.zip /root
+RUN winecfg;
+RUN cd '/root/.wine/drive_c/Program Files'; unzip /root/Inno_Setup_5.zip;
 
 # mount /media/home
 RUN mkdir /media/home && chown root /media/home
