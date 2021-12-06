@@ -7517,12 +7517,16 @@ String Database_getPrintableName(String                  string,
                    );
       break;
     case DATABASE_TYPE_MYSQL:
-      String_format(string,
-                    "mysql:%S:%S:*:%S",
-                    databaseSpecifier->mysql.serverName,
-                    databaseSpecifier->mysql.userName,
-                    databaseSpecifier->mysql.databaseName
-                   );
+      #if defined(HAVE_MYSQL)
+        String_format(string,
+                      "mysql:%S:%S:*:%S",
+                      databaseSpecifier->mysql.serverName,
+                      databaseSpecifier->mysql.userName,
+                      databaseSpecifier->mysql.databaseName
+                     );
+      #else /* not HAVE_MYSQL */
+        String_clear(string);
+      #endif /* HAVE_MYSQL */
       break;
   }
 
