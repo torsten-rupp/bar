@@ -59,12 +59,15 @@ RUN apt-get -y install \
   libpq-dev \
   ;
 
+COPY 'Inno Setup 5.zip' /root
+RUN cd /root; unzip 'Inno Setup 5.zip';
+
 # mount /media/home
-RUN mkdir /media/home  && chown root /media/home
+RUN mkdir /media/home && chown root /media/home
 VOLUME [ "/media/home" ]
 
 # mounts
-RUN install -d /media/home  && chown root /media/home
+RUN install -d /media/home && chown root /media/home
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]
