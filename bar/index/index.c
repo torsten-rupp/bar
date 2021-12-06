@@ -408,10 +408,14 @@ LOCAL void busyHandler(void *userData)
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
+      #if defined(HAVE_MYSQL)
       if (String_isEmpty(databaseSpecifier->mysql.databaseName))
       {
         String_setCString(databaseSpecifier->mysql.databaseName,DEFAULT_DATABASE_NAME);
       }
+      #else /* HAVE_MYSQL */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_MYSQL */
       break;
   }
 
