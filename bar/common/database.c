@@ -2020,45 +2020,6 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
-<<<<<<< HEAD
-=======
-          }
-
-          // select database
-          assert((databaseName != NULL) || !String_isEmpty(databaseSpecifier->mysql.databaseName));
-          mysqlResult = mysql_select_db(databaseHandle->mysql.handle,
-                                        !String_isEmpty(databaseName)
-                                          ? String_cString(databaseName)
-                                          : String_cString(databaseSpecifier->mysql.databaseName)
-                                       );
-          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-          {
-            HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
-          }
-          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-          {
-            error = ERRORX_(DATABASE_CONNECTION_LOST,
-                            mysql_errno(databaseHandle->mysql.handle),
-                            "%s",
-                            mysql_error(databaseHandle->mysql.handle)
-                           );
-            mysql_close(databaseHandle->mysql.handle);
-            Semaphore_unlock(&databaseList.lock);
-            sem_destroy(&databaseHandle->wakeUp);
-            return error;
-          }
-          else if (mysqlResult != 0)
-          {
-            error = ERRORX_(DATABASE,
-                            mysql_errno(databaseHandle->mysql.handle),
-                            "%s",
-                            mysql_error(databaseHandle->mysql.handle)
-                           );
-            mysql_close(databaseHandle->mysql.handle);
-            Semaphore_unlock(&databaseList.lock);
-            sem_destroy(&databaseHandle->wakeUp);
-            return error;
->>>>>>> master
           }
         }
       #else /* HAVE_MYSQL */
@@ -5449,48 +5410,8 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
               break;
             }
 
-<<<<<<< HEAD
             if (databaseRowFunction != NULL)
             {
-=======
-          // step and process rows
-          mysqlResult = mysql_stmt_execute(statementHandle);
-          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-          {
-            HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",mysqlResult,mysql_stmt_error(statementHandle));
-          }
-          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-          {
-            free(values);
-            free(dateTime);
-            free(bind);
-            mysql_stmt_close(statementHandle);
-            error = ERRORX_(DATABASE_CONNECTION_LOST,
-                            mysql_stmt_errno(statementHandle),
-                            "%s: %s",
-                            mysql_stmt_error(statementHandle),
-                            String_cString(sqlString)
-                           );
-            break;
-          }
-          else if (mysqlResult != 0)
-          {
-            free(values);
-            free(dateTime);
-            free(bind);
-            mysql_stmt_close(statementHandle);
-            error = ERRORX_(DATABASE,
-                            mysql_stmt_errno(statementHandle),
-                            "%s: %s",
-                            mysql_stmt_error(statementHandle),
-                            String_cString(sqlString)
-                           );
-            break;
-          }
-
-          if (databaseRowFunction != NULL)
-          {
->>>>>>> master
 #if 0
 if (mysql_stmt_store_result(statementHandle) != 0)
 {
@@ -5555,19 +5476,6 @@ abort();
                 {
                   error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
                 }
-<<<<<<< HEAD
-=======
-                error = databaseRowFunction(values,valueCount,databaseRowUserData);
-              }
-              else if (mysqlResult == 1)
-              {
-                error = ERRORX_(DATABASE,
-                                mysql_stmt_errno(statementHandle),
-                                "%s: %s",
-                                mysql_stmt_error(statementHandle),
-                                String_cString(sqlString)
-                               );
->>>>>>> master
               }
               while (   (mysqlResult == 0)
                      && (error == ERROR_NONE)
@@ -5579,7 +5487,6 @@ abort();
             {
               switch (values[i].type)
               {
-<<<<<<< HEAD
                 case DATABASE_DATATYPE_NONE:
                   break;
                 case DATABASE_DATATYPE:
@@ -5612,14 +5519,6 @@ abort();
                     HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
                   #endif /* NDEBUG */
                   break;
-=======
-                error = ERRORX_(DATABASE,
-                                mysql_stmt_errno(statementHandle),
-                                "%s: %s",
-                                mysql_stmt_error(statementHandle),
-                                String_cString(sqlString)
-                               );
->>>>>>> master
               }
             }
             free(values);
@@ -6679,49 +6578,9 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                               "%s",
                               mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
                              );
-<<<<<<< HEAD
-  fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-  fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
               break;
-=======
-              break;
-            }
-          }
-
-          // do query
-          mysqlResult = mysql_stmt_execute(databaseStatementHandle->mysql.statementHandle);
-          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-          {
-            HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",
-                                mysqlResult,mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                               );
-          }
-          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-          {
-            error = ERRORX_(DATABASE_CONNECTION_LOST,
-                            mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
-                            "%s",
-                            mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                           );
-            break;
-          }
-          else if (mysqlResult != 0)
-          {
-            error = ERRORX_(DATABASE,
-                            mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
-                            "%s",
-                            mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                           );
-            break;
-          }
-
-          if (error == ERROR_NONE)
-          {
-            // get number of changes
-            if (changedRowCount != NULL)
-            {
-              (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mysql.handle);
->>>>>>> master
             }
 
             if (error == ERROR_NONE)
@@ -7489,7 +7348,6 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
                          )
           )
   {
-<<<<<<< HEAD
     #if defined(HAVE_MYSQL)
       databaseSpecifier->type               = DATABASE_TYPE_MYSQL;
       databaseSpecifier->mysql.serverName   = String_setBuffer(String_new(),s1,n1);
@@ -7500,14 +7358,6 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
     #else /* HAVE_MYSQL */
 // TODO:
     #endif /* HAVE_MYSQL */
-=======
-    databaseSpecifier->type               = DATABASE_TYPE_MYSQL;
-    databaseSpecifier->mysql.serverName   = String_setBuffer(String_new(),s1,n1);
-    databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
-    Password_init(&databaseSpecifier->mysql.password);
-    Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
-    databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
->>>>>>> master
   }
   else
   {
@@ -9078,15 +8928,11 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
       }
       break;
     case DATABASE_TYPE_MYSQL:
-<<<<<<< HEAD
       #if defined(HAVE_MYSQL)
       #else /* HAVE_MYSQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MYSQL */
 // TODO: required? how to do?
-=======
-      // nothing to do
->>>>>>> master
       break;
   }
   if (error == ERROR_NONE)
