@@ -197,8 +197,7 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
   make
   make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
-  if test $fromSourceFlag -ne 1; then
-  set -x       .
+  # build setup program
   install packages/backup-archiver.iss backup-archiver.iss
   $wine "$iscc" \
     /O$sourcePath \
@@ -209,8 +208,7 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
   chown $userGroup $sourcePath/${setupName}.exe
 
   # get MD5 hash
-  md5sum $BUIsourcePathLD_DIR/${setupName}.exe
-  fi
+  md5sum $sourcePath/${setupName}.exe
 
   # debug
   if test $debugFlag -eq 1; then
