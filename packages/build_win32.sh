@@ -45,7 +45,7 @@ while test $# != 0; do
     *)
       case $n in
         0)
-          sourcePath="$1"
+          sourcePath=`readlink -f "$1"`
           n=1
           ;;
         1)
@@ -76,7 +76,7 @@ done
 while test $# != 0; do
   case $n in
     0)
-      sourcePath="$1"
+      sourcePath=`readlink -f "$1"`
       n=1
       ;;
     1)
