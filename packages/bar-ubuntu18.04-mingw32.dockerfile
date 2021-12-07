@@ -1,9 +1,12 @@
 FROM ubuntu:18.04
 ENV container docker
 
+ARG UID=1000
+ARG GID=1000
+
 # add user for build process
-RUN groupadd -g 1000 build
-RUN useradd -g 1000 -u 1000 build
+RUN groupadd -g $GID build
+RUN useradd -g $GID -u $UID build
 
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
@@ -60,11 +63,12 @@ RUN apt-get -y install \
   libpq-dev \
   ;
 
-# install Inno Setup
-RUN wineboot --update;
+# install Inno Setup (user root+build)
+RUN wineboot --update
 RUN wget -q -O /tmp/innosetup-5.6.1.exe https://files.jrsoftware.org/is/5/innosetup-5.6.1.exe
 RUN DISPLAY=:0.0 xvfb-run -n 0 -s "-screen 0 1024x768x16" wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
 RUN rm -f /tmp/innosetup-5.6.1.exe
+RUN install -d /home/build; cp -r /root/.wine /home/build; chown -R build:build /home/build/.wine
 
 # mount /media/home
 RUN mkdir /media/home && chown root /media/home
