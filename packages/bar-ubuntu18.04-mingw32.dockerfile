@@ -66,6 +66,7 @@ RUN apt-get -y install \
 RUN wineboot --update;
 RUN wget -q -O /tmp/innosetup-5.6.1.exe https://files.jrsoftware.org/is/5/innosetup-5.6.1.exe
 RUN DISPLAY=:0.0 xvfb-run -n 0 -s "-screen 0 1024x768x16" wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
+RUN rm -f /tmp/innosetup-5.6.1.exe
 
 # mount /media/home
 RUN mkdir /media/home && chown root /media/home
