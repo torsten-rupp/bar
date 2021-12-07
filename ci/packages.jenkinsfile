@@ -97,6 +97,7 @@ def build()
 
 // main
 properties([gitLabConnection('GitLab-DMZ')])
+properties([buildDiscarder(logRotator(daysToKeepStr: '3', numToKeepStr: '3')),])
 try
 {
   node('docker')
