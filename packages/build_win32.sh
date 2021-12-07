@@ -144,35 +144,26 @@ if test -z "$wine"; then
   echo >&2 ERROR: wine not found!
   exit 1
 fi
+winepath=`which winepath`
+if test -z "$winepath"; then
+  echo >&2 ERROR: winepath not found!
+  exit 1
+fi
 
 # get ISCC
-iscc=`winepath 'C:/Program Files/Inno Setup 5/ISCC.exe'`
+set -x
+iscc=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
 if ! test -f "$iscc"; then
-  iscc=`winepath 'C:/Program Files (x86)/Inno Setup 5/ISCC.exe'`
+  iscc=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
 fi
 if ! test -f "$iscc"; then
   echo >&2 ERROR: ISCC.exe not found!
   exit 1
-fi
-
-if false; then
-$wine '/media/wine/Program Files (x86)/Inno Setup 5/ISCC.exe' '/?' 1>/dev/null 2>/dev/null
-if test $? -lt 2; then
-  iscc='/media/wine/Program Files (x86)/Inno Setup 5/ISCC.exe'
-fi
-$wine '/media/wine/Program Files/Inno Setup 5/ISCC.exe' '/?' 1>/dev/null 2>/dev/null
-if test $? -lt 2; then
-  iscc='/media/wine/Program Files/Inno Setup 5/ISCC.exe'
-fi
-if test -z "$iscc"; then
-  echo >&2 ERROR: ISCC.exe not found!
-  exit 1
-fi
 fi
 
 # set error handler: execute bash shell
-trap /bin/bash ERR
-set -e
+#trap /bin/bash ERR
+#set -e
 
 # create temporary directory
 tmpDir=`mktemp -d /tmp/win32-XXXXXX`
