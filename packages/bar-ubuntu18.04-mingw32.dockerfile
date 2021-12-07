@@ -33,6 +33,7 @@ RUN apt-get -y install \
   tcl \
   unzip \
   wget \
+  xvfb \
   xz-utils \
   ;
 RUN apt-get -y install \
@@ -60,9 +61,6 @@ RUN apt-get -y install \
   ;
 
 # install Inno Setup
-RUN apt-get -y install \
-  xvfb \
-  ;
 RUN wineboot --update;
 RUN wget -q -O /tmp/innosetup-5.6.1.exe https://files.jrsoftware.org/is/5/innosetup-5.6.1.exe
 RUN DISPLAY=:0.0 xvfb-run -n 0 -s "-screen 0 1024x768x16" wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
