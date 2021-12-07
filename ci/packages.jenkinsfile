@@ -26,6 +26,7 @@ def build()
 //TODO
 //          sh "make -j`nproc --ignore=1`"
           sh "make"
+
           sh "make dist"
         }
       }
@@ -37,7 +38,10 @@ def build()
       {
         script
         {
-          sh "make build_rpm"
+          if (params.PACKAGE_RPM)
+          {
+            sh "make build_rpm"
+          }
         }
       }
     }
@@ -47,7 +51,10 @@ def build()
       {
         script
         {
-          sh "make build_deb"
+          if (params.PACKAGE_DEB)
+          {
+            sh "make build_deb"
+          }
         }
       }
     }
@@ -57,7 +64,10 @@ def build()
       {
         script
         {
-          sh "make build_win32"
+          if (params.PACKAGE_WIN32)
+          {
+            sh "make build_win32"
+          }
         }
       }
     }
@@ -65,7 +75,13 @@ def build()
     {
       docker.image(DOCKER_IMAGE_NAME).inside
       {
-        sh "make gui"
+        script
+        {
+          if (params.PACKAGE_GUI)
+          {
+            sh "make gui"
+          }
+        }
       }
     }
   }

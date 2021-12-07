@@ -818,7 +818,7 @@ update_docker:
 	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile      -t bar-centos-x86_64:6     .)
 #	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile             -t bar-debian:8            .)
 	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile      -t bar-debian-x86_64:8     .)
-#	(cd packages; $(DOCKER) build -f bar-ubuntu18.04-mingw32.dockerfile -t bar-mingw32             .)
+	(cd packages; $(DOCKER) build -f bar-ubuntu18.04-mingw32.dockerfile -t bar-mingw32             .)
 	#
 	# test images
 	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
@@ -1022,9 +1022,11 @@ build_deb:
         )
 
 # Windows setup
-.PHONY: win32 clean_win32
-win32: \
-  $(DISTRIBUTION_NAME)-setup.exe
+.PHONY: win32 win32d clean_win32
+win32:
+	$(MAKE) $(DISTRIBUTION_NAME)-setup.exe
+win32d:
+	$(MAKE) $(DISTRIBUTION_NAME)-setup.exe DEBUG=1
 
 clean_win32:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
