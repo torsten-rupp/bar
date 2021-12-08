@@ -7,17 +7,16 @@ def tests()
 {
   try
   {
-    stage("Tests")
+    stage("Build")
     {
-      // simple build (without external packages)
       docker.image(DOCKER_IMAGE_NAME).inside
       {
         checkout scm
         script
         {
           // configure
-          sh "./download-third-party-packages.sh --local-directory /media/extern"
-          sh "sh -x -c ./download-third-party-packages.sh"
+          sh "sh -x ./download-third-party-packages.sh --local-directory /media/extern"
+          sh "sh -x ./download-third-party-packages.sh"
           sh "./configure"
 
           // make
@@ -26,7 +25,10 @@ def tests()
           sh "make"
         }
       }
+    }
 
+    stage("Tests")
+    {
       // run tests
       script
       {
