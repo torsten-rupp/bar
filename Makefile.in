@@ -152,7 +152,7 @@ TARGETS              = bar/bar@EXEEXT@ \
                        bar/bar-gcov@EXEEXT@ \
                        bar/bar-gprof@EXEEXT@ \
                        bar/bar-valgrind@EXEEXT@ \
-                       bar/destroyerEXEEXT@ \
+                       bar/destroyer@EXEEXT@ \
                        bar/bar-keygen@SHELLEXT@ \
                        $(if $(findstring $(ENABLE_GUI),yes),\
                          barcontrol/barcontrol@SHELLEXT@ \
