@@ -149,6 +149,10 @@ doc/images/%-large.png: doc/images/%.xcf
 
 TARGETS              = bar/bar@EXEEXT@ \
                        bar/bar-debug@EXEEXT@ \
+                       bar/bar-gcov@EXEEXT@ \
+                       bar/bar-gprof@EXEEXT@ \
+                       bar/bar-valgrind@EXEEXT@ \
+                       bar/destroyer@EXEEXT@ \
                        bar/bar-keygen@SHELLEXT@ \
                        $(if $(findstring $(ENABLE_GUI),yes),\
                          barcontrol/barcontrol@SHELLEXT@ \
@@ -337,19 +341,21 @@ depend:
 
 # ----------------------------------------------------------------------------
 # create bar
-.PHONY: bar bar-debug
+bar/%:
+	$(MAKE) -C bar $*
 
-bar bar/bar@EXEEXT@:
-	$(MAKE) -C bar bar@EXEEXT@
+.PHONY: bar bar-debug bar-gcov bar-gprof bar-valgrind
 
-bar-debug bar/bar-debug@EXEEXT@:
-	$(MAKE) -C bar bar-debug@EXEEXT@
+bar: bar/bar@EXEEXT@
+bar-debug: bar/bar-debug@EXEEXT@
+bar-gcov: bar/bar-gcov@EXEEXT@
+bar-gprof: bar/bar-gprof@EXEEXT@
+bar-valgrind: bar/bar-valgrind@EXEEXT@
 
 # create bar-keygen
 .PHONY: bar-keygen
 
-bar-keygen bar/bar-keygen@SHELLEXT@:
-	$(MAKE) -C bar bar-keygen@SHELLEXT@
+bar-keygen: bar/bar-keygen@SHELLEXT@
 
 # create barcontrol
 .PHONY: barcontrol

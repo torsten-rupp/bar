@@ -107,6 +107,7 @@ properties([gitLabConnection('GitLab-DMZ'),
             ]
            ]
           )
+
 try
 {
   node('docker')

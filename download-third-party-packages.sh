@@ -16,6 +16,7 @@ CURL="curl"
 CURL_OPTIONS="-L --retry 5 --connect-timeout 60 --max-time 300"
 ECHO="echo"
 ECHO_NO_NEW_LINE="echo -n"
+INSTALL="install"
 LN="ln"
 MKDIR="mkdir"
 RMF="rm -f"
@@ -27,6 +28,7 @@ WGET_OPTIONS="--tries=5 --timeout=300"
 UNZIP="unzip"
 XZ="xz"
 
+ZLIB_VERSION=1.2.11
 BZIP2_VERSION=1.0.8
 LZMA_VERSION=5.2.5
 LZO_VERSION=2.10
@@ -488,16 +490,12 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get zlib..."
-     fileName=`ls zlib-*.tar.gz 2>/dev/null|cat -`
+     fileName="zlib-$ZLIB_VERSION.tar.gz"
      if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/zlib-*.tar.gz; then
-         fileName=`ls $localDirectory/zlib-*.tar.gz 2>/dev/null|cat -`
+       if test -n "$localDirectory" -a -f $localDirectory/zlib-$ZLIB_VERSION.tar.gz; then
+         $LN -s $localDirectory/zlib-$ZLIB_VERSION.tar.gz $fileName
          result=1
        else
-         fileName=`$CURL $CURL_OPTIONS --silent --output - 'http://www.zlib.net'|grep -E -e 'http://.*/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://.*/\(.*\.tar\.gz\).*|\1|g'`
-         if test -z "$fileName"; then
-           fatalError "'zlib' filename not found!"
-         fi
          url="http://www.zlib.net/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
@@ -535,13 +533,13 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get bzip2 ($BZIP2_VERSION)..."
-     fileName=bzip2-$BZIP2_VERSION.tar.gz
-     url="https://sourceware.org/pub/bzip2/$fileName"
+     fileName="bzip2-$BZIP2_VERSION.tar.gz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/bzip2-$BZIP2_VERSION.tar.gz; then
-         fileName=$localDirectory/bzip2-$BZIP2_VERSION.tar.gz
+         $LN -s $localDirectory/bzip2-$BZIP2_VERSION.tar.gz $fileName
          result=1
        else
+         url="https://sourceware.org/pub/bzip2/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -577,13 +575,13 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get lzma..."
-     fileName=xz-$LZMA_VERSION.tar.gz
-     url="https://tukaani.org/xz/$fileName"
+     fileName="xz-$LZMA_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/xz-$LZMA_VERSION.tar.gz; then
-         fileName=$localDirectory/xz-$LZMA_VERSION.tar.gz
+         $LN -s $localDirectory/xz-$LZMA_VERSION.tar.gz $fileName
          result=1
        else
+         url="https://tukaani.org/xz/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -619,13 +617,13 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get lzo ($LZO_VERSION)..."
-     fileName=lzo-$LZO_VERSION.tar.gz
-     url="http://www.oberhumer.com/opensource/lzo/download/$fileName"
+     fileName="lzo-$LZO_VERSION.tar.gz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/lzo-$LZO_VERSION.tar.gz; then
-         fileName=$localDirectory/lzo-$LZO_VERSION.tar.gz
+         $LN -s $localDirectory/lzo-$LZO_VERSION.tar.gz $fileName
          result=1
        else
+         url="http://www.oberhumer.com/opensource/lzo/download/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -661,17 +659,12 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get lz4..."
-     fileName=`ls lz4-*.tar.gz 2>/dev/null|cat -`
+     fileName="lz4-$LZ4_VERSION.tar.gz"
      if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/lz4-*.tar.gz; then
-         fileName=`ls $localDirectory/lz4-*.tar.gz 2>/dev/null|cat -`
+       if test -n "$localDirectory" -a -f $localDirectory/lz4-$LZ4_VERSION.tar.gz; then
+         $LN -s $localDirectory/lz4-$LZ4_VERSION.tar.gz $fileName
          result=1
        else
-#         url=`$CURL $curlOptions --silent --output - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
-#
-#         fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
-#         $CURL $curlOptions -O "$url"
-         fileName="lz4-$LZ4_VERSION.tar.gz"
          url="https://github.com/Cyan4973/lz4/archive/$LZ4_VERSION.tar.gz"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
@@ -708,17 +701,12 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get zstd..."
-     fileName=`ls zstd-*.zip 2>/dev/null|cat -`
+     fileName="zstd-$ZSTD_VERSION.zip"
      if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/zstd-*.zip; then
-         fileName=`ls $localDirectory/zstd-*.zip 2>/dev/null|cat -`
+       if test -n "$localDirectory" -a -f $localDirectory/zstd-$ZSTD_VERSION.zip; then
+         $LN -s $localDirectory/zstd-$ZSTD_VERSION.zip $fileName
          result=1
        else
-#         url=`$CURL $curlOptions --silent --output - 'http://code.google.com/p/zstd'|grep -E -e 'zstd-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/zstd-.*\.tar\.gz\)".*|\1|g'`
-#
-#         fileName=`echo $URL|sed 's|.*/\(zstd-.*\.tar\.gz\).*|\1|g'`
-#         $CURL $curlOptions -O "$url"
-         fileName="zstd-$ZSTD_VERSION.zip"
          url="https://github.com/facebook/zstd/archive/v$ZSTD_VERSION.zip"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
@@ -755,10 +743,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get xdelta3 ($XDELTA3_VERSION)..."
-     fileName=xdelta3-$XDELTA3_VERSION.tar.gz
+     fileName="xdelta3-$XDELTA3_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/xdelta3-$XDELTA3_VERSION.tar.gz; then
-         fileName=$localDirectory/xdelta3-$XDELTA3_VERSION.tar.gz
+         $LN -s $localDirectory/xdelta3-$XDELTA3_VERSION.tar.gz $fileName
          result=1
        else
          url="https://github.com/jmacd/xdelta-gpl/releases/download/v$XDELTA3_VERSION/$fileName"
@@ -797,10 +785,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get gpg-error ($LIBGPG_ERROR_VERSION)..."
-     fileName=libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
+     fileName="libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
-         fileName=$localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
+         $LN -s $localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2 $fileName
          result=1
        else
          url="https://www.gnupg.org/ftp/gcrypt/libgpg-error/$fileName"
@@ -837,10 +825,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get gcrypt ($LIBGCRYPT_VERSION)..."
-     fileName=libgcrypt-$LIBGCRYPT_VERSION.tar.bz2
+     fileName="libgcrypt-$LIBGCRYPT_VERSION.tar.bz2"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2; then
-         fileName=$localDirectory/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2
+         $LN -s $localDirectory/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2 $fileName
          result=1
        else
          url="https://www.gnupg.org/ftp/gcrypt/libgcrypt/$fileName"
@@ -879,10 +867,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get c-ares ($C_ARES_VERSION)..."
-     fileName=c-ares-$C_ARES_VERSION.tar.gz
+     fileName="c-ares-$C_ARES_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/c-ares-$C_ARES_VERSION.tar.gz; then
-         fileName=$localDirectory/c-ares-$C_ARES_VERSION.tar.gz
+         $LN -s $localDirectory/c-ares-$C_ARES_VERSION.tar.gz $fileName
          result=1
        else
          url="http://c-ares.haxx.se/download/$fileName"
@@ -919,10 +907,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get curl ($CURL_VERSION)..."
-     fileName=curl-$CURL_VERSION.tar.bz2
+     fileName="curl-$CURL_VERSION.tar.bz2"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/curl-$CURL_VERSION.tar.bz2; then
-         fileName=$localDirectory/curl-$CURL_VERSION.tar.bz2
+         $LN -s $localDirectory/curl-$CURL_VERSION.tar.bz2 $fileName
          result=1
        else
          url="http://curl.haxx.se/download/$fileName"
@@ -961,10 +949,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get mxml ($MXML_VERSION)..."
-     fileName=mxml-$MXML_VERSION.zip
+     fileName="mxml-$MXML_VERSION.zip"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/mxml-$MXML_VERSION.zip; then
-         fileName=$localDirectory/mxml-$MXML_VERSION.zip
+         $LN -s $localDirectory/mxml-$MXML_VERSION.zip $fileName
          result=1
        else
          url="https://github.com/michaelrsweet/mxml/archive/v$MXML_VERSION.zip"
@@ -1003,10 +991,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get openssl ($OPENSSL_VERSION)..."
-     fileName=openssl-$OPENSSL_VERSION.tar.gz
+     fileName="openssl-$OPENSSL_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/openssl-$OPENSSL_VERSION.tar.gz; then
-         fileName=$localDirectory/openssl-$OPENSSL_VERSION.tar.gz
+         $LN -s $localDirectory/openssl-$OPENSSL_VERSION.tar.gz $fileName
          result=1
        else
          url="http://www.openssl.org/source/$fileName"
@@ -1045,10 +1033,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get libssh2 ($LIBSSH2_VERSION)..."
-     fileName=libssh2-$LIBSSH2_VERSION.tar.gz
+     fileName="libssh2-$LIBSSH2_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz; then
-         fileName=$localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz
+         $LN -s $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz $fileName
          result=1
        else
          url="http://www.libssh2.org/download/$fileName"
@@ -1087,10 +1075,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get nettle ($NETTLE_VERSION)..."
-     fileName=nettle-$NETTLE_VERSION.tar.gz
+     fileName="nettle-$NETTLE_VERSION.tar.gz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/nettle-$NETTLE_VERSION.tar.gz; then
-         fileName=$localDirectory/nettle-$NETTLE_VERSION.tar.gz
+         $LN -s $localDirectory/nettle-$NETTLE_VERSION.tar.gz $fileName
          result=1
        else
          url="https://ftp.gnu.org/gnu/nettle/$fileName"
@@ -1127,10 +1115,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get gmp ($GMP_VERSION)..."
-     fileName=gmp-$GMP_VERSION.tar.xz
+     fileName="gmp-$GMP_VERSION.tar.xz"
      if test ! -f "$fileName"; then
        if test -n "$localDirectory" -a -f $localDirectory/gmp-$GMP_VERSION.tar.xz; then
-         fileName=$localDirectory/gmp-$GMP_VERSION.tar.xz
+         $LN -s $localDirectory/gmp-$GMP_VERSION.tar.xz $fileName
          result=1
        else
          url="https://gmplib.org/download/gmp/$fileName"
@@ -1167,10 +1155,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get libidn2 ($LIBIDN2_VERSION)..."
-     fileName=libidn2-$LIBIDN2_VERSION.tar.gz
+     fileName="libidn2-$LIBIDN2_VERSION.tar.gz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz; then
-         fileName=$localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz
+         $LN -s $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz $fileName
          result=1
        else
          url="https://ftp.gnu.org/gnu/libidn/$fileName"
@@ -1207,10 +1195,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get gnutls ($GNU_TLS_VERSION)..."
-     fileName=gnutls-$GNU_TLS_VERSION.tar.xz
+     fileName="gnutls-$GNU_TLS_VERSION.tar.xz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/gnutls-$GNU_TLS_VERSION.tar.xz; then
-         fileName=$localDirectory/gnutls-$GNU_TLS_VERSION.tar.xz
+         $LN -s $localDirectory/gnutls-$GNU_TLS_VERSION.tar.xz $fileName
          result=1
        else
          url="https://www.gnupg.org/ftp/gcrypt/gnutls/$GNU_TLS_SUB_DIRECTORY/$fileName"
@@ -1249,10 +1237,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get libiconv ($LIBICONV_VERSION)..."
-     fileName=libiconv-$LIBICONV_VERSION.tar.gz
+     fileName="libiconv-$LIBICONV_VERSION.tar.gz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/libiconv-$LIBICONV_VERSION.tar.gz; then
-         fileName=$localDirectory/libiconv-$LIBICONV_VERSION.tar.gz
+         $LN -s $localDirectory/libiconv-$LIBICONV_VERSION.tar.gz $fileName
          result=1
        else
          url="https://ftp.gnu.org/pub/gnu/libiconv/$fileName"
@@ -1289,10 +1277,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get libcdio ($LIBCDIO_VERSION)..."
-     fileName=libcdio-$LIBCDIO_VERSION.tar.bz2
+     fileName="libcdio-$LIBCDIO_VERSION.tar.bz2"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2; then
-         fileName=$localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2
+         $LN -s $localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2 $fileName
          result=1
        else
          url="https://ftp.gnu.org/gnu/libcdio/$fileName"
@@ -1331,10 +1319,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get mtx ($MTX_VERSION)..."
-     fileName=mtx-$MTX_VERSION.tar.gz
+     fileName="mtx-$MTX_VERSION.tar.gz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/mtx-$MTX_VERSION.tar.gz; then
-         fileName=$localDirectory/mtx-$MTX_VERSION.tar.gz
+         $LN -s $localDirectory/mtx-$MTX_VERSION.tar.gz $fileName
          result=1
        else
          url="http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/$fileName"
@@ -1373,10 +1361,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get pcre ($PCRE_VERSION)..."
-     fileName=pcre-$PCRE_VERSION.tar.bz2
+     fileName="pcre-$PCRE_VERSION.tar.bz2"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/pcre-$PCRE_VERSION.tar.bz2; then
-         fileName=$localDirectory/pcre-$PCRE_VERSION.tar.bz2
+         $LN -s $localDirectory/pcre-$PCRE_VERSION.tar.bz2 $fileName
          result=1
        else
          url="https://downloads.sourceforge.net/project/pcre/pcre/$PCRE_VERSION/$fileName"
@@ -1415,10 +1403,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get sqlite ($SQLITE_VERSION)..."
-     fileName=sqlite-src-$SQLITE_VERSION.zip
+     fileName="sqlite-src-$SQLITE_VERSION.zip"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/sqlite-src-$SQLITE_VERSION.zip; then
-         fileName=$localDirectory/sqlite-src-$SQLITE_VERSION.zip
+         $LN -s $localDirectory/sqlite-src-$SQLITE_VERSION.zip $fileName
          result=1
        else
          url="https://www.sqlite.org/$SQLITE_YEAR/$fileName"
@@ -1457,10 +1445,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get icu ($ICU_VERSION)..."
-     fileName=icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
+     fileName="icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz; then
-         fileName=$localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
+         $LN -s $localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz $fileName
          result=1
        else
          url="https://github.com/unicode-org/icu/releases/download/release-`echo $ICU_VERSION|sed 's/\./-/g'`/$fileName"
@@ -1499,10 +1487,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get binutils ($BINUTILS_VERSION)..."
-     fileName=binutils-$BINUTILS_VERSION.tar.bz2
+     fileName="binutils-$BINUTILS_VERSION.tar.bz2"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/binutils-$BINUTILS_VERSION.tar.bz2; then
-         fileName=$localDirectory/binutils-$BINUTILS_VERSION.tar.bz2
+         $LN -s $localDirectory/binutils-$BINUTILS_VERSION.tar.bz2 $fileName
          result=1
        else
          url="http://ftp.gnu.org/gnu/binutils/$fileName"
@@ -1541,13 +1529,13 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get pthreads w32 ($PTHREAD_W32_VERSION)..."
-     fileName=pthreads-w32-$PTHREAD_W32_VERSION-release.tar.gz
-     url="ftp://sourceware.org/pub/pthreads-win32/$fileName"
+     fileName="pthreads-w32-$PTHREAD_W32_VERSION-release.tar.gz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/pthreads-w32-$PTHREAD_W32_VERSION-release.tar.gz; then
-         fileName=$localDirectory/pthreads-w32-$PTHREAD_W32_VERSION-release.tar.gz
+         $LN -s $localDirectory/pthreads-w32-$PTHREAD_W32_VERSION-release.tar.gz $fileName
          result=1
        else
+         url="ftp://sourceware.org/pub/pthreads-win32/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -1583,10 +1571,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get breakpad..."
-     fileName=breakpad
+     fileName="breakpad"
      if test ! -d $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/breakpad; then
-         fileName=$localDirectory/breakpad
+         $LN -s $localDirectory/breakpad $fileName
          result=1
        else
          $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
@@ -1614,10 +1602,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get epm ($EPM_VERSION)..."
-     fileName=epm-$EPM_VERSION-source.tar.bz2
+     fileName="epm-$EPM_VERSION-source.tar.bz2"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/epm-$EPM_VERSION-source.tar.bz2; then
-         fileName=$localDirectory/epm-$EPM_VERSION-source.tar.bz2
+         $LN -s $localDirectory/epm-$EPM_VERSION-source.tar.bz2 $fileName
          result=1
        else
          url="http://www.msweet.org/files/project2/$fileName"
@@ -1656,10 +1644,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get launchj4..."
-     fileName=launch4j-3.1.0-beta2-linux.tgz
+     fileName="launch4j-3.1.0-beta2-linux.tgz"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/launch4j-3.1.0-beta2-linux.tgz; then
-         fileName=$localDirectory/launch4j-3.1.0-beta2-linux.tgz
+         $LN -s $localDirectory/launch4j-3.1.0-beta2-linux.tgz $fileName
          result=1
        else
          url="http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/$fileName"
@@ -1698,10 +1686,10 @@ if test $cleanFlag -eq 0; then
      cd "$destination/extern"
 
      $ECHO_NO_NEW_LINE "Get OpenJDK Windows..."
-     fileName=openjdk-1.6.0-unofficial-b30-windows-i586-image.zip
+     fileName="openjdk-1.6.0-unofficial-b30-windows-i586-image.zip"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
-         fileName=$localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip
+         $LN -s $localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip $fileName
          result=1
        else
          url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"
@@ -1722,10 +1710,10 @@ if test $cleanFlag -eq 0; then
      fi
 
      $ECHO_NO_NEW_LINE "Get OpenJDK Windows 64bit..."
-     fileName=openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip
+     fileName="openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip; then
-         fileName=$localDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip
+         $LN -s $localDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip
          result=1
        else
          url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"

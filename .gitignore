@@ -101,3 +101,9 @@ xdelta3
 xz
 zlib
 zstd
+
+files
+build
+bar/build
+
+trash
