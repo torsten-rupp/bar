@@ -23,6 +23,7 @@ def tests()
 //TODO
 //          sh "make -j`nproc --ignore=1`"
           sh "make"
+          sh "make gcov"
         }
       }
     }
