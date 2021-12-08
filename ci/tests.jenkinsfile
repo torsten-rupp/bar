@@ -78,7 +78,7 @@ def tests()
   {
     script
     {
-      archiveArtifacts artifacts: 'bar-test.log', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'bar/bar-test.log, barcontrol/barcontrol-test.log', allowEmptyArchive: true
     }
     cleanWs notFailBuild: true
   }
