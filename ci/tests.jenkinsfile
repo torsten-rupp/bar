@@ -17,7 +17,7 @@ def tests()
         {
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
-          sh "./download-third-party-packages.sh"
+          sh "sh -x -c ./download-third-party-packages.sh"
           sh "./configure"
 
           // make
