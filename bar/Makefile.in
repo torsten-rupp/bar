@@ -1615,8 +1615,7 @@ test tests: \
   bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(RMF) bar-test.log
-	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 test% tests%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \

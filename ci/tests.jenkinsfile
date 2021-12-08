@@ -55,22 +55,24 @@ def tests()
           default:
             docker.image(DOCKER_IMAGE_NAME).inside
             {
-              sh "make test_smoke-"+binaryExtension+" O='--verbose=1'"
+              sh "rm -f bar-test.log"
+              sh "make test_smoke-"+binaryExtension+" O='--verbose=1' >> bar-test.log"
             }
             break;
           case "FULL":
             docker.image(DOCKER_IMAGE_NAME).inside
             {
-              sh "make test_basic"           +binaryExtension+" O='--verbose=1'"
-              sh "make test_compress"        +binaryExtension+" O='--verbose=1'"
-              sh "make test_delta_compress"  +binaryExtension+" O='--verbose=1'"
-              sh "make test_crypt"           +binaryExtension+" O='--verbose=1'"
-              sh "make test_asymmetric_crypt"+binaryExtension+" O='--verbose=1'"
-              sh "make test_signatures"      +binaryExtension+" O='--verbose=1'"
-              sh "make test_split"           +binaryExtension+" O='--verbose=1'"
-              sh "make test_convert"         +binaryExtension+" O='--verbose=1'"
-              sh "make test_arguments"       +binaryExtension+" O='--verbose=1'"
-              sh "make test_misc"            +binaryExtension+" O='--verbose=1'"
+              sh "rm -f bar-test.log"
+              sh "make test_basic"           +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_compress"        +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_delta_compress"  +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_crypt"           +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_asymmetric_crypt"+binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_signatures"      +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_split"           +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_convert"         +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_arguments"       +binaryExtension+" O='--verbose=1' >> bar-test.log"
+              sh "make test_misc"            +binaryExtension+" O='--verbose=1' >> bar-test.log"
             }
             break;
         }
@@ -81,7 +83,7 @@ def tests()
   {
     script
     {
-      archiveArtifacts artifacts: 'bar/bar-test.log, barcontrol/barcontrol-test.log', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'bar-test.log, barcontrol-test.log', allowEmptyArchive: true
     }
     cleanWs notFailBuild: true
   }
