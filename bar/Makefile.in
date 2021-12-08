@@ -1583,7 +1583,7 @@ test_smoke-valgrind: \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 test_smoke-valgrind TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 
-test_min: \
+test_min tests_min: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
@@ -1591,24 +1591,24 @@ test_min: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 test TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-debug: \
+test_min-debug tests_min-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 test-debug TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-gcov: \
+test_min-gcov tests_min-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 test-gcov TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-gprof: \
+test_min-gprof tests_min-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 test-gprof TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-valgrind: \
+test_min-valgrind tests_min-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 test-valgrind TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 
-test: \
+test tests: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
@@ -1617,7 +1617,7 @@ test: \
   bar-keygen@SHELLEXT@
 	@$(RMF) bar-test.log
 	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
-test%: \
+test% tests%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
@@ -1625,27 +1625,27 @@ test%: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-test%-debug: \
+test%-debug tests%-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-test%-gcov: \
+test%-gcov test%-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-test%-gprof: \
+test%-gprof tests%-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
-test%-valgrind: \
+test%-valgrind tests%-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test -j1 $@
 
-test_clean:
+test_clean tests_clean:
 	@$(MAKE) -C test clean
 
-test_distclean:
+test_distclean tests_distclean:
 	@$(MAKE) -C test distclean
 
 # ----------------------------------------------------------------------------
