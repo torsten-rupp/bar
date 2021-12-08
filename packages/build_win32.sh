@@ -151,7 +151,6 @@ if test -z "$winepath"; then
 fi
 
 # get ISCC
-set -x
 iscc=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
 if ! test -f "$iscc"; then
   iscc=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
