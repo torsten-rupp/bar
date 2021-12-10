@@ -34,11 +34,11 @@ def build()
 
     stage("RPM package")
     {
-      docker.image(DOCKER_IMAGE_NAME_RPM).inside
+      if (params.PACKAGE_RPM)
       {
-        script
+        docker.image(DOCKER_IMAGE_NAME_RPM).inside
         {
-          if (params.PACKAGE_RPM)
+          script
           {
             sh "make build_rpm"
           }
@@ -47,11 +47,11 @@ def build()
     }
     stage("DEB package")
     {
-      docker.image(DOCKER_IMAGE_NAME_DEB).inside
+      if (params.PACKAGE_DEB)
       {
-        script
+        docker.image(DOCKER_IMAGE_NAME_DEB).inside
         {
-          if (params.PACKAGE_DEB)
+          script
           {
             sh "make build_deb"
           }
@@ -60,13 +60,23 @@ def build()
     }
     stage("Win32 package")
     {
-      docker.image(DOCKER_IMAGE_NAME_WIN32).inside
+      if (params.PACKAGE_WIN32)
       {
-        script
+//      docker.image(DOCKER_IMAGE_NAME_WIN32).inside("-u 0:0")
+        docker.image(DOCKER_IMAGE_NAME_WIN32).inside
         {
-          if (params.PACKAGE_WIN32)
+          script
           {
-            sh "make build_win32"
+            // build with prepared wine setup or normal
+            sh 'if test -f /wine.tar.bz2; then \
+                  wineDir=`mktemp -d /tmp/wine-XXXXXX`; \
+                  (cd $wineDir; tar xjf /wine.tar.bz2); \
+                  WINEPREFIX=$wineDir/.wine make build_win32; \
+                  rm -rf $wineDir; \
+                else \
+                  make build_win32; \
+                fi \
+               ';
           }
         }
       }
