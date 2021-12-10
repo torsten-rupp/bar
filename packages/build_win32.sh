@@ -144,6 +144,11 @@ if test -z "$wine"; then
   echo >&2 ERROR: wine not found!
   exit 1
 fi
+wineboot=`which wineboot`
+if test -z "$wineboot"; then
+  echo >&2 ERROR: wineboot not found!
+  exit 1
+fi
 winepath=`which winepath`
 if test -z "$winepath"; then
   echo >&2 ERROR: winepath not found!

@@ -63,12 +63,17 @@ RUN apt-get -y install \
   libpq-dev \
   ;
 
-# install Inno Setup (user root+build)
-RUN wineboot --update
+# install Inno Setup
 RUN wget -q -O /tmp/innosetup-5.6.1.exe https://files.jrsoftware.org/is/5/innosetup-5.6.1.exe
+RUN wineboot --update
 RUN DISPLAY=:0.0 xvfb-run -n 0 -s "-screen 0 1024x768x16" wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
 RUN rm -f /tmp/innosetup-5.6.1.exe
-RUN install -d /home/build; cp -r /root/.wine /home/build; chown -R build:build /home/build/.wine
+
+# create wine setup archive
+RUN cd /root; tar cjf /wine.tar.bz2 .wine
+#RUN find /root -type d -print0 | xargs -0 chmod a+rwx
+#RUN find /root -type f -print0 | xargs -0 chmod a+rw
+#RUN install -d /home/build; cp -r /root/.wine /home/build; chown -R build:build /home/build/.wine
 
 # mount /media/home
 RUN mkdir /media/home && chown root /media/home
