@@ -3808,7 +3808,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                            IndexModes  *indexMode,
                            uint64      *lastCheckedDateTime,
                            String      errorMessage,
-                           ulong       *totalEntryCount,
+                           uint        *totalEntryCount,
                            uint64      *totalEntrySize
                           )
 {
@@ -3911,7 +3911,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                              IndexModes             *indexMode,
                              uint64                 *lastCheckedDateTime,
                              String                 errorMessage,
-                             ulong                  *totalEntryCount,
+                             uint                   *totalEntryCount,
                              uint64                 *totalEntrySize
                             )
 {
@@ -4041,7 +4041,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               IndexModes    *indexMode,
                               uint64        *lastCheckedDateTime,
                               String        errorMessage,
-                              ulong         *totalEntryCount,
+                              uint          *totalEntryCount,
                               uint64        *totalEntrySize
                              )
 {
@@ -4382,14 +4382,14 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               ConstString   jobUUID,
                               ConstString   scheduleUUID,
                               const IndexId indexIds[],
-                              ulong         indexIdCount,
+                              uint          indexIdCount,
                               IndexTypeSet  indexTypeSet,
                               IndexStateSet indexStateSet,
                               IndexModeSet  indexModeSet,
                               ConstString   name,
-                              ulong         *totalStorageCount,
+                              uint          *totalStorageCount,
                               uint64        *totalStorageSize,
-                              ulong         *totalEntryCount,
+                              uint          *totalEntryCount,
                               uint64        *totalEntrySize,
                               uint64        *totalEntryContentSize
                              )
@@ -4685,7 +4685,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               const char            *jobUUID,
                               const char            *scheduleUUID,
                               const IndexId         indexIds[],
-                              ulong                 indexIdCount,
+                              uint                  indexIdCount,
                               IndexTypeSet          indexTypeSet,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
@@ -4893,7 +4893,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           IndexModes       *indexMode,
                           uint64           *lastCheckedDateTime,
                           String           errorMessage,
-                          ulong            *totalEntryCount,
+                          uint             *totalEntryCount,
                           uint64           *totalEntrySize
                          )
 {
@@ -5323,17 +5323,17 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 {
   Errors     error;
   DatabaseId entityId;
-  ulong      totalEntryCount;
+  uint       totalEntryCount;
   uint64     totalEntrySize;
-  ulong      totalFileCount;
+  uint       totalFileCount;
   uint64     totalFileSize;
-  ulong      totalImageCount;
+  uint       totalImageCount;
   uint64     totalImageSize;
-  ulong      totalDirectoryCount;
-  ulong      totalLinkCount;
-  ulong      totalHardlinkCount;
+  uint       totalDirectoryCount;
+  uint       totalLinkCount;
+  uint       totalHardlinkCount;
   uint64     totalHardlinkSize;
-  ulong      totalSpecialCount;
+  uint       totalSpecialCount;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -5903,7 +5903,7 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
 }
 
 bool Index_hasDeletedStorages(IndexHandle *indexHandle,
-                              ulong       *deletedStorageCount
+                              uint        *deletedStorageCount
                              )
 {
   Errors error;
@@ -5937,7 +5937,7 @@ bool Index_hasDeletedStorages(IndexHandle *indexHandle,
     // slave mode: no deleted
     n = 0LL;
   }
-  if (deletedStorageCount != NULL) (*deletedStorageCount) = (ulong)n;
+  if (deletedStorageCount != NULL) (*deletedStorageCount) = (uint )n;
 
   return (n > 0LL);
 }

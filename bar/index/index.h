@@ -740,7 +740,7 @@ INLINE IndexTypes Index_getType(IndexId indexId)
 \***********************************************************************/
 
 bool Index_containsType(const IndexId indexIds[],
-                        ulong         indexIdCount,
+                        uint          indexIdCount,
                         IndexTypes    indexType
                        );
 
@@ -809,20 +809,20 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     const char   *findJobUUID,
                     const char   *findScheduleUUID,
                     IndexId      *uuidId,
-                    ulong        *executionCountNormal,
-                    ulong        *executionCountFull,
-                    ulong        *executionCountIncremental,
-                    ulong        *executionCountDifferential,
-                    ulong        *executionCountContinuous,
+                    uint         *executionCountNormal,
+                    uint         *executionCountFull,
+                    uint         *executionCountIncremental,
+                    uint         *executionCountDifferential,
+                    uint         *executionCountContinuous,
                     uint64       *averageDurationNormal,
                     uint64       *averageDurationFull,
                     uint64       *averageDurationIncremental,
                     uint64       *averageDurationDifferential,
                     uint64       *averageDurationContinuous,
-                    ulong        *totalEntityCount,
-                    ulong        *totalStorageCount,
+                    uint         *totalEntityCount,
+                    uint         *totalStorageCount,
                     uint64       *totalStorageSize,
-                    ulong        *totalEntryCount,
+                    uint         *totalEntryCount,
                     uint64       *totalEntrySize
                    );
 
@@ -866,7 +866,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       ArchiveTypes *archiveType,
                       uint64       *createdDateTime,
                       String       lastErrorMessage,
-                      ulong        *totalEntryCount,
+                      uint         *totalEntryCount,
                       uint64       *totalEntrySize
                      );
 
@@ -906,7 +906,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                            IndexModes  *indexMode,
                            uint64      *lastCheckedDateTime,
                            String      errorMessage,
-                           ulong       *totalEntryCount,
+                           uint        *totalEntryCount,
                            uint64      *totalEntrySize
                           );
 
@@ -949,7 +949,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                              IndexModes             *indexMode,
                              uint64                 *lastCheckedDateTime,
                              String                 errorMessage,
-                             ulong                  *totalEntryCount,
+                             uint                   *totalEntryCount,
                              uint64                 *totalEntrySize
                             );
 
@@ -990,7 +990,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               IndexModes    *indexMode,
                               uint64        *lastCheckedDateTime,
                               String        errorMessage,
-                              ulong         *totalEntryCount,
+                              uint          *totalEntryCount,
                               uint64        *totalEntrySize
                              );
 
@@ -1194,11 +1194,11 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           uint64           *createdDateTime,
                           String           errorMessage,
                           uint64           *duration,
-                          ulong            *totalEntryCount,
+                          uint             *totalEntryCount,
                           uint64           *totalEntrySize,
-                          ulong            *skippedEntryCount,
+                          uint             *skippedEntryCount,
                           uint64           *skippedEntrySize,
-                          ulong            *errorEntryCount,
+                          uint             *errorEntryCount,
                           uint64           *errorEntrySize
                          );
 
@@ -1235,11 +1235,11 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                         uint64       createdDateTime,
                         const char   *errorMessage,
                         uint64       duration,
-                        ulong        totalEntryCount,
+                        uint         totalEntryCount,
                         uint64       totalEntrySize,
-                        ulong        skippedEntryCount,
+                        uint         skippedEntryCount,
                         uint64       skippedEntrySize,
-                        ulong        errorEntryCount,
+                        uint         errorEntryCount,
                         uint64       errorEntrySize,
                         IndexId      *historyId
                        );
@@ -1276,16 +1276,16 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
-                           IndexId       uuidId,
+Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
+                           IndexId     uuidId,
 //TODO: remove?
-                           ConstString   jobUUID,
-                           ConstString   scheduleUUID,
-                           ConstString   name,
-                           uint64        *lastExecutedDateTime,
-                           ulong         *totalEntityCount,
-                           ulong         *totalEntryCount,
-                           uint64        *totalEntrySize
+                           ConstString jobUUID,
+                           ConstString scheduleUUID,
+                           ConstString name,
+                           uint64      *lastExecutedDateTime,
+                           uint        *totalEntityCount,
+                           uint        *totalEntryCount,
+                           uint64      *totalEntrySize
                           );
 
 /***********************************************************************\
@@ -1351,7 +1351,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        uint64           *lastExecutedDateTime,
                        String           lastErrorMessage,
                        uint64           *size,
-                       ulong            *totalEntryCount,
+                       uint             *totalEntryCount,
                        uint64           *totalEntrySize
                       );
 
@@ -1425,11 +1425,11 @@ Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
 //TODO: remove?
                               ConstString   jobUUID,
                               const IndexId indexIds[],
-                              ulong         indexIdCount,
+                              uint          indexIdCount,
                               ConstString   name,
-                              ulong         *totalStorageCount,
+                              uint          *totalStorageCount,
                               uint64        *totalStorageSize,
-                              ulong         *totalEntryCount,
+                              uint          *totalEntryCount,
                               uint64        *totalEntrySize
                              );
 
@@ -1481,7 +1481,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                               ConstString          name,
                               IndexEntitySortModes sortMode,
                               DatabaseOrdering     ordering,
-                              ulong                offset,
+                              uint64               offset,
                               uint64               limit
                              );
 
@@ -1515,7 +1515,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
                          uint64           *totalSize,
-                         ulong            *totalEntryCount,
+                         uint             *totalEntryCount,
                          uint64           *totalEntrySize,
                          uint             *lockedCount
                         );
@@ -1675,14 +1675,14 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               ConstString   jobUUID,
                               ConstString   scheduleUUID,
                               const IndexId indexIds[],
-                              ulong         indexIdCount,
+                              uint          indexIdCount,
                               IndexTypeSet  indexTypeSet,
                               IndexStateSet indexStateSet,
                               IndexModeSet  indexModeSet,
                               ConstString   name,
-                              ulong         *totalStorageCount,
+                              uint          *totalStorageCount,
                               uint64        *totalStorageSize,
-                              ulong         *totalEntryCount,
+                              uint          *totalEntryCount,
                               uint64        *totalEntrySize,
                               uint64        *totalEntryContentSize
                              );
@@ -1735,7 +1735,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               const char            *jobUUID,
                               const char            *scheduleUUID,
                               const IndexId         indexIds[],
-                              ulong                 indexIdCount,
+                              uint                  indexIdCount,
                               IndexTypeSet          indexTypeSet,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
@@ -1795,7 +1795,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           IndexModes       *indexMode,
                           uint64           *lastCheckedDateTime,
                           String           errorMessage,
-                          ulong            *totalEntryCount,
+                          uint             *totalEntryCount,
                           uint64           *totalEntrySize
                          );
 
@@ -1898,7 +1898,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 \***********************************************************************/
 
 bool Index_hasDeletedStorages(IndexHandle *indexHandle,
-                              ulong       *deletedStorageCount
+                              uint        *deletedStorageCount
                              );
 
 /***********************************************************************\
@@ -1994,15 +1994,15 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
 
 Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             const IndexId indexIds[],
-                            ulong         indexIdCount,
+                            uint          indexIdCount,
                             const IndexId entryIds[],
-                            ulong         entryIdCount,
+                            uint          entryIdCount,
                             IndexTypes    indexType,
                             ConstString   name,
                             bool          newestOnly,
-                            ulong         *totalStorageCount,
+                            uint          *totalStorageCount,
                             uint64        *totalStorageSize,
-                            ulong         *totalEntryCount,
+                            uint          *totalEntryCount,
                             uint64        *totalEntrySize,
                             uint64        *totalEntryContentSize
                            );
@@ -2033,9 +2033,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              IndexHandle         *indexHandle,
                              const IndexId       indexIds[],
-                             ulong               indexIdCount,
+                             uint                indexIdCount,
                              const IndexId       entryIds[],
-                             ulong               entryIdCount,
+                             uint                entryIdCount,
                              IndexTypes          indexType,
                              ConstString         name,
                              bool                newestOnly,
@@ -2095,10 +2095,10 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
                         uint32           *userId,
                         uint32           *groupId,
                         uint32           *permission,
-                        ulong            *fragmentCount,
+                        uint             *fragmentCount,
                         String           destinationName,
                         FileSystemTypes  *fileSystemType,
-                        ulong            *blockSize
+                        uint             *blockSize
                        );
 
 /***********************************************************************\
@@ -2628,7 +2628,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                       ConstString     name,
                       FileSystemTypes fileSystemType,
                       int64           size,
-                      ulong           blockSize,
+                      uint            blockSize,
                       uint64          blockOffset,
                       uint64          blockCount
                      );
@@ -2867,9 +2867,9 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
 Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
                                   IndexHandle      *indexHandle,
                                   const IndexId    indexIds[],
-                                  ulong            indexIdCount,
+                                  uint             indexIdCount,
                                   const IndexId    entryIds[],
-                                  ulong            entryIdCount,
+                                  uint             entryIdCount,
                                   IndexTypes       indexType,
                                   ConstString      name,
                                   DatabaseOrdering ordering,

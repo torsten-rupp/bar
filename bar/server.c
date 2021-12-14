@@ -91,7 +91,8 @@
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)
-#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
+// TODO:#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
+#define SLEEP_TIME_INDEX_THREAD 10
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
 #define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*S_PER_MINUTE)
 
@@ -147,11 +148,11 @@ typedef struct
 {
   struct
   {
-    ulong normal;
-    ulong full;
-    ulong incremental;
-    ulong differential;
-    ulong continuous;
+    uint normal;
+    uint full;
+    uint incremental;
+    uint differential;
+    uint continuous;
   }      executionCount;
   struct
   {
@@ -161,10 +162,10 @@ typedef struct
     uint64 differential;
     uint64 continuous;
   }      averageDuration;
-  ulong  totalEntityCount;
-  ulong  totalStorageCount;
+  uint   totalEntityCount;
+  uint   totalStorageCount;
   uint64 totalStorageSize;
-  ulong  totalEntryCount;
+  uint   totalEntryCount;
   uint64 totalEntrySize;
 } AggregateInfo;
 
@@ -2649,7 +2650,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
   ArchiveTypes          archiveType;
   uint64                createdDateTime;
   uint64                size;
-  ulong                 totalEntryCount;
+  uint                  totalEntryCount;
   uint64                totalEntrySize;
   uint                  lockedCount;
   ExpirationEntityNode  *expirationEntityNode;
@@ -3735,7 +3736,6 @@ LOCAL void autoIndexThreadCode(void)
 
                                        UNUSED_VARIABLE(userData);
 
-
                                        error = Storage_parseName(&storageSpecifier,storageName);
                                        if (error == ERROR_NONE)
                                        {
@@ -3801,7 +3801,7 @@ LOCAL void autoIndexThreadCode(void)
                                              }
                                              else if (Misc_getCurrentDateTime() > (fileInfo->timeLastChanged+30*S_PER_MINUTE))
                                              {
-                                               // add to index (Note: to avoid update on currently created archive, wait for min. 30min after craation)
+                                               // add to index (Note: to avoid update on currently created archive, wait for min. 30min after creation)
                                                error = Index_newStorage(indexHandle,
                                                                         INDEX_ID_NONE, // uuidId
                                                                         INDEX_ID_NONE, // entityId
@@ -14551,7 +14551,7 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init uuid list fail");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get index infos fail");
     return;
   }
 
@@ -14710,7 +14710,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   uint64           lastExecutedDateTime;
   uint64           totalSize;
-  ulong            totalEntryCount;
+  uint             totalEntryCount;
   uint64           totalEntrySize;
   UUIDNode         *uuidNode;
   const JobNode    *jobNode;
@@ -14917,7 +14917,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   ArchiveTypes         archiveType;
   String               lastErrorMessage;
   uint64               totalSize;
-  ulong                totalEntryCount;
+  uint                 totalEntryCount;
   uint64               totalEntrySize;
   int                  maxAge;
   const JobNode        *jobNode;
@@ -15141,7 +15141,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   IndexStates           indexState;
   IndexModes            indexMode;
   uint64                lastCheckedDateTime;
-  ulong                 totalEntryCount;
+  uint                  totalEntryCount;
   uint64                totalEntrySize;
   const JobNode         *jobNode;
 
@@ -15575,7 +15575,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   IndexModeSet  indexModeSet;
   String        name;
   Errors        error;
-  ulong         totalStorageCount,totalEntryCount;
+  uint          totalStorageCount,totalEntryCount;
   uint64        totalStorageSize,totalEntrySize,totalEntryContentSize;
 
   assert(clientInfo != NULL);
@@ -15904,7 +15904,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   uint64                timeModified;
   uint32                userId,groupId;
   uint32                permission;
-  ulong                 fragmentCount;
+  uint                  fragmentCount;
   const JobNode         *jobNode;
 
   assert(clientInfo != NULL);
@@ -16258,7 +16258,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   bool       newestOnly;
   bool       selectedOnly;
   Errors     error;
-  ulong      totalStorageCount,totalEntryCount;
+  uint       totalStorageCount,totalEntryCount;
   uint64     totalStorageSize,totalEntrySize,totalEntryContentSize;
 
   assert(clientInfo != NULL);
@@ -16464,11 +16464,11 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
   ArchiveTypes     archiveType;
   String           errorMessage;
   uint64           duration;
-  ulong            totalEntryCount;
+  uint             totalEntryCount;
   uint64           totalEntrySize;
-  ulong            skippedEntryCount;
+  uint             skippedEntryCount;
   uint64           skippedEntrySize;
-  ulong            errorEntryCount;
+  uint             errorEntryCount;
   uint64           errorEntrySize;
   const JobNode    *jobNode;
 

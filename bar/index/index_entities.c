@@ -2179,7 +2179,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       ArchiveTypes *archiveType,
                       uint64       *createdDateTime,
                       String       lastErrorMessage,
-                      ulong        *totalEntryCount,
+                      uint         *totalEntryCount,
                       uint64       *totalEntrySize
                      )
 {
@@ -2287,11 +2287,11 @@ Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
 //TODO: remove?
                               ConstString   jobUUID,
                               const IndexId indexIds[],
-                              ulong         indexIdCount,
+                              uint          indexIdCount,
                               ConstString   name,
-                              ulong         *totalStorageCount,
+                              uint          *totalStorageCount,
                               uint64        *totalStorageSize,
-                              ulong         *totalEntryCount,
+                              uint          *totalEntryCount,
                               uint64        *totalEntrySize
                              )
 {
@@ -2356,7 +2356,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                               ConstString          name,
                               IndexEntitySortModes sortMode,
                               DatabaseOrdering     ordering,
-                              ulong                offset,
+                              uint64               offset,
                               uint64               limit
                              )
 {
@@ -2484,15 +2484,12 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
                          uint64           *totalSize,
-                         ulong            *totalEntryCount,
+                         uint             *totalEntryCount,
                          uint64           *totalEntrySize,
                          uint             *lockedCount
                         )
 {
   DatabaseId uuidDatabaseId,entityDatatabaseId;
-  double     totalSize_;
-  double     totalEntryCount_;
-  double     totalEntrySize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -2511,20 +2508,17 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            createdDateTime,
                            archiveType,
                            lastErrorMessage,
-                           &totalSize_,
-                           &totalEntryCount_,
-                           &totalEntrySize_,
+                           &totalSize,
+                           &totalEntryCount,
+                           &totalEntrySize,
                            lockedCount
                           )
      )
   {
     return FALSE;
   }
-  if (uuidId          != NULL) (*uuidId         ) = INDEX_ID_ENTITY(uuidDatabaseId);
-  if (entityId        != NULL) (*entityId       ) = INDEX_ID_ENTITY(entityDatatabaseId);
-  if (totalSize       != NULL) (*totalSize      ) = (uint64)totalSize_;
-  if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
-  if (totalEntrySize  != NULL) (*totalEntrySize ) = (uint64)totalEntrySize_;
+  if (uuidId   != NULL) (*uuidId  ) = INDEX_ID_ENTITY(uuidDatabaseId);
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityDatatabaseId);
 
   return TRUE;
 }

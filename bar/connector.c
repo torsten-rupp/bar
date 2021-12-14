@@ -1017,12 +1017,12 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUUID,MISC_UUID_STRING_LENGTH);
   IndexId      uuidId;
-  ulong        executionCountNormal,executionCountFull,executionCountIncremental,executionCountDifferential,executionCountContinuous;
+  uint         executionCountNormal,executionCountFull,executionCountIncremental,executionCountDifferential,executionCountContinuous;
   uint64       averageDurationNormal,averageDurationFull,averageDurationIncremental,averageDurationDifferential,averageDurationContinuous;
-  ulong        totalEntityCount;
-  ulong        totalStorageCount;
+  uint         totalEntityCount;
+  uint         totalStorageCount;
   uint64       totalStorageSize;
-  ulong        totalEntryCount;
+  uint         totalEntryCount;
   uint64       totalEntrySize;
 
   assert(connectorInfo != NULL);
@@ -1586,7 +1586,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   String          name;
   FileSystemTypes fileSystemType;
   uint64          size;
-  ulong           blockSize;
+  uint            blockSize;
   uint64          blockOffset;
   uint64          blockCount;
   Errors          error;
@@ -1635,7 +1635,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
     String_delete(name);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"blockSize",&blockSize,0L))
+  if (!StringMap_getUInt(argumentMap,"blockSize",&blockSize,0L))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockSize=<n>");
     String_delete(name);
@@ -2940,11 +2940,11 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
   uint64       createdDateTime;
   String       errorMessage;
   uint64       duration;
-  ulong        totalEntryCount;
+  uint         totalEntryCount;
   uint64       totalEntrySize;
-  ulong        skippedEntryCount;
+  uint         skippedEntryCount;
   uint64       skippedEntrySize;
-  ulong        errorEntryCount;
+  uint         errorEntryCount;
   uint64       errorEntrySize;
   Errors       error;
   IndexId      historyId;
@@ -2998,7 +2998,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
     String_delete(hostName);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"totalEntryCount",&totalEntryCount,0LL))
+  if (!StringMap_getUInt(argumentMap,"totalEntryCount",&totalEntryCount,0LL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"totalEntryCount=<n>");
     String_delete(errorMessage);
@@ -3012,7 +3012,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
     String_delete(hostName);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"skippedEntryCount",&skippedEntryCount,0L))
+  if (!StringMap_getUInt(argumentMap,"skippedEntryCount",&skippedEntryCount,0L))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"skippedEntryCount=<n>");
     String_delete(errorMessage);
@@ -3026,7 +3026,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
     String_delete(hostName);
     return;
   }
-  if (!StringMap_getULong(argumentMap,"errorEntryCount",&errorEntryCount,0L))
+  if (!StringMap_getUInt(argumentMap,"errorEntryCount",&errorEntryCount,0L))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorEntryCount=<n>");
     String_delete(errorMessage);
