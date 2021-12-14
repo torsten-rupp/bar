@@ -353,6 +353,8 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
+#if 0
+// TODO: not needed?
 LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
                                    DatabaseId   storageId,
                                    ProgressInfo *progressInfo
@@ -424,6 +426,7 @@ LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
 
   return error;
 }
+#endif
 
 #if 0
 //TODO: trigger or implementation here?
