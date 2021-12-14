@@ -243,59 +243,6 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-/***********************************************************************\
-* Name   : IndexUUID_pruneAll
-* Purpose: prune all enpty UUIDs
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
-                          bool        *doneFlag,
-                          ulong       *deletedCounter
-                         )
-{
-  Array         uuidIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    uuidId;
-
-  assert(indexHandle != NULL);
-
-  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &uuidIds,
-                          "uuids",
-                          "id",
-                          DATABASE_FILTERS_NONE
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&uuidIds);
-    return error;
-  }
-  ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
-  {
-    error = IndexUUID_prune(indexHandle,
-                            doneFlag,
-                            deletedCounter,
-                            uuidId
-                           );
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&uuidIds);
-    return error;
-  }
-  Array_done(&uuidIds);
-
-  return ERROR_NONE;
-}
-
 #if 0
 //TODO: not used, remove
 /***********************************************************************\
@@ -1671,6 +1618,48 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
   }
 
   return error;
+}
+
+Errors IndexUUID_pruneEmpty(IndexHandle *indexHandle,
+                            bool        *doneFlag,
+                            ulong       *deletedCounter
+                           )
+{
+  Array         uuidIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    uuidId;
+
+  assert(indexHandle != NULL);
+
+  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &uuidIds,
+                          "uuids",
+                          "id",
+                          DATABASE_FILTERS_NONE
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&uuidIds);
+    return error;
+  }
+  ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
+  {
+    error = IndexUUID_prune(indexHandle,
+                            doneFlag,
+                            deletedCounter,
+                            uuidId
+                           );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&uuidIds);
+    return error;
+  }
+  Array_done(&uuidIds);
+
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

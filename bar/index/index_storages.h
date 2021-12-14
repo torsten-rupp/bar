@@ -117,6 +117,20 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                                      DatabaseId  storageId
                                     );
 
+/***********************************************************************\
+* Name   : IndexStorage_pruneEmpty
+* Purpose: prune all empty storages which have state OK or ERROR
+* Input  : indexHandle  - index handle
+*          progressInfo - progress info (or NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors IndexStorage_pruneEmpty(IndexHandle  *indexHandle,
+                               ProgressInfo *progressInfo
+                              );
+
 #ifdef __cplusplus
   }
 #endif

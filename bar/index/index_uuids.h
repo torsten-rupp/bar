@@ -59,7 +59,7 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : IndexUUID_pruneAll
-* Purpose: prune all empty UUIDs
+* Purpose: prune all enpty UUIDs
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag (can be NULL)
 *          deletedCounter - deleted entries count (can be NULL)
@@ -68,10 +68,10 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
-                          bool        *doneFlag,
-                          ulong       *deletedCounter
-                         );
+Errors IndexUUID_pruneEmpty(IndexHandle *indexHandle,
+                            bool        *doneFlag,
+                            ulong       *deletedCounter
+                           );
 
 #ifdef __cplusplus
   }

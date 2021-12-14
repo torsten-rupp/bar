@@ -769,10 +769,10 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // prune UUID
     if (error == ERROR_NONE)
     {
-      error = IndexUUID_pruneAll(indexHandle,
-                                 NULL,  // doneFlag
-                                 NULL  // deletedCounter
-                                );
+      error = IndexUUID_pruneEmpty(indexHandle,
+                                   NULL,  // doneFlag
+                                   NULL  // deletedCounter
+                                  );
     }
   }
 

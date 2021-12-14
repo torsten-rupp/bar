@@ -290,14 +290,6 @@ LOCAL void                       *indexPauseCallbackUserData;
 
 LOCAL ProgressInfo               importProgressInfo;
 
-// TODO: remove
-#if 0
-#ifndef NDEBUG
-  LOCAL void const *indexBusyStackTrace[32];
-  LOCAL uint       indexBusyStackTraceSize;
-#endif /* not NDEBUG */
-#endif
-
 #ifdef INDEX_DEBUG_LOCK
   LOCAL ThreadLWPId indexUseCountLPWIds[32];
 #endif /* INDEX_DEBUG_LOCK */
@@ -2782,53 +2774,48 @@ LOCAL void indexThreadCode(void)
           }
 
           // find next storage to remove (Note: get single entry for remove to avoid long-running prepare!)
+          storageId = DATABASE_ID_NONE;
           INDEX_DOX(error,
                     &indexHandle,
           {
-            error = Database_get(&indexHandle.databaseHandle,
-                                 CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                                 {
-                                   assert(values != NULL);
-                                   assert(valueCount == 3);
+            return Database_get(&indexHandle.databaseHandle,
+                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                {
+                                  assert(values != NULL);
+                                  assert(valueCount == 3);
 
-                                   UNUSED_VARIABLE(userData);
-                                   UNUSED_VARIABLE(valueCount);
+                                  UNUSED_VARIABLE(userData);
+                                  UNUSED_VARIABLE(valueCount);
 
-                                   storageId = values[0].id;
-                                   entityId  = values[1].id;
-                                   String_setBuffer(storageName,values[2].text.data,values[2].text.length);
+                                  storageId = values[0].id;
+                                  entityId  = values[1].id;
+                                  String_setBuffer(storageName,values[2].text.data,values[2].text.length);
 
-                                   return ERROR_NONE;
-                                 },NULL),
-                                 NULL,  // changedRowCount
-                                 DATABASE_TABLES
-                                 (
-                                   "storages"
-                                 ),
-                                 DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMNS
-                                 (
-                                   DATABASE_COLUMN_KEY   ("id"),
-                                   DATABASE_COLUMN_KEY   ("entityId"),
-                                   DATABASE_COLUMN_STRING("name")
-                                 ),
-                                 "    state!=? \
-                                  AND deletedFlag=1 \
-                                 ",
-                                 DATABASE_FILTERS
-                                 (
-                                   DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
-                                 ),
-                                 NULL,  // orderGroup
-                                 0LL,
-                                 1LL
-                                );
-            if (error != ERROR_NONE)
-            {
-              storageId = DATABASE_ID_NONE;
-            }
-
-            return error;
+                                  return ERROR_NONE;
+                                },NULL),
+                                NULL,  // changedRowCount
+                                DATABASE_TABLES
+                                (
+                                  "storages"
+                                ),
+                                DATABASE_FLAG_NONE,
+                                DATABASE_COLUMNS
+                                (
+                                  DATABASE_COLUMN_KEY   ("id"),
+                                  DATABASE_COLUMN_KEY   ("entityId"),
+                                  DATABASE_COLUMN_STRING("name")
+                                ),
+                                "    state!=? \
+                                 AND deletedFlag=1 \
+                                ",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
+                                ),
+                                NULL,  // orderGroup
+                                0LL,
+                                1LL
+                               );
           });
           if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
               || indexQuitFlag
@@ -3230,11 +3217,13 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                   void                    *IndexCommon_isMaintenanceTimeUserData
                  )
 {
-  String      printableDatabaseURI;
-  bool        createFlag;
-  Errors      error;
-  uint        indexVersion;
-  IndexHandle indexHandle;
+  String            printableDatabaseURI;
+  bool              createFlag;
+  Errors            error;
+  uint              indexVersion;
+  DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, NULL };
+  IndexHandle       indexHandleReference,indexHandle;
+  ProgressInfo      progressInfo;
 
   assert(databaseSpecifier != NULL);
 
@@ -3289,7 +3278,6 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                 error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
                 if (error != ERROR_NONE)
                 {
-                  String_delete(saveDatabaseName);
                   String_delete(printableDatabaseURI);
                   Database_deleteSpecifier(indexDatabaseSpecifier);
                   indexDatabaseSpecifier = NULL;
@@ -3320,7 +3308,6 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                 error = Database_rename(indexDatabaseSpecifier,saveDatabaseName);
                 if (error != ERROR_NONE)
                 {
-                  String_delete(saveDatabaseName);
                   String_delete(printableDatabaseURI);
                   Database_deleteSpecifier(indexDatabaseSpecifier);
                   indexDatabaseSpecifier = NULL;
@@ -3334,6 +3321,8 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
 
           // upgrade version -> create new
           createFlag = TRUE;
+// TODO:
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           plogMessage(NULL,  // logHandle
                       LOG_TYPE_ERROR,
                       "INDEX",
@@ -3347,6 +3336,8 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
       {
         // unknown version -> create new
         createFlag = TRUE;
+// TODO:
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
@@ -3358,6 +3349,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
     else
     {
       // does not exists -> create new
+// TODO:
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
@@ -3371,13 +3363,10 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
   if (!createFlag)
   {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-// TODO: remove #if 0
-#if 0
     // check if database is outdated or corrupt
     if (Database_exists(indexDatabaseSpecifier,NULL))
     {
-      error = openIndex(&indexHandleReference,&databaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
+      error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
         error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
@@ -3390,6 +3379,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       }
       if (error != ERROR_NONE)
       {
+        uint   n;
+        String saveDatabaseName;
+
         // rename existing index for upgrade
         saveDatabaseName = String_new();
         n = 0;
@@ -3422,7 +3414,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                    );
       }
     }
-#endif
   }
 
   if (createFlag)
@@ -3467,8 +3458,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                );
   }
 
-// TODO: remove #if 0
-#if 0
   // initial clean-up
   error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
   if (error != ERROR_NONE)
@@ -3493,13 +3482,12 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     (void)cleanUpStorageNoEntity(&indexHandle);
     (void)cleanUpStorageInvalidState(&indexHandle);
     (void)cleanUpNoUUID(&indexHandle);
-    (void)pruneStorages(&indexHandle,&progressInfo);
-    (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
-    (void)IndexUUID_pruneAlls(&indexHandle,NULL,NULL);
+    (void)IndexStorage_pruneEmpty(&indexHandle,&progressInfo);
+    (void)IndexEntity_pruneEmpty(&indexHandle,NULL,NULL);
+    (void)IndexUUID_pruneEmpty(&indexHandle,NULL,NULL);
     IndexCommon_doneProgress(&progressInfo);
   #endif /* INDEX_INTIIAL_CLEANUP */
   closeIndex(&indexHandle);
-#endif
 
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,

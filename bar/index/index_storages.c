@@ -899,9 +899,9 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                         UNUSED_VARIABLE(userData);
                         UNUSED_VARIABLE(valueCount);
 
-                        (*indexState)          = (IndexStates)values[0].u;
-                        (*lastCheckedDateTime) = values[1].u64;
-                        String_setBuffer(errorMessage,values[2].text.data,values[2].text.length);
+                        if (indexState          != NULL) (*indexState)          = (IndexStates)values[0].u;
+                        if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[1].u64;
+                        if (errorMessage        != NULL) String_setBuffer(errorMessage,values[2].text.data,values[2].text.length);
 
                         return ERROR_NONE;
                       },NULL),
@@ -1076,7 +1076,7 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "FTS_entries",
-                                    "entryId IN (%S)",
+                                    "entryId IN (?)",
                                     DATABASE_FILTERS
                                     (
                                       DATABASE_FILTER_STRING(entryIdsString)
@@ -2112,65 +2112,6 @@ LOCAL Errors pruneStorage(IndexHandle  *indexHandle,
   // free resources
   String_delete(string);
   String_delete(name);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : pruneStorages
-* Purpose: prune all empty storages which have state OK or ERROR
-* Input  : indexHandle  - index handle
-*          progressInfo - progress info (or NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneStorages(IndexHandle  *indexHandle,
-                           ProgressInfo *progressInfo
-                          )
-{
-  Array         storageIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    storageId;
-
-  assert(indexHandle != NULL);
-
-  // init variables
-  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-
-  // get all storage ids
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &storageIds,
-                          "storages",
-                          "id",
-                          "state IN (?,?)",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_UINT(INDEX_STATE_OK),
-                            DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
-                          )
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    return error;
-  }
-
-  // prune storages
-  ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
-  {
-    error = pruneStorage(indexHandle,storageId,progressInfo);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&storageIds);
-    return error;
-  }
-
-  // free resources
-  Array_done(&storageIds);
 
   return ERROR_NONE;
 }
@@ -3799,6 +3740,55 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
+
+  return ERROR_NONE;
+}
+
+Errors IndexStorage_pruneEmpty(IndexHandle  *indexHandle,
+                               ProgressInfo *progressInfo
+                              )
+{
+  Array         storageIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    storageId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all storage ids
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &storageIds,
+                          "storages",
+                          "id",
+                          "state IN (?,?)",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT(INDEX_STATE_OK),
+                            DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
+                          )
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // prune storages
+  ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+  {
+    error = pruneStorage(indexHandle,storageId,progressInfo);
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&storageIds);
 
   return ERROR_NONE;
 }
