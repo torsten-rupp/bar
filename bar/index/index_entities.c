@@ -1480,10 +1480,10 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
-                                 bool        *doneFlag,
-                                 ulong       *deletedCounter
-                                )
+Errors IndexEntity_pruneEmpty(IndexHandle *indexHandle,
+                              bool        *doneFlag,
+                              ulong       *deletedCounter
+                             )
 {
   Array         entityIds;
   Errors        error;
@@ -2435,7 +2435,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entities.lockedCount")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=1 \
+                                        "    entities.deletedFlag=? \
                                          AND %s \
                                          GROUP BY entities.id \
                                          %s \
@@ -2446,6 +2446,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                                        ),
                            DATABASE_FILTERS
                            (
+                             DATABASE_FILTER_BOOL  (FALSE),
                              DATABASE_FILTER_UINT64(offset),
                              DATABASE_FILTER_UINT64(limit)
                            )

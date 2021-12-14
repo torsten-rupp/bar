@@ -59,7 +59,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                         );
 
 /***********************************************************************\
-* Name   : IndexEntity_pruneAll
+* Name   : IndexEntity_pruneEmpty
 * Purpose: prune all empty entities
 * Input  : indexHandle    - index handle
 *          doneFlag       - done flag (can be NULL)
@@ -69,10 +69,10 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
-                            bool        *doneFlag,
-                            ulong       *deletedCounter
-                           );
+Errors IndexEntity_pruneEmpty(IndexHandle *indexHandle,
+                              bool        *doneFlag,
+                              ulong       *deletedCounter
+                             );
 
 /***********************************************************************\
 * Name   : IndexEntity_updateAggregates
