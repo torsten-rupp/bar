@@ -3221,7 +3221,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
   bool              createFlag;
   Errors            error;
   uint              indexVersion;
-  DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, NULL };
+  DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, { 0LL } };
   IndexHandle       indexHandleReference,indexHandle;
   ProgressInfo      progressInfo;
 
@@ -3706,7 +3706,7 @@ Errors Index_flush(IndexHandle *indexHandle)
 }
 
 bool Index_containsType(const IndexId indexIds[],
-                        ulong         indexIdCount,
+                        uint          indexIdCount,
                         IndexTypes    indexType
                        )
 {

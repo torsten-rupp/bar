@@ -7354,7 +7354,7 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
       databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->mysql.password);
       Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
-      databaseSpecifier->mysql.databaseName = String_new();
+      databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
     #else /* HAVE_MYSQL */
 // TODO:
     #endif /* HAVE_MYSQL */
@@ -9614,9 +9614,12 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   toColumnInfo.count  = toValueCount;
 
 // TODO: for progress
+{
   uint64 nn;
-  Database_getUInt64(fromDatabaseHandle,&nn,fromTableName,"COUNT(*)",NULL,DATABASE_FILTERS_NONE);
+  Database_getUInt64(fromDatabaseHandle,&nn,fromTableName,"COUNT(*)",DATABASE_FILTERS_NONE,NULL);
+UNUSED_VARIABLE(nn);
 //fprintf(stderr,"%s:%d: %llu\n",__FILE__,__LINE__,nn);
+}
 
   // select rows in from-table and copy to to-table
   BLOCK_DOX(error,
@@ -12053,7 +12056,7 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   {
     String_formatAppend(sqlString," WHERE %s",filter);
   }
-fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(databaseStatementHandle,

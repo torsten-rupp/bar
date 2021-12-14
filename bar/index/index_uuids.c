@@ -320,20 +320,20 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     const char   *findJobUUID,
                     const char   *findScheduleUUID,
                     IndexId      *uuidId,
-                    ulong        *executionCountNormal,
-                    ulong        *executionCountFull,
-                    ulong        *executionCountIncremental,
-                    ulong        *executionCountDifferential,
-                    ulong        *executionCountContinuous,
+                    uint         *executionCountNormal,
+                    uint         *executionCountFull,
+                    uint         *executionCountIncremental,
+                    uint         *executionCountDifferential,
+                    uint         *executionCountContinuous,
                     uint64       *averageDurationNormal,
                     uint64       *averageDurationFull,
                     uint64       *averageDurationIncremental,
                     uint64       *averageDurationDifferential,
                     uint64       *averageDurationContinuous,
-                    ulong        *totalEntityCount,
-                    ulong        *totalStorageCount,
+                    uint         *totalEntityCount,
+                    uint         *totalStorageCount,
                     uint64       *totalStorageSize,
-                    ulong        *totalEntryCount,
+                    uint         *totalEntryCount,
                     uint64       *totalEntrySize
                    )
 {
@@ -457,20 +457,20 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                       StringMap_getInt64 (resultMap,"uuidId",uuidId,INDEX_ID_NONE);
                                       if (!INDEX_ID_IS_NONE(*uuidId))
                                       {
-                                        if (executionCountNormal        != NULL) StringMap_getULong (resultMap,"executionCountNormal",       executionCountNormal,       0L  );
-                                        if (executionCountFull          != NULL) StringMap_getULong (resultMap,"executionCountFull",         executionCountFull,         0L  );
-                                        if (executionCountIncremental   != NULL) StringMap_getULong (resultMap,"executionCountIncremental",  executionCountIncremental,  0L  );
-                                        if (executionCountDifferential  != NULL) StringMap_getULong (resultMap,"executionCountDifferential", executionCountDifferential, 0L  );
-                                        if (executionCountContinuous    != NULL) StringMap_getULong (resultMap,"executionCountContinuous",   executionCountContinuous,   0L  );
+                                        if (executionCountNormal        != NULL) StringMap_getUInt  (resultMap,"executionCountNormal",       executionCountNormal,       0   );
+                                        if (executionCountFull          != NULL) StringMap_getUInt  (resultMap,"executionCountFull",         executionCountFull,         0   );
+                                        if (executionCountIncremental   != NULL) StringMap_getUInt  (resultMap,"executionCountIncremental",  executionCountIncremental,  0   );
+                                        if (executionCountDifferential  != NULL) StringMap_getUInt  (resultMap,"executionCountDifferential", executionCountDifferential, 0   );
+                                        if (executionCountContinuous    != NULL) StringMap_getUInt  (resultMap,"executionCountContinuous",   executionCountContinuous,   0   );
                                         if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL );
                                         if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL );
                                         if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL );
                                         if (averageDurationDifferential != NULL) StringMap_getUInt64(resultMap,"averageDurationDifferential",averageDurationDifferential,0LL );
                                         if (averageDurationContinuous   != NULL) StringMap_getUInt64(resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL );
-                                        if (totalEntityCount            != NULL) StringMap_getULong (resultMap,"totalEntityCount",           totalEntityCount,           0L  );
-                                        if (totalStorageCount           != NULL) StringMap_getULong (resultMap,"totalStorageCount",          totalStorageCount,          0L  );
+                                        if (totalEntityCount            != NULL) StringMap_getUInt  (resultMap,"totalEntityCount",           totalEntityCount,           0L  );
+                                        if (totalStorageCount           != NULL) StringMap_getUInt  (resultMap,"totalStorageCount",          totalStorageCount,          0   );
                                         if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL );
-                                        if (totalEntryCount             != NULL) StringMap_getULong (resultMap,"totalEntryCount",            totalEntryCount,            0L  );
+                                        if (totalEntryCount             != NULL) StringMap_getUInt  (resultMap,"totalEntryCount",            totalEntryCount,            0   );
                                         if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL );
 
                                         return ERROR_NONE;
@@ -489,16 +489,16 @@ bool Index_findUUID(IndexHandle  *indexHandle,
   return (error == ERROR_NONE);
 }
 
-Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
-                           IndexId       uuidId,
+Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
+                           IndexId     uuidId,
 //TODO: remove?
-                           ConstString   jobUUID,
-                           ConstString   scheduleUUID,
-                           ConstString   name,
-                           uint64        *lastExecutedDateTime,
-                           ulong         *totalEntityCount,
-                           ulong         *totalEntryCount,
-                           uint64        *totalEntrySize
+                           ConstString jobUUID,
+                           ConstString scheduleUUID,
+                           ConstString name,
+                           uint64      *lastExecutedDateTime,
+                           uint        *totalEntityCount,
+                           uint        *totalEntryCount,
+                           uint64      *totalEntrySize
                           )
 {
   String ftsMatchString;
@@ -1370,14 +1370,11 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        uint64           *lastExecutedDateTime,
                        String           lastErrorMessage,
                        uint64           *size,
-                       ulong            *totalEntryCount,
+                       uint             *totalEntryCount,
                        uint64           *totalEntrySize
                       )
 {
   DatabaseId databaseId;
-  double     size_;
-  double     totalEntryCount_;
-  double     totalEntrySize_;
 
   assert(indexQueryHandle != NULL);
   assert(indexQueryHandle->indexHandle != NULL);
@@ -1393,18 +1390,15 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                            jobUUID,
                            lastExecutedDateTime,
                            lastErrorMessage,
-                           &size_,
-                           &totalEntryCount_,
-                           &totalEntrySize_
+                           &size,
+                           &totalEntryCount,
+                           &totalEntrySize
                           )
      )
   {
     return FALSE;
   }
-  if (indexId         != NULL) (*indexId        ) = INDEX_ID_UUID(databaseId);
-  if (size            != NULL) (*size           ) = (uint64)size_;
-  if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
-  if (totalEntrySize  != NULL) (*totalEntrySize ) = (uint64)totalEntrySize_;
+  if (indexId != NULL) (*indexId) = INDEX_ID_UUID(databaseId);
 
   return TRUE;
 }
