@@ -4674,7 +4674,7 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
               sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,i,String_cString(databaseValue->string),String_length(databaseValue->string),NULL);
               break;
             case DATABASE_DATATYPE_CSTRING:
-              sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,i,databaseValue->text.data,databaseValue->text.length,NULL);
+              sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,i,databaseValue->s,stringLength(databaseValue->s),NULL);
               break;
             case DATABASE_DATATYPE_BLOB:
               HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -4788,8 +4788,8 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
                 {
                   memCopyFast(databaseStatementHandle->mysql.values.bind[i].buffer,
                               databaseStatementHandle->mysql.values.bind[i].buffer_length,
-                              databaseValue->text.data,
-                              databaseValue->text.length
+                              databaseValue->s,
+                              stringLength(databaseValue->s)
                              );
                 }
                 else
@@ -5083,8 +5083,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                       String_setCString(values[i].string, (char*)sqlite3_column_text(statementHandle,i));
                       break;
                     case DATABASE_DATATYPE_CSTRING:
-                      values[i].text.data   = (char*)sqlite3_column_text(statementHandle,i);
-                      values[i].text.length = stringLength(values[i].text.data);
+                      values[i].s = (char*)sqlite3_column_text(statementHandle,i);
                       break;
                     case DATABASE_DATATYPE_BLOB:
                       HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
@@ -5741,8 +5740,8 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
               assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
               sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
                                                1+databaseStatementHandle->valueIndex,
-                                               values[i].text.data,
-                                               values[i].text.length,
+                                               values[i].s,
+                                               stringLength(values[i].s),
                                                NULL
                                               );
               databaseStatementHandle->valueIndex++;
@@ -6028,14 +6027,15 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
               sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
                                                1+databaseStatementHandle->valueIndex,
                                                String_cString(filters[i].string),
-                                               String_length(filters[i].string),NULL
+                                               String_length(filters[i].string),
+                                               NULL
                                               );
               break;
             case DATABASE_DATATYPE_CSTRING:
               sqliteResult = sqlite3_bind_text(databaseStatementHandle->sqlite.statementHandle,
                                                1+databaseStatementHandle->valueIndex,
-                                               filters[i].text.data,
-                                               filters[i].text.length,
+                                               filters[i].s,
+                                               stringLength(filters[i].s),
                                                NULL
                                               );
               break;
@@ -11125,7 +11125,7 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       stringFormat(buffer,bufferSize,"%s",String_cString(databaseValue->string));
       break;
     case DATABASE_DATATYPE_CSTRING:
-      stringFormat(buffer,bufferSize,"%s",databaseValue->text.data);
+      stringFormat(buffer,bufferSize,"%s",databaseValue->s);
       break;
     case DATABASE_DATATYPE_BLOB:
       stringFormat(buffer,bufferSize,"");
@@ -11574,7 +11574,7 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
     String_formatAppend(sqlString,"%s",values[i].value);
   }
   String_appendChar(sqlString,')');
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(&databaseStatementHandle,
@@ -11917,6 +11917,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
       #endif /* HAVE_MYSQL */
       break;
   }
+//fprintf(stderr,"%s:%d: sql delete: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(&databaseStatementHandle,
@@ -12052,7 +12053,7 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
   {
     String_formatAppend(sqlString," WHERE %s",filter);
   }
-//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(databaseStatementHandle,
