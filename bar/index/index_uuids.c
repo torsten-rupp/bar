@@ -1369,7 +1369,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
                        uint64           *lastExecutedDateTime,
                        String           lastErrorMessage,
-                       uint64           *size,
+                       uint64           *totalSize,
                        uint             *totalEntryCount,
                        uint64           *totalEntrySize
                       )
@@ -1390,9 +1390,9 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                            jobUUID,
                            lastExecutedDateTime,
                            lastErrorMessage,
-                           &size,
-                           &totalEntryCount,
-                           &totalEntrySize
+                           totalSize,
+                           totalEntryCount,
+                           totalEntrySize
                           )
      )
   {
