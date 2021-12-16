@@ -3369,6 +3369,7 @@ Dprintf.dprintf("");
                 0 iff entryIndexData1 = entryIndexData2,
                 1 iff entryIndexData1 > entryIndexData2
      */
+    @Override
     public int compare(EntryIndexData entryIndexData1, EntryIndexData entryIndexData2)
     {
       if      ((entryIndexData1 != null) && (entryIndexData2 != null))
@@ -4259,6 +4260,7 @@ Dprintf.dprintf("");
      * @param indexData1,indexData2 index data
      * @return true iff index id equals
      */
+    @Override
     public int compare(IndexData indexData1, IndexData indexData2)
     {
       return (indexData1.id == indexData2.id) ? 0 : 1;

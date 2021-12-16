@@ -376,6 +376,7 @@ class JobDataComparator implements Comparator<JobData>
               0 iff jobData1 = jobData2,
               1 iff jobData1 > jobData2
    */
+  @Override
   public int compare(JobData jobData1, JobData jobData2)
   {
     switch (sortMode)
