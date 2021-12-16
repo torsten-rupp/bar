@@ -1336,7 +1336,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 *          lastExecutedDateTime - last executed date/time stamp [s] (can
 *                                 be NULL)
 *          lastErrorMessage     - last error message (can be NULL)
-*          size                 - total sum of storage size [bytes] (can
+*          totalSize            - total sum of storage size [bytes] (can
 *                                 be NULL)
 *          totalEntryCount      - total number of entries (can be NULL)
 *          totalEntrySize       - total sum of entry size [bytes] (can
@@ -1350,7 +1350,7 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
                        String           jobUUID,
                        uint64           *lastExecutedDateTime,
                        String           lastErrorMessage,
-                       uint64           *size,
+                       uint64           *totalSize,
                        uint             *totalEntryCount,
                        uint64           *totalEntrySize
                       );

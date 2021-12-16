@@ -2508,9 +2508,9 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                            createdDateTime,
                            archiveType,
                            lastErrorMessage,
-                           &totalSize,
-                           &totalEntryCount,
-                           &totalEntrySize,
+                           totalSize,
+                           totalEntryCount,
+                           totalEntrySize,
                            lockedCount
                           )
      )
