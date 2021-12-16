@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -379,6 +380,7 @@ public class TabJobs
                 0 iff fileTreeData1 = fileTreeData2,
                 1 iff fileTreeData1 > fileTreeData2
      */
+    @Override
     public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
     {
       if (sortMode == SortModes.NAME)
@@ -563,6 +565,7 @@ public class TabJobs
                 0 iff deviceData1 = deviceData2,
                 1 iff deviceData1 > deviceData2
      */
+    @Override
     public int compare(DeviceData deviceData1, DeviceData deviceData2)
     {
       switch (sortMode)
@@ -934,6 +937,7 @@ public class TabJobs
                 0 iff entryData1 = entryData2,
                 1 iff entryData1 > entryData2
      */
+    @Override
     public int compare(EntryData entryData1, EntryData entryData2)
     {
       return entryData1.pattern.compareTo(entryData2.pattern);
@@ -1022,6 +1026,7 @@ public class TabJobs
                 0 iff mountData1 = mountData2,
                 1 iff mountData1 > mountData2
      */
+    @Override
     public int compare(MountData mountData1, MountData mountData2)
     {
       return mountData1.name.compareTo(mountData2.name);
@@ -1611,35 +1616,30 @@ public class TabJobs
                 0 iff scheduleData1 = scheduleData2,
                 1 iff scheduleData1 > scheduleData2
      */
+    @Override
     public int compare(ScheduleData scheduleData1, ScheduleData scheduleData2)
     {
-      switch (sortMode)
+      EnumSet<SortModes> sortModeSet = EnumSet.allOf(SortModes.class);
+
+      // primiary sort key
+      int result = compare(scheduleData1,scheduleData2,sortMode);
+      sortModeSet.remove(sortMode);
+
+      // other sort keys
+      for (SortModes nextSortMode : sortModeSet)
       {
-        case DATE:
-          String date1 = scheduleData1.getDate();
-          String date2 = scheduleData2.getDate();
-
-          return date1.compareTo(date2);
-        case WEEKDAY:
-          if      (scheduleData1.weekDays < scheduleData2.weekDays) return -1;
-          else if (scheduleData1.weekDays > scheduleData2.weekDays) return  1;
-          else                                                      return  0;
-        case TIME:
-          String time1 = scheduleData1.getTime();
-          String time2 = scheduleData2.getTime();
-
-          return time1.compareTo(time2);
-        case ARCHIVE_TYPE:
-          return scheduleData1.archiveType.compareTo(scheduleData2.archiveType);
-        case CUSTOM_TEXT:
-          return scheduleData1.customText.compareTo(scheduleData2.customText);
-        case ENABLED:
-          if      (scheduleData1.enabled && !scheduleData2.enabled) return -1;
-          else if (!scheduleData1.enabled && scheduleData2.enabled) return  1;
-          else                                                      return  0;
-        default:
-          return 0;
+        if (result == 0)
+        {
+          result = compare(scheduleData1,scheduleData2,nextSortMode);
+          sortModeSet.remove(nextSortMode);
+        }
+        else
+        {
+          break;
+        }
       }
+
+      return result;
     }
 
     /** get index of week day
@@ -1657,6 +1657,54 @@ public class TabJobs
       }
 
       return index;
+    }
+
+    /** compare schedule data
+     * @param scheduleData1, scheduleData2 tree data to compare
+     * @param sortMode sort mode
+     * @return -1 iff scheduleData1 < scheduleData2,
+                0 iff scheduleData1 = scheduleData2,
+                1 iff scheduleData1 > scheduleData2
+     */
+    private int compare(ScheduleData scheduleData1, ScheduleData scheduleData2, SortModes sortMode)
+    {
+      int result = 0;
+
+      switch (sortMode)
+      {
+        case DATE:
+          String date1 = scheduleData1.getDate();
+          String date2 = scheduleData2.getDate();
+
+          result = date1.compareTo(date2);
+          break;
+        case WEEKDAY:
+          if      (scheduleData1.weekDays < scheduleData2.weekDays) result = -1;
+          else if (scheduleData1.weekDays > scheduleData2.weekDays) result =  1;
+          else                                                      result =  0;
+          break;
+        case TIME:
+          String time1 = scheduleData1.getTime();
+          String time2 = scheduleData2.getTime();
+
+          result = time1.compareTo(time2);
+          break;
+        case ARCHIVE_TYPE:
+          result = scheduleData1.archiveType.compareTo(scheduleData2.archiveType);
+          break;
+        case CUSTOM_TEXT:
+          result = scheduleData1.customText.compareTo(scheduleData2.customText);
+          break;
+        case ENABLED:
+          if      (scheduleData1.enabled && !scheduleData2.enabled) result = -1;
+          else if (!scheduleData1.enabled && scheduleData2.enabled) result =  1;
+          else                                                      result =  0;
+          break;
+        default:
+          break;
+      }
+
+      return result;
     }
   }
 
@@ -1882,6 +1930,7 @@ public class TabJobs
                 0 iff persistenceData1 = persistenceData2,
                 1 iff persistenceData1 > persistenceData2
      */
+    @Override
     public int compare(PersistenceData persistenceData1, PersistenceData persistenceData2)
     {
       int result = 0;
@@ -10558,6 +10607,7 @@ TODO: implement delete entity
                         0 iff jobData1.uuid = jobData2.uuid,
                         1 iff jobData1.uuid > jobData2.uuid
              */
+            @Override
             public int compare(JobData jobData1, JobData jobData2)
             {
               return jobData1.uuid.compareTo(jobData2.uuid);
