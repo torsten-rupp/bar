@@ -1191,8 +1191,8 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
     return error;
   }
 
-#if 0
   // transfer storages and entries without entity
+  DatabaseId toEntityId;
   error = Database_copyTable(oldDatabaseHandle,
                              newDatabaseHandle,
                              "storages",
@@ -1506,7 +1506,6 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
   {
     return error;
   }
-#endif
 
   return error;
 }

@@ -49,13 +49,12 @@
 const UUID_LENGTH     = 36
 // how to increase that? limit 3072/4-1
 const MAX_TEXT_LENGTH = 500
-const CHARACTER_SET = utf8mb4
 
 // --- meta ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta(
   name  VARCHAR(${MAX_TEXT_LENGTH}) UNIQUE,
   value TEXT
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 INSERT OR IGNORE INTO meta (name,value) VALUES ('version',${VERSION});
 INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',NOW());
 
@@ -65,7 +64,7 @@ CREATE TABLE IF NOT EXISTS uuids(
   jobUUID VARCHAR(${UUID_LENGTH}) UNIQUE NOT NULL,
 
   INDEX(jobUUID)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
@@ -115,7 +114,7 @@ CREATE TABLE IF NOT EXISTS entities(
   INDEX(jobUUID,created,type),
   INDEX(hostName),
   INDEX(deletedFlag)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // insert default entity (Note: requires an update, because MySQL does not allow to insert with id=0)
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (1,'','',0,0,0,0);
@@ -190,7 +189,7 @@ CREATE TABLE IF NOT EXISTS storages(
   INDEX(state,name,totalEntryCount,created),
   INDEX(deletedFlag),
   FULLTEXT(name)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // full-text-search (using a view)
 CREATE VIEW FTS_storages(
@@ -230,7 +229,7 @@ CREATE TABLE IF NOT EXISTS entries(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type),
   FULLTEXT(name)
-) CHARACTER SET '${CHARACTER_SET}';
+);
 
 // newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
@@ -261,7 +260,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   INDEX(size,type,name,timeLastChanged),
   INDEX(timeLastChanged,name,size,type),
   INDEX(entityId,type,entryId,name,size,timeLastChanged)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // full-text-search (using a view)
 CREATE VIEW FTS_entries(
@@ -318,7 +317,7 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
   INDEX(entityId,type,name),
   INDEX(name),
   INDEX(type,name)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- entry fragments -------------------------------------------------
 CREATE TABLE IF NOT EXISTS entryFragments(
@@ -335,7 +334,7 @@ CREATE TABLE IF NOT EXISTS entryFragments(
 
   INDEX(entryId),
   INDEX(storageId)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
@@ -349,7 +348,7 @@ CREATE TABLE IF NOT EXISTS fileEntries(
   CONSTRAINT fileEntries UNIQUE (entryId),
 
   INDEX(entryId)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
@@ -365,7 +364,7 @@ CREATE TABLE IF NOT EXISTS imageEntries(
   CONSTRAINT imageEntries UNIQUE (entryId),
 
   INDEX(entryId)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
@@ -391,7 +390,7 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   INDEX(entryId),
   INDEX(storageId,name),
   INDEX(name)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
@@ -408,7 +407,7 @@ CREATE TABLE IF NOT EXISTS linkEntries(
 
   INDEX(entryId),
   INDEX(storageId)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
@@ -422,7 +421,7 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
   CONSTRAINT hardlinkEntries UNIQUE (entryId),
 
   INDEX(entryId)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
@@ -441,7 +440,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
 
   INDEX(entryId),
   INDEX(storageId)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
@@ -464,11 +463,11 @@ CREATE TABLE IF NOT EXISTS history(
   INDEX(jobUUID,created,type),
   INDEX(created),
   INDEX(errorMessage)
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // --- debug only ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS log(
   text TEXT
-) CHARACTER SET '${CHARACTER_SET}' COLLATE '${CHARACTER_SET}_bin';
+);
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

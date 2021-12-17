@@ -388,8 +388,6 @@ LOCAL void setQuit(void)
 {
   quitFlag = TRUE;
   Semaphore_signalModified(&delayThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 }
 
 /***********************************************************************\
@@ -3030,7 +3028,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               }
             }
           }
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         }
 
         List_done(&jobExpirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));

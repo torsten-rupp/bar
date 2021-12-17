@@ -3503,7 +3503,7 @@ LOCAL Errors runDebug(void)
   DatabaseSpecifier databaseSpecifier;
   String            printableDatabaseURI;
   IndexHandle       *indexHandle;
-  ulong             deletedStorageCount;
+  uint              deletedStorageCount;
   Errors            error;
   JobOptions        jobOptions;
   StorageSpecifier  storageSpecifier;
@@ -4212,8 +4212,6 @@ exit(1);
 
     configFileName = String_newCString(globalOptions.saveConfigurationFileName);
     if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"Writing configuration file '%s'...",String_cString(configFileName)); }
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
     error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL);
     if (error != ERROR_NONE)
     {
