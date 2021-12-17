@@ -108,6 +108,17 @@ LOCAL const char *DATABASE_DATATYPE_NAMES[] =
   "UNKNOWN"
 };
 
+/* MySQL database character sets to use (descenting order)
+   Note: try to create with character set uft8mb4 (4-byte UTF8),
+         then utf8 as a fallback for older MySQL versions.
+*/
+LOCAL const char *MYSQL_CHARACTER_SETS[] =
+{
+  "utf8mb4",
+  "utf8"
+};
+
+
 /***************************** Datatypes *******************************/
 
 #ifndef NDEBUG
@@ -1545,6 +1556,489 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
 }
 
 /***********************************************************************\
+* Name   : sqlite3Query
+* Purpose: do SQLite3 query
+* Input  : handle     - SQLite3 handle
+*          sqlCommand - SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors sqlite3Exec(sqlite3    *handle,
+                         const char *sqlCommand
+                        )
+{
+  int    sqliteResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(sqlCommand != NULL);
+
+  sqliteResult = sqlite3_exec(handle,
+                              sqlCommand,
+                              CALLBACK_(NULL,NULL),
+                              NULL
+                             );
+  if      (sqliteResult == SQLITE_MISUSE)
+  {
+    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
+                        sqliteResult,
+                        sqlite3_extended_errcode(handle)
+                       );
+  }
+  else if (sqliteResult == SQLITE_INTERRUPT)
+  {
+    error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
+                    "%s: %s",
+                    sqlite3_errmsg(handle),
+                    sqlCommand
+                   );
+  }
+  else if (sqliteResult != SQLITE_OK)
+  {
+    error = ERRORX_(DATABASE,sqlite3_errcode(handle),
+                    "%s: %s",
+                    sqlite3_errmsg(handle),
+                    sqlCommand
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : sqlite3StatementPrepare
+* Purpose: prepare SQLite3 statement
+* Input  : statementHandle - statement handle variable
+*          handle          - SQLite3 handle
+*          sqlCommand      - SQL command
+* Output : statementHandle - statement handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors sqlite3StatementPrepare(sqlite3_stmt **statementHandle,
+                                     sqlite3      *handle,
+                                     const char   *sqlCommand
+                                    )
+{
+  int    sqliteResult;
+  Errors error;
+
+  assert(statementHandle != NULL);
+  assert(handle != NULL);
+  assert(sqlCommand != NULL);
+
+  sqliteResult = sqlite3_prepare_v2(handle,
+                                    sqlCommand,
+                                    -1,
+                                    statementHandle,
+                                    NULL
+                                   );
+  #ifndef NDEBUG
+    if ((*statementHandle) == NULL)
+    {
+      HALT_INTERNAL_ERROR("SQLite prepare fail %d: %s: %s",
+                          sqlite3_errcode(handle),
+                          sqlite3_errmsg(handle),
+                          sqlCommand
+                         );
+    }
+  #endif /* not NDEBUG */
+  if      (sqliteResult == SQLITE_MISUSE)
+  {
+    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
+                        sqliteResult,sqlite3_extended_errcode(handle),
+                        sqlCommand
+                       );
+  }
+  else if (sqliteResult == SQLITE_INTERRUPT)
+  {
+    error = ERRORX_(INTERRUPTED,sqlite3_errcode(handle),
+                    "%s: %s",
+                    sqlite3_errmsg(handle),
+                    sqlCommand
+                   );
+  }
+  else if (sqliteResult != SQLITE_OK)
+  {
+    error = ERRORX_(DATABASE,sqlite3_errcode(handle),
+                    "%s: %s",
+                    sqlite3_errmsg(handle),
+                    sqlCommand
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : sqlite3UnlockNotifyCallback
+* Purpose: SQLite3 unlock notify callback
+* Input  : argv - arguments
+*          argc - number of arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void sqlite3UnlockNotifyCallback(void *argv[], int argc)
+{
+  sem_t *semaphore;
+  assert(argv != NULL);
+  assert(argc >= 1);
+
+  UNUSED_VARIABLE(argc);
+
+  semaphore = (sem_t*)argv[0];
+
+  assert(semaphore != NULL);
+  sem_post(semaphore);
+}
+
+/***********************************************************************\
+* Name   : waitUnlockNotify
+* Purpose: wait unlock notify
+* Input  : handle - SQLite3 handle
+* Output : -
+* Return : SQLite result code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
+{
+  int   sqliteResult;
+  sem_t semaphore;
+
+  // init variables
+  sem_init(&semaphore,0,0);
+
+  // register call-back
+  sqliteResult = sqlite3_unlock_notify(handle,sqlite3UnlockNotifyCallback,&semaphore);
+  if (sqliteResult != SQLITE_OK)
+  {
+    sem_destroy(&semaphore);
+    return sqliteResult;
+  }
+
+  // wait for notify
+  sem_wait(&semaphore);
+
+  // free resources
+  sem_destroy(&semaphore);
+
+  return SQLITE_OK;
+}
+
+/***********************************************************************\
+* Name   : sqlite3Step
+* Purpose: do SQLite3 step
+* Input  : statementHandle - statement handle
+*          handle          - SQLite3 handle
+*          sqlCommand      - SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
+                         sqlite3      *handle,
+                         long         timeout,
+                         const char   *sqlCommand
+                        )
+{
+  const uint SLEEP_TIME = 250;  // [ms]
+
+  uint   n;
+  int    sqliteResult;
+  Errors error;
+
+  assert(statementHandle != NULL);
+  assert(handle != NULL);
+  assert(sqlCommand != NULL);
+
+  n = 0;
+  do
+  {
+    sqliteResult = sqlite3_step(statementHandle);
+    if (sqliteResult == SQLITE_LOCKED)
+    {
+      sqlite3WaitUnlockNotify(handle);
+      sqlite3_reset(statementHandle);
+    }
+//TODO: correct? abort here?
+    else if (sqliteResult == SQLITE_BUSY)
+    {
+      Misc_udelay(SLEEP_TIME*US_PER_MS);
+      sqlite3_reset(statementHandle);
+      n++;
+    }
+  }
+  while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
+         && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
+        );
+
+  if      ((sqliteResult == SQLITE_OK) || (sqliteResult == SQLITE_DONE))
+  {
+    error = ERROR_NONE;
+  }
+  else if (sqliteResult == SQLITE_LOCKED)
+  {
+// TODO:
+  }
+  else if (sqliteResult == SQLITE_MISUSE)
+  {
+    HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
+                        sqliteResult,
+                        sqlite3_extended_errcode(handle)
+                       );
+  }
+  else if (sqliteResult == SQLITE_INTERRUPT)
+  {
+    error = ERRORX_(INTERRUPTED,
+                    sqlite3_errcode(handle),
+                    "%s",
+                    sqlite3_errmsg(handle)
+                   );
+  }
+  else
+  {
+    error = ERRORX_(DATABASE,
+                    sqlite3_errcode(handle),
+                    "%s",
+                    sqlite3_errmsg(handle)
+                   );
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mysqlQuery
+* Purpose: do MySQL query
+* Input  : handle     - MySQL handle
+*          sqlCommand - SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlQuery(MYSQL      *handle,
+                        const char *sqlCommand
+                       )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(sqlCommand != NULL);
+
+  mysqlResult = mysql_query(handle,sqlCommand);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlCommand
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s: %s",
+                    mysql_error(handle),
+                    sqlCommand
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mysqlSelectDatabase_
+* Purpose: select MySQL database
+* Input  : handle     - MySQL handle
+*          sqlCommand - SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
+                                 const char *databaseName
+                                )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(databaseName != NULL);
+
+  mysqlResult = mysql_select_db(handle,databaseName);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mysqlStatementPrepare
+* Purpose: prepare MySQL statement
+* Input  : statementHandle - statement handle
+*          sqlCommand - SQL command
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlStatementPrepare(MYSQL_STMT *statementHandle,
+                                   const char *sqlCommand
+                                  )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(statementHandle != NULL);
+  assert(sqlCommand != NULL);
+
+  mysqlResult = mysql_stmt_prepare(statementHandle,
+                                   sqlCommand,
+                                   stringLength(sqlCommand)
+                                  );
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s: %s",
+                        mysqlResult,
+                        mysql_stmt_error(statementHandle),
+                        sqlCommand
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_stmt_errno(statementHandle),
+                    "%s: %s",
+                    mysql_stmt_error(statementHandle),
+                    sqlCommand
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_stmt_errno(statementHandle),
+                    "%s: %s",
+                    mysql_stmt_error(statementHandle),
+                    sqlCommand
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mysqlStatementExecute
+* Purpose: execute MySQL statement
+* Input  : statementHandle - statement handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(statementHandle != NULL);
+
+  mysqlResult = mysql_stmt_execute(statementHandle);
+  if      (mysqlResult == 0)
+  {
+    error = ERROR_NONE;
+  }
+  else if (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",
+                        mysqlResult,
+                        mysql_stmt_error(statementHandle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_stmt_errno(statementHandle),
+                    "%s",
+                    mysql_stmt_error(statementHandle)
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_stmt_errno(statementHandle),
+                    "%s",
+                    mysql_stmt_error(statementHandle)
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : openDatabase
 * Purpose: open database
 * Input  : databaseHandle    - database handle variable
@@ -1819,7 +2313,12 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
         sqliteResult = sqlite3_open_v2(String_cString(sqliteName),&databaseHandle->sqlite.handle,sqliteMode,NULL);
         if (sqliteResult != SQLITE_OK)
         {
-          error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseHandle->sqlite.handle));
+          error = ERRORX_(DATABASE,
+                          sqlite3_errcode(databaseHandle->sqlite.handle),
+                          "%s: '%s'",
+                          sqlite3_errmsg(databaseHandle->sqlite.handle),
+                          String_cString(sqliteName)
+                         );
           String_delete(sqliteName);
           sem_destroy(&databaseHandle->wakeUp);
           return error;
@@ -1828,14 +2327,11 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
         // attach aux database
         if ((openDatabaseMode & DATABASE_OPENMODE_AUX) == DATABASE_OPENMODE_AUX)
         {
-          sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                      "ATTACH DATABASE ':memory:' AS " DATABASE_AUX,
-                                      CALLBACK_(NULL,NULL),
-                                      NULL
-                                     );
-          if (sqliteResult != SQLITE_OK)
+          error = sqlite3Exec(databaseHandle->sqlite.handle,
+                              "ATTACH DATABASE ':memory:' AS " DATABASE_AUX
+                             );
+          if (error != ERROR_NONE)
           {
-            error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),"%s",sqlite3_errmsg(databaseHandle->sqlite.handle));
             sqlite3_close(databaseHandle->sqlite.handle);
             String_delete(sqliteName);
             sem_destroy(&databaseHandle->wakeUp);
@@ -1850,7 +2346,6 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MYSQL)
         {
-          int  mysqlResult;
           char sqlCommand[256];
 
           SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -1883,34 +2378,11 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
             }
 
             // enable UTF8
-            mysqlResult = mysql_query(databaseHandle->mysql.handle,
-                                      "SET NAMES 'utf8'"
-                                     );
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            error = mysqlQuery(databaseHandle->mysql.handle,
+                               "SET NAMES 'utf8'"
+                              );
+            if (error != ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s: %s",
-                              mysql_error(databaseHandle->mysql.handle),
-                              "SET NAMES 'utf8'"
-                             );
-              mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
-            else if (mysqlResult != 0)
-            {
-              error = ERRORX_(DATABASE,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s: %s",
-                              mysql_error(databaseHandle->mysql.handle),
-                              "SET NAMES 'utf8'"
-                             );
               mysql_close(databaseHandle->mysql.handle);
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
@@ -1920,16 +2392,12 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
             // create database if requested
             if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
             {
+              uint i;
+
               /* try to create with character set uft8mb4 (4-byte UTF8),
                  then utf8 as a fallback for older MySQL versions.
               */
-              const char *CHARACTER_SETS[] =
-              {
-                "utf8mb4",
-                "utf8"
-              };
-
-              uint i = 0;
+              i = 0;
               do
               {
                 stringFormat(sqlCommand,sizeof(sqlCommand),
@@ -1940,42 +2408,16 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
                              !String_isEmpty(databaseName)
                                ? String_cString(databaseName)
                                : String_cString(databaseSpecifier->mysql.databaseName),
-                             CHARACTER_SETS[i],
-                             CHARACTER_SETS[i]
+                             MYSQL_CHARACTER_SETS[i],
+                             MYSQL_CHARACTER_SETS[i]
                             );
-                mysqlResult = mysql_query(databaseHandle->mysql.handle,
-                                          sqlCommand
-                                         );
-                if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-                {
-                  HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
-                }
-                else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-                {
-                  error = ERRORX_(DATABASE_CONNECTION_LOST,
-                                  mysql_errno(databaseHandle->mysql.handle),
-                                  "%s: %s",mysql_error(databaseHandle->mysql.handle),
-                                  sqlCommand
-                                 );
-                }
-                else if (mysqlResult != 0)
-                {
-                  error = ERRORX_(DATABASE,
-                                  mysql_errno(databaseHandle->mysql.handle),
-                                  "%s: %s",
-                                  mysql_error(databaseHandle->mysql.handle),
-                                  sqlCommand
-                                 );
-                }
-                else
-                {
-                  error = ERROR_NONE;
-                }
-
+                error = mysqlQuery(databaseHandle->mysql.handle,
+                                   sqlCommand
+                                  );
                 i++;
               }
               while (   (error != ERROR_NONE)
-                     && (i < SIZE_OF_ARRAY(CHARACTER_SETS))
+                     && (i < SIZE_OF_ARRAY(MYSQL_CHARACTER_SETS))
                     );
               if (error != ERROR_NONE)
               {
@@ -1987,34 +2429,13 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
             }
 
             // select database
-            mysqlResult = mysql_select_db(databaseHandle->mysql.handle,
-                                          !String_isEmpty(databaseName)
-                                            ? String_cString(databaseName)
-                                            : String_cString(databaseSpecifier->mysql.databaseName)
-                                         );
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            error = mysqlSelectDatabase(databaseHandle->mysql.handle,
+                                        !String_isEmpty(databaseName)
+                                          ? String_cString(databaseName)
+                                          : String_cString(databaseSpecifier->mysql.databaseName)
+                                       );
+            if (error != ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_error(databaseHandle->mysql.handle));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s",
-                              mysql_error(databaseHandle->mysql.handle)
-                             );
-              mysql_close(databaseHandle->mysql.handle);
-              Semaphore_unlock(&databaseList.lock);
-              sem_destroy(&databaseHandle->wakeUp);
-              return error;
-            }
-            else if (mysqlResult != 0)
-            {
-              error = ERRORX_(DATABASE,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s",
-                              mysql_error(databaseHandle->mysql.handle)
-                             );
               mysql_close(databaseHandle->mysql.handle);
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
@@ -2151,12 +2572,10 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
         int sqliteResult;
 
         // enable recursive triggers
-        sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                    "PRAGMA recursive_triggers=ON",
-                                    CALLBACK_(NULL,NULL),
-                                    NULL
-                                   );
-        assert(sqliteResult == SQLITE_OK);
+        error = sqlite3Exec(databaseHandle->sqlite.handle,
+                            "PRAGMA recursive_triggers=ON"
+                           );
+        assert(error == ERROR_NONE);
 
         UNUSED_VARIABLE(sqliteResult);
       }
@@ -3659,114 +4078,6 @@ LOCAL int busyHandler(void *userData, int n)
 #endif /* 0 */
 
 /***********************************************************************\
-* Name   : unlockNotifyCallback
-* Purpose: SQLite3 unlock notify callback
-* Input  : argv - arguments
-*          argc - number of arguments
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void unlockNotifyCallback(void *argv[], int argc)
-{
-  sem_t *semaphore;
-  assert(argv != NULL);
-  assert(argc >= 1);
-
-  UNUSED_VARIABLE(argc);
-
-  semaphore = (sem_t*)argv[0];
-
-  assert(semaphore != NULL);
-  sem_post(semaphore);
-}
-
-/***********************************************************************\
-* Name   : waitUnlockNotify
-* Purpose: wait unlock notify
-* Input  : handle - SQLite3 handle
-* Output : -
-* Return : SQLite result code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL int waitUnlockNotify(sqlite3 *handle)
-{
-  int   sqliteResult;
-  sem_t semaphore;
-
-  // init variables
-  sem_init(&semaphore,0,0);
-
-  // register call-back
-  sqliteResult = sqlite3_unlock_notify(handle,unlockNotifyCallback,&semaphore);
-  if (sqliteResult != SQLITE_OK)
-  {
-    sem_destroy(&semaphore);
-    return sqliteResult;
-  }
-
-  // wait for notify
-  sem_wait(&semaphore);
-
-  // free resources
-  sem_destroy(&semaphore);
-
-  return SQLITE_OK;
-}
-
-// TODO: remove
-#if 0
-/***********************************************************************\
-* Name   : sqliteStep
-* Purpose: step statement
-* Input  : handle          - database handle
-*          statementHandle - statement handle
-*          timeout         - timeout [ms]
-* Output : -
-* Return : SQLite result code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeout)
-{
-  #define SLEEP_TIME 500L
-
-  uint n;
-  int  sqliteResult;
-
-  assert(handle != NULL);
-  assert(statementHandle != NULL);
-
-  n = 0;
-  do
-  {
-    sqliteResult = sqlite3_step(statementHandle);
-    if (sqliteResult == SQLITE_LOCKED)
-    {
-      waitUnlockNotify(handle);
-      sqlite3_reset(statementHandle);
-    }
-//TODO: correct? abort here?
-    else if (sqliteResult == SQLITE_BUSY)
-    {
-      Misc_udelay(SLEEP_TIME*US_PER_MS);
-      sqlite3_reset(statementHandle);
-      n++;
-    }
-  }
-  while (   ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
-         && ((timeout == WAIT_FOREVER) || (n < (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME)))
-        );
-
-  return sqliteResult;
-
-  #undef SLEEP_TIME
-}
-#endif
-
-/***********************************************************************\
 * Name   : prepareStatement
 * Purpose: prepare SQL statement
 * Input  : databaseStatementHandle - database query handle variable
@@ -3832,63 +4143,20 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
   {
     case DATABASE_TYPE_SQLITE3:
       {
-        int  sqliteResult;
-
         DATABASE_DEBUG_TIME_START(databaseStatementHandle);
         {
-          sqliteResult = sqlite3_prepare_v2(databaseHandle->sqlite.handle,
-                                            sqlCommand,
-                                            -1,
-                                            &databaseStatementHandle->sqlite.statementHandle,
-                                            NULL
-                                           );
-          #ifndef NDEBUG
-            if (databaseStatementHandle->sqlite.statementHandle == NULL)
-            {
-              HALT_INTERNAL_ERROR("SQLite prepare fail %d: %s: %s",
-                                  sqlite3_errcode(databaseHandle->sqlite.handle),
-                                  sqlite3_errmsg(databaseHandle->sqlite.handle),
-                                  sqlCommand
-                                 );
-            }
-          #endif /* not NDEBUG */
+          error = sqlite3StatementPrepare(&databaseStatementHandle->sqlite.statementHandle,
+                                          databaseHandle->sqlite.handle,
+                                          sqlCommand
+                                         );
         }
         DATABASE_DEBUG_TIME_END(databaseStatementHandle);
-        if      (sqliteResult == SQLITE_OK)
+        if (error != ERROR_NONE)
         {
-          error = ERROR_NONE;
-        }
-        else if (sqliteResult == SQLITE_MISUSE)
-        {
-          HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
-                              sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle),
-                              sqlCommand
-                             );
-        }
-        else if (sqliteResult == SQLITE_INTERRUPT)
-        {
-          error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),
-                          "%s: %s",
-                          sqlite3_errmsg(databaseHandle->sqlite.handle),
-                          sqlCommand
-                         );
           Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
           #ifndef NDEBUG
             String_delete(databaseStatementHandle->sqlString);
           #endif /* not NDEBUG */
-        }
-        else
-        {
-          error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),
-                          "%s: %s",
-                          sqlite3_errmsg(databaseHandle->sqlite.handle),
-                          sqlCommand
-                         );
-          Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
-          #ifndef NDEBUG
-            String_delete(databaseStatementHandle->sqlString);
-          #endif /* not NDEBUG */
-          return error;
         }
 
         // get value/result count
@@ -3908,8 +4176,6 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MYSQL)
         {
-          int mysqlResult;
-
           // prepare SQL statement
           DATABASE_DEBUG_TIME_START(databaseStatementHandle);
           {
@@ -3926,48 +4192,13 @@ LOCAL int sqliteStep(sqlite3 *handle, sqlite3_stmt *statementHandle, long timeou
             #endif /* not NDEBUG */
 
     //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,sqlCommand);
-            mysqlResult = mysql_stmt_prepare(databaseStatementHandle->mysql.statementHandle,
-                                             sqlCommand,
-                                             stringLength(sqlCommand)
-                                            );
+            error = mysqlStatementPrepare(databaseStatementHandle->mysql.statementHandle,
+                                          sqlCommand
+                                         );
           }
           DATABASE_DEBUG_TIME_END(databaseStatementHandle);
-          if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+          if (error != ERROR_NONE)
           {
-            HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s: %s",
-                                mysqlResult,
-                                mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),
-                                sqlCommand
-                               );
-          }
-          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-          {
-            error = ERRORX_(DATABASE_CONNECTION_LOST,
-                            mysql_errno(databaseHandle->mysql.handle),
-                            "%s: %s",
-                            mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),
-                            sqlCommand
-                           );
-            mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
-            Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
-            #ifndef NDEBUG
-              String_delete(databaseStatementHandle->sqlString);
-            #endif /* not NDEBUG */
-            return error;
-          }
-          else if (mysqlResult != 0)
-          {
-            error = ERRORX_(DATABASE,
-                            mysql_errno(databaseHandle->mysql.handle),
-                            "%s: %s",
-                            mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),
-                            sqlCommand
-                           );
-  // TODO: remove
-  fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-  #ifndef NDEBUG
-  debugPrintStackTrace();
-  #endif
             mysql_stmt_close(databaseStatementHandle->mysql.statementHandle);
             Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
             #ifndef NDEBUG
@@ -4392,7 +4623,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
           sqliteResult = sqlite3_step(databaseStatementHandle->sqlite.statementHandle);
           if (sqliteResult == SQLITE_LOCKED)
           {
-            waitUnlockNotify(databaseStatementHandle->databaseHandle->sqlite.handle);
+            sqlite3WaitUnlockNotify(databaseStatementHandle->databaseHandle->sqlite.handle);
             sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
           }
   //TODO: correct? abort here?
@@ -4808,23 +5039,7 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
             }
           }
 
-          mysqlResult = mysql_stmt_execute(databaseStatementHandle->mysql.statementHandle);
-          if      (mysqlResult == 0)
-          {
-            error = ERROR_NONE;
-          }
-          else if (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-          {
-            HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",mysqlResult,mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
-          }
-          else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-          {
-            error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_errno(databaseStatementHandle->databaseHandle->mysql.handle),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
-          }
-          else if (mysqlResult != 0)
-          {
-            error = ERRORX_(DATABASE,mysql_errno(databaseStatementHandle->databaseHandle->mysql.handle),"%s",mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
-          }
+          error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
 // TODO: remove
 if (error != ERROR_NONE)
 {
@@ -4970,32 +5185,12 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
           if (databaseRowFunction != NULL)
           {
             // prepare SQL statement
-            sqliteResult = sqlite3_prepare_v2(databaseHandle->sqlite.handle,
-                                              String_cString(sqlString),
-                                              -1,
-                                              &statementHandle,
-                                              NULL  // nextSqlCommand
-                                             );
-            if      (sqliteResult == SQLITE_MISUSE)
+            error = sqlite3StatementPrepare(&statementHandle,
+                                            databaseHandle->sqlite.handle,
+                                            String_cString(sqlString)
+                                           );
+            if (error != ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                                  sqliteResult,sqlite3_extended_errcode(databaseHandle->sqlite.handle)
-                                 );
-            }
-            else if (sqliteResult == SQLITE_INTERRUPT)
-            {
-              error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),
-                              "%s: %s",
-                              sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString)
-                             );
-              break;
-            }
-            else if (sqliteResult != SQLITE_OK)
-            {
-              error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),
-                              "%s: %s",
-                              sqlite3_errmsg(databaseHandle->sqlite.handle),String_cString(sqlString)
-                             );
               break;
             }
             assert(statementHandle != NULL);
@@ -5033,7 +5228,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                 sqliteResult = sqlite3_step(statementHandle);
                 if      (sqliteResult == SQLITE_LOCKED)
                 {
-                  waitUnlockNotify(databaseHandle->sqlite.handle);
+                  sqlite3WaitUnlockNotify(databaseHandle->sqlite.handle);
                   sqlite3_reset(statementHandle);
                 }
                 else if (sqliteResult == SQLITE_MISUSE)
@@ -5154,41 +5349,16 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
           else
           {
             // query SQL statement
-            if (error == ERROR_NONE)
+            error = sqlite3Exec(databaseHandle->sqlite.handle,
+                                String_cString(sqlString)
+                               );
+            if (error != ERROR_NONE)
             {
-              sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                          String_cString(sqlString),
-                                          NULL,  // callback
-                                          NULL,  // userData
-                                          NULL  // errorMsg
-                                         ); \
-              if      (sqliteResult == SQLITE_MISUSE)
-              {
-                HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                                    sqliteResult,
-                                    sqlite3_extended_errcode(databaseHandle->sqlite.handle)
-                                   );
-              }
-              else if (sqliteResult == SQLITE_INTERRUPT)
-              {
-                error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),
-                                "%s: %s",
-                                sqlite3_errmsg(databaseHandle->sqlite.handle),
-                                String_cString(sqlString)
-                               );
-              }
-              else if (sqliteResult != SQLITE_OK)
-              {
-                error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),
-                                "%s: %s",
-                                sqlite3_errmsg(databaseHandle->sqlite.handle),
-                                String_cString(sqlString)
-                               );
-              }
-
-              // get last insert id
-              databaseHandle->lastInsertId = (DatabaseId)sqlite3_last_insert_rowid(databaseHandle->sqlite.handle);;
+              break;
             }
+
+            // get last insert id
+            databaseHandle->lastInsertId = (DatabaseId)sqlite3_last_insert_rowid(databaseHandle->sqlite.handle);;
           }
         }
         break;
@@ -5205,36 +5375,12 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             // prepare SQL statement
             statementHandle = mysql_stmt_init(databaseHandle->mysql.handle);
             assert(statementHandle != NULL);
-            mysqlResult = mysql_stmt_prepare(statementHandle,
-                                             String_cString(sqlString),
-                                             String_length(sqlString)
-                                            );
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-            {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",
-                                  mysqlResult,
-                                  mysql_stmt_error(statementHandle)
-                                 );
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+            error = mysqlStatementPrepare(statementHandle,
+                                          String_cString(sqlString)
+                                         );
+            if (error != ERROR_NONE)
             {
               mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE_CONNECTION_LOST,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s: %s",
-                              mysql_stmt_error(statementHandle),
-                              String_cString(sqlString)
-                             );
-              break;
-            }
-            else if (mysqlResult != 0)
-            {
-              mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),
-                              "%s: %s",
-                              mysql_stmt_error(statementHandle),
-                              String_cString(sqlString)
-                             );
               break;
             }
 
@@ -5380,32 +5526,13 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             }
 
             // step and process rows
-            mysqlResult = mysql_stmt_execute(statementHandle);
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
-            {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",mysqlResult,mysql_stmt_error(statementHandle));
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+            error = mysqlStatementExecute(statementHandle);
+            if (error != ERROR_NONE)
             {
               free(values);
               free(dateTime);
               free(bind);
               mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE_CONNECTION_LOST,
-                              mysql_stmt_errno(statementHandle),
-                              "%s: %s",
-                              mysql_stmt_error(statementHandle),
-                              String_cString(sqlString)
-                             );
-              break;
-            }
-            else if (mysqlResult != 0)
-            {
-              free(values);
-              free(dateTime);
-              free(bind);
-              mysql_stmt_close(statementHandle);
-              error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
               break;
             }
 
@@ -6253,37 +6380,13 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
     {
       case DATABASE_TYPE_SQLITE3:
         {
-          int sqliteResult;
-
 //fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,String_cString(sqlCommand));
-          sqliteResult = sqlite3_exec(databaseHandle->sqlite.handle,
-                                      sqlCommand,
-                                      NULL,  // callback
-                                      NULL,  // userData
-                                      NULL  // errorMsg
-                                     ); \
-          if      (sqliteResult == SQLITE_MISUSE)
+          error = sqlite3Exec(databaseHandle->sqlite.handle,
+                              sqlCommand
+                             );
+          if (error != ERROR_NONE)
           {
-            HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
-                                sqliteResult,
-                                sqlite3_extended_errcode(databaseHandle->sqlite.handle)
-                               );
-          }
-          else if (sqliteResult == SQLITE_INTERRUPT)
-          {
-            error = ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->sqlite.handle),
-                            "%s: %s",
-                            sqlite3_errmsg(databaseHandle->sqlite.handle),
-                            sqlCommand
-                           );
-          }
-          else if (sqliteResult != SQLITE_OK)
-          {
-            error = ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->sqlite.handle),
-                            "%s: %s",
-                            sqlite3_errmsg(databaseHandle->sqlite.handle),
-                            sqlCommand
-                           );
+            break;
           }
 
           // get last insert id
@@ -6293,36 +6396,12 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
       case DATABASE_TYPE_MYSQL:
         #if defined(HAVE_MYSQL)
           {
-            int       mysqlResult;
             MYSQL_RES *result;
 
   //fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
-            mysqlResult = mysql_query(databaseHandle->mysql.handle,sqlCommand);
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            error = mysqlQuery(databaseHandle->mysql.handle,sqlCommand);
+            if (error != ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",
-                                  mysqlResult,
-                                  mysql_error(databaseHandle->mysql.handle)
-                                 );
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s: %s",
-                              mysql_error(databaseHandle->mysql.handle),
-                              sqlCommand
-                             );
-              break;
-            }
-            else if (mysqlResult != 0)
-            {
-              error = ERRORX_(DATABASE,
-                              mysql_errno(databaseHandle->mysql.handle),
-                              "%s: %s",
-                              mysql_error(databaseHandle->mysql.handle),
-                              sqlCommand
-                             );
               break;
             }
 
@@ -6519,8 +6598,6 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
       case DATABASE_TYPE_MYSQL:
         #if defined(HAVE_MYSQL)
           {
-            int mysqlResult;
-
             // bind values
             if (databaseStatementHandle->valueCount > 0)
             {
@@ -6555,45 +6632,20 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             }
 
             // do query
-            mysqlResult = mysql_stmt_execute(databaseStatementHandle->mysql.statementHandle);
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
+            if (error != ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",
-                                  mysqlResult,mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                                 );
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,
-                              mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
-                              "%s",
-                              mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                             );
-              break;
-            }
-            else if (mysqlResult != 0)
-            {
-              error = ERRORX_(DATABASE,
-                              mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
-                              "%s",
-                              mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                             );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
               break;
             }
 
-            if (error == ERROR_NONE)
+            // get number of changes
+            if (changedRowCount != NULL)
             {
-              // get number of changes
-              if (changedRowCount != NULL)
-              {
-                (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mysql.handle);
-              }
-
-              // get last insert id
-              databaseStatementHandle->databaseHandle->lastInsertId = (DatabaseId)mysql_stmt_insert_id(databaseStatementHandle->mysql.statementHandle);
+              (*changedRowCount) = (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mysql.handle);
             }
+
+            // get last insert id
+            databaseStatementHandle->databaseHandle->lastInsertId = (DatabaseId)mysql_stmt_insert_id(databaseStatementHandle->mysql.statementHandle);
           }
         #else /* HAVE_MYSQL */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -6812,32 +6864,9 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       case DATABASE_TYPE_MYSQL:
         #if defined(HAVE_MYSQL)
           {
-            int mysqlResult;
-
-            mysqlResult = mysql_stmt_execute(databaseStatementHandle->mysql.statementHandle);
-            if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+            error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
+            if (error != ERROR_NONE)
             {
-              HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",
-                                  mysqlResult,
-                                  mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                                 );
-            }
-            else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
-            {
-              error = ERRORX_(DATABASE_CONNECTION_LOST,
-                              mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
-                              "%s",
-                              mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                             );
-              break;
-            }
-            else if (mysqlResult != 0)
-            {
-              error = ERRORX_(DATABASE,
-                              mysql_stmt_errno(databaseStatementHandle->mysql.statementHandle),
-                              "%s",
-                              mysql_stmt_error(databaseStatementHandle->mysql.statementHandle)
-                             );
               break;
             }
 
@@ -7558,6 +7587,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
       #if defined(HAVE_MYSQL)
         {
           DatabaseHandle     databaseHandle;
+          uint               i;
           StringList         tableNameList;
           StringListIterator iterator;
           String             name;
@@ -7570,16 +7600,31 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           }
 
           // create new database
-          error = Database_execute(&databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
-                                   "CREATE DATABASE %s CHARACTER SET 'UTF8'",
-                                   String_cString(newDatabaseName)
-                                  );
+          i = 0;
+          do
+          {
+            char sqlCommand[256];
+
+            stringFormat(sqlCommand,sizeof(sqlCommand),
+                         "CREATE DATABASE %s \
+                          CHARACTER SET '%s' \
+                          COLLATE '%s_bin' \
+                         ",
+                         String_cString(newDatabaseName),
+                         MYSQL_CHARACTER_SETS[i],
+                         MYSQL_CHARACTER_SETS[i]
+                        );
+            error = mysqlQuery(databaseHandle.mysql.handle,
+                               sqlCommand
+                              );
+            i++;
+          }
+          while (   (error != ERROR_NONE)
+                 && (i < SIZE_OF_ARRAY(MYSQL_CHARACTER_SETS))
+                );
           if (error != ERROR_NONE)
           {
+            Database_close(&databaseHandle);
             return error;
           }
 
@@ -11577,7 +11622,7 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
     String_formatAppend(sqlString,"%s",values[i].value);
   }
   String_appendChar(sqlString,')');
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
 
   // prepare statement
   error = prepareStatement(&databaseStatementHandle,
@@ -13162,11 +13207,9 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
       case DATABASE_TYPE_SQLITE3:
 /*
 //TODO
-        sqlite3_exec(databaseHandle->sqlite.handle,
-                                      "PRAGMA vdbe_trace=ON",
-                                      CALLBACK_(NULL,NULL),
-                                      NULL
-                                     );
+        sqlite3Exec(databaseHandle->sqlite.handle,
+                    "PRAGMA vdbe_trace=ON"
+                   );
 */
         break;
       case DATABASE_TYPE_MYSQL:
@@ -13187,11 +13230,9 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
       switch (Database_getType(databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
-          sqlite3_exec(databaseHandle->sqlite.handle,
-                                    "PRAGMA vdbe_trace=OFF",
-                                    CALLBACK_(NULL,NULL),
-                                    NULL
-                                   );
+          sqlite3Exec(databaseHandle->sqlite.handle,
+                      "PRAGMA vdbe_trace=OFF"
+                     );
           break;
         case DATABASE_TYPE_MYSQL:
           #if defined(HAVE_MYSQL)
