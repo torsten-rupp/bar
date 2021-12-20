@@ -21,8 +21,8 @@
 #include <semaphore.h>
 #include <assert.h>
 
-#if defined(HAVE_MYSQL_MYSQL_H) && defined(HAVE_MYSQL_ERRMSG_H)
-  #include "mysql/mysql.h"
+#if defined(HAVE_MARIADB_MYSQL_H) && defined(HAVE_MARIADB_ERRMSG_H)
+  #include "mariadb/mysql.h"
 #endif
 
 #include "common/global.h"
@@ -69,7 +69,7 @@ typedef struct
     {
       String fileName;
     } sqlite;
-    #if defined(HAVE_MYSQL)
+    #if defined(HAVE_MARIADB)
     struct
     {
       String   serverName;
@@ -77,7 +77,7 @@ typedef struct
       Password password;
       String   databaseName;
     } mysql;
-    #endif /* HAVE_MYSQL */
+    #endif /* HAVE_MARIADB */
   };
 } DatabaseSpecifier;
 
@@ -383,13 +383,13 @@ typedef struct DatabaseHandle
     {
       sqlite3                 *handle;
     } sqlite;
-    #if defined(HAVE_MYSQL)
+    #if defined(HAVE_MARIADB)
     struct
     {
       MYSQL                   *handle;
     }
     mysql;
-    #endif /* HAVE_MYSQL */
+    #endif /* HAVE_MARIADB */
   };
   uint                        readLockCount;
   uint                        readWriteLockCount;
@@ -524,7 +524,7 @@ typedef struct
 // database statement handle
 typedef struct
 {
-  DatabaseHandle    *databaseHandle;
+  DatabaseHandle *databaseHandle;
   union
   {
     struct
@@ -533,7 +533,7 @@ typedef struct
       DatabaseValue     **bind;
     }
     sqlite;
-    #if defined(HAVE_MYSQL)
+    #if defined(HAVE_MARIADB)
     struct
     {
       MYSQL_STMT        *statementHandle;
@@ -551,19 +551,19 @@ DatabaseDataTypes *dataTypes;
       }                 results;
     }
     mysql;
-    #endif /* HAVE_MYSQL */
+    #endif /* HAVE_MARIADB */
   };
 
-  uint                valueCount;
-  uint                valueIndex;
+  uint           valueCount;
+  uint           valueIndex;
 
-  char                **columnNames;
-  DatabaseValue       *results;
-  uint                resultCount;
-  uint                resultIndex;
+  char           **columnNames;
+  DatabaseValue  *results;
+  uint           resultCount;
+  uint           resultIndex;
 
-  uint          *valueMap;
-  uint          valueMapCount;
+  uint           *valueMap;
+  uint           valueMapCount;
 
   #ifndef NDEBUG
     String sqlString;

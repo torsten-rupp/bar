@@ -47,8 +47,10 @@
 */
 
 const UUID_LENGTH     = 36
-// MySQL limit with utf8mb4 3072/4 = 768 characters
-const MAX_TEXT_LENGTH = 768
+// Index limit: utf8mb4 3072/4-1 = 767 characters
+//const MAX_TEXT_LENGTH = 767
+//TODO: >= 762 does not work - why?
+const MAX_TEXT_LENGTH = 761
 
 // --- meta ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta(
@@ -141,7 +143,7 @@ CREATE TABLE IF NOT EXISTS storages(
 //TODO: use
   hostName                  TEXT,
 //TODO: use
-  userName                  VARCHAR(255),
+  userName                  VARCHAR(64),
   comment                   TEXT,
   state                     INT DEFAULT ${STATE_CREATE},
   mode                      INT DEFAULT ${MODE_MANUAL},
