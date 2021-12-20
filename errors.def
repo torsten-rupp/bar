@@ -894,6 +894,13 @@ ERROR DATABASE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DATABASE_VERSION
+  stringSet(errorText,sizeof(errorText),TR("insufficient database version"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR DATABASE_CONNECTION_LOST         TR("database connection lost")
 ERROR DATABASE_EXISTS                  TR("database already exists")
 ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version of index")

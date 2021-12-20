@@ -108,6 +108,11 @@ LOCAL const char *DATABASE_DATATYPE_NAMES[] =
   "UNKNOWN"
 };
 
+// min. MySQL server version (>= 5.7.7 with key length 3072)
+#define MYSQL_MIN_SERVER_VERSION 50707
+
+#define MYSQL_TIMEOUT (5*60)  // [s]
+
 /* MySQL database character sets to use (descenting order)
    Note: try to create with character set uft8mb4 (4-byte UTF8),
          then utf8 as a fallback for older MySQL versions.
@@ -117,7 +122,6 @@ LOCAL const char *MYSQL_CHARACTER_SETS[] =
   "utf8mb4",
   "utf8"
 };
-
 
 /***************************** Datatypes *******************************/
 
@@ -2345,7 +2349,13 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MYSQL)
         {
-          char sqlCommand[256];
+          union
+          {
+            bool b;
+            uint u;
+          }     optionValue;
+          ulong serverVersion;
+          char  sqlCommand[256];
 
           SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
@@ -2358,6 +2368,13 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
+            optionValue.b = TRUE;
+            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
+            optionValue.u = MYSQL_TIMEOUT;
+            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+
+            // connect
             if (mysql_real_connect(databaseHandle->mysql.handle,
                                    String_cString(databaseSpecifier->mysql.serverName),
                                    String_cString(databaseSpecifier->mysql.userName),
@@ -2370,6 +2387,20 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
                )
             {
               error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s",mysql_error(databaseHandle->mysql.handle));
+              mysql_close(databaseHandle->mysql.handle);
+              Semaphore_unlock(&databaseList.lock);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
+
+            // check min. version
+            serverVersion = mysql_get_server_version(databaseHandle->mysql.handle);
+            if (serverVersion < MYSQL_MIN_SERVER_VERSION)
+            {
+              error = ERRORX_(DATABASE_VERSION,0,"available %lu, required %lu",
+                              serverVersion,
+                              MYSQL_MIN_SERVER_VERSION
+                             );
               mysql_close(databaseHandle->mysql.handle);
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
