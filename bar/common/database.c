@@ -1750,10 +1750,10 @@ LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: use
 LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
                          sqlite3      *handle,
-                         long         timeout,
-                         const char   *sqlCommand
+                         long         timeout
                         )
 {
   const uint SLEEP_TIME = 250;  // [ms]
@@ -1764,7 +1764,6 @@ LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
 
   assert(statementHandle != NULL);
   assert(handle != NULL);
-  assert(sqlCommand != NULL);
 
   n = 0;
   do
@@ -2589,7 +2588,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
           mysqlResult = mysql_query(databaseHandle->mysql.handle,
   // TODO:
           // ONLY_FULL_GROUP_BY
-                                    "SET SESSION sql_mode='ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'"
+                                    "SET SESSION sql_mode='ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
                                    );
           assert(mysqlResult == 0);
           UNUSED_VARIABLE(mysqlResult);

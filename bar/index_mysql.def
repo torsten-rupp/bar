@@ -47,8 +47,8 @@
 */
 
 const UUID_LENGTH     = 36
-// how to increase that? limit 3072/4-1
-const MAX_TEXT_LENGTH = 500
+// MySQL limit with utf8mb4 3072/4 = 768 characters
+const MAX_TEXT_LENGTH = 768
 
 // --- meta ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta(
