@@ -776,7 +776,7 @@ AC_SUBST(HAVE_SSH2)                         dnl "1" for ssh2 support, "" otherwi
 AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" otherwise
 AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
 AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
-AC_SUBST(HAVE_MYSQL)                        dnl "1" for MySQL support, "" otherwise
+AC_SUBST(HAVE_MARIADB)                      dnl "1" for MariaDB support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
 AC_SUBST(HAVE_BFD)                          dnl "1" for BFD support, "" otherwise
@@ -833,7 +833,7 @@ AC_SUBST(XGETTEXT)                          dnl xgettext command
 AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
-AC_SUBST(MYSQL)                             dnl mysql command
+AC_SUBST(MARIADB)                           dnl MariaDB command
 
 AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
@@ -930,7 +930,7 @@ ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
 ENABLE_PCRE="yes"
-ENABLE_MYSQL="yes"
+ENABLE_MARIADB="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
@@ -1224,6 +1224,10 @@ if test -z "$WINDRES"; then
   AC_PATH_PROGS(WINDRES,$host-windres windres)
 fi
 
+AC_PATH_PROGS(CMAKE,cmake)
+if test -z "$CMAKE"; then
+  AC_MSG_ERROR([Cannot find a 'cmake' in PATH. Please check your PATH environment variable.])
+fi
 AC_PATH_PROGS(MAKE,make)
 if test -z "$MAKE"; then
   AC_MSG_ERROR([Cannot find a 'make' in PATH. Please check your PATH environment variable.])
@@ -1268,11 +1272,6 @@ fi
 AC_PATH_PROGS(MSGFMT,msgfmt)
 if test -z "$MSGFMT"; then
   AC_MSG_ERROR([Cannot find a 'msgfmt' in PATH. Please check your PATH environment variable.])
-fi
-
-AC_PATH_PROGS(MYSQL,mysql)
-if test -z "$MYSQL"; then
-  AC_MSG_WARN([Cannot find a 'mysql' in PATH. Please check your PATH environment variable.])
 fi
 
 AC_PROG_INSTALL
@@ -1594,7 +1593,7 @@ fi
 
 # add extern include/library+local include search directory
 CC_INCLUDES="$CC_INCLUDES $cwd/extern/include $cwd/bar"
-LIBRARY_PATHS="$cwd/extern/lib /usr/lib64/mysql /usr/lib/mysql $LIBRARY_PATHS"
+LIBRARY_PATHS="$cwd/extern/lib $cwd/extern/lib/mariadb $LIBRARY_PATHS"
 
 # set variables for compile extern
 AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
@@ -1649,6 +1648,76 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
     else
       AC_MSG_ERROR([Cannot create sqlite3.c])
     fi
+  fi
+fi
+
+# compile MariaDB client
+if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+    dnl compile MariaDB client library
+
+    cwd=`pwd`
+
+    AC_MSG_COMPILE([MariaDB client])
+    result=1
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+        -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES mariadb-connector-c"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+    fi
+    HAVE_MARIADB=1
+    AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
+  fi
+else
+  dnl search for installed zlib library
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+  else
+    if test -z "$HAVE_MARIADB"; then
+      AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+    fi
+    if test -z "$HAVE_MARIADB"; then
+      AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+    fi
+  fi
+fi
+if test -z "$HAVE_MARIADB"; then
+  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+    AC_MSG_WARN([MariaDB client not compiled: Maria DB client package missing])
   fi
 fi
 
@@ -3639,17 +3708,17 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
-# use MySQL
-if test $ENABLE_MYSQL = "yes"; then
-  dnl search for installed MySQL library
+# use MariaDB
+if test $ENABLE_MARIADB = "yes"; then
+  dnl search for installed MariaDB library
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[MySQL installed])])
+    AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MARIADB=1;LIBRARIES="$LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[MariaDB installed])])
   else
-    if test -z "$HAVE_MYSQL"; then
-      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;CC_DEFINES="$CC_DEFINES MYSQL_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[static MySQL installed])])
+    if test -z "$HAVE_MARIADB"; then
+      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mysqlclient,[HAVE_MARIADB=1;CC_DEFINES="$CC_DEFINES MARIADB_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[static MariaDB installed])])
     fi
-    if test -z "$HAVE_MYSQL"; then
-      AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MYSQL=1;LIBRARIES="$LIBRARIES mysqlclient";AC_DEFINE(HAVE_MYSQL,1,[MySQL installed])])
+    if test -z "$HAVE_MARIADB"; then
+      AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MARIADB=1;LIBRARIES="$LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[MariaDB installed])])
     fi
   fi
 fi
@@ -3973,7 +4042,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_GNU_TLS,,AC_MSG_ERROR([GNU TLS missing]))
    AS_IF(test $HAVE_ISO9660,,AC_MSG_ERROR([ISO9660 missing]))
    AS_IF(test $HAVE_PCRE   ,,AC_MSG_ERROR([PCRE missing]))
-   AS_IF(test $HAVE_MYSQL  ,,AC_MSG_ERROR([MySQL missing]))
+   AS_IF(test $HAVE_MARIADB,,AC_MSG_ERROR([MariaDB missing]))
   ]
 )
 
@@ -4004,8 +4073,8 @@ AC_CHECK_HEADERS(\
                  linux/fs.h \
                  linux/tcp.h \
                  mntent.h \
-                 mysql/mysql.h \
-                 mysql/errmsg.h \
+                 mariadb/mysql.h \
+                 mariadb/errmsg.h \
                  netdb.h \
                  netinet/in.h \
                  pwd.h \
@@ -4437,16 +4506,14 @@ if test $ENABLE_PCRE = "yes"; then
               VERSION_PCRE=unknown
              )
 fi
-if test $ENABLE_MYSQL = "yes"; then
+if test $ENABLE_MARIADB = "yes"; then
   AC_TRY_LINK([#include <stdio.h>
-               #include "mysql/mysql.h"
+               #include "mariadb_version.h"
               ],
-              [MYSQL mysql;
-               mysql_init(&mysql);
-               printf("%s",mysql_get_client_info(mysql));
+              [printf("%s",MARIADB_CLIENT_VERSION_STR);
               ],
-              VERSION_MYSQL=`./conftest$ac_exeext`,
-              VERSION_MYSQL=unknown
+              VERSION_MARIADB=`./conftest$ac_exeext`,
+              VERSION_MARIADB=unknown
              )
 fi
 
@@ -4521,6 +4588,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Host               : $host";
                     echo "  Dynamic linked     : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SQLite             : yes ($VERSION_SQLITE)";
+                    echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  ICU support        : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
                     echo "  zip compression    : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
                     echo "  bzip2 compression  : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
@@ -4536,7 +4604,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
-                    echo "  MySQL support      : `if test "$HAVE_MYSQL"; then echo "yes ($VERSION_MYSQL)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -4581,6 +4648,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
 
                    host="$host"
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
+                   HAVE_MARIADB=$HAVE_MARIADB
                    HAVE_ICU=$HAVE_ICU
                    HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
@@ -4597,7 +4665,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
-                   HAVE_MYSQL=$HAVE_MYSQL
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -4619,6 +4686,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HEAPVIEW_DIR="$HEAPVIEW_DIR"
 
                    VERSION_SQLITE="$VERSION_SQLITE"
+                   VERSION_MARIADB="$VERSION_MARIADB"
                    VERSION_ICU="$VERSION_ICU"
                    VERSION_Z="$VERSION_Z"
                    VERSION_BZ2="$VERSION_BZ2"
@@ -4634,7 +4702,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
-                   VERSION_MYSQL="$VERSION_MYSQL"
                   )
 
 AC_OUTPUT

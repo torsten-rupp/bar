@@ -55,6 +55,7 @@ SQLITE_YEAR=2020
 #TODO: remove
 SQLITE_VERSION=3270200
 SQLITE_VERSION=3340000
+MARIADB_CLIENT_VERSION=3.1.13
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
@@ -109,6 +110,7 @@ gnutlsFlag=0
 libcdioFlag=0
 pcreFlag=0
 sqliteFlag=0
+mariaDBClientFlag=0
 icuFlag=0
 mtxFlag=0
 binutilsFlag=0
@@ -236,6 +238,10 @@ while test $# != 0; do
           allFlag=0
           sqliteFlag=1
           ;;
+        mariadb)
+          allFlag=0
+          mariaDBClientFlag=1
+          ;;
         icu)
           allFlag=0
           icuFlag=1
@@ -347,6 +353,10 @@ while test $# != 0; do
       allFlag=0
       sqliteFlag=1
       ;;
+    mariadb)
+      allFlag=0
+      mariaDBClientFlag=1
+      ;;
     icu)
       allFlag=0
       icuFlag=1
@@ -414,6 +424,7 @@ if test $helpFlag -eq 1; then
   $ECHO " libcdio"
   $ECHO " pcre"
   $ECHO " sqlite"
+  $ECHO " mariadb"
   $ECHO " icu"
   $ECHO " binutils"
   $ECHO ""
@@ -1431,6 +1442,48 @@ if test $cleanFlag -eq 0; then
     result=$?
     if test $noDecompressFlag -eq 0; then
       (cd "$destination"; $LN -sfT extern/sqlite-src-$SQLITE_VERSION sqlite)
+    fi
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $mariaDBClientFlag -eq 1; then
+    # MariaDB
+    (
+     cd "$destination/extern"
+
+     $ECHO_NO_NEW_LINE "Get MariaDB ($MARIADB_CLIENT_VERSION)..."
+     fileName="mariadb-connector-c-$MARIADB_CLIENT_VERSION-src.tar.gz"
+     if test ! -f $fileName; then
+       if test -n "$localDirectory" -a -f $localDirectory/mariadb-connector-c-$MARIADB_CLIENT_VERSION-src.tar.gz; then
+         $LN -s $localDirectory/mariadb-connector-c-$MARIADB_CLIENT_VERSION-src.tar.gz $fileName
+         result=1
+       else
+         url="https://mirror.kumi.systems/mariadb/connector-c-$MARIADB_CLIENT_VERSION/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    if test $noDecompressFlag -eq 0; then
+      (cd "$destination"; $LN -sfT extern/mariadb-connector-c-$MARIADB_CLIENT_VERSION-src mariadb-connector-c)
     fi
     case $result in
       1) $ECHO "ok (local)"; ;;

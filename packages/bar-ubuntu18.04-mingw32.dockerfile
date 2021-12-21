@@ -46,6 +46,7 @@ RUN apt-get -y install \
   libc6-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
+  cmake \
   make \
   mingw-w64-i686-dev \
   gcc-mingw-w64-i686 \

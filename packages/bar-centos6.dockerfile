@@ -40,6 +40,7 @@ RUN yum -y install \
   gcc-c++ \
   java-1.6.0-openjdk-devel \
   jre \
+  cmake \
   make \
   rpm-build \
   ;

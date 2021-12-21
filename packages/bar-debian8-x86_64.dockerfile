@@ -43,6 +43,7 @@ RUN apt-get -y install \
   libc6-dev \
   default-jdk \
   default-jre \
+  cmake \
   make \
   unoconv \
   txt2man \

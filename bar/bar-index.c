@@ -542,14 +542,14 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
-      #if defined(HAVE_MYSQL)
+      #if defined(HAVE_MARIADB)
         if (String_isEmpty(databaseSpecifier.mysql.databaseName))
         {
           String_setCString(databaseSpecifier.mysql.databaseName,DEFAULT_DATABASE_NAME);
         }
-      #else /* HAVE_MYSQL */
+      #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_MYSQL */
+      #endif /* HAVE_MARIADB */
       break;
   }
   printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
@@ -1042,10 +1042,10 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
     case DATABASE_TYPE_SQLITE3:
       break;
     case DATABASE_TYPE_MYSQL:
-      #if defined(HAVE_MYSQL)
-      #else /* HAVE_MYSQL */
+      #if defined(HAVE_MARIADB)
+      #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_MYSQL */
+      #endif /* HAVE_MARIADB */
       break;
   }
   printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
@@ -1956,10 +1956,10 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         }
         break;
       case DATABASE_TYPE_MYSQL:
-        #if defined(HAVE_MYSQL)
-        #else /* HAVE_MYSQL */
+        #if defined(HAVE_MARIADB)
+        #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MYSQL */
+        #endif /* HAVE_MARIADB */
 // TODO:
         break;
     }
@@ -2019,10 +2019,10 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         }
         break;
       case DATABASE_TYPE_MYSQL:
-        #if defined(HAVE_MYSQL)
-        #else /* HAVE_MYSQL */
+        #if defined(HAVE_MARIADB)
+        #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MYSQL */
+        #endif /* HAVE_MARIADB */
 // TODO:
         break;
     }
@@ -2106,10 +2106,10 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         }
         break;
       case DATABASE_TYPE_MYSQL:
-        #if defined(HAVE_MYSQL)
-        #else /* HAVE_MYSQL */
+        #if defined(HAVE_MARIADB)
+        #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MYSQL */
+        #endif /* HAVE_MARIADB */
         // nothing to do (use views)
         break;
     }
@@ -8113,11 +8113,11 @@ UNUSED_VARIABLE(lostFlag);
       String_format(ftsSubSelect,"SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S'",ftsName);
       break;
     case DATABASE_TYPE_MYSQL:
-      #if defined(HAVE_MYSQL)
+      #if defined(HAVE_MARIADB)
         String_format(ftsSubSelect,"SELECT id FROM entries WHERE MATCH(name) AGAINST ('%S')",ftsName);
-      #else /* HAVE_MYSQL */
+      #else /* HAVE_MARIADB */
         return;
-      #endif /* HAVE_MYSQL */
+      #endif /* HAVE_MARIADB */
       break;
   }
 
@@ -9939,10 +9939,10 @@ if (xxxId != DATABASE_ID_NONE)
             String_insertCString(s,STRING_BEGIN,"EXPLAIN QUERY PLAN ");
             break;
           case DATABASE_TYPE_MYSQL:
-            #if defined(HAVE_MYSQL)
+            #if defined(HAVE_MARIADB)
               String_insertCString(s,STRING_BEGIN,"EXPLAIN  ");
-            #else /* HAVE_MYSQL */
-            #endif /* HAVE_MYSQL */
+            #else /* HAVE_MARIADB */
+            #endif /* HAVE_MARIADB */
             break;
         }
       }

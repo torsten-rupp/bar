@@ -40,6 +40,7 @@ RUN apt-get -y install \
   libpq-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
+  cmake \
   make \
   unoconv \
   txt2man \
