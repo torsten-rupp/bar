@@ -3711,21 +3711,6 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
-# use MariaDB
-if test $ENABLE_MARIADB = "yes"; then
-  dnl search for installed MariaDB library
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MARIADB=1;LIBRARIES="$LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[MariaDB installed])])
-  else
-    if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mysqlclient,[HAVE_MARIADB=1;CC_DEFINES="$CC_DEFINES MARIADB_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[static MariaDB installed])])
-    fi
-    if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_LIBRARIES(mysql_init,mysqlclient,[HAVE_MARIADB=1;LIBRARIES="$LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[MariaDB installed])])
-    fi
-  fi
-fi
-
 case "$host_os" in
   linux-*)
     ;;
