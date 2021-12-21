@@ -3431,20 +3431,20 @@ if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
     AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
   fi
 else
-  dnl search for installed zlib library
+  dnl search for installed MariaDB client library
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+    AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
   else
     if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
     fi
     if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+      AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
     fi
   fi
 fi
 if test -z "$HAVE_MARIADB"; then
-  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+  if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
     AC_MSG_WARN([MariaDB client not compiled: Maria DB client package missing])
   fi
 fi

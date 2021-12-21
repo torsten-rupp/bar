@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-18 04:25+0100\n"
+"POT-Creation-Date: 2021-12-21 12:17+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -845,86 +845,90 @@ msgstr ""
 msgid "database"
 msgstr ""
 
-#: errors.def:897
+#: errors.def:900
+msgid "insufficient database version"
+msgstr ""
+
+#: errors.def:904
 msgid "database connection lost"
 msgstr ""
 
-#: errors.def:898
+#: errors.def:905
 msgid "database already exists"
 msgstr ""
 
-#: errors.def:899
+#: errors.def:906
 msgid "unknown version of index"
 msgstr ""
 
-#: errors.def:903
+#: errors.def:910
 msgid "missing table"
 msgstr ""
 
-#: errors.def:910
+#: errors.def:917
 msgid "missing column"
 msgstr ""
 
-#: errors.def:917
+#: errors.def:924
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:924
+#: errors.def:931
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:931
+#: errors.def:938
 msgid "database bind fail"
 msgstr ""
 
-#: errors.def:938
+#: errors.def:945
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:942
+#: errors.def:949
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:943
+#: errors.def:950
 msgid "index not found"
 msgstr ""
 
-#: errors.def:944
+#: errors.def:951
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:948
+#: errors.def:955
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:955
+#: errors.def:962
 msgid "parse index id fail"
 msgstr ""
 
-#: errors.def:959
+#: errors.def:966
 msgid "database busy"
 msgstr ""
 
-#: errors.def:960
+#: errors.def:967
 msgid "database operation interupted"
 msgstr ""
 
-#: errors.def:961
+#: errors.def:968
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:964
+#: errors.def:971
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:965
+#: errors.def:972
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:966
+#: errors.def:973
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:967
+#: errors.def:974
 msgid "instance is not a slave"
 msgstr ""

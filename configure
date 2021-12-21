@@ -14978,15 +14978,15 @@ else
 
 
     ac_result=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
-$as_echo_n "checking for library containing zlibVersion... " >&6; }
-if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing mysql_init" >&5
+$as_echo_n "checking for library containing mysql_init... " >&6; }
+if ${ac_cv_search_libraries_mysql_init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
             ac_func_search_libraries_save_LIBS=$LIBS
 
-      for ac_library in z ""; do
+      for ac_library in mariadb ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -15000,8 +15000,8 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void zlibVersion();"; fi`
-                                         return (int)zlibVersion;
+`if test -z ""; then echo "extern void mysql_init();"; fi`
+                                         return (int)mysql_init;
 
 
   ;
@@ -15010,25 +15010,25 @@ main ()
 
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libraries_zlibVersion=$ac_result; break
+  ac_cv_search_libraries_mysql_init=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
       done
-      if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+      if ${ac_cv_search_libraries_mysql_init+:} false; then :
 
 else
-  ac_cv_search_libraries_zlibVersion=no
+  ac_cv_search_libraries_mysql_init=no
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
-$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
-  ac_result=$ac_cv_search_libraries_zlibVersion
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mysql_init" >&5
+$as_echo "$ac_cv_search_libraries_mysql_init" >&6; }
+  ac_result=$ac_cv_search_libraries_mysql_init
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";
 $as_echo "#define HAVE_MARIADB 1" >>confdefs.h
@@ -15039,9 +15039,9 @@ fi
     if test -z "$HAVE_MARIADB"; then
 
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing zlibVersion" >&5
-$as_echo_n "checking for static library containing zlibVersion... " >&6; }
-if ${ac_cv_search_static_zlibVersion+:} false; then :
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing mysql_init" >&5
+$as_echo_n "checking for static library containing mysql_init... " >&6; }
+if ${ac_cv_search_static_mysql_init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
@@ -15049,7 +15049,7 @@ else
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in z ""; do
+      for ac_library in mariadb ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -15063,8 +15063,8 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void zlibVersion();"; fi`
-                                         return (int)zlibVersion;
+`if test -z ""; then echo "extern void mysql_init();"; fi`
+                                         return (int)mysql_init;
 
 
   ;
@@ -15073,16 +15073,16 @@ main ()
 
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_zlibVersion=$ac_result; break
+  ac_cv_search_static_mysql_init=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
       done
-      if ${ac_cv_search_static_zlibVersion+:} false; then :
+      if ${ac_cv_search_static_mysql_init+:} false; then :
 
 else
-  ac_cv_search_static_zlibVersion=no
+  ac_cv_search_static_mysql_init=no
 fi
 
             LIBS=$ac_func_search_static_libraries_save_LIBS
@@ -15090,11 +15090,11 @@ fi
 
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_zlibVersion" >&5
-$as_echo "$ac_cv_search_static_zlibVersion" >&6; }
-  ac_result=$ac_cv_search_static_zlibVersion
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_mysql_init" >&5
+$as_echo "$ac_cv_search_static_mysql_init" >&6; }
+  ac_result=$ac_cv_search_static_mysql_init
   if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";
 $as_echo "#define HAVE_MARIADB 1" >>confdefs.h
 
 fi
@@ -15104,15 +15104,15 @@ fi
 
 
     ac_result=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
-$as_echo_n "checking for library containing zlibVersion... " >&6; }
-if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing mysql_init" >&5
+$as_echo_n "checking for library containing mysql_init... " >&6; }
+if ${ac_cv_search_libraries_mysql_init+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
             ac_func_search_libraries_save_LIBS=$LIBS
 
-      for ac_library in z ""; do
+      for ac_library in mariadb ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -15126,8 +15126,8 @@ else
 int
 main ()
 {
-`if test -z ""; then echo "extern void zlibVersion();"; fi`
-                                         return (int)zlibVersion;
+`if test -z ""; then echo "extern void mysql_init();"; fi`
+                                         return (int)mysql_init;
 
 
   ;
@@ -15136,25 +15136,25 @@ main ()
 
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libraries_zlibVersion=$ac_result; break
+  ac_cv_search_libraries_mysql_init=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
       done
-      if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+      if ${ac_cv_search_libraries_mysql_init+:} false; then :
 
 else
-  ac_cv_search_libraries_zlibVersion=no
+  ac_cv_search_libraries_mysql_init=no
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
-$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
-  ac_result=$ac_cv_search_libraries_zlibVersion
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mysql_init" >&5
+$as_echo "$ac_cv_search_libraries_mysql_init" >&6; }
+  ac_result=$ac_cv_search_libraries_mysql_init
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";
 $as_echo "#define HAVE_MARIADB 1" >>confdefs.h
@@ -15165,7 +15165,7 @@ fi
   fi
 fi
 if test -z "$HAVE_MARIADB"; then
-  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+  if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: Maria DB client package missing" >&5
 $as_echo "$as_me: WARNING: MariaDB client not compiled: Maria DB client package missing" >&2;}
   fi

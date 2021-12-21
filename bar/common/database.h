@@ -21,7 +21,7 @@
 #include <semaphore.h>
 #include <assert.h>
 
-#if defined(HAVE_MARIADB_MYSQL_H) && defined(HAVE_MARIADB_ERRMSG_H)
+#ifdef HAVE_MARIADB_MYSQL_H
   #include "mariadb/mysql.h"
 #endif
 
