@@ -54,7 +54,6 @@ RUN yum -y install \
   rpm-build \
   ;
 RUN yum -y install \
-  mysql-devel \
   postgresql-devel \
   ;
 

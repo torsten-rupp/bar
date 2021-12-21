@@ -48,7 +48,6 @@ RUN yum -y install \
   valgrind \
   ;
 RUN yum -y install \
-  mysql-devel \
   postgresql-devel \
   ;
 
