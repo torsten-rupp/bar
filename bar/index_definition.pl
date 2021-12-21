@@ -729,7 +729,8 @@ sub processFile($$)
     print HFILE_HANDLE "\n";
 
     # definitions
-    print HFILE_HANDLE "extern const char * const INDEX_DEFINITIONS_".$suffix."[];";
+    print HFILE_HANDLE "extern const char * const INDEX_DEFINITIONS_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_COUNT_".$suffix." ".($#definitions+1)."\n";
     print HFILE_HANDLE "\n";
 
     print CFILE_HANDLE "const char * const INDEX_DEFINITIONS_".$suffix."[] = \n";
@@ -744,7 +745,9 @@ sub processFile($$)
 
     # tables
     print HFILE_HANDLE "extern const char * const INDEX_DEFINITION_TABLE_NAMES_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_TABLE_NAME_COUNT_".$suffix." ".($#tableNames+1)."\n";
     print HFILE_HANDLE "extern const char * const INDEX_DEFINITION_FTS_TABLE_NAMES_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_FTS_TABLE_NAME_COUNT_".$suffix." ".($#ftsTableNames+1)."\n";
 
     print CFILE_HANDLE "const char * const INDEX_DEFINITION_TABLE_NAMES_".$suffix."[] = \n";
     print CFILE_HANDLE "{\n";
@@ -765,7 +768,9 @@ sub processFile($$)
     print CFILE_HANDLE "\n";
 
     print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_TABLES_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_TABLE_COUNT_".$suffix." ".($#tableNames+1)."\n";
     print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_FTS_TABLES_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_FTS_TABLE_COUNT_".$suffix." ".($#ftsTableNames+1)."\n";
     print HFILE_HANDLE "\n";
 
     print CFILE_HANDLE "const char * const INDEX_DEFINITION_TABLES_".$suffix."[] = \n";
@@ -787,7 +792,8 @@ sub processFile($$)
     print CFILE_HANDLE "\n";
 
     # indices
-    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_INDEX_NAMES_".$suffix."[];";
+    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_INDEX_NAMES_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_INDEX_NAME_COUNT_".$suffix." ".($#indexNames+1)."\n";
     print HFILE_HANDLE "\n";
 
     print CFILE_HANDLE "const char* const INDEX_DEFINITION_INDEX_NAMES_".$suffix."[] = \n";
@@ -800,7 +806,8 @@ sub processFile($$)
     print CFILE_HANDLE "};\n";
     print CFILE_HANDLE "\n";
 
-    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_INDICES_".$suffix."[];";
+    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_INDICES_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_INDICE_COUNT_".$suffix." ".($#indexNames+1)."\n";
     print HFILE_HANDLE "\n";
 
     print CFILE_HANDLE "const char* const INDEX_DEFINITION_INDICES_".$suffix."[] = \n";
@@ -814,7 +821,8 @@ sub processFile($$)
     print CFILE_HANDLE "\n";
 
     # triggers
-    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_TRIGGER_NAMES_".$suffix."[];";
+    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_TRIGGER_NAMES_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_TRIGGER_NAME_COUNT_".$suffix." ".($#triggerNames+1)."\n";
     print HFILE_HANDLE "\n";
     print CFILE_HANDLE "const char* const INDEX_DEFINITION_TRIGGER_NAMES_".$suffix."[] = \n";
     print CFILE_HANDLE "{\n";
@@ -826,7 +834,8 @@ sub processFile($$)
     print CFILE_HANDLE "};\n";
     print CFILE_HANDLE "\n";
 
-    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_TRIGGERS_".$suffix."[];";
+    print HFILE_HANDLE "extern const char* const INDEX_DEFINITION_TRIGGERS_".$suffix."[];\n";
+    print HFILE_HANDLE "#define INDEX_DEFINITION_TRIGGER_COUNT_".$suffix." ".($#triggerNames+1+1)."\n";
     print HFILE_HANDLE "\n";
 
     print CFILE_HANDLE "const char* const INDEX_DEFINITION_TRIGGERS_".$suffix."[] = \n";

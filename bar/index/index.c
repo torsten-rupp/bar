@@ -421,14 +421,14 @@ LOCAL void busyHandler(void *userData)
       #ifdef NDEBUG
         return Database_open(&indexHandle->databaseHandle,
                              databaseSpecifier,
-                             DATABASE_OPENMODE_FORCE_CREATE|DATABASE_OPENMODE_AUX,
+                             DATABASE_OPEN_MODE_FORCE_CREATE|DATABASE_OPEN_MODE_AUX,
                              DATABASE_TIMEOUT
                             );
       #else /* not NDEBUG */
         return __Database_open(__fileName__,__lineNb__,
                                &indexHandle->databaseHandle,
                                databaseSpecifier,
-                               DATABASE_OPENMODE_FORCE_CREATE|DATABASE_OPENMODE_AUX,
+                               DATABASE_OPEN_MODE_FORCE_CREATE|DATABASE_OPEN_MODE_AUX,
                                DATABASE_TIMEOUT
                               );
       #endif /* NDEBUG */
@@ -481,9 +481,9 @@ LOCAL void busyHandler(void *userData)
         return Database_open(&indexHandle->databaseHandle,
                              databaseSpecifier,
                              (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
-                               ? DATABASE_OPENMODE_READWRITE
-                               : DATABASE_OPENMODE_READ
-                             )|DATABASE_OPENMODE_AUX,
+                               ? DATABASE_OPEN_MODE_READWRITE
+                               : DATABASE_OPEN_MODE_READ
+                             )|DATABASE_OPEN_MODE_AUX,
                              timeout
                             );
       #else /* not NDEBUG */
@@ -491,9 +491,9 @@ LOCAL void busyHandler(void *userData)
                                &indexHandle->databaseHandle,
                                databaseSpecifier,
                                (((indexOpenMode & INDEX_OPEN_MASK_MODE) == INDEX_OPEN_MODE_READ_WRITE)
-                                 ? DATABASE_OPENMODE_READWRITE
-                                 : DATABASE_OPENMODE_READ
-                               )|DATABASE_OPENMODE_AUX,
+                                 ? DATABASE_OPEN_MODE_READWRITE
+                                 : DATABASE_OPEN_MODE_READ
+                               )|DATABASE_OPEN_MODE_AUX,
                                timeout
                               );
       #endif /* NDEBUG */
@@ -574,7 +574,7 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
   // drop triggers (required for some databases before rename)
   error = Database_open(&databaseHandle,
                         databaseSpecifier,
-                        DATABASE_OPENMODE_READWRITE,
+                        DATABASE_OPEN_MODE_READWRITE,
                         NO_WAIT
                        );
   if (error != ERROR_NONE)
@@ -601,7 +601,7 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
   // re-create triggers
   error = Database_open(&databaseHandle,
                         &renameToDatabaseSpecifier,
-                        DATABASE_OPENMODE_READWRITE,
+                        DATABASE_OPEN_MODE_READWRITE,
                         NO_WAIT
                        );
   if (error != ERROR_NONE)
@@ -3372,15 +3372,29 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ,NO_WAIT);
         if (error == ERROR_NONE)
         {
-          error = Database_compare(&indexHandleReference.databaseHandle,&indexHandle.databaseHandle);
+          error = Database_compare(&indexHandleReference.databaseHandle,
+                                   &indexHandle.databaseHandle,
+                                   INDEX_CONST_REFERENCE_TABLE_NAMES,
+                                   INDEX_CONST_REFERENCE_TABLE_NAME_COUNT,
+                                   DATABASE_COMPARE_FLAG_INCLUDE_VIEWS
+                                  );
           closeIndex(&indexHandle);
         }
         closeIndex(&indexHandleReference);
       }
       if (error != ERROR_NONE)
       {
+        // outdated or corrupt -> create new
         uint   n;
         String saveDatabaseName;
+
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_ERROR,
+                    "INDEX",
+                    "Outdated or corrupt index database '%s' (reason: %s) - create new",
+                    String_cString(printableDatabaseURI),
+                    Error_getText(error)
+                   );
 
         // rename existing index for upgrade
         saveDatabaseName = String_new();
@@ -3403,15 +3417,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         }
         String_delete(saveDatabaseName);
 
-        // outdated or corrupt -> create new
         createFlag = TRUE;
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_ERROR,
-                    "INDEX",
-                    "Outdated or corrupt index database '%s' (error: %s) - create new",
-                    String_cString(printableDatabaseURI),
-                    Error_getText(error)
-                   );
       }
     }
   }

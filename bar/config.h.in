@@ -298,7 +298,7 @@
 /* makedev() available */
 #undef HAVE_MAKEDEV
 
-/* MariaDB installed */
+/* mariadbclient installed */
 #undef HAVE_MARIADB
 
 /* Define to 1 if you have the <mariadb/errmsg.h> header file. */
