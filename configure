@@ -14929,7 +14929,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd mariadb-connector-c; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      (cd mariadb-connector-c; make clean; make -C libmariadb -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -14942,7 +14942,7 @@ $as_echo "fail (make)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd mariadb-connector-c; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      (cd mariadb-connector-c; make -C libmariadb install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -26814,7 +26814,6 @@ VERSION_MAJOR="$VERSION_MAJOR"
 
                    host="$host"
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
-                   HAVE_MARIADB=$HAVE_MARIADB
                    HAVE_ICU=$HAVE_ICU
                    HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
@@ -26831,6 +26830,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
+                   HAVE_MARIADB=$HAVE_MARIADB
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -26851,8 +26851,6 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    TLS_DIR="$TLS_DIR"
                    HEAPVIEW_DIR="$HEAPVIEW_DIR"
 
-                   VERSION_SQLITE="$VERSION_SQLITE"
-                   VERSION_MARIADB="$VERSION_MARIADB"
                    VERSION_ICU="$VERSION_ICU"
                    VERSION_Z="$VERSION_Z"
                    VERSION_BZ2="$VERSION_BZ2"
@@ -26868,6 +26866,8 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
+                   VERSION_SQLITE="$VERSION_SQLITE"
+                   VERSION_MARIADB="$VERSION_MARIADB"
 
 
 _ACEOF
@@ -27450,8 +27450,6 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";
                     echo "  Host               : $host";
                     echo "  Dynamic linked     : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SQLite             : yes ($VERSION_SQLITE)";
-                    echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  ICU support        : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
                     echo "  zip compression    : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
                     echo "  bzip2 compression  : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
@@ -27467,6 +27465,8 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  SQLite             : yes ($VERSION_SQLITE)";
+                    echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -27498,6 +27498,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_SSH2" \
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
+                            -o ! "$HAVE_MARIDDB" \
                             -o ! "$HAVE_PCRE"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
