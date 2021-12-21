@@ -3407,7 +3407,7 @@ if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
       fi
     fi
     if test $result -eq 1; then
-      (cd mariadb-connector-c; make -C libmariadb install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      (cd mariadb-connector-c; make -C libmariadb install PREFIX=$cwd/extern; make -C include install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
