@@ -25,7 +25,6 @@ def build()
           // make
 //TODO
 //          sh "make -j`nproc --ignore=1`"
-sh "cat bar/config.h"
           sh "make"
           if (params.CODE_COVERAGE)
           {
