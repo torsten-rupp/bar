@@ -557,9 +557,9 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   // open database
   printInfo("Open database '%s'...",String_cString(printableDataseURI));
   openMode = (createFlag)
-               ? DATABASE_OPENMODE_FORCE_CREATE
-               : DATABASE_OPENMODE_READWRITE;
-  openMode |= DATABASE_OPENMODE_AUX;
+               ? DATABASE_OPEN_MODE_FORCE_CREATE
+               : DATABASE_OPEN_MODE_READWRITE;
+  openMode |= DATABASE_OPEN_MODE_AUX;
   error = Database_open(databaseHandle,
                         &databaseSpecifier,
                         openMode,
@@ -1054,7 +1054,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
 
   error = Database_open(&oldDatabaseHandle,
                         &databaseSpecifier,
-                        DATABASE_OPENMODE_READ,
+                        DATABASE_OPEN_MODE_READ,
                         WAIT_FOREVER
                        );
   if (error == ERROR_NONE)
@@ -1567,11 +1567,13 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   printInfo("Optimize:\n");
 
   printInfo("  Tables...");
+  StringList_init(&tableNameList);
   error = Database_getTableList(&tableNameList,databaseHandle);
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
     printError("get tables fail (error: %s)!",Error_getText(error));
+    StringList_done(&tableNameList);
     return;
   }
   n = 0;
@@ -1803,10 +1805,12 @@ LOCAL void printTableNames(DatabaseHandle *databaseHandle)
   StringListIterator stringListIterator;
   ConstString        tableName;
 
+  StringList_init(&tableNameList);
   error = Database_getTableList(&tableNameList,databaseHandle);
   if (error != ERROR_NONE)
   {
     printError("cannot get table names (error: %s)!",Error_getText(error));
+    StringList_done(&tableNameList);
     exit(EXITCODE_FAIL);
   }
   STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName)
@@ -1861,9 +1865,11 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
   StringListIterator stringListIterator;
   ConstString        triggerName;
 
+  StringList_init(&triggerNameList);
   error = Database_getTriggerList(&triggerNameList,databaseHandle);
   if (error != ERROR_NONE)
   {
+    StringList_done(&triggerNameList);
     printError("cannot get trigger names (error: %s)!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }

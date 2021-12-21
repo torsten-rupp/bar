@@ -88,16 +88,16 @@ typedef struct
 // database open modes
 typedef enum
 {
-  DATABASE_OPENMODE_CREATE,
-  DATABASE_OPENMODE_FORCE_CREATE,
-  DATABASE_OPENMODE_READ,
-  DATABASE_OPENMODE_READWRITE,
+  DATABASE_OPEN_MODE_CREATE,
+  DATABASE_OPEN_MODE_FORCE_CREATE,
+  DATABASE_OPEN_MODE_READ,
+  DATABASE_OPEN_MODE_READWRITE,
 } DatabaseOpenModes;
 
 // additional database open mode flags
-#define DATABASE_OPENMODE_MEMORY (1 << 16)
-#define DATABASE_OPENMODE_SHARED (1 << 17)
-#define DATABASE_OPENMODE_AUX    (1 << 18)
+#define DATABASE_OPEN_MODE_MEMORY (1 << 16)
+#define DATABASE_OPEN_MODE_SHARED (1 << 17)
+#define DATABASE_OPEN_MODE_AUX    (1 << 18)
 
 // database lock types
 typedef enum
@@ -187,6 +187,9 @@ typedef enum
   DATABASE_TEMPORARY_TABLE8,
   DATABASE_TEMPORARY_TABLE9
 } DatabaseTemporaryTableIds;
+
+#define DATABASE_COMPARE_FLAG_NONE          0
+#define DATABASE_COMPARE_FLAG_INCLUDE_VIEWS (1 << 0)
 
 typedef enum
 {
@@ -1593,13 +1596,20 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle);
 * Purpose: compare database structure
 * Input  : databaseHandleReference - reference database handle
 *          databaseHandle          - database handle
+*          columnNames             - column names (can be NULL)
+*          columnNameCount         - cilumn name count
+*          compareFlags            - compare flags; see
+*                                    DATABASE_COMPARE_FLAG_*
 * Output : -
 * Return : ERROR_NONE if databases equals or mismatch code
 * Notes  : -
 \***********************************************************************/
 
 Errors Database_compare(DatabaseHandle *databaseHandleReference,
-                        DatabaseHandle *databaseHandle
+                        DatabaseHandle *databaseHandle,
+                        const char     *columnNames[],
+                        uint           columnNameCount,
+                        uint           compareFlags
                        );
 
 /***********************************************************************\

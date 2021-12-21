@@ -624,9 +624,10 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 /***********************************************************************\
 * Name   : ARRAY_FIND
 * Purpose: find index of value in array
-* Input  : array - array
-*          size  - size of array (number of elements)
-*          i     - iterator
+* Input  : array     - array
+*          size      - size of array (number of elements)
+*          i         - iterator
+*          condition - condition
 * Output : -
 * Return : index or size
 * Notes  : -
@@ -646,6 +647,36 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
       } \
       \
       return i; \
+    }; \
+    __closure__; \
+  })()
+
+/***********************************************************************\
+* Name   : ARRAY_CONTAINS
+* Purpose: check if value is in array
+* Input  : array     - array
+*          size      - size of array (number of elements)
+*          i         - iterator
+*          condition - condition
+* Output : -
+* Return : TURE iff in array
+* Notes  : -
+\***********************************************************************/
+
+#define ARRAY_CONTAINS(array,size,i,condition) \
+  ({ \
+    auto bool __closure__ (void); \
+    bool __closure__ (void) \
+    { \
+      uint i; \
+      \
+      i = 0; \
+      while ((i) < (size) && !(condition)) \
+      { \
+        (i)++; \
+      } \
+      \
+      return (i) < (size); \
     }; \
     __closure__; \
   })()

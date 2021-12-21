@@ -1606,121 +1606,6 @@ AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $STATIC_LIBRARIES,
                           $LIBRARIES)
 
-# create sqlite3.c
-if test -d sqlite -o -d "`readlink sqlite`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl create sqlite3.c almagation
-
-    cwd=`pwd`
-
-    AC_MSG_CREATE([sqlite3.c])
-    result=1
-    if test $result -eq 1; then
-      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
-        --build=$build \
-        --disable-tcl \
-        --enable-fts4\
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd sqlite; \
-       install -d $cwd/extern/sources; \
-       install -d $cwd/extern/include; \
-       install -m 644 sqlite3.c $cwd/extern/sources; \
-       install -m 644 sqlite3.h $cwd/extern/include; \
-      ) 1>$tmpFile 2>&1
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    else
-      AC_MSG_ERROR([Cannot create sqlite3.c])
-    fi
-  fi
-fi
-
-# compile MariaDB client
-if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl compile MariaDB client library
-
-    cwd=`pwd`
-
-    AC_MSG_COMPILE([MariaDB client])
-    result=1
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-        -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES mariadb-connector-c"
-    else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
-    fi
-    HAVE_MARIADB=1
-    AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
-  fi
-else
-  dnl search for installed zlib library
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
-  else
-    if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
-    fi
-    if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
-    fi
-  fi
-fi
-if test -z "$HAVE_MARIADB"; then
-  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
-    AC_MSG_WARN([MariaDB client not compiled: Maria DB client package missing])
-  fi
-fi
-
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
@@ -3446,6 +3331,124 @@ if test $ENABLE_CURL = "yes"; then
   fi
 fi
 
+# create sqlite3.c
+if test -d sqlite -o -d "`readlink sqlite`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+    dnl create sqlite3.c almagation
+
+    cwd=`pwd`
+
+    AC_MSG_CREATE([sqlite3.c])
+    result=1
+    if test $result -eq 1; then
+      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
+        --build=$build \
+        --disable-tcl \
+        --enable-fts4\
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; \
+       install -d $cwd/extern/sources; \
+       install -d $cwd/extern/include; \
+       install -m 644 sqlite3.c $cwd/extern/sources; \
+       install -m 644 sqlite3.h $cwd/extern/include; \
+      ) 1>$tmpFile 2>&1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    else
+      AC_MSG_ERROR([Cannot create sqlite3.c])
+    fi
+  fi
+fi
+
+# compile MariaDB client
+if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+    dnl compile MariaDB client library
+
+    cwd=`pwd`
+
+    AC_MSG_COMPILE([MariaDB client])
+    result=1
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+        -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+        -DCMAKE_C_FLAGS=-I$cwd/extern/include \
+        -DCMAKE_EXE_LINKER_FLAGS=-L$cwd/extern/lib \
+        `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES mariadb-connector-c"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+    fi
+    HAVE_MARIADB=1
+    AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
+  fi
+else
+  dnl search for installed zlib library
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+  else
+    if test -z "$HAVE_MARIADB"; then
+      AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+    fi
+    if test -z "$HAVE_MARIADB"; then
+      AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+    fi
+  fi
+fi
+if test -z "$HAVE_MARIADB"; then
+  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+    AC_MSG_WARN([MariaDB client not compiled: Maria DB client package missing])
+  fi
+fi
+
 # compile/use cdio
 if test $ENABLE_ISO9660 = "yes"; then
   if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
@@ -4587,8 +4590,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";
                     echo "  Host               : $host";
                     echo "  Dynamic linked     : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
-                    echo "  SQLite             : yes ($VERSION_SQLITE)";
-                    echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  ICU support        : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
                     echo "  zip compression    : `if test "$HAVE_Z"; then echo "yes ($VERSION_Z)"; else echo no; fi`";
                     echo "  bzip2 compression  : `if test "$HAVE_BZ2"; then echo "yes ($VERSION_BZ2)"; else echo no; fi`";
@@ -4604,6 +4605,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  SQLite             : yes ($VERSION_SQLITE)";
+                    echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -4635,6 +4638,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_SSH2" \
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
+                            -o ! "$HAVE_MARIDDB" \
                             -o ! "$HAVE_PCRE"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
@@ -4648,7 +4652,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
 
                    host="$host"
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
-                   HAVE_MARIADB=$HAVE_MARIADB
                    HAVE_ICU=$HAVE_ICU
                    HAVE_Z=$HAVE_Z
                    HAVE_BZ2=$HAVE_BZ2
@@ -4665,6 +4668,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
+                   HAVE_MARIADB=$HAVE_MARIADB
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -4685,8 +4689,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    TLS_DIR="$TLS_DIR"
                    HEAPVIEW_DIR="$HEAPVIEW_DIR"
 
-                   VERSION_SQLITE="$VERSION_SQLITE"
-                   VERSION_MARIADB="$VERSION_MARIADB"
                    VERSION_ICU="$VERSION_ICU"
                    VERSION_Z="$VERSION_Z"
                    VERSION_BZ2="$VERSION_BZ2"
@@ -4702,6 +4704,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_PCRE="$VERSION_PCRE"
+                   VERSION_SQLITE="$VERSION_SQLITE"
+                   VERSION_MARIADB="$VERSION_MARIADB"
                   )
 
 AC_OUTPUT

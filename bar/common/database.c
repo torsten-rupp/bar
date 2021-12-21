@@ -2260,7 +2260,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
 
         // create database
         if (   !String_isEmpty(fileName)
-            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
+            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
            )
         {
           // delete existing file
@@ -2269,7 +2269,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
 
         // check if exists
         if (   !String_isEmpty(fileName)
-            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_CREATE)
+            && ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_CREATE)
            )
         {
           if (File_exists(fileName))
@@ -2294,13 +2294,13 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
         sqliteMode = SQLITE_OPEN_URI;
         switch (openDatabaseMode & DATABASE_OPEN_MASK_MODE)
         {
-          case DATABASE_OPENMODE_READ:
+          case DATABASE_OPEN_MODE_READ:
             sqliteMode |= SQLITE_OPEN_READONLY;
             String_appendCString(sqliteName,"?immutable=1");
             break;
-          case DATABASE_OPENMODE_CREATE:
-          case DATABASE_OPENMODE_FORCE_CREATE:
-          case DATABASE_OPENMODE_READWRITE:
+          case DATABASE_OPEN_MODE_CREATE:
+          case DATABASE_OPEN_MODE_FORCE_CREATE:
+          case DATABASE_OPEN_MODE_READWRITE:
             sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
             break;
           default:
@@ -2308,8 +2308,8 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
         }
         if ((openDatabaseMode & DATABASE_OPEN_MASK_FLAGS) != 0)
         {
-          if ((openDatabaseMode & DATABASE_OPENMODE_MEMORY) == DATABASE_OPENMODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(sqliteName,"mode=memory");
-          if ((openDatabaseMode & DATABASE_OPENMODE_SHARED) == DATABASE_OPENMODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(sqliteName,"cache=shared");
+          if ((openDatabaseMode & DATABASE_OPEN_MODE_MEMORY) == DATABASE_OPEN_MODE_MEMORY) sqliteMode |= SQLITE_OPEN_MEMORY;//String_appendCString(sqliteName,"mode=memory");
+          if ((openDatabaseMode & DATABASE_OPEN_MODE_SHARED) == DATABASE_OPEN_MODE_SHARED) sqliteMode |= SQLITE_OPEN_SHAREDCACHE;//String_appendCString(sqliteName,"cache=shared");
         }
 //sqliteMode |= SQLITE_OPEN_NOMUTEX;
 
@@ -2329,7 +2329,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
         }
 
         // attach aux database
-        if ((openDatabaseMode & DATABASE_OPENMODE_AUX) == DATABASE_OPENMODE_AUX)
+        if ((openDatabaseMode & DATABASE_OPEN_MODE_AUX) == DATABASE_OPEN_MODE_AUX)
         {
           error = sqlite3Exec(databaseHandle->sqlite.handle,
                               "ATTACH DATABASE ':memory:' AS " DATABASE_AUX
@@ -2423,7 +2423,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
             }
 
             // create database if requested
-            if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPENMODE_FORCE_CREATE)
+            if ((openDatabaseMode & DATABASE_OPEN_MASK_MODE) == DATABASE_OPEN_MODE_FORCE_CREATE)
             {
               uint i;
 
@@ -7059,48 +7059,37 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
 
                                 if (i < maxColumnCount)
                                 {
+                                  if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                   if (   stringEqualsIgnoreCase(type,"INTEGER")
                                       || stringEqualsIgnoreCase(type,"NUMERIC")
                                      )
                                   {
                                     if (isPrimaryKey)
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
-                                      i++;
                                     }
                                     else
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_INT;
-                                      i++;
                                     }
                                   }
                                   else if (stringEqualsIgnoreCase(type,"REAL"))
                                   {
-                                    if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                     if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
-                                    i++;
                                   }
                                   else if (stringEqualsIgnoreCase(type,"TEXT"))
                                   {
-                                    if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                     if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_CSTRING;
-                                    i++;
                                   }
                                   else if (stringEqualsIgnoreCase(type,"BLOB"))
                                   {
-                                    if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                     if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_BLOB;
-                                    i++;
                                   }
                                   else
                                   {
-                                    // default datatype is TEXT
-                                    if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),"TEXT");
-                                    if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_CSTRING;
-                                    i++;
+                                    if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_NONE;
                                   }
+                                  i++;
                                 }
 
                                 return ERROR_NONE;
@@ -7158,69 +7147,53 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
 
                                   if (i < maxColumnCount)
                                   {
+                                    if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                     if (stringStartsWith(type,"int"))
                                     {
                                       if (isPrimaryKey)
                                       {
-                                        if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                         if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_PRIMARY_KEY;
-                                        i++;
                                       }
                                       else
                                       {
-                                        if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                         if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_INT;
-                                        i++;
                                       }
                                     }
                                     else if (stringEquals(type,"tinyint(1)"))
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_BOOL;
-                                      i++;
                                     }
                                     else if (stringStartsWith(type,"tinyint"))
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_INT;
-                                      i++;
                                     }
                                     else if (stringStartsWith(type,"bigint"))
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_INT64;
-                                      i++;
                                     }
                                     else if (stringStartsWith(type,"double"))
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_DOUBLE;
-                                      i++;
                                     }
                                     else if (stringStartsWith(type,"datetime"))
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_DATETIME;
-                                      i++;
                                     }
                                     else if (   stringStartsWith(type,"varchar")
                                              || stringStartsWith(type,"text")
                                             )
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_CSTRING;
-                                      i++;
                                     }
                                     else if (stringStartsWith(type,"blob"))
                                     {
-                                      if (columnNames != NULL) stringSet(columnNames[i],sizeof(columnNames[i]),name);
                                       if (columnTypes != NULL) columnTypes[i] = DATABASE_DATATYPE_BLOB;
-                                      i++;
                                     }
                                     else
                                     {
                                       HALT_INTERNAL_ERROR("unknown database type '%s'",type);
                                     }
+                                    i++;
                                   }
 
                                   return ERROR_NONE;
@@ -7520,9 +7493,9 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
   bool           existsFlag;
 
   #ifdef NDEBUG
-    error = openDatabase(&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPENMODE_READ,NO_WAIT);
+    error = openDatabase(&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPEN_MODE_READ,NO_WAIT);
   #else /* not NDEBUG */
-    error = openDatabase(__FILE__,__LINE__,&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPENMODE_READ,NO_WAIT);
+    error = openDatabase(__FILE__,__LINE__,&databaseHandle,databaseSpecifier,databaseName,DATABASE_OPEN_MODE_READ,NO_WAIT);
   #endif /* NDEBUG */
   if (error == ERROR_NONE)
   {
@@ -7626,7 +7599,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           String             name;
 
           // open database
-          error = Database_open(&databaseHandle,databaseSpecifier,DATABASE_OPENMODE_READ,NO_WAIT);
+          error = Database_open(&databaseHandle,databaseSpecifier,DATABASE_OPEN_MODE_READ,NO_WAIT);
           if (error != ERROR_NONE)
           {
             return error;
@@ -7662,6 +7635,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           }
 
           // rename tables
+          StringList_init(&tableNameList);
           error = Database_getTableList(&tableNameList,&databaseHandle);
           STRINGLIST_ITERATEX(&tableNameList,iterator,name,error == ERROR_NONE)
           {
@@ -7991,8 +7965,6 @@ Errors Database_getTableList(StringList     *tableList,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  StringList_init(tableList);
-
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
                databaseHandle,
@@ -8081,8 +8053,6 @@ Errors Database_getViewList(StringList     *viewList,
   assert(viewList != NULL);
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
-
-  StringList_init(viewList);
 
   DATABASE_DOX(error,
                ERRORX_(DATABASE_TIMEOUT,0,""),
@@ -9317,16 +9287,19 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
 }
 
 Errors Database_compare(DatabaseHandle *referenceDatabaseHandle,
-                        DatabaseHandle *databaseHandle
+                        DatabaseHandle *databaseHandle,
+                        const char     *tableNames[],
+                        uint           tableNameCount,
+                        uint           compareFlags
                        )
 {
   Errors             error;
   StringList         referenceTableNameList,tableNameList;
   StringListIterator stringListIterator;
   String             tableName;
-  DatabaseColumnName referenceColumnNames[DATABASE_MAX_TABLE_COLUMNS],columnNames[DATABASE_MAX_TABLE_COLUMNS];
-  DatabaseDataTypes  referenceColumnTypes[DATABASE_MAX_TABLE_COLUMNS],columnTypes[DATABASE_MAX_TABLE_COLUMNS];
-  uint               referenceColumnCount,columnCount;
+  DatabaseColumnName referenceColumnNames[DATABASE_MAX_TABLE_COLUMNS],compareColumnNames[DATABASE_MAX_TABLE_COLUMNS];
+  DatabaseDataTypes  referenceColumnTypes[DATABASE_MAX_TABLE_COLUMNS],compareColumnTypes[DATABASE_MAX_TABLE_COLUMNS];
+  uint               referenceColumnCount,compareColumnCount;
   uint               i,j;
 
   assert(referenceDatabaseHandle != NULL);
@@ -9339,89 +9312,121 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   assert(checkDatabaseInitialized(databaseHandle));
 
   // get table lists
+  StringList_init(&referenceTableNameList);
   error = Database_getTableList(&referenceTableNameList,referenceDatabaseHandle);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getTableList(&tableNameList,databaseHandle);
   if (error != ERROR_NONE)
   {
     StringList_done(&referenceTableNameList);
     return error;
   }
+  if ((compareFlags & DATABASE_COMPARE_FLAG_INCLUDE_VIEWS) != 0)
+  {
+    error = Database_getViewList(&referenceTableNameList,referenceDatabaseHandle);
+    if (error != ERROR_NONE)
+    {
+      StringList_done(&referenceTableNameList);
+      return error;
+    }
+  }
+
+  StringList_init(&tableNameList);
+  error = Database_getTableList(&tableNameList,databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&tableNameList);
+    StringList_done(&referenceTableNameList);
+    return error;
+  }
+  if ((compareFlags & DATABASE_COMPARE_FLAG_INCLUDE_VIEWS) != 0)
+  {
+    error = Database_getViewList(&tableNameList,databaseHandle);
+    if (error != ERROR_NONE)
+    {
+      StringList_done(&tableNameList);
+      StringList_done(&referenceTableNameList);
+      return error;
+    }
+  }
 
   // compare tables
   STRINGLIST_ITERATEX(&referenceTableNameList,stringListIterator,tableName,error == ERROR_NONE)
   {
-    if (StringList_contains(&tableNameList,tableName))
+    if (   (tableNames == NULL)
+        || ARRAY_CONTAINS(tableNames,tableNameCount,i,String_equalsCString(tableName,tableNames[i]))
+       )
     {
-      // get column lists
-      error = getTableColumns(referenceColumnNames,
-                              referenceColumnTypes,
-                              &referenceColumnCount,
-                              DATABASE_MAX_TABLE_COLUMNS,
-                              referenceDatabaseHandle,
-                              String_cString(tableName)
-                             );
-      if (error != ERROR_NONE)
+      if (StringList_contains(&tableNameList,tableName))
       {
-        break;
-      }
-      error = getTableColumns(columnNames,
-                              columnTypes,
-                              &columnCount,
-                              DATABASE_MAX_TABLE_COLUMNS,
-                              databaseHandle,
-                              String_cString(tableName)
-                             );
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-
-      // compare columns
-      for (i = 0; i < referenceColumnCount; i++)
-      {
-        // find column
-        j = ARRAY_FIND(columnNames,columnCount,j,stringEquals(referenceColumnNames[i],columnNames[j]));
-        if (j < columnCount)
+        // get column lists
+        error = getTableColumns(referenceColumnNames,
+                                referenceColumnTypes,
+                                &referenceColumnCount,
+                                DATABASE_MAX_TABLE_COLUMNS,
+                                referenceDatabaseHandle,
+                                String_cString(tableName)
+                               );
+        if (error != ERROR_NONE)
         {
-          if (!areCompatibleTypes(referenceColumnTypes[j],columnTypes[i]))
+          break;
+        }
+        error = getTableColumns(compareColumnNames,
+                                compareColumnTypes,
+                                &compareColumnCount,
+                                DATABASE_MAX_TABLE_COLUMNS,
+                                databaseHandle,
+                                String_cString(tableName)
+                               );
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+
+        // compare columns
+//  fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
+        for (i = 0; i < referenceColumnCount; i++)
+        {
+          // find column
+          j = ARRAY_FIND(compareColumnNames,compareColumnCount,j,stringEquals(referenceColumnNames[i],compareColumnNames[j]));
+          if (j < compareColumnCount)
           {
-            error = ERRORX_(DATABASE_TYPE_MISMATCH,0,"%s",referenceColumnNames[i]);
+            if (   (referenceColumnTypes[j] != DATABASE_DATATYPE_NONE)
+                && !areCompatibleTypes(referenceColumnTypes[i],compareColumnTypes[j])
+               )
+            {
+              error = ERRORX_(DATABASE_TYPE_MISMATCH,0,"%s in %s: %d != %d",referenceColumnNames[i],String_cString(tableName),referenceColumnTypes[i],compareColumnTypes[j]);
+            }
+          }
+          else
+          {
+            error = ERRORX_(DATABASE_MISSING_COLUMN,0,"%s in %s",referenceColumnNames[i],String_cString(tableName));
           }
         }
-        else
+        if (error != ERROR_NONE)
         {
-          error = ERRORX_(DATABASE_MISSING_COLUMN,0,"%s",referenceColumnNames[i]);
+          break;
         }
-      }
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
 
-      // check for obsolete columns
-      for (i = 0; i < columnCount; i++)
-      {
-        // find column
-        j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEquals(columnNames[i],referenceColumnNames[j]));
-        if (j >= referenceColumnCount)
+        // check for obsolete columns
+        for (i = 0; i < compareColumnCount; i++)
         {
-          error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s",referenceColumnNames[j]);
+          // find column
+          j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEquals(compareColumnNames[i],referenceColumnNames[j]));
+          if (j >= referenceColumnCount)
+          {
+            error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s in %s",referenceColumnNames[j],String_cString(tableName));
+          }
         }
-      }
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
 
-      // free resources
-    }
-    else
-    {
-      error = ERRORX_(DATABASE_MISSING_TABLE,0,"%s",String_cString(tableName));
+        // free resources
+      }
+      else
+      {
+        error = ERRORX_(DATABASE_MISSING_TABLE,0,"%s",String_cString(tableName));
+      }
     }
   }
 
@@ -13119,9 +13124,11 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
                 char               sqlCommand[256];
 
                 // get table names
+                StringList_init(&tableNameList);
                 error = Database_getTableList(&tableNameList,databaseHandle);
                 if (error != ERROR_NONE)
                 {
+                  StringList_done(&tableNameList);
                   return error;
                 }
 

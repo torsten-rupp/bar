@@ -9076,331 +9076,6 @@ LIBRARY_PATHS="$cwd/extern/lib $cwd/extern/lib/mariadb $LIBRARY_PATHS"
   done
 
 
-# create sqlite3.c
-if test -d sqlite -o -d "`readlink sqlite`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
-    cwd=`pwd`
-
-
-  $as_echo_n "create sqlite3.c... " >&6
-
-    result=1
-    if test $result -eq 1; then
-      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
-        --build=$build \
-        --disable-tcl \
-        --enable-fts4\
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-$as_echo "fail (configure)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-$as_echo "fail (make)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd sqlite; \
-       install -d $cwd/extern/sources; \
-       install -d $cwd/extern/include; \
-       install -m 644 sqlite3.c $cwd/extern/sources; \
-       install -m 644 sqlite3.h $cwd/extern/include; \
-      ) 1>$tmpFile 2>&1
-    fi
-    if test $result -eq 1; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
-$as_echo "done" >&6; }
-    else
-      as_fn_error $? "Cannot create sqlite3.c" "$LINENO" 5
-    fi
-  fi
-fi
-
-# compile MariaDB client
-if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
-    cwd=`pwd`
-
-
-  $as_echo_n "compile MariaDB client... " >&6
-
-    result=1
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-        -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-$as_echo "fail (configure)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-$as_echo "fail (make)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-$as_echo "fail (make)" >&6; }
-
-  $as_echo "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do $as_echo "  $s"; done
-  $as_echo "---------------------------------------------------------------------------------------"
-
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
-$as_echo "done" >&6; }
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES mariadb-connector-c"
-    else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
-    fi
-    HAVE_MARIADB=1
-
-$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
-
-  fi
-else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-
-
-    ac_result=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
-$as_echo_n "checking for library containing zlibVersion... " >&6; }
-if ${ac_cv_search_libraries_zlibVersion+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-            ac_func_search_libraries_save_LIBS=$LIBS
-
-      for ac_library in z ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z ""; then echo "extern void zlibVersion();"; fi`
-                                         return (int)zlibVersion;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libraries_zlibVersion=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if ${ac_cv_search_libraries_zlibVersion+:} false; then :
-
-else
-  ac_cv_search_libraries_zlibVersion=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
-$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
-  ac_result=$ac_cv_search_libraries_zlibVersion
-  if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";
-$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
-
-fi
-
-  else
-    if test -z "$HAVE_MARIADB"; then
-
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing zlibVersion" >&5
-$as_echo_n "checking for static library containing zlibVersion... " >&6; }
-if ${ac_cv_search_static_zlibVersion+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      for ac_library in z ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z ""; then echo "extern void zlibVersion();"; fi`
-                                         return (int)zlibVersion;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_static_zlibVersion=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if ${ac_cv_search_static_zlibVersion+:} false; then :
-
-else
-  ac_cv_search_static_zlibVersion=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_zlibVersion" >&5
-$as_echo "$ac_cv_search_static_zlibVersion" >&6; }
-  ac_result=$ac_cv_search_static_zlibVersion
-  if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";
-$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
-
-fi
-
-    fi
-    if test -z "$HAVE_MARIADB"; then
-
-
-    ac_result=""
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
-$as_echo_n "checking for library containing zlibVersion... " >&6; }
-if ${ac_cv_search_libraries_zlibVersion+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-            ac_func_search_libraries_save_LIBS=$LIBS
-
-      for ac_library in z ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z ""; then echo "extern void zlibVersion();"; fi`
-                                         return (int)zlibVersion;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_libraries_zlibVersion=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if ${ac_cv_search_libraries_zlibVersion+:} false; then :
-
-else
-  ac_cv_search_libraries_zlibVersion=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
-$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
-  ac_result=$ac_cv_search_libraries_zlibVersion
-  if test "$ac_result" != no; then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";
-$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
-
-fi
-
-    fi
-  fi
-fi
-if test -z "$HAVE_MARIADB"; then
-  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: Maria DB client package missing" >&5
-$as_echo "$as_me: WARNING: MariaDB client not compiled: Maria DB client package missing" >&2;}
-  fi
-fi
-
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
@@ -15165,6 +14840,334 @@ else
 fi
 
     fi
+  fi
+fi
+
+# create sqlite3.c
+if test -d sqlite -o -d "`readlink sqlite`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+
+    cwd=`pwd`
+
+
+  $as_echo_n "create sqlite3.c... " >&6
+
+    result=1
+    if test $result -eq 1; then
+      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
+        --build=$build \
+        --disable-tcl \
+        --enable-fts4\
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd sqlite; \
+       install -d $cwd/extern/sources; \
+       install -d $cwd/extern/include; \
+       install -m 644 sqlite3.c $cwd/extern/sources; \
+       install -m 644 sqlite3.h $cwd/extern/include; \
+      ) 1>$tmpFile 2>&1
+    fi
+    if test $result -eq 1; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+    else
+      as_fn_error $? "Cannot create sqlite3.c" "$LINENO" 5
+    fi
+  fi
+fi
+
+# compile MariaDB client
+if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+
+    cwd=`pwd`
+
+
+  $as_echo_n "compile MariaDB client... " >&6
+
+    result=1
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+        -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+        -DCMAKE_C_FLAGS=-I$cwd/extern/include \
+        -DCMAKE_EXE_LINKER_FLAGS=-L$cwd/extern/lib \
+        `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mariadb-connector-c; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES mariadb-connector-c"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+    fi
+    HAVE_MARIADB=1
+
+$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
+
+  fi
+else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
+$as_echo_n "checking for library containing zlibVersion... " >&6; }
+if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in z ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void zlibVersion();"; fi`
+                                         return (int)zlibVersion;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_zlibVersion=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+
+else
+  ac_cv_search_libraries_zlibVersion=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
+$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
+  ac_result=$ac_cv_search_libraries_zlibVersion
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";
+$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
+
+fi
+
+  else
+    if test -z "$HAVE_MARIADB"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing zlibVersion" >&5
+$as_echo_n "checking for static library containing zlibVersion... " >&6; }
+if ${ac_cv_search_static_zlibVersion+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in z ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void zlibVersion();"; fi`
+                                         return (int)zlibVersion;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_zlibVersion=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_zlibVersion+:} false; then :
+
+else
+  ac_cv_search_static_zlibVersion=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_zlibVersion" >&5
+$as_echo "$ac_cv_search_static_zlibVersion" >&6; }
+  ac_result=$ac_cv_search_static_zlibVersion
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";
+$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
+
+fi
+
+    fi
+    if test -z "$HAVE_MARIADB"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing zlibVersion" >&5
+$as_echo_n "checking for library containing zlibVersion... " >&6; }
+if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in z ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void zlibVersion();"; fi`
+                                         return (int)zlibVersion;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_zlibVersion=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_zlibVersion+:} false; then :
+
+else
+  ac_cv_search_libraries_zlibVersion=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_zlibVersion" >&5
+$as_echo "$ac_cv_search_libraries_zlibVersion" >&6; }
+  ac_result=$ac_cv_search_libraries_zlibVersion
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";
+$as_echo "#define HAVE_MARIADB 1" >>confdefs.h
+
+fi
+
+    fi
+  fi
+fi
+if test -z "$HAVE_MARIADB"; then
+  if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: Maria DB client package missing" >&5
+$as_echo "$as_me: WARNING: MariaDB client not compiled: Maria DB client package missing" >&2;}
   fi
 fi
 

@@ -246,14 +246,14 @@ LOCAL void printNotifies(void)
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
-                          continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
+                          continuousDatabaseOpenMode|DATABASE_OPEN_MODE_READWRITE,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
-                            continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
+                            continuousDatabaseOpenMode|DATABASE_OPEN_MODE_READWRITE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
@@ -262,14 +262,14 @@ LOCAL void printNotifies(void)
     #ifdef NDEBUG
       error = Database_open(databaseHandle,
                             databaseSpecifier,
-                            DATABASE_OPENMODE_CREATE,
+                            DATABASE_OPEN_MODE_CREATE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
     #else /* not NDEBUG */
       error = __Database_open(__fileName__,__lineNb__,
                               databaseHandle,
                               databaseSpecifier,
-                              DATABASE_OPENMODE_CREATE,
+                              DATABASE_OPEN_MODE_CREATE,
                               CONTINUOUS_DATABASE_TIMEOUT
                              );
     #endif /* NDEBUG */
@@ -315,14 +315,14 @@ LOCAL void printNotifies(void)
   #ifdef NDEBUG
     error = Database_open(databaseHandle,
                           databaseSpecifier,
-                          continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
+                          continuousDatabaseOpenMode|DATABASE_OPEN_MODE_CREATE,
                           CONTINUOUS_DATABASE_TIMEOUT
                          );
   #else /* not NDEBUG */
     error = __Database_open(__fileName__,__lineNb__,
                             databaseHandle,
                             databaseSpecifier,
-                            continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
+                            continuousDatabaseOpenMode|DATABASE_OPEN_MODE_CREATE,
                             CONTINUOUS_DATABASE_TIMEOUT
                            );
   #endif /* NDEBUG */
