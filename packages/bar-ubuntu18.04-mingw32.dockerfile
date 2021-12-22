@@ -60,7 +60,6 @@ RUN apt-get -y install \
   wine32 \
   ;
 RUN apt-get -y install \
-  libmysqlclient-dev \
   libpq-dev \
   ;
 

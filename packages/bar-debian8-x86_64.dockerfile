@@ -50,7 +50,6 @@ RUN apt-get -y install \
   valgrind \
   ;
 RUN apt-get -y install \
-  libmysqlclient-dev \
   libpq-dev \
   ;
 
