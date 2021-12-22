@@ -820,11 +820,11 @@ update_docker:
 	$(DOCKER) pull ubuntu:20.04
 	#
 	# base images
-#	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile             -t bar-centos:6            .)
-	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile      -t bar-centos-x86_64:6     .)
-#	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile             -t bar-debian:8            .)
-	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile      -t bar-debian-x86_64:8     .)
-	(cd packages; $(DOCKER) build -f bar-ubuntu18.04-mingw32.dockerfile -t bar-mingw32             .)
+#	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile         -t bar-centos:6            .)
+	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile -t bar-centos-x86_64:6     .)
+#	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile         -t bar-debian:8            .)
+	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile -t bar-debian-x86_64:8     .)
+	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32             .)
 	#
 	# test images
 	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
