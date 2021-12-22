@@ -3388,8 +3388,15 @@ if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
     if test $result -eq 1; then
       (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
         -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-        -DCMAKE_C_FLAGS=-I$cwd/extern/include \
-        -DCMAKE_EXE_LINKER_FLAGS=-L$cwd/extern/lib \
+        -DWITH_EXTERNAL_ZLIB=ON \
+        -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+        -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+        -DOPENSSL_FOUND=1 \
+        -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+        -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
+        -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
+        -DOPENSSL_LIBRARIES=$cwd/extern/lib \
+        -DWITH_CURL=OFF \
         `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
@@ -3399,7 +3406,10 @@ if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
       fi
     fi
     if test $result -eq 1; then
-      (cd mariadb-connector-c; make clean; make -C libmariadb -j$CPU_CORES) 1>$tmpFile 2>&1
+      (cd mariadb-connector-c; \
+       make clean; \
+       make -C libmariadb mariadbclient -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3407,7 +3417,10 @@ if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
       fi
     fi
     if test $result -eq 1; then
-      (cd mariadb-connector-c; make -C libmariadb install PREFIX=$cwd/extern; make -C include install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      (cd mariadb-connector-c; \
+       make -C include install PREFIX=$cwd/extern; \
+       install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
+      ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
