@@ -4509,7 +4509,7 @@ if test $ENABLE_PCRE = "yes"; then
 fi
 if test $ENABLE_MARIADB = "yes"; then
   AC_TRY_LINK([#include <stdio.h>
-               #include "mariadb_version.h"
+               #include "mariadb/mariadb_version.h"
               ],
               [printf("%s",MARIADB_CLIENT_VERSION_STR);
               ],

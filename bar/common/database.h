@@ -21,6 +21,7 @@
 #include <semaphore.h>
 #include <assert.h>
 
+#include "sqlite3.h"
 #ifdef HAVE_MARIADB_MYSQL_H
   #include "mariadb/mysql.h"
 #endif
@@ -33,8 +34,6 @@
 #include "common/threads.h"
 #include "common/semaphores.h"
 #include "errors.h"
-
-#include "sqlite3.h"
 
 /****************** Conditional compilation switches *******************/
 #define _DATABASE_LOCK_PER_INSTANCE   // if defined use lock per database instance, otherwise a global lock for all database is used
@@ -995,16 +994,18 @@ void Database_doneAll(void);
 *          databaseURI         - database URI string:
 *                                  - [(sqlite|sqlite3):]file name, NULL
 *                                    for sqlite3 "in memory",
-*                                  - mysql:<server>:<user>:<passwored>[:<database>]
+*                                  - mariadb:<server>:<user>:<passwored>[:<database>]
 *          defaultDatabaseName - default database name
 * Output : databaseSpecifier - database specifier
-* Return : -
+* Return : validURIPrefixFlag - TRUE iff valid URI prefix is given (can
+*                               be NULL)
 * Notes  : -
 \***********************************************************************/
 
 void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
                              const char        *databaseURI,
-                             const char        *defaultDatabaseName
+                             const char        *defaultDatabaseName,
+                             bool              *validURIPrefixFlag
                             );
 
 /***********************************************************************\
@@ -1039,14 +1040,18 @@ void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier);
 * Input  : datbaseURI          - database URI string:
 *                                  - [(sqlite|sqlite3):]file name, NULL
 *                                    for sqlite3 "in memory",
-*                                  - mysql:<server>:<user>:<password>[:<database>]
+*                                  - mariadb:<server>:<user>:<password>[:<database>]
            defaultDatabaseName - default database name
-* Output : -
+* Return : validURIPrefixFlag - TRUE iff valid URI prefix is given (can
+*                               be NULL)
 * Return : database specifier or NULL
 * Notes  : -
 \***********************************************************************/
 
-DatabaseSpecifier *Database_newSpecifier(const char *datbaseURI, const char *defaultDatabaseName);
+DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
+                                         const char *defaultDatabaseName,
+                                         bool       *validURIPrefixFlag
+                                        );
 
 /***********************************************************************\
 * Name   : Database_duplicateSpecifier
@@ -1133,7 +1138,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 *          uri              - database URI:
 *                               - [(sqlite|sqlite3):]file name, NULL for
 *                                 sqlite3 "in memory",
-*                               - mysql:<server>:<user>[:<database>]
+*                               - mariadb:<server>:<user>[:<database>]
 *          databaseOpenMode - open mode; see DatabaseOpenModes
 *          timeout          - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle

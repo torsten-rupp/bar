@@ -7553,6 +7553,9 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SEPARATOR("index database"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("database URI"),
+  CONFIG_VALUE_COMMENT("  sqlite:<filename>"),
+  CONFIG_VALUE_COMMENT("  mariadb:<server>:<user>:<password>"),
   CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseURI,-1,                            "<URI>"),
   CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1,                     "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1,                 "yes|no"),
