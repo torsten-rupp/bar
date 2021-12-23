@@ -1610,11 +1610,11 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle);
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_compare(DatabaseHandle *databaseHandleReference,
-                        DatabaseHandle *databaseHandle,
-                        const char     *columnNames[],
-                        uint           columnNameCount,
-                        uint           compareFlags
+Errors Database_compare(DatabaseHandle     *databaseHandleReference,
+                        DatabaseHandle     *databaseHandle,
+                        const char * const tableNames[],
+                        uint               columnNameCount,
+                        uint               compareFlags
                        );
 
 /***********************************************************************\

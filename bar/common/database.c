@@ -9307,11 +9307,11 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
   return ERROR_NONE;
 }
 
-Errors Database_compare(DatabaseHandle *referenceDatabaseHandle,
-                        DatabaseHandle *databaseHandle,
-                        const char     *tableNames[],
-                        uint           tableNameCount,
-                        uint           compareFlags
+Errors Database_compare(DatabaseHandle     *referenceDatabaseHandle,
+                        DatabaseHandle     *databaseHandle,
+                        const char * const tableNames[],
+                        uint               tableNameCount,
+                        uint               compareFlags
                        )
 {
   Errors             error;
