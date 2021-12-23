@@ -1880,10 +1880,10 @@ LOCAL Errors mysqlQuery(MYSQL      *handle,
 }
 
 /***********************************************************************\
-* Name   : mysqlSelectDatabase_
+* Name   : mysqlSelectDatabase
 * Purpose: select MySQL database
-* Input  : handle     - MySQL handle
-*          sqlCommand - SQL command
+* Input  : handle       - MySQL handle
+*          databaseName - database name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1903,6 +1903,58 @@ LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
     HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : mysqlSetCharacterSet
+* Purpose: set MariaDB character set
+* Input  : handle       - MySQL handle
+*          characterSet - character set name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlSetCharacterSet(MYSQL      *handle,
+                                  const char *characterSet
+                                 )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(characterSet != NULL);
+
+  mysqlResult = mysql_set_character_set(handle,characterSet);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
                         mysqlResult,
                         mysql_error(handle)
                        );
@@ -2032,7 +2084,6 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
                     "%s",
                     mysql_stmt_error(statementHandle)
                    );
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   }
   else
   {
@@ -2369,6 +2420,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
+// TODO:
 #if 0
             optionValue.b = TRUE;
             mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
@@ -2411,9 +2463,9 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
             }
 
             // enable UTF8
-            error = mysqlQuery(databaseHandle->mysql.handle,
-                               "SET NAMES 'utf8'"
-                              );
+            error = mysqlSetCharacterSet(databaseHandle->mysql.handle,
+                                         "utf8mb4"
+                                        );
             if (error != ERROR_NONE)
             {
               mysql_close(databaseHandle->mysql.handle);
