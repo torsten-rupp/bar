@@ -630,7 +630,7 @@ BAR_INDEX_HEADERS_COMMON    = \
 BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
                               index_common.def \
                               index_sqlite.def \
-                              index_mysql.def \
+                              index_mariadb.def \
                               index/index_current.c \
 
 BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
@@ -1113,11 +1113,11 @@ index_definition.c index_definition.h: \
   $(SOURCE_DIR)/index_definition.pl \
   $(SOURCE_DIR)/index_common.def \
   $(SOURCE_DIR)/index_sqlite.def \
-  $(SOURCE_DIR)/index_mysql.def
+  $(SOURCE_DIR)/index_mariadb.def
 	$(PERL) $(SOURCE_DIR)/index_definition.pl \
 	  --common $(SOURCE_DIR)/index_common.def \
 	  --sqlite $(SOURCE_DIR)/index_sqlite.def \
-	  --mysql $(SOURCE_DIR)/index_mysql.def \
+	  --mariadb $(SOURCE_DIR)/index_mariadb.def \
 	  --source index_definition.c \
 	  --header index_definition.h
 release/index_definition.o: index_definition.c index_definition.h

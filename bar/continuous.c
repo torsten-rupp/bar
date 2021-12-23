@@ -1671,7 +1671,7 @@ Errors Continuous_init(const char *databaseURI)
 
     // get database specifier
     assert(continuousDatabaseSpecifier == NULL);
-    continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    continuousDatabaseSpecifier = Database_newSpecifier(databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
     if (continuousDatabaseSpecifier == NULL)
     {
       return ERROR_DATABASE;

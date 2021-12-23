@@ -401,10 +401,10 @@ LOCAL void busyHandler(void *userData)
       break;
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MARIADB)
-      if (String_isEmpty(databaseSpecifier->mysql.databaseName))
-      {
-        String_setCString(databaseSpecifier->mysql.databaseName,DEFAULT_DATABASE_NAME);
-      }
+        if (String_isEmpty(databaseSpecifier->mysql.databaseName))
+        {
+          String_setCString(databaseSpecifier->mysql.databaseName,DEFAULT_DATABASE_NAME);
+        }
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
@@ -879,7 +879,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   uint64            t1;
   IndexId           uuidId,entityId,storageId;
 
-  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
+  Database_parseSpecifier(&databaseSpecifier,String_cString(oldDatabaseURI),INDEX_DEFAULT_DATABASE_NAME,NULL);
 
   // open old index (Note: must be read/write to fix errors in database)
   error = openIndex(&oldIndexHandle,&databaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);

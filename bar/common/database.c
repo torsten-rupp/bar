@@ -108,14 +108,14 @@ LOCAL const char *DATABASE_DATATYPE_NAMES[] =
   "UNKNOWN"
 };
 
-// min. MySQL server version (>= 5.7.7 with key length 3072)
+// min. MariaDB server version (>= 5.7.7 with key length 3072)
 #define MARIADB_MIN_SERVER_VERSION 100200
 
 #define MARIADB_TIMEOUT (5*60)  // [s]
 
-/* MySQL database character sets to use (descenting order)
+/* MariaDB database character sets to use (descenting order)
    Note: try to create with character set uft8mb4 (4-byte UTF8),
-         then utf8 as a fallback for older MySQL versions.
+         then utf8 as a fallback for older MariaDB versions.
 */
 LOCAL const char *MARIADB_CHARACTER_SETS[] =
 {
@@ -1827,7 +1827,7 @@ LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
 
 /***********************************************************************\
 * Name   : mysqlQuery
-* Purpose: do MySQL query
+* Purpose: do MariaDB query
 * Input  : handle     - MySQL handle
 *          sqlCommand - SQL command
 * Output : -
@@ -1848,7 +1848,7 @@ LOCAL Errors mysqlQuery(MYSQL      *handle,
   mysqlResult = mysql_query(handle,sqlCommand);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
-    HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s",
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
                         mysqlResult,
                         mysql_error(handle)
                        );
@@ -1881,7 +1881,7 @@ LOCAL Errors mysqlQuery(MYSQL      *handle,
 
 /***********************************************************************\
 * Name   : mysqlSelectDatabase_
-* Purpose: select MySQL database
+* Purpose: select MariaDB database
 * Input  : handle     - MySQL handle
 *          sqlCommand - SQL command
 * Output : -
@@ -1890,8 +1890,8 @@ LOCAL Errors mysqlQuery(MYSQL      *handle,
 \***********************************************************************/
 
 LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
-                                 const char *databaseName
-                                )
+                                   const char *databaseName
+                                  )
 {
   int    mysqlResult;
   Errors error;
@@ -1902,7 +1902,7 @@ LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
   mysqlResult = mysql_select_db(handle,databaseName);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
-    HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
                         mysqlResult,
                         mysql_error(handle)
                        );
@@ -1933,7 +1933,7 @@ LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
 
 /***********************************************************************\
 * Name   : mysqlStatementPrepare
-* Purpose: prepare MySQL statement
+* Purpose: prepare MariaDB statement
 * Input  : statementHandle - statement handle
 *          sqlCommand - SQL command
 * Output : -
@@ -1942,8 +1942,8 @@ LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
 \***********************************************************************/
 
 LOCAL Errors mysqlStatementPrepare(MYSQL_STMT *statementHandle,
-                                   const char *sqlCommand
-                                  )
+                                     const char *sqlCommand
+                                    )
 {
   int    mysqlResult;
   Errors error;
@@ -1957,7 +1957,7 @@ LOCAL Errors mysqlStatementPrepare(MYSQL_STMT *statementHandle,
                                   );
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
-    HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s: %s",
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s: %s",
                         mysqlResult,
                         mysql_stmt_error(statementHandle),
                         sqlCommand
@@ -1990,15 +1990,15 @@ LOCAL Errors mysqlStatementPrepare(MYSQL_STMT *statementHandle,
 }
 
 /***********************************************************************\
-* Name   : mysqlStatementExecute
-* Purpose: execute MySQL statement
+* Name   : mariadbStatementExecute
+* Purpose: execute MariaDB statement
 * Input  : statementHandle - statement handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
+LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
 {
   int    mysqlResult;
   Errors error;
@@ -2012,7 +2012,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
   }
   else if (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
-    HALT_INTERNAL_ERROR("MySQL library reported misuse %d: %s",
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
                         mysqlResult,
                         mysql_stmt_error(statementHandle)
                        );
@@ -2032,7 +2032,6 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
                     "%s",
                     mysql_stmt_error(statementHandle)
                    );
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
   }
   else
   {
@@ -2133,7 +2132,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
               break;
             case DATABASE_TYPE_MYSQL:
               #if defined(HAVE_MARIADB)
-                mysql_close(databaseHandle->mysql.handle);
+                mariadb_close(databaseHandle->mysql.handle);
               #else /* HAVE_MARIADB */
               #endif /* HAVE_MARIADB */
               break;
@@ -2154,7 +2153,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
               break;
             case DATABASE_TYPE_MYSQL:
               #if defined(HAVE_MARIADB)
-                mysql_close(databaseHandle->mysql.handle);
+                mariadb_close(databaseHandle->mysql.handle);
               #else /* HAVE_MARIADB */
               #endif /* HAVE_MARIADB */
               break;
@@ -2369,12 +2368,14 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
+
+// TODO:
 #if 0
             optionValue.b = TRUE;
-            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
+            mariadb_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
             optionValue.u = MARIADB_TIMEOUT;
-            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
-            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+            mariadb_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+            mariadb_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 #endif
 
             // connect
@@ -2389,7 +2390,11 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
                                   ) == NULL
                )
             {
-              error = ERRORX_(DATABASE,mysql_errno(databaseHandle->mysql.handle),"%s",mysql_error(databaseHandle->mysql.handle));
+              error = ERRORX_(DATABASE,
+                              mysql_errno(databaseHandle->mysql.handle),
+                              "%s",
+                              mysql_error(databaseHandle->mysql.handle)
+                             );
               mysql_close(databaseHandle->mysql.handle);
               Semaphore_unlock(&databaseList.lock);
               sem_destroy(&databaseHandle->wakeUp);
@@ -2428,7 +2433,7 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
               uint i;
 
               /* try to create with character set uft8mb4 (4-byte UTF8),
-                 then utf8 as a fallback for older MySQL versions.
+                 then utf8 as a fallback for older MariaDB versions.
               */
               i = 0;
               do
@@ -2616,16 +2621,16 @@ LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MARIADB)
         {
-          int mysqlResult;
+          int mariadbResult;
 
           // set SQL mode: allow null dates, disable strict to allow automatic cut of too long values
-          mysqlResult = mysql_query(databaseHandle->mysql.handle,
+          mariadbResult = mysql_query(databaseHandle->mysql.handle,
   // TODO:
           // ONLY_FULL_GROUP_BY
                                     "SET SESSION sql_mode='ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'"
                                    );
-          assert(mysqlResult == 0);
-          UNUSED_VARIABLE(mysqlResult);
+          assert(mariadbResult == 0);
+          UNUSED_VARIABLE(mariadbResult);
 
   // TODO:
   bool b = FALSE;
@@ -4190,6 +4195,7 @@ LOCAL int busyHandler(void *userData, int n)
           #ifndef NDEBUG
             String_delete(databaseStatementHandle->sqlString);
           #endif /* not NDEBUG */
+          return error;
         }
 
         // get value/result count
@@ -4216,7 +4222,7 @@ LOCAL int busyHandler(void *userData, int n)
             #ifndef NDEBUG
               if (databaseStatementHandle->mysql.statementHandle == NULL)
               {
-                HALT_INTERNAL_ERROR("MySQL library reported misuse %d %s: %s",
+                HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s: %s",
                                     mysql_errno(databaseHandle->mysql.handle),
                                     mysql_stmt_error(databaseStatementHandle->mysql.statementHandle),
                                     sqlCommand
@@ -4763,11 +4769,11 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MARIADB)
         {
-          int  mysqlResult;
+          int  mariadbResult;
           uint i;
 
-          mysqlResult = mysql_stmt_fetch(databaseStatementHandle->mysql.statementHandle);
-          switch (mysqlResult)
+          mariadbResult = mysql_stmt_fetch(databaseStatementHandle->mysql.statementHandle);
+          switch (mariadbResult)
           {
             case 0:
               for (i = 0; i < databaseStatementHandle->resultCount; i++)
@@ -4981,7 +4987,7 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MARIADB)
         {
-          int mysqlResult;
+          int mariadbResult;
 
           for (i = 0; i < databaseStatementHandle->valueMapCount; i++)
           {
@@ -5072,7 +5078,7 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
             }
           }
 
-          error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
+          error = mariadbStatementExecute(databaseStatementHandle->mysql.statementHandle);
 // TODO: remove
 if (error != ERROR_NONE)
 {
@@ -5401,7 +5407,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             const uint MAX_TEXT_LENGTH = 4096;
 
             MYSQL_STMT *statementHandle;
-            int        mysqlResult;
+            int        mariadbResult;
             MYSQL_BIND *bind;
             MYSQL_TIME *dateTime;
 
@@ -5541,7 +5547,12 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
                 free(dateTime);
                 free(bind);
                 mysql_stmt_close(statementHandle);
-                error = ERRORX_(DATABASE_CONNECTION_LOST,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+                error = ERRORX_(DATABASE_CONNECTION_LOST,
+                                mysql_stmt_errno(statementHandle),
+                                "%s: %s",
+                                mysql_stmt_error(statementHandle),
+                                String_cString(sqlString)
+                               );
                 break;
               }
             }
@@ -5559,7 +5570,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             }
 
             // step and process rows
-            error = mysqlStatementExecute(statementHandle);
+            error = mariadbStatementExecute(statementHandle);
             if (error != ERROR_NONE)
             {
               free(values);
@@ -5571,20 +5582,21 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
 
             if (databaseRowFunction != NULL)
             {
+// TODO: required?
 #if 0
-if (mysql_stmt_store_result(statementHandle) != 0)
+if (mariadb_stmt_store_result(statementHandle) != 0)
 {
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(statementHandle));
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mariadb_stmt_error(statementHandle));
 abort();
 }
 #endif
               do
               {
                 // step
-                mysqlResult = mysql_stmt_fetch(statementHandle);
+                mariadbResult = mysql_stmt_fetch(statementHandle);
 
                 // process row
-                if      (mysqlResult == 0)
+                if      (mariadbResult == 0)
                 {
                   for (i = 0; i < valueCount; i++)
                   {
@@ -5627,16 +5639,26 @@ abort();
                   }
                   error = databaseRowFunction(values,valueCount,databaseRowUserData);
                 }
-                else if (mysqlResult == 1)
+                else if (mariadbResult == 1)
                 {
-                  error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+                  error = ERRORX_(DATABASE,
+                                  mysql_stmt_errno(statementHandle),
+                                  "%s: %s",
+                                  mysql_stmt_error(statementHandle),
+                                  String_cString(sqlString)
+                                 );
                 }
-                else if (mysqlResult == MYSQL_DATA_TRUNCATED)
+                else if (mariadbResult == MYSQL_DATA_TRUNCATED)
                 {
-                  error = ERRORX_(DATABASE,mysql_stmt_errno(statementHandle),"%s: %s",mysql_stmt_error(statementHandle),String_cString(sqlString));
+                  error = ERRORX_(DATABASE,
+                                  mysql_stmt_errno(statementHandle),
+                                  "%s: %s",
+                                  mysql_stmt_error(statementHandle),
+                                  String_cString(sqlString)
+                                 );
                 }
               }
-              while (   (mysqlResult == 0)
+              while (   (mariadbResult == 0)
                      && (error == ERROR_NONE)
                     );
             }
@@ -6016,7 +6038,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
 
                   assertx(databaseStatementHandle->valueIndex < databaseStatementHandle->valueCount,"invalid value count: given %u, expected %u",databaseStatementHandle->valueIndex,databaseStatementHandle->valueCount);
 
-                  // convert to internal MySQL format
+                  // convert to internal MariaDB format
                   Misc_splitDateTime(values[i].dateTime,
                                      &year,
                                      &month,
@@ -6292,7 +6314,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                   uint year,month,day;
                   uint hour,minute,second;
 
-                  // convert to internal MySQL format
+                  // convert to internal MariaDB format
                   Misc_splitDateTime(filters[i].dateTime,
                                      &year,
                                      &month,
@@ -6665,7 +6687,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             }
 
             // do query
-            error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
+            error = mariadbStatementExecute(databaseStatementHandle->mysql.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
@@ -6897,22 +6919,13 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       case DATABASE_TYPE_MYSQL:
         #if defined(HAVE_MARIADB)
           {
-            error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
+            error = mariadbStatementExecute(databaseStatementHandle->mysql.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
             }
+            (void)mysql_stmt_store_result(databaseStatementHandle->mysql.statementHandle);
 
-#if 1
-if (mysql_stmt_store_result(databaseStatementHandle->mysql.statementHandle) != 0)
-{
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,mysql_stmt_error(databaseStatementHandle->mysql.statementHandle));
-abort();
-}
-#endif
-
-//fprintf(stderr,"%s:%d: mysql_stmt_num_rows(statementHandle)=%d\n",__FILE__,__LINE__,mysql_stmt_num_rows(statementHandle));
-//            if (mysql_stmt_num_rows(statementHandle) > 0)
             if (databaseRowFunction != NULL)
             {
               // step
@@ -7296,7 +7309,7 @@ Errors Database_initAll(void)
   }
 
   #ifdef HAVE_MARIADB
-    // init MySQL
+    // init MariaDB
     mysql_library_init(0,NULL,NULL);
   #endif
 
@@ -7306,7 +7319,7 @@ Errors Database_initAll(void)
 void Database_doneAll(void)
 {
   #ifdef HAVE_MARIADB
-    // done MySQL
+    // done MariaDB
     mysql_library_end();
   #endif
 
@@ -7323,7 +7336,8 @@ void Database_doneAll(void)
 
 void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
                              const char        *databaseURI,
-                             const char        *defaultDatabaseName
+                             const char        *defaultDatabaseName,
+                             bool              *validURIPrefixFlag
                             )
 {
   const char *s1,*s2,*s3,*s4;
@@ -7346,10 +7360,11 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
   {
     databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
     databaseSpecifier->sqlite.fileName = String_setBuffer(String_new(),s1,n1);
+    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else if (   (databaseURI != NULL)
            && stringMatch(databaseURI,
-                          "^mysql:([^:]+):([^:]+):([^:]*):(.*)",
+                          "^mariadb:([^:]+):([^:]+):([^:]*):(.*)",
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
                           &s1,&n1,
@@ -7370,10 +7385,11 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
     #else /* HAVE_MARIADB */
 // TODO:
     #endif /* HAVE_MARIADB */
+    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else if (   (databaseURI != NULL)
            && stringMatch(databaseURI,
-                          "^mysql:([^:]+):([^:]+):(.*)",
+                          "^mariadb:([^:]+):([^:]+):(.*)",
                           STRING_NO_ASSIGN,
                           STRING_NO_ASSIGN,
                           &s1,&n1,
@@ -7393,11 +7409,13 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
     #else /* HAVE_MARIADB */
 // TODO:
     #endif /* HAVE_MARIADB */
+    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else
   {
     databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
     databaseSpecifier->sqlite.fileName = String_setCString(String_new(),databaseURI);
+    if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = FALSE;
   }
 }
 
@@ -7447,7 +7465,10 @@ void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier)
   }
 }
 
-DatabaseSpecifier *Database_newSpecifier(const char *databaseURI, const char *defaultDatabaseName)
+DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
+                                         const char *defaultDatabaseName,
+                                         bool       *validURIPrefixFlag
+                                        )
 {
   DatabaseSpecifier *databaseSpecifier;
 
@@ -7457,7 +7478,7 @@ DatabaseSpecifier *Database_newSpecifier(const char *databaseURI, const char *de
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName);
+  Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName,validURIPrefixFlag);
 
   return databaseSpecifier;
 }
@@ -7554,7 +7575,7 @@ String Database_getPrintableName(String                  string,
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MARIADB)
         String_format(string,
-                      "mysql:%S:%S:*:%S",
+                      "mariadb:%S:%S:*:%S",
                       databaseSpecifier->mysql.serverName,
                       databaseSpecifier->mysql.userName,
                       databaseSpecifier->mysql.databaseName
@@ -7717,10 +7738,10 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
       case DATABASE_TYPE_MYSQL:
         #if defined(HAVE_MARIADB)
           fprintf(stderr,
-                  "Database debug: opened 'mysql:%s:%s:*:%s'\n",
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName)
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.databaseName)
+                  "Database debug: opened 'mariadb:%s:%s:*:%s'\n",
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.serverName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.userName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.databaseName)
                  );
         #else /* HAVE_MARIADB */
         #endif /* HAVE_MARIADB */
@@ -7781,10 +7802,10 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
       case DATABASE_TYPE_MYSQL:
         #if defined(HAVE_MARIADB)
           fprintf(stderr,
-                  "Database debug: close 'mysql:%s:%s:*:%s'\n",
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName)
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
-                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.databaseName)
+                  "Database debug: close 'mariadb:%s:%s:*:%s'\n",
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.serverName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.userName)
+                  String_cString(databaseHandle->databaseNode->databaseSpecifier.mariadb.databaseName)
                  );
         #else /* HAVE_MARIADB */
         #endif /* HAVE_MARIADB */
@@ -9286,11 +9307,11 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
   return ERROR_NONE;
 }
 
-Errors Database_compare(DatabaseHandle *referenceDatabaseHandle,
-                        DatabaseHandle *databaseHandle,
-                        const char     *tableNames[],
-                        uint           tableNameCount,
-                        uint           compareFlags
+Errors Database_compare(DatabaseHandle     *referenceDatabaseHandle,
+                        DatabaseHandle     *databaseHandle,
+                        const char * const tableNames[],
+                        uint               tableNameCount,
+                        uint               compareFlags
                        )
 {
   Errors             error;
@@ -13208,7 +13229,7 @@ void Database_debugPrintSimpleLockInfo(void)
         break;
       case DATABASE_TYPE_MYSQL:
         #if defined(HAVE_MARIADB)
-          printf("Database: 'mysql:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mysql.serverName),String_cString(databaseNode->databaseSpecifier.mysql.userName));
+          printf("Database: 'mariadb:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mysql.serverName),String_cString(databaseNode->databaseSpecifier.mysql.userName));
         #else /* HAVE_MARIADB */
           return ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
@@ -13313,7 +13334,7 @@ void Database_debugPrintInfo(void)
           case DATABASE_TYPE_MYSQL:
             #if defined(HAVE_MARIADB)
               fprintf(stderr,
-                      "  opened 'mysql:%s:%s': %u\n",
+                      "  opened 'mariadb:%s:%s': %u\n",
                       String_cString(databaseNode->databaseSpecifier.mysql.serverName),
                       String_cString(databaseNode->databaseSpecifier.mysql.userName),
                       databaseNode->openCount
@@ -13578,7 +13599,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
         case DATABASE_TYPE_MYSQL:
           #if defined(HAVE_MARIADB)
             fprintf(stderr,
-                    "Database lock info 'mysql:%s:%s':\n",
+                    "Database lock info 'mariadb:%s:%s':\n",
                     String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.serverName),
                     String_cString(databaseHandle->databaseNode->databaseSpecifier.mysql.userName)
                    );
@@ -13673,7 +13694,7 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
     case DATABASE_TYPE_MYSQL:
       #if defined(HAVE_MARIADB)
         fprintf(stderr,
-                "DEBUG database %s, %lu: 'mysql:%s:%s': %s\n",
+                "DEBUG database %s, %lu: 'mariadb:%s:%s': %s\n",
                 __fileName__,__lineNb__,
                 String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mysql.serverName),
                 String_cString(databaseStatementHandle->databaseHandle->databaseNode->databaseSpecifier.mysql.userName),
