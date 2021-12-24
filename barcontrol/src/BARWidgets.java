@@ -133,7 +133,7 @@ public class BARWidgets
 
     text = Widgets.newText(parentComposite,SWT.LEFT|SWT.BORDER);
     text.setToolTipText(toolTipText);
-    text.setText(widgetVariable.getString());
+    text.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
     text.addModifyListener(new ModifyListener()
     {
       public void modifyText(ModifyEvent modifyEvent)
@@ -142,7 +142,7 @@ public class BARWidgets
         Color color  = COLOR_MODIFIED;
 
         String s = widget.getText();
-        if (widgetVariable.getString().equals(s)) color = null;
+        if (((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString()).equals(s)) color = null;
 
         widget.setBackground(color);
       }
@@ -242,16 +242,16 @@ public class BARWidgets
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
-   * @param min,max min/max value
    * @param listener listener or null
+   * @param min,max min/max value
    * @return number widget
    */
   public static Spinner newNumber(Composite            parentComposite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
+                                  final Listener       listener,
                                   int                  min,
-                                  int                  max,
-                                  final Listener       listener
+                                  int                  max
                                  )
   {
     final Spinner spinner;
@@ -260,17 +260,16 @@ public class BARWidgets
     spinner.setToolTipText(toolTipText);
     spinner.setMinimum(min);
     spinner.setMaximum(max);
-    spinner.setSelection(widgetVariable.getInteger());
+    spinner.setSelection((listener != null) ? listener.getInt(widgetVariable) : widgetVariable.getInteger());
 
     spinner.addModifyListener(new ModifyListener()
     {
       public void modifyText(ModifyEvent modifyEvent)
       {
         Spinner widget = (Spinner)modifyEvent.widget;
-        Color color  = COLOR_MODIFIED;
+        int     n      = widget.getSelection();
 
-        int n = widget.getSelection();
-
+        Color color = COLOR_MODIFIED;
         if (listener != null)
         {
           if (listener.getInt(widgetVariable) == n) color = null;
@@ -388,22 +387,22 @@ public class BARWidgets
                                   int            max
                                  )
   {
-    return newNumber(parentComposite,toolTipText,widgetVariable,min,max,(Listener)null);
+    return newNumber(parentComposite,toolTipText,widgetVariable,(Listener)null,min,max);
   }
 
   /** create new checkbox widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
-   * @param text checkbox text
    * @param listener listener or null
-   * @return number widget
+   * @param text checkbox text
+   * @return button widget
    */
   public static Button newCheckbox(Composite            parentComposite,
                                    String               toolTipText,
                                    final WidgetVariable widgetVariable,
-                                   String               text,
-                                   final Listener       listener
+                                   final Listener       listener,
+                                   String               text
                                   )
   {
     final Button button;
@@ -478,7 +477,7 @@ public class BARWidgets
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
    * @param text checkbox text
-   * @return number widget
+   * @return button widget
    */
   public static Button newCheckbox(Composite      parentComposite,
                                    String         toolTipText,
@@ -486,22 +485,120 @@ public class BARWidgets
                                    String         text
                                   )
   {
-    return newCheckbox(parentComposite,toolTipText,widgetVariable,text,(Listener)null);
+    return newCheckbox(parentComposite,toolTipText,widgetVariable,(Listener)null,text);
+  }
+
+  /** create new radio widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param widgetVariable widget variable
+   * @param listener listener or null
+   * @param text checkbox text
+   * @return button widget
+   */
+  public static Button newRadio(Composite            parentComposite,
+                                String               toolTipText,
+                                final WidgetVariable widgetVariable,
+                                final Listener       listener,
+                                String               text
+                               )
+  {
+    final Button button;
+
+    button = Widgets.newRadio(parentComposite,text);
+    button.setToolTipText(toolTipText);
+
+    button.addSelectionListener(new SelectionListener()
+    {
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+        Button  widget = (Button)selectionEvent.widget;
+        boolean b      = widget.getSelection();
+
+        if (listener != null)
+        {
+          listener.setChecked(widgetVariable,b);
+        }
+        else
+        {
+          widgetVariable.set(b);
+        }
+      }
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Button  widget = (Button)selectionEvent.widget;
+        boolean b      = widget.getSelection();
+
+        if (listener != null)
+        {
+          listener.setChecked(widgetVariable,b);
+        }
+        else
+        {
+          widgetVariable.set(b);
+        }
+      }
+    });
+
+    final WidgetModifyListener widgetModifiedListener = (listener != null)
+      ? new WidgetModifyListener(button,widgetVariable)
+        {
+          public void modified(Widget widget, WidgetVariable variable)
+          {
+            button.setSelection(listener.getChecked(widgetVariable));
+          }
+        }
+      : new WidgetModifyListener(button,widgetVariable);
+    Widgets.addModifyListener(widgetModifiedListener);
+    button.addDisposeListener(new DisposeListener()
+    {
+      public void widgetDisposed(DisposeEvent disposedEvent)
+      {
+        Widgets.removeModifyListener(widgetModifiedListener);
+      }
+    });
+
+    if (listener != null)
+    {
+      button.setSelection(listener.getChecked(widgetVariable));
+    }
+    else
+    {
+      button.setSelection(widgetVariable.getBoolean());
+    }
+
+    return button;
+  }
+
+  /** create new radio widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param widgetVariable widget variable
+   * @param text checkbox text
+   * @return button widget
+   */
+  public static Button newRadio(Composite      parentComposite,
+                                String         toolTipText,
+                                WidgetVariable widgetVariable,
+                                String         text
+                               )
+  {
+    return newRadio(parentComposite,toolTipText,widgetVariable,(Listener)null,text);
   }
 
   /** create new byte size widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
-   * @param values combo values
    * @param listener listener or null
+   * @param values combo values
    * @return number widget
    */
   public static Combo newByteSize(Composite            parentComposite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
-                                  String[]             values,
-                                  final Listener       listener
+                                  final Listener       listener,
+                                  String[]             values
                                  )
   {
     final Shell shell = parentComposite.getShell();
@@ -510,24 +607,24 @@ public class BARWidgets
     combo = Widgets.newCombo(parentComposite);
     combo.setToolTipText(toolTipText);
     combo.setItems(values);
-    combo.setText(widgetVariable.getString());
+    combo.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
     combo.setData("showedErrorDialog",false);
 
     combo.addModifyListener(new ModifyListener()
     {
       public void modifyText(ModifyEvent modifyEvent)
       {
-        Combo widget = (Combo)modifyEvent.widget;
-        Color color  = COLOR_MODIFIED;
+        Combo  widget = (Combo)modifyEvent.widget;
+        String string = widget.getText();
 
-        String s = widget.getText();
+        Color color = COLOR_MODIFIED;
         if (listener != null)
         {
-          if (listener.getString(widgetVariable).equals(s)) color = null;
+          if (listener.getString(widgetVariable).equals(string)) color = null;
         }
         else
         {
-          if (widgetVariable.getString().equals(s)) color = null;
+          if (widgetVariable.getString().equals(string)) color = null;
         }
 /*
         try
@@ -704,15 +801,15 @@ public class BARWidgets
                                   String[]       values
                                  )
   {
-    return newByteSize(parentComposite,toolTipText,widgetVariable,values,(Listener)null);
+    return newByteSize(parentComposite,toolTipText,widgetVariable,(Listener)null,values);
   }
 
   /** create new time widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
-   * @param values combo values [text,value]
    * @param listener listener or null
+   * @param values combo values [text,value]
    * @return number widget
    */
   public static Combo newTime(Composite            parentComposite,
@@ -734,10 +831,10 @@ public class BARWidgets
     {
       public void modifyText(ModifyEvent modifyEvent)
       {
-        Combo widget = (Combo)modifyEvent.widget;
-        Color color  = COLOR_MODIFIED;
-
+        Combo  widget = (Combo)modifyEvent.widget;
         String string = widget.getText();
+
+        Color color = COLOR_MODIFIED;
         try
         {
           if (!string.isEmpty())
@@ -1047,11 +1144,13 @@ public class BARWidgets
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
-   * @return text widget
+   * @param listener listener or null
+   * @return composite
    */
   public static Composite newDirectory(Composite            parentComposite,
                                        String               toolTipText,
-                                       final WidgetVariable widgetVariable
+                                       final WidgetVariable widgetVariable,
+                                       final Listener       listener
                                       )
   {
     final Shell shell = parentComposite.getShell();
@@ -1071,11 +1170,11 @@ public class BARWidgets
       {
         public void modifyText(ModifyEvent modifyEvent)
         {
-          Text  widget = (Text)modifyEvent.widget;
-          Color color  = COLOR_MODIFIED;
+          Text   widget = (Text)modifyEvent.widget;
+          String string = widget.getText();
 
-          String s = widget.getText();
-          if (widgetVariable.getString().equals(s)) color = null;
+          Color color  = COLOR_MODIFIED;
+          if (((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString()).equals(string)) color = null;
 
           widget.setBackground(color);
         }
@@ -1159,17 +1258,33 @@ public class BARWidgets
     return composite;
   }
 
+  /** create new path name widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param widgetVariable widget variable
+   * @return composite
+   */
+  public static Composite newDirectory(Composite            parentComposite,
+                                       String               toolTipText,
+                                       final WidgetVariable widgetVariable
+                                      )
+  {
+    return newDirectory(parentComposite,toolTipText,widgetVariable,(Listener)null);
+  }
+
   /** create new file name widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
    * @param widgetVariable widget variable
+   * @param listener listener or null
    * @param fileExtensions array with {name,pattern} or null
    * @param defaultFileExtension default file extension pattern or null
-   * @return text widget
+   * @return composite
    */
   public static Composite newFile(Composite            parentComposite,
                                   String               toolTipText,
                                   final WidgetVariable widgetVariable,
+                                  final Listener       listener,
                                   final String[]       fileExtensions,
                                   final String         defaultFileExtension
                                  )
@@ -1185,17 +1300,17 @@ public class BARWidgets
     {
       text = Widgets.newText(composite,SWT.LEFT|SWT.BORDER);
       text.setToolTipText(toolTipText);
-      text.setText(widgetVariable.getString());
+      text.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
       Widgets.layout(text,0,0,TableLayoutData.WE);
       text.addModifyListener(new ModifyListener()
       {
         public void modifyText(ModifyEvent modifyEvent)
         {
-          Text  widget = (Text)modifyEvent.widget;
-          Color color  = COLOR_MODIFIED;
+          Text   widget = (Text)modifyEvent.widget;
+          String string = widget.getText();
 
-          String s = widget.getText();
-          if (widgetVariable.getString().equals(s)) color = null;
+          Color color  = COLOR_MODIFIED;
+          if (((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString()).equals(string)) color = null;
 
           widget.setBackground(color);
         }
@@ -1207,7 +1322,14 @@ public class BARWidgets
           Text widget = (Text)selectionEvent.widget;
 
           String string = widget.getText();
-          widgetVariable.set(string);
+          if (listener != null)
+          {
+            listener.setString(widgetVariable,string);
+          }
+          else
+          {
+            widgetVariable.set(string);
+          }
 
           widget.setBackground(null);
         }
@@ -1225,13 +1347,28 @@ public class BARWidgets
           Text widget = (Text)focusEvent.widget;
 
           String string = widget.getText();
-          widgetVariable.set(string);
+          if (listener != null)
+          {
+            listener.setString(widgetVariable,string);
+          }
+          else
+          {
+            widgetVariable.set(string);
+          }
 
           widget.setBackground(null);
         }
       });
 
-      final WidgetModifyListener widgetModifiedListener = new WidgetModifyListener(text,widgetVariable);
+      final WidgetModifyListener widgetModifiedListener = (listener != null)
+        ? new WidgetModifyListener(text,widgetVariable)
+          {
+            public void modified(Widget widget, WidgetVariable variable)
+            {
+              text.setText(listener.getString(widgetVariable));
+            }
+          }
+        : new WidgetModifyListener(text,widgetVariable);
       Widgets.addModifyListener(widgetModifiedListener);
       text.addDisposeListener(new DisposeListener()
       {
@@ -1283,6 +1420,30 @@ public class BARWidgets
     return composite;
   }
 
+  /** create new file name widget
+   * @param parentComposite parent composite
+   * @param toolTipText tooltip text
+   * @param widgetVariable widget variable
+   * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @return composite
+   */
+  public static Composite newFile(Composite            parentComposite,
+                                  String               toolTipText,
+                                  final WidgetVariable widgetVariable,
+                                  final String[]       fileExtensions,
+                                  final String         defaultFileExtension
+                                 )
+  {
+    return newFile(parentComposite,
+                   toolTipText,
+                   widgetVariable,
+                   (Listener)null,
+                   fileExtensions,
+                   defaultFileExtension
+                  );
+  }
+
   /** create new password widget
    * @param parentComposite parent composite
    * @param toolTipText tooltip text
@@ -1300,7 +1461,7 @@ public class BARWidgets
 
     text = Widgets.newText(parentComposite,SWT.LEFT|SWT.BORDER|SWT.PASSWORD);
     text.setToolTipText(toolTipText);
-    text.setText(widgetVariable.getString());
+    text.setText((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString());
     text.addModifyListener(new ModifyListener()
     {
       public void modifyText(ModifyEvent modifyEvent)
@@ -1309,7 +1470,7 @@ public class BARWidgets
         Color color  = COLOR_MODIFIED;
 
         String s = widget.getText();
-        if (widgetVariable.getString().equals(s)) color = null;
+        if (((listener != null) ? listener.getString(widgetVariable) : widgetVariable.getString()).equals(s)) color = null;
 
         widget.setBackground(color);
       }

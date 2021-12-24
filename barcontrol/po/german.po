@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-20 02:35+0100\n"
+"POT-Creation-Date: 2021-12-23 02:44+0100\n"
 "PO-Revision-Date: 2021-10-11 11:18+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -1693,6 +1693,7 @@ msgid "Max. number of threads"
 msgstr "Max. Anzahl von Threads"
 
 #: src/ServerSettings.java:1022
+#, fuzzy
 msgid "Max. number of compression and encryption threads."
 msgstr "Max. Anzahl von Kompressions- und Verschlüsselungsthreads."
 
@@ -1970,14 +1971,17 @@ msgid "CA file"
 msgstr "Zertifikatsdatei Zertifizierungsstelle"
 
 #: src/ServerSettings.java:1370
+#, fuzzy
 msgid "BAR certificate authority file."
 msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
 
 #: src/ServerSettings.java:1379
+#, fuzzy
 msgid "Cert file"
-msgstr "Zertifikatsdatei"
+msgstr "Zertifikatsdatei Zertifizierungsstelle"
 
 #: src/ServerSettings.java:1382
+#, fuzzy
 msgid "BAR certificate file."
 msgstr "BAR Zertifikatsdatei."
 
@@ -1986,6 +1990,7 @@ msgid "Key file"
 msgstr "Schlüsseldatei"
 
 #: src/ServerSettings.java:1394
+#, fuzzy
 msgid "BAR key file."
 msgstr "BAR Schüsseldatei."
 
@@ -2533,7 +2538,7 @@ msgstr ""
 "{0}"
 
 #: src/ServerSettings.java:3288
-#, java-format
+#, fuzzy, java-format
 msgid "Flush server options fail (error: {0})"
 msgstr "Schreiben der Server-Einstellungen fehlgeschlagen (error: {0})"
 
@@ -5927,6 +5932,50 @@ msgstr "Anzahl"
 #: src/TabStatus.java:3232
 msgid "Average time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#, fuzzy
+#~ msgid "SQLite index database"
+#~ msgstr "Indexdatenbank"
+
+#, fuzzy
+#~ msgid "MariaDB index database"
+#~ msgstr "Indexdatenbank"
+
+#, fuzzy
+#~ msgid "Server name"
+#~ msgstr "FTP-Server Name."
+
+#, fuzzy
+#~ msgid "MariaDB server name."
+#~ msgstr "FTP-Server Name."
+
+#, fuzzy
+#~ msgid "User name"
+#~ msgstr "Neuer Name"
+
+#, fuzzy
+#~ msgid "MariaDB login password."
+#~ msgstr "{0} Login Passwort"
+
+#, fuzzy
+#~ msgid "Cert"
+#~ msgstr "Zertifikatsdatei"
+
+#, fuzzy
+#~ msgid "Save settings"
+#~ msgstr "Server Einstellungen"
+
+#, fuzzy
+#~ msgid "Load settings"
+#~ msgstr "Server Einstellungen"
+
+#, fuzzy
+#~ msgid "Server:"
+#~ msgstr "Server"
+
+#, fuzzy
+#~ msgid "Password:"
+#~ msgstr "Passwort"
 
 #~ msgid "differental"
 #~ msgstr "differentiell"

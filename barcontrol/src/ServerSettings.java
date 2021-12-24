@@ -19,6 +19,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.KeyEvent;
@@ -823,6 +826,88 @@ public class ServerSettings
     }
   }
 
+  /** database specifier
+   */
+  static class DatabaseSpecifier
+  {
+    enum Types
+    {
+      SQLITE,
+      MARIADB
+    };
+
+    Types  type;
+    String fileName;
+    String serverName;
+    String userName;
+    String password;
+
+    /** parse URI and create database specifier
+     * @param uri database URI
+     */
+    public DatabaseSpecifier(String uri)
+    {
+      Matcher matcher;
+
+      if      ((matcher = Pattern.compile("^sqlite:([^:]*?)$").matcher(uri)).matches())
+      {
+        type       = Types.SQLITE;
+        fileName   = matcher.group(1);
+        serverName = "";
+        userName   = "";
+        password   = "";
+      }
+      else if ((matcher = Pattern.compile("^mariadb:([^:]*?):([^:]*?):([^:]*?)$").matcher(uri)).matches())
+      {
+        type       = Types.MARIADB;
+        fileName   = "";
+        serverName = matcher.group(1);
+        userName   = matcher.group(2);
+        password   = matcher.group(3);
+      }
+      else if ((matcher = Pattern.compile("^mariadb:([^:]*?):([^:]*?)$").matcher(uri)).matches())
+      {
+        type       = Types.MARIADB;
+        fileName   = "";
+        serverName = matcher.group(1);
+        userName   = matcher.group(2);
+        password   = "";
+      }
+      else if ((matcher = Pattern.compile("^mariadb:([^:]*?)$").matcher(uri)).matches())
+      {
+        type       = Types.MARIADB;
+        fileName   = "";
+        serverName = matcher.group(1);
+        userName   = "";
+        password   = "";
+      }
+      else
+      {
+        type       = Types.SQLITE;
+        fileName   = uri;
+        serverName = "";
+        userName   = "";
+        password   = "";
+      }
+    }
+
+    /** format datatabase specifier URI
+     * @return string
+     */
+    public String format()
+    {
+      switch (type)
+      {
+        case SQLITE:
+          return String.format("sqlite:%s",fileName);
+        case MARIADB:
+          return String.format("mariadb:%s:%s:%s",serverName,userName,password);
+        default:
+          return String.format("sqlite:%s",fileName);
+      }
+    }
+  }
+
   private static Display display;
 
   // colors
@@ -837,11 +922,11 @@ public class ServerSettings
   /** edit server settings
    * @param shell shell
    */
-  public static void serverSettings(Shell shell)
+  public static void serverSettings(final Shell shell)
   {
     TabFolder   tabFolder,subTabFolder;
     Composite   tab;
-    Composite   composite,subComposite,subSubComposite;
+    Composite   composite,subComposite,subSubComposite,subSubSubComposite;
     Label       label;
     Text        text;
     Combo       combo;
@@ -957,7 +1042,13 @@ public class ServerSettings
     // get images
     IMAGE_TOGGLE_MARK = Widgets.loadImage(display,"togglemark.png");
 
-    final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Server settings"),700,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,
+                                           BARControl.tr("Server settings"),
+                                           600,
+                                           SWT.DEFAULT,
+                                           new double[]{1.0,0.0},
+                                           1.0
+                                          );
 
     // create widgets
     tabFolder = Widgets.newTabFolder(dialog);
@@ -974,6 +1065,8 @@ public class ServerSettings
     final Button widgetRemoveServer;
     final Button widgetSave;
 
+    final BusyDialog busyDialog[] = {null};
+
     // general
     composite = Widgets.addTab(tabFolder,BARControl.tr("General"));
     composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
@@ -985,7 +1078,7 @@ public class ServerSettings
       Widgets.layout(label,row,0,TableLayoutData.W);
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
-      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
       {
         subSubComposite = BARWidgets.newDirectory(subComposite,
                                                   BARControl.tr("Path to temporary directory."),
@@ -1019,7 +1112,7 @@ public class ServerSettings
       label = Widgets.newLabel(composite,BARControl.tr("Max. number of threads")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       spinner = BARWidgets.newNumber(composite,
-                                     BARControl.tr("Max. number of compression and encryption threads."),
+                                     BARControl.tr("Max. number of compression and encryption threads.\nUse 0 for number of available cpu cores."),
                                      maxThreads,
                                      0,
                                      65535
@@ -1062,7 +1155,7 @@ public class ServerSettings
                                                 BARControl.tr("Jobs directory."),
                                                 serverJobsDirectory
                                                );
-      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
       row++;
 
       label = Widgets.newLabel(composite,BARControl.tr("Max. continuous entry size")+":");
@@ -1083,15 +1176,188 @@ public class ServerSettings
       row++;
 
       label = Widgets.newLabel(composite,BARControl.tr("Index database")+":");
-      Widgets.layout(label,row,0,TableLayoutData.W);
-      subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("Index database."),
-                                           indexDatabase,
-                                           new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                       },
-                                           "*"
-                                          );
-      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+      Widgets.layout(label,row,0,TableLayoutData.NW);
+      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
+      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      {
+        subSubComposite = Widgets.newComposite(subComposite,SWT.NONE);
+        subSubComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,0.0}));
+        Widgets.layout(subSubComposite,0,0,TableLayoutData.W);
+        {
+          button = BARWidgets.newRadio(subSubComposite,
+                                       BARControl.tr("SQLite index database"),
+                                       indexDatabase,
+                                       new BARWidgets.Listener()
+                                       {
+                                         public boolean getChecked(WidgetVariable widgetVariable)
+                                         {
+                                           DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                           return databaseSpecifier.type == DatabaseSpecifier.Types.SQLITE;
+                                         }
+                                         public void setChecked(WidgetVariable widgetVariable, boolean checked)
+                                         {
+                                           if (checked)
+                                           {
+                                             DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                             databaseSpecifier.type = DatabaseSpecifier.Types.SQLITE;
+                                             widgetVariable.set(databaseSpecifier.format());
+                                           }
+                                         }
+                                       },
+                                       BARControl.tr("SQLite")
+                                      );
+          Widgets.layout(button,0,0,TableLayoutData.W);
+          button = BARWidgets.newRadio(subSubComposite,
+                                       BARControl.tr("MariaDB index database"),
+                                       indexDatabase,
+                                       new BARWidgets.Listener()
+                                       {
+                                         public boolean getChecked(WidgetVariable widgetVariable)
+                                         {
+                                           DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                           return databaseSpecifier.type == DatabaseSpecifier.Types.MARIADB;
+                                         }
+                                         public void setChecked(WidgetVariable widgetVariable, boolean checked)
+                                         {
+                                           if (checked)
+                                           {
+                                             DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                             databaseSpecifier.type = DatabaseSpecifier.Types.MARIADB;
+                                             widgetVariable.set(databaseSpecifier.format());
+                                           }
+                                         }
+                                       },
+                                       BARControl.tr("MariaDB")
+                                      );
+          Widgets.layout(button,0,1,TableLayoutData.W);
+        }
+
+        subSubComposite = Widgets.newComposite(subComposite,Settings.hasExpertRole());
+        subSubComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+        Widgets.layout(subSubComposite,1,0,TableLayoutData.N|TableLayoutData.WE);
+        {
+          label = Widgets.newLabel(subSubComposite,BARControl.tr("File name")+":");
+          Widgets.layout(label,0,0,TableLayoutData.W);
+          subSubSubComposite = BARWidgets.newFile(subSubComposite,
+                                                  BARControl.tr("Index database."),
+                                                  indexDatabase,
+                                                  new BARWidgets.Listener()
+                                                  {
+                                                    public String getString(WidgetVariable widgetVariable)
+                                                    {
+                                                      DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                                      return databaseSpecifier.fileName;
+                                                    }
+                                                    public void setString(WidgetVariable widgetVariable, String string)
+                                                    {
+                                                      DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                                      databaseSpecifier.fileName = string;
+                                                      widgetVariable.set(databaseSpecifier.format());
+                                                    }
+                                                  },
+                                                  new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                              },
+                                                  "*"
+                                                 );
+          Widgets.layout(subSubSubComposite,0,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+        }
+        Widgets.addModifyListener(new WidgetModifyListener(subSubComposite,indexDatabase)
+        {
+          @Override
+          public void modified(Control control, WidgetVariable widgetVariable)
+          {
+            DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+            Widgets.setVisible(control,databaseSpecifier.type == DatabaseSpecifier.Types.SQLITE);
+            int width = dialog.getSize().x;
+            dialog.pack();
+            dialog.setSize(width,dialog.getSize().y);
+          }
+        });
+
+        subSubComposite = Widgets.newComposite(subComposite,Settings.hasExpertRole());
+        subSubComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+        Widgets.layout(subSubComposite,1,0,TableLayoutData.N|TableLayoutData.WE);
+        {
+          label = Widgets.newLabel(subSubComposite,BARControl.tr("Server name")+":");
+          Widgets.layout(label,0,0,TableLayoutData.W);
+          text = BARWidgets.newText(subSubComposite,
+                                    BARControl.tr("MariaDB server name."),
+                                    indexDatabase,
+                                    new BARWidgets.Listener()
+                                    {
+                                      public String getString(WidgetVariable widgetVariable)
+                                      {
+                                        DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                        return databaseSpecifier.serverName;
+                                      }
+                                      public void setString(WidgetVariable widgetVariable, String string)
+                                      {
+                                        DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                        databaseSpecifier.serverName = string;
+                                        widgetVariable.set(databaseSpecifier.format());
+                                      }
+                                    }
+                                   );
+          Widgets.layout(text,0,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+
+          label = Widgets.newLabel(subSubComposite,BARControl.tr("User name")+":");
+          Widgets.layout(label,1,0,TableLayoutData.W);
+          text = BARWidgets.newText(subSubComposite,
+                                    BARControl.tr("MariaDB user login name."),
+                                    indexDatabase,
+                                    new BARWidgets.Listener()
+                                    {
+                                      public String getString(WidgetVariable widgetVariable)
+                                      {
+                                        DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                        return databaseSpecifier.userName;
+                                      }
+                                      public void setString(WidgetVariable widgetVariable, String string)
+                                      {
+                                        DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                        databaseSpecifier.userName = string;
+                                        widgetVariable.set(databaseSpecifier.format());
+                                      }
+                                    }
+                                   );
+          Widgets.layout(text,1,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+
+          label = Widgets.newLabel(subSubComposite,BARControl.tr("Password")+":");
+          Widgets.layout(label,2,0,TableLayoutData.W);
+          text = BARWidgets.newPassword(subSubComposite,
+                                        BARControl.tr("MariaDB login password."),
+                                        indexDatabase,
+                                        new BARWidgets.Listener()
+                                        {
+                                          public String getString(WidgetVariable widgetVariable)
+                                          {
+                                            DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                            return "";
+                                          }
+                                          public void setString(WidgetVariable widgetVariable, String string)
+                                          {
+                                            DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+                                            databaseSpecifier.password = string;
+                                            widgetVariable.set(databaseSpecifier.format());
+                                          }
+                                        }
+                                       );
+          Widgets.layout(text,2,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+        }
+        Widgets.addModifyListener(new WidgetModifyListener(subSubComposite,indexDatabase)
+        {
+          @Override
+          public void modified(Control control, WidgetVariable widgetVariable)
+          {
+            DatabaseSpecifier databaseSpecifier = new DatabaseSpecifier(widgetVariable.getString());
+            Widgets.setVisible(control,databaseSpecifier.type == DatabaseSpecifier.Types.MARIADB);
+            int width = dialog.getSize().x;
+            dialog.pack();
+            dialog.setSize(width,dialog.getSize().y);
+          }
+        });
+      }
       row++;
 
       button = BARWidgets.newCheckbox(composite,
@@ -1140,7 +1406,7 @@ public class ServerSettings
       Widgets.layout(subComposite,row,1,TableLayoutData.NSWE);
       {
         widgetMaintenanceTable = Widgets.newTable(subComposite);
-        Widgets.layout(widgetMaintenanceTable,0,0,TableLayoutData.WE,0,0,0,0,SWT.DEFAULT,200);
+        Widgets.layout(widgetMaintenanceTable,0,0,TableLayoutData.WE,0,0,0,0,200,200);
         tableColumn = Widgets.addTableColumn(widgetMaintenanceTable,0,BARControl.tr("Date"),     SWT.LEFT,120,false);
         tableColumn.setToolTipText(BARControl.tr("Click to sort by date."));
         tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
@@ -1348,7 +1614,6 @@ public class ServerSettings
     // servers
     composite = Widgets.addTab(tabFolder,BARControl.tr("Servers"));
     composite.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,0.0,0.0,0.0,1.0},new double[]{0.0,1.0},2));
-    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
       row = 0;
@@ -1364,40 +1629,40 @@ public class ServerSettings
       Widgets.layout(spinner,row,1,TableLayoutData.W,0,0,0,0,70,SWT.DEFAULT);
       row++;
 
-      label = Widgets.newLabel(composite,BARControl.tr("CA file")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("CA")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("BAR certificate authority file."),
+                                           BARControl.tr("BAR certificate authority file or data."),
                                            serverCAFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
                                            "*"
                                           );
-      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
       row++;
 
-      label = Widgets.newLabel(composite,BARControl.tr("Cert file")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Cert")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("BAR certificate file."),
+                                           BARControl.tr("BAR certificate file or data."),
                                            serverCertFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
                                            "*"
                                           );
-      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
       row++;
 
-      label = Widgets.newLabel(composite,BARControl.tr("Key file")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Key")+":");
       Widgets.layout(label,row,0,TableLayoutData.W);
       subSubComposite = BARWidgets.newFile(composite,
-                                           BARControl.tr("BAR key file."),
+                                           BARControl.tr("BAR key file or data."),
                                            serverKeyFile,
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
                                            "*"
                                           );
-      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+      Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
       row++;
 
       label = Widgets.newLabel(composite,BARControl.tr("Password")+":");
@@ -1406,7 +1671,7 @@ public class ServerSettings
                                     BARControl.tr("BAR server password."),
                                     serverPassword
                                    );
-      Widgets.layout(text,row,1,TableLayoutData.WE);
+      Widgets.layout(text,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
       row++;
 
       label = Widgets.newLabel(composite,BARControl.tr("Storage servers")+":");
@@ -1414,7 +1679,7 @@ public class ServerSettings
       row++;
 
       widgetServerTable = Widgets.newTable(composite);
-      Widgets.layout(widgetServerTable,row,0,TableLayoutData.NSWE,0,2);
+      Widgets.layout(widgetServerTable,row,0,TableLayoutData.NSWE,0,2,0,0,200,200);
       tableColumn = Widgets.addTableColumn(widgetServerTable,0,BARControl.tr("Type"),SWT.LEFT, 60,false);
       tableColumn.setToolTipText(BARControl.tr("Click to sort by type."));
       tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
@@ -1658,7 +1923,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
@@ -1670,7 +1935,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Unload command")+":");
@@ -1682,7 +1947,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Load command")+":");
@@ -1694,7 +1959,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image pre-command")+":");
@@ -1706,7 +1971,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image post-command")+":");
@@ -1718,7 +1983,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image command")+":");
@@ -1730,7 +1995,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
@@ -1742,7 +2007,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
@@ -1754,7 +2019,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
@@ -1766,7 +2031,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
@@ -1778,7 +2043,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write pre-command")+":");
@@ -1790,7 +2055,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write post-command")+":");
@@ -1802,7 +2067,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write command")+":");
@@ -1814,7 +2079,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image write command")+":");
@@ -1826,7 +2091,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
       }
 
@@ -1844,7 +2109,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
@@ -1856,7 +2121,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Unload command")+":");
@@ -1868,7 +2133,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Load command")+":");
@@ -1880,7 +2145,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image pre-command")+":");
@@ -1892,7 +2157,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image post-command")+":");
@@ -1904,7 +2169,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image command")+":");
@@ -1916,7 +2181,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
@@ -1928,7 +2193,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
@@ -1940,7 +2205,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
@@ -1952,7 +2217,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
@@ -1964,7 +2229,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write pre-command")+":");
@@ -1976,7 +2241,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write post-command")+":");
@@ -1988,7 +2253,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write command")+":");
@@ -2000,7 +2265,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image write command")+":");
@@ -2012,7 +2277,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
       }
 
@@ -2031,7 +2296,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
@@ -2043,7 +2308,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Unload command")+":");
@@ -2055,7 +2320,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Load command")+":");
@@ -2067,7 +2332,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image pre-command")+":");
@@ -2079,7 +2344,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image post-command")+":");
@@ -2091,7 +2356,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image command")+":");
@@ -2103,7 +2368,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
@@ -2115,7 +2380,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
@@ -2127,7 +2392,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
@@ -2139,7 +2404,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
@@ -2151,7 +2416,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write pre-command")+":");
@@ -2163,7 +2428,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write post-command")+":");
@@ -2175,7 +2440,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write command")+":");
@@ -2187,7 +2452,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image write command")+":");
@@ -2199,7 +2464,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
       }
 
@@ -2218,7 +2483,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Request medium command")+":");
@@ -2230,7 +2495,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Unload command")+":");
@@ -2242,7 +2507,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Load command")+":");
@@ -2254,7 +2519,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image pre-command")+":");
@@ -2266,7 +2531,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image post-command")+":");
@@ -2278,7 +2543,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Image command")+":");
@@ -2290,7 +2555,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
@@ -2302,7 +2567,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
@@ -2314,7 +2579,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
@@ -2326,7 +2591,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Blank command")+":");
@@ -2338,7 +2603,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write pre-command")+":");
@@ -2350,7 +2615,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write post-command")+":");
@@ -2362,7 +2627,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Write command")+":");
@@ -2374,7 +2639,7 @@ public class ServerSettings
                                                          },
                                              "*"
                                             );
-        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE);
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
         row++;
       }
     }
@@ -2382,7 +2647,6 @@ public class ServerSettings
     // output+log
     composite = Widgets.addTab(tabFolder,BARControl.tr("Output && Log"));
     composite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
-    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Verbosity level")+":");
@@ -2406,7 +2670,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log errors."),
                                         log,
-                                        BARControl.tr("errors"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2432,7 +2695,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("errors")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2440,7 +2704,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log warnings."),
                                         log,
-                                        BARControl.tr("warnings"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2466,7 +2729,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("warnings")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2474,7 +2738,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log info."),
                                         log,
-                                        BARControl.tr("info"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2500,7 +2763,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("info")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2508,7 +2772,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log stored/restored files."),
                                         log,
-                                        BARControl.tr("ok"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2534,7 +2797,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("ok")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2542,7 +2806,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log unknown files."),
                                         log,
-                                        BARControl.tr("unknown files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2568,7 +2831,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("unknown files")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2576,7 +2840,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log skipped files."),
                                         log,
-                                        BARControl.tr("skipped files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2602,7 +2865,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("skipped files")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2610,7 +2874,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log missing files."),
                                         log,
-                                        BARControl.tr("missing files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2636,7 +2899,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("missing files")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2644,7 +2908,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log incomplete files."),
                                         log,
-                                        BARControl.tr("incomplete files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2670,7 +2933,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("incomplete files")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2678,7 +2942,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log excluded files."),
                                         log,
-                                        BARControl.tr("excluded files"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2704,7 +2967,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("excluded files")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2712,7 +2976,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log storage operations."),
                                         log,
-                                        BARControl.tr("storage operations"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2738,7 +3001,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("storage operations")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2746,7 +3010,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log index operations."),
                                         log,
-                                        BARControl.tr("index operations"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2772,7 +3035,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("index operations")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2780,7 +3044,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("Log continuous operations."),
                                         log,
-                                        BARControl.tr("continuous operations"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2806,7 +3069,8 @@ public class ServerSettings
 
                                             widgetVariable.set(StringUtils.join(values,","));
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("continuous operations")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2814,7 +3078,6 @@ public class ServerSettings
         button = BARWidgets.newCheckbox(subComposite,
                                         BARControl.tr("all"),
                                         log,
-                                        BARControl.tr("all"),
                                         new BARWidgets.Listener()
                                         {
                                           public boolean getChecked(WidgetVariable widgetVariable)
@@ -2830,7 +3093,8 @@ public class ServerSettings
                                               widgetVariable.set("all");
                                             }
                                           }
-                                        }
+                                        },
+                                        BARControl.tr("all")
                                        );
         Widgets.layout(button,row,0,TableLayoutData.W);
         row++;
@@ -2846,7 +3110,7 @@ public class ServerSettings
                                                     },
                                         "*.log"
                                        );
-      Widgets.layout(subComposite,2,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,2,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
 
       label = Widgets.newLabel(composite,BARControl.tr("Log format")+":");
       Widgets.layout(label,3,0,TableLayoutData.W);
@@ -2854,7 +3118,7 @@ public class ServerSettings
                                 BARControl.tr("Log format string."),
                                 logFormat
                                );
-      Widgets.layout(text,3,1,TableLayoutData.WE);
+      Widgets.layout(text,3,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
 
       label = Widgets.newLabel(composite,BARControl.tr("Log post command")+":");
       Widgets.layout(label,4,0,TableLayoutData.W);
@@ -2865,7 +3129,7 @@ public class ServerSettings
                                                     },
                                         "*"
                                        );
-      Widgets.layout(subComposite,4,1,TableLayoutData.WE);
+      Widgets.layout(subComposite,4,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
     }
 
     // buttons
@@ -2968,216 +3232,233 @@ public class ServerSettings
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
+
+        busyDialog[0] = new BusyDialog(shell,
+                                       BARControl.tr("Save settings"),
+                                       300,
+                                       SWT.DEFAULT,
+                                       BusyDialog.AUTO_ANIMATE
+                                      );
+
         Dialogs.close(dialog,true);
       }
     });
 
-    BARServer.getServerOption(tmpDirectory               );
-    BARServer.getServerOption(maxTmpSize                 );
-    BARServer.getServerOption(niceLevel                  );
-    BARServer.getServerOption(maxThreads                 );
-//    BARServer.getServerOption(maxBandWidth               );
-    BARServer.getServerOption(compressMinSize            );
-
-    BARServer.getServerOption(continuousMaxSize          );
-
-    BARServer.getServerOption(indexDatabase              );
-    BARServer.getServerOption(indexDatabaseUpdate        );
-    BARServer.getServerOption(indexDatabaseAutoUpdate    );
-//    BARServer.getServerOption(indexDatabaseMaxBandWidth  );
-    BARServer.getServerOption(indexDatabaseKeepTime      );
-
-    BARServer.getServerOption(cdDevice                   );
-    BARServer.getServerOption(cdRequestVolumeCommand     );
-    BARServer.getServerOption(cdUnloadCommand            );
-    BARServer.getServerOption(cdLoadCommand              );
-    BARServer.getServerOption(cdVolumeSize               );
-    BARServer.getServerOption(cdImagePreCommand          );
-    BARServer.getServerOption(cdImagePostCommand         );
-    BARServer.getServerOption(cdImageCommandCommand      );
-    BARServer.getServerOption(cdECCPreCommand            );
-    BARServer.getServerOption(cdECCPostCommand           );
-    BARServer.getServerOption(cdECCCommand               );
-    BARServer.getServerOption(cdBlankCommand             );
-    BARServer.getServerOption(cdWritePreCommand          );
-    BARServer.getServerOption(cdWritePostCommand         );
-    BARServer.getServerOption(cdWriteCommand             );
-    BARServer.getServerOption(cdWriteImageCommand        );
-
-    BARServer.getServerOption(dvdDevice                  );
-    BARServer.getServerOption(dvdRequestVolumeCommand    );
-    BARServer.getServerOption(dvdUnloadCommand           );
-    BARServer.getServerOption(dvdLoadCommand             );
-    BARServer.getServerOption(dvdVolumeSize              );
-    BARServer.getServerOption(dvdImagePreCommand         );
-    BARServer.getServerOption(dvdImagePostCommand        );
-    BARServer.getServerOption(dvdImageCommandCommand     );
-    BARServer.getServerOption(dvdECCPreCommand           );
-    BARServer.getServerOption(dvdECCPostCommand          );
-    BARServer.getServerOption(dvdECCCommand              );
-    BARServer.getServerOption(dvdBlankCommand            );
-    BARServer.getServerOption(dvdWritePreCommand         );
-    BARServer.getServerOption(dvdWritePostCommand        );
-    BARServer.getServerOption(dvdWriteCommand            );
-    BARServer.getServerOption(dvdWriteImageCommand       );
-
-    BARServer.getServerOption(bdDevice                   );
-    BARServer.getServerOption(bdRequestVolumeCommand     );
-    BARServer.getServerOption(bdUnloadCommand            );
-    BARServer.getServerOption(bdLoadCommand              );
-    BARServer.getServerOption(bdVolumeSize               );
-    BARServer.getServerOption(bdImagePreCommand          );
-    BARServer.getServerOption(bdImagePostCommand         );
-    BARServer.getServerOption(bdImageCommandCommand      );
-    BARServer.getServerOption(bdECCPreCommand            );
-    BARServer.getServerOption(bdECCPostCommand           );
-    BARServer.getServerOption(bdECCCommand               );
-    BARServer.getServerOption(bdBlankCommand             );
-    BARServer.getServerOption(bdWritePreCommand          );
-    BARServer.getServerOption(bdWritePostCommand         );
-    BARServer.getServerOption(bdWriteCommand             );
-    BARServer.getServerOption(bdWriteImageCommand        );
-
-    BARServer.getServerOption(deviceName                 );
-    BARServer.getServerOption(deviceRequestVolumeCommand );
-    BARServer.getServerOption(deviceUnloadCommand        );
-    BARServer.getServerOption(deviceLoadCommand          );
-    BARServer.getServerOption(deviceVolumeSize           );
-    BARServer.getServerOption(deviceImagePreCommand      );
-    BARServer.getServerOption(deviceImagePostCommand     );
-    BARServer.getServerOption(deviceImageCommandCommand  );
-    BARServer.getServerOption(deviceECCPreCommand        );
-    BARServer.getServerOption(deviceECCPostCommand       );
-    BARServer.getServerOption(deviceECCCommand           );
-    BARServer.getServerOption(deviceBlankCommand         );
-    BARServer.getServerOption(deviceWritePreCommand      );
-    BARServer.getServerOption(deviceWritePostCommand     );
-    BARServer.getServerOption(deviceWriteCommand         );
-
-    BARServer.getServerOption(serverPort                 );
-//    BARServer.getServerOption(serverTLSPort              );
-    BARServer.getServerOption(serverCAFile               );
-    BARServer.getServerOption(serverCertFile             );
-    BARServer.getServerOption(serverKeyFile              );
-    BARServer.getServerOption(serverPassword             );
-    BARServer.getServerOption(serverJobsDirectory        );
-
-    BARServer.getServerOption(verbose                    );
-    BARServer.getServerOption(log                        );
-    BARServer.getServerOption(logFile                    );
-    BARServer.getServerOption(logFormat                  );
-    BARServer.getServerOption(logPostCommand             );
-
-    Widgets.removeAllTableItems(widgetMaintenanceTable);
-    try
+    busyDialog[0] = new BusyDialog(shell,
+                                   BARControl.tr("Load settings"),
+                                   300,
+                                   SWT.DEFAULT,
+                                   BusyDialog.AUTO_ANIMATE
+                                  );
     {
-      BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST"),
-                               0,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
-                                   throws BARException
+      BARServer.getServerOption(tmpDirectory               );
+      BARServer.getServerOption(maxTmpSize                 );
+      BARServer.getServerOption(niceLevel                  );
+      BARServer.getServerOption(maxThreads                 );
+  //    BARServer.getServerOption(maxBandWidth               );
+      BARServer.getServerOption(compressMinSize            );
+
+      BARServer.getServerOption(continuousMaxSize          );
+
+      BARServer.getServerOption(indexDatabase              );
+      BARServer.getServerOption(indexDatabaseUpdate        );
+      BARServer.getServerOption(indexDatabaseAutoUpdate    );
+  //    BARServer.getServerOption(indexDatabaseMaxBandWidth  );
+      BARServer.getServerOption(indexDatabaseKeepTime      );
+
+      BARServer.getServerOption(cdDevice                   );
+      BARServer.getServerOption(cdRequestVolumeCommand     );
+      BARServer.getServerOption(cdUnloadCommand            );
+      BARServer.getServerOption(cdLoadCommand              );
+      BARServer.getServerOption(cdVolumeSize               );
+      BARServer.getServerOption(cdImagePreCommand          );
+      BARServer.getServerOption(cdImagePostCommand         );
+      BARServer.getServerOption(cdImageCommandCommand      );
+      BARServer.getServerOption(cdECCPreCommand            );
+      BARServer.getServerOption(cdECCPostCommand           );
+      BARServer.getServerOption(cdECCCommand               );
+      BARServer.getServerOption(cdBlankCommand             );
+      BARServer.getServerOption(cdWritePreCommand          );
+      BARServer.getServerOption(cdWritePostCommand         );
+      BARServer.getServerOption(cdWriteCommand             );
+      BARServer.getServerOption(cdWriteImageCommand        );
+
+      BARServer.getServerOption(dvdDevice                  );
+      BARServer.getServerOption(dvdRequestVolumeCommand    );
+      BARServer.getServerOption(dvdUnloadCommand           );
+      BARServer.getServerOption(dvdLoadCommand             );
+      BARServer.getServerOption(dvdVolumeSize              );
+      BARServer.getServerOption(dvdImagePreCommand         );
+      BARServer.getServerOption(dvdImagePostCommand        );
+      BARServer.getServerOption(dvdImageCommandCommand     );
+      BARServer.getServerOption(dvdECCPreCommand           );
+      BARServer.getServerOption(dvdECCPostCommand          );
+      BARServer.getServerOption(dvdECCCommand              );
+      BARServer.getServerOption(dvdBlankCommand            );
+      BARServer.getServerOption(dvdWritePreCommand         );
+      BARServer.getServerOption(dvdWritePostCommand        );
+      BARServer.getServerOption(dvdWriteCommand            );
+      BARServer.getServerOption(dvdWriteImageCommand       );
+
+      BARServer.getServerOption(bdDevice                   );
+      BARServer.getServerOption(bdRequestVolumeCommand     );
+      BARServer.getServerOption(bdUnloadCommand            );
+      BARServer.getServerOption(bdLoadCommand              );
+      BARServer.getServerOption(bdVolumeSize               );
+      BARServer.getServerOption(bdImagePreCommand          );
+      BARServer.getServerOption(bdImagePostCommand         );
+      BARServer.getServerOption(bdImageCommandCommand      );
+      BARServer.getServerOption(bdECCPreCommand            );
+      BARServer.getServerOption(bdECCPostCommand           );
+      BARServer.getServerOption(bdECCCommand               );
+      BARServer.getServerOption(bdBlankCommand             );
+      BARServer.getServerOption(bdWritePreCommand          );
+      BARServer.getServerOption(bdWritePostCommand         );
+      BARServer.getServerOption(bdWriteCommand             );
+      BARServer.getServerOption(bdWriteImageCommand        );
+
+      BARServer.getServerOption(deviceName                 );
+      BARServer.getServerOption(deviceRequestVolumeCommand );
+      BARServer.getServerOption(deviceUnloadCommand        );
+      BARServer.getServerOption(deviceLoadCommand          );
+      BARServer.getServerOption(deviceVolumeSize           );
+      BARServer.getServerOption(deviceImagePreCommand      );
+      BARServer.getServerOption(deviceImagePostCommand     );
+      BARServer.getServerOption(deviceImageCommandCommand  );
+      BARServer.getServerOption(deviceECCPreCommand        );
+      BARServer.getServerOption(deviceECCPostCommand       );
+      BARServer.getServerOption(deviceECCCommand           );
+      BARServer.getServerOption(deviceBlankCommand         );
+      BARServer.getServerOption(deviceWritePreCommand      );
+      BARServer.getServerOption(deviceWritePostCommand     );
+      BARServer.getServerOption(deviceWriteCommand         );
+
+      BARServer.getServerOption(serverPort                 );
+  //    BARServer.getServerOption(serverTLSPort              );
+      BARServer.getServerOption(serverCAFile               );
+      BARServer.getServerOption(serverCertFile             );
+      BARServer.getServerOption(serverKeyFile              );
+      BARServer.getServerOption(serverPassword             );
+      BARServer.getServerOption(serverJobsDirectory        );
+
+      BARServer.getServerOption(verbose                    );
+      BARServer.getServerOption(log                        );
+      BARServer.getServerOption(logFile                    );
+      BARServer.getServerOption(logFormat                  );
+      BARServer.getServerOption(logPostCommand             );
+
+      Widgets.removeAllTableItems(widgetMaintenanceTable);
+      try
+      {
+        BARServer.executeCommand(StringParser.format("MAINTENANCE_LIST"),
+                                 0,  // debugLevel
+                                 new Command.ResultHandler()
                                  {
-                                   // get data
-                                   int    id        = valueMap.getInt   ("id"       );
-                                   String date      = valueMap.getString("date"     );
-                                   String weekDays  = valueMap.getString("weekDays" );
-                                   String beginTime = valueMap.getString("beginTime");
-                                   String endTime   = valueMap.getString("endTime"  );
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                     throws BARException
+                                   {
+                                     // get data
+                                     int    id        = valueMap.getInt   ("id"       );
+                                     String date      = valueMap.getString("date"     );
+                                     String weekDays  = valueMap.getString("weekDays" );
+                                     String beginTime = valueMap.getString("beginTime");
+                                     String endTime   = valueMap.getString("endTime"  );
 
-                                   // create server data
-                                   MaintenanceData maintenanceData = new MaintenanceData(id,date,weekDays,beginTime,endTime);
+                                     // create server data
+                                     MaintenanceData maintenanceData = new MaintenanceData(id,date,weekDays,beginTime,endTime);
 
-                                   // add table entry
-                                   Widgets.insertTableItem(widgetMaintenanceTable,
-                                                           maintenanceDataComparator,
-                                                           maintenanceData,
-                                                           maintenanceData.getDate(),
-                                                           maintenanceData.getWeekDays(),
-                                                           maintenanceData.getBeginTime(),
-                                                           maintenanceData.getEndTime()
-                                                          );
+                                     // add table entry
+                                     Widgets.insertTableItem(widgetMaintenanceTable,
+                                                             maintenanceDataComparator,
+                                                             maintenanceData,
+                                                             maintenanceData.getDate(),
+                                                             maintenanceData.getWeekDays(),
+                                                             maintenanceData.getBeginTime(),
+                                                             maintenanceData.getEndTime()
+                                                            );
+                                   }
                                  }
-                               }
-                              );
-    }
-    catch (Exception exception)
-    {
-      Dialogs.error(dialog,BARControl.tr("Get maintenance list fail:\n\n{0}",exception.getMessage()));
-      return;
-    }
+                                );
+      }
+      catch (Exception exception)
+      {
+        Dialogs.error(dialog,BARControl.tr("Get maintenance list fail:\n\n{0}",exception.getMessage()));
+        return;
+      }
 
-    Widgets.removeAllTableItems(widgetServerTable);
-    ServerData serverData;
-    serverData = new ServerData(0,"default",ServerTypes.FTP);
-    Widgets.insertTableItem(widgetServerTable,
-                            serverDataComparator,
-                            serverData,
-                            ServerTypes.FTP.toString(),
-                            "default",
-                            (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                            (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                           );
-    serverData = new ServerData(0,"default",ServerTypes.SSH);
-    Widgets.insertTableItem(widgetServerTable,
-                            serverDataComparator,
-                            serverData,
-                            ServerTypes.SSH.toString(),
-                            "default",
-                            (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                            (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                           );
-    serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
-    Widgets.insertTableItem(widgetServerTable,
-                            serverDataComparator,
-                            serverData,
-                            ServerTypes.WEBDAV.toString(),
-                            "default",
-                            (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                            (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                           );
+      Widgets.removeAllTableItems(widgetServerTable);
+      ServerData serverData;
+      serverData = new ServerData(0,"default",ServerTypes.FTP);
+      Widgets.insertTableItem(widgetServerTable,
+                              serverDataComparator,
+                              serverData,
+                              ServerTypes.FTP.toString(),
+                              "default",
+                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                             );
+      serverData = new ServerData(0,"default",ServerTypes.SSH);
+      Widgets.insertTableItem(widgetServerTable,
+                              serverDataComparator,
+                              serverData,
+                              ServerTypes.SSH.toString(),
+                              "default",
+                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                             );
+      serverData = new ServerData(0,"default",ServerTypes.WEBDAV);
+      Widgets.insertTableItem(widgetServerTable,
+                              serverDataComparator,
+                              serverData,
+                              ServerTypes.WEBDAV.toString(),
+                              "default",
+                              (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                              (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                             );
 
-    try
-    {
-      BARServer.executeCommand(StringParser.format("SERVER_LIST"),
-                               0,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
-                                   throws BARException
+      try
+      {
+        BARServer.executeCommand(StringParser.format("SERVER_LIST"),
+                                 0,  // debugLevel
+                                 new Command.ResultHandler()
                                  {
-                                   // get data
-                                   int         id                 = valueMap.getInt   ("id"                          );
-                                   String      name               = valueMap.getString("name"                        );
-                                   ServerTypes serverType         = valueMap.getEnum  ("serverType",ServerTypes.class);
-                                   int         port               = valueMap.getInt   ("port",0                      );
-                                   String      loginName          = valueMap.getString("loginName",""                );
-                                   int         maxConnectionCount = valueMap.getInt   ("maxConnectionCount",0        );
-                                   long        maxStorageSize     = valueMap.getLong  ("maxStorageSize"              );
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                     throws BARException
+                                   {
+                                     // get data
+                                     int         id                 = valueMap.getInt   ("id"                          );
+                                     String      name               = valueMap.getString("name"                        );
+                                     ServerTypes serverType         = valueMap.getEnum  ("serverType",ServerTypes.class);
+                                     int         port               = valueMap.getInt   ("port",0                      );
+                                     String      loginName          = valueMap.getString("loginName",""                );
+                                     int         maxConnectionCount = valueMap.getInt   ("maxConnectionCount",0        );
+                                     long        maxStorageSize     = valueMap.getLong  ("maxStorageSize"              );
 
-                                   // create server data
-                                   ServerData serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
+                                     // create server data
+                                     ServerData serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
 
-                                   // add table entry
-                                   Widgets.insertTableItem(widgetServerTable,
-                                                           serverDataComparator,
-                                                           serverData,
-                                                           serverType.toString(),
-                                                           serverData.name,
-                                                           (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                                           (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                                                          );
+                                     // add table entry
+                                     Widgets.insertTableItem(widgetServerTable,
+                                                             serverDataComparator,
+                                                             serverData,
+                                                             serverType.toString(),
+                                                             serverData.name,
+                                                             (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                                             (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                                            );
+                                   }
                                  }
-                               }
-                              );
+                                );
+      }
+      catch (Exception exception)
+      {
+        Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getMessage()));
+        return;
+      }
     }
-    catch (Exception exception)
-    {
-      Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getMessage()));
-      return;
-    }
+    busyDialog[0].close();
 
     if ((Boolean)Dialogs.run(dialog,false))
     {
@@ -3280,12 +3561,14 @@ public class ServerSettings
         BARServer.setServerOption(logPostCommand             );
 
         BARServer.flushServerOption();
+
+        busyDialog[0].close();
       }
       catch (Exception exception)
       {
         if (!shell.isDisposed())
         {
-          Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",exception.getMessage()));
+          Dialogs.error(shell,BARControl.tr("Save server options fail (error: {0})",exception.getMessage()));
         }
       }
     }
