@@ -15172,7 +15172,11 @@ throw new Error("NYI");
    */
   private void testScript(String name, String script)
   {
-    final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Test script"),500,300,BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+    final BusyDialog busyDialog = new BusyDialog(shell,
+                                                 BARControl.tr("Test script"),
+                                                 500,300,
+                                                 BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE
+                                                );
 
     String[] errorMessage = new String[1];
     ValueMap valueMap     = new ValueMap();

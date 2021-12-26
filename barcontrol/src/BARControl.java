@@ -2338,7 +2338,7 @@ if (false) {
                                       BARControl.tr("Connect"),
                                       400,
                                       60,
-                                      BARControl.tr("Try to connect to ''"+serverName+"''\u2026"),
+                                      BARControl.tr("Try to connect to ''")+serverName+"'\u2026",
                                       BusyDialog.AUTO_ANIMATE
                                      );
         }
@@ -3297,7 +3297,11 @@ if (false) {
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
 
-            final BusyDialog busyDialog = new BusyDialog(shell,"Print debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
+            final BusyDialog busyDialog = new BusyDialog(shell,
+                                                         BARControl.tr("Print debug memory dump"),
+                                                         500,100,
+                                                         BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0
+                                                        );
             Background.run(new BackgroundRunnable(busyDialog)
             {
               public void run(final BusyDialog busyDialog)
@@ -3364,7 +3368,11 @@ if (false) {
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
 
-            final BusyDialog busyDialog = new BusyDialog(shell,"Store debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
+            final BusyDialog busyDialog = new BusyDialog(shell,
+                                                         BARControl.tr("Store debug memory dump"),
+                                                         500,100,
+                                                         BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE
+                                                        );
             Background.run(new BackgroundRunnable(busyDialog)
             {
               public void run(final BusyDialog busyDialog)
