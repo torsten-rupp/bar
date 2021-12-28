@@ -20233,6 +20233,7 @@ Errors Server_socket(void)
   {
     indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+    printInfo(1,"Index database opened\n");
   }
 
   // init server sockets
@@ -20445,6 +20446,10 @@ Errors Server_socket(void)
   }
 
   // Note: ignore SIGALRM in Misc_waitHandles()
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Ready"
+            );
   printInfo(1,"Ready\n");
   MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
