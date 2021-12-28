@@ -427,6 +427,10 @@ public class BusyDialog
     dialog.open();
     if (widgetAbortCloseButton != null) widgetAbortCloseButton.setFocus();
     display.update();
+    while (display.readAndDispatch())
+    {
+      // nothing to do
+    }
   }
 
   /** create busy dialog

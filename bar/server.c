@@ -20199,9 +20199,14 @@ Errors Server_socket(void)
   if (!stringIsEmpty(globalOptions.indexDatabaseURI))
   {
     DatabaseSpecifier databaseSpecifier;
+    bool              validURIPrefix;
     String            printableDatabaseURI;
 
-    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME,&validURIPrefix);
+    if (!validURIPrefix)
+    {
+      printWarning("No valid prefix in database URI");
+    }
     printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
 
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
@@ -20228,6 +20233,7 @@ Errors Server_socket(void)
   {
     indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+    printInfo(1,"Index database opened\n");
   }
 
   // init server sockets
@@ -20440,6 +20446,10 @@ Errors Server_socket(void)
   }
 
   // Note: ignore SIGALRM in Misc_waitHandles()
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Ready"
+            );
   printInfo(1,"Ready\n");
   MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
@@ -21028,9 +21038,14 @@ Errors Server_batch(int inputDescriptor,
   if (!stringIsEmpty(globalOptions.indexDatabaseURI))
   {
     DatabaseSpecifier databaseSpecifier;
+    bool              validURIPrefix;
     String            printableDatabaseURI;
 
-    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME,&validURIPrefix);
+    if (!validURIPrefix)
+    {
+      printWarning("No valid prefix in database URI");
+    }
     printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
 
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));

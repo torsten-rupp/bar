@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-12-20 02:35+0100\n"
+"POT-Creation-Date: 2021-12-23 02:44+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -1906,8 +1906,9 @@ msgid "Max. number of threads"
 msgstr "リストのエントリ最大数"
 
 #: src/ServerSettings.java:1022
+#, fuzzy
 msgid "Max. number of compression and encryption threads."
-msgstr ""
+msgstr "リストのエントリ最大数"
 
 #: src/ServerSettings.java:1042
 #, fuzzy
@@ -2205,7 +2206,7 @@ msgstr "ソースファイル選択"
 #: src/ServerSettings.java:1379
 #, fuzzy
 msgid "Cert file"
-msgstr "ソースファイル選択"
+msgstr "すべてのファイル"
 
 #: src/ServerSettings.java:1382
 #, fuzzy
@@ -2220,7 +2221,7 @@ msgstr "ファイル"
 #: src/ServerSettings.java:1394
 #, fuzzy
 msgid "BAR key file."
-msgstr "ファイル"
+msgstr "すべてのファイル"
 
 #: src/ServerSettings.java:1406
 #, fuzzy
@@ -2793,9 +2794,9 @@ msgid ""
 msgstr "サーバ"
 
 #: src/ServerSettings.java:3288
-#, java-format
+#, fuzzy, java-format
 msgid "Flush server options fail (error: {0})"
-msgstr ""
+msgstr "サーバ"
 
 #: src/ServerSettings.java:3329 src/TabJobs.java:15426
 msgid "Year to execute job. Leave to '*' for each year."
@@ -6241,6 +6242,49 @@ msgid "Average time"
 msgstr "現存エントリの上書き"
 
 #, fuzzy
+#~ msgid "SQLite index database"
+#~ msgstr "保存ファイルをインデックス・データベースに追加"
+
+#, fuzzy
+#~ msgid "MariaDB index database"
+#~ msgstr "保存ファイルをインデックス・データベースに追加"
+
+#, fuzzy
+#~ msgid "Server name"
+#~ msgstr "FTPサーバ名"
+
+#, fuzzy
+#~ msgid "MariaDB server name."
+#~ msgstr "FTPサーバ名"
+
+#, fuzzy
+#~ msgid "User name"
+#~ msgstr "新しい名称"
+
+#, fuzzy
+#~ msgid "MariaDB login password."
+#~ msgstr "FTPログインパスワード"
+
+#, fuzzy
+#~ msgid "Cert"
+#~ msgstr "ソースファイル選択"
+
+#, fuzzy
+#~ msgid "BAR key file or data."
+#~ msgstr "ファイル"
+
+#, fuzzy
+#~ msgid "Server:"
+#~ msgstr "サーバ"
+
+#, fuzzy
+#~ msgid "User:"
+#~ msgstr "ユーザー"
+
+#~ msgid "Password:"
+#~ msgstr "パスワード"
+
+#, fuzzy
 #~ msgid "differental"
 #~ msgstr "差分"
 
@@ -6771,9 +6815,6 @@ msgstr "現存エントリの上書き"
 #~ msgid "RestoreX"
 #~ msgstr "復元"
 
-#~ msgid "User"
-#~ msgstr "ユーザー"
-
 #~ msgid "Host"
 #~ msgstr "ホスト"
 
@@ -6956,10 +6997,6 @@ msgstr "現存エントリの上書き"
 #, fuzzy
 #~ msgid "new continuous"
 #~ msgstr "先へ"
-
-#, fuzzy
-#~ msgid "BAR CA file."
-#~ msgstr "すべてのファイル"
 
 #, fuzzy
 #~ msgid "{0} ({1} {2,choice,0#bytes|1#byte|1<bytes})"
@@ -7155,6 +7192,3 @@ msgstr "現存エントリの上書き"
 
 #~ msgid "Execute job with default type."
 #~ msgstr "デフォルトタイプでタスク実行。"
-
-#~ msgid "Password:"
-#~ msgstr "パスワード"

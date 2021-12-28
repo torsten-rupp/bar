@@ -246,7 +246,7 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
           print CFILE_HANDLE "\n";
         }
-        elsif ($suffix eq "MYSQL")
+        elsif ($suffix eq "MARIADB")
         {
           push(@indexNames, $indexName);
           push(@definitions, "INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName));
@@ -359,7 +359,7 @@ sub processFile($$)
             print CFILE_HANDLE "\"\n";
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)." = INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)."_;\n";
           }
-          elsif ($suffix eq "MYSQL")
+          elsif ($suffix eq "MARIADB")
           {
             push(@triggerNames, $triggerName);
             push(@definitions, "INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName));
@@ -413,7 +413,7 @@ sub processFile($$)
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
             print CFILE_HANDLE "\n";
           }
-          elsif ($suffix eq "MYSQL")
+          elsif ($suffix eq "MARIADB")
           {
             push(@tableNames, $tableName);
             push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
@@ -450,7 +450,7 @@ sub processFile($$)
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
             print CFILE_HANDLE "\n";
           }
-          elsif ($suffix eq "MYSQL")
+          elsif ($suffix eq "MARIADB")
           {
             push(@ftsTableNames, $tableName);
             push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
@@ -514,7 +514,7 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
           print CFILE_HANDLE "\n";
         }
-        elsif ($suffix eq "MYSQL")
+        elsif ($suffix eq "MARIADB")
         {
           push(@tableNames, $tableName);
           push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
@@ -555,7 +555,7 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
           print CFILE_HANDLE "\n";
         }
-        elsif ($suffix eq "MYSQL")
+        elsif ($suffix eq "MARIADB")
         {
           push(@ftsTableNames, $tableName);
           push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
@@ -613,7 +613,7 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
         }
-        elsif ($suffix eq "MYSQL")
+        elsif ($suffix eq "MARIADB")
         {
           print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
@@ -644,7 +644,7 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
         }
-        elsif ($suffix eq "MYSQL")
+        elsif ($suffix eq "MARIADB")
         {
           print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
@@ -675,7 +675,7 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
         }
-        elsif ($suffix eq "MYSQL")
+        elsif ($suffix eq "MARIADB")
         {
           print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
@@ -855,12 +855,12 @@ sub processFile($$)
 # ------------------------------ main program  -------------------------------
 
 # get options
-GetOptions("common=s" => \$commonFileName,
-           "sqlite=s" => \$sqliteFileName,
-           "mysql=s"  => \$mysqlFileName,
-           "source=s" => \$cFileName,
-           "header=s" => \$hFileName,
-           "help"     => \$help
+GetOptions("common=s"  => \$commonFileName,
+           "sqlite=s"  => \$sqliteFileName,
+           "mariadb=s" => \$mariadbFileName,
+           "source=s"  => \$cFileName,
+           "header=s"  => \$hFileName,
+           "help"      => \$help
           );
 
 # help
@@ -868,12 +868,12 @@ if ($help == 1)
 {
   print "Usage: $0 <options>\n";
   print "\n";
-  print "Options: --common <file name> - comon definition file\n";
-  print "         --sqlite <file name> - SqLite definition file\n";
-  print "         --mysql <file name>  - MySQL definition file\n";
-  print "         --source <file name> - C source file\n";
-  print "         --header <file name> - C header file\n";
-  print "         --help               - output this help\n";
+  print "Options: --common <file name>  - comon definition file\n";
+  print "         --sqlite <file name>  - SqLite definition file\n";
+  print "         --mariadb <file name> - MariaDB definition file\n";
+  print "         --source <file name>  - C source file\n";
+  print "         --header <file name>  - C header file\n";
+  print "         --help                - output this help\n";
   exit 0;
 }
 
@@ -922,7 +922,7 @@ print CFILE_HANDLE "/* This file is auto-generated by index_definition.pl. Do NO
 
 processFile($commonFileName,"");
 processFile($sqliteFileName,"SQLITE");
-processFile($mysqlFileName,"MYSQL");
+processFile($mariadbFileName,"MARIADB");
 
 print HFILE_HANDLE "
 
@@ -942,47 +942,47 @@ print CFILE_HANDLE "\
 const IndexDefinitions INDEX_DEFINITIONS[] =
 {
   INDEX_DEFINITIONS_SQLITE,
-  INDEX_DEFINITIONS_MYSQL
+  INDEX_DEFINITIONS_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_TABLES[] =
 {
   INDEX_DEFINITION_TABLES_SQLITE,
-  INDEX_DEFINITION_TABLES_MYSQL
+  INDEX_DEFINITION_TABLES_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_TABLE_NAMES[] =
 {
   INDEX_DEFINITION_TABLE_NAMES_SQLITE,
-  INDEX_DEFINITION_TABLE_NAMES_MYSQL
+  INDEX_DEFINITION_TABLE_NAMES_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_FTS_TABLES[] =
 {
   INDEX_DEFINITION_FTS_TABLES_SQLITE,
-  INDEX_DEFINITION_FTS_TABLES_MYSQL
+  INDEX_DEFINITION_FTS_TABLES_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_FTS_TABLE_NAMES[] =
 {
   INDEX_DEFINITION_FTS_TABLE_NAMES_SQLITE,
-  INDEX_DEFINITION_FTS_TABLE_NAMES_MYSQL
+  INDEX_DEFINITION_FTS_TABLE_NAMES_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_INDICES[] =
 {
   INDEX_DEFINITION_INDICES_SQLITE,
-  INDEX_DEFINITION_INDICES_MYSQL
+  INDEX_DEFINITION_INDICES_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_INDEX_NAMES[] =
 {
   INDEX_DEFINITION_INDEX_NAMES_SQLITE,
-  INDEX_DEFINITION_INDEX_NAMES_MYSQL
+  INDEX_DEFINITION_INDEX_NAMES_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_TRIGGERS[] =
 {
   INDEX_DEFINITION_TRIGGERS_SQLITE,
-  INDEX_DEFINITION_TRIGGERS_MYSQL
+  INDEX_DEFINITION_TRIGGERS_MARIADB
 };
 const IndexDefinitions INDEX_DEFINITION_TRIGGER_NAMES[] =
 {
   INDEX_DEFINITION_TRIGGER_NAMES_SQLITE,
-  INDEX_DEFINITION_TRIGGER_NAMES_MYSQL
+  INDEX_DEFINITION_TRIGGER_NAMES_MARIADB
 };
 ";
 

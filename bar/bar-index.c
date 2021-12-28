@@ -24,10 +24,10 @@
 #endif
 #include <assert.h>
 
-#if defined(HAVE_MYSQL_MYSQL_H) && defined(HAVE_MYSQL_ERRMSG_H)
-  #include "mysql/mysql.h"
-  #include "mysql/errmsg.h"
-#endif /* HAVE_MYSQL_H */
+#if defined(HAVE_MARIADB_MYSQL_H) && defined(HAVE_MARIADB_ERRMSG_H)
+  #include "mariadb/mysql.h"
+  #include "mariadb/errmsg.h"
+#endif /* HAVE_MARIADB_MYSQL_H && HAVE_MARIADB_ERRMSG_H */
 
 #include "common/global.h"
 #include "common/strings.h"
@@ -214,7 +214,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("Usage %s: [<options>] <URI> [<SQL command>...|-]\n",programName);
   printf("\n");
   printf("URI: [sqlite:]<file name>\n");
-  printf("     mysql:<server>:<user>:<password>\n");
+  printf("     mariadb:<server>:<user>:<password>\n");
   printf("\n");
   printf("Options:  -C|--directory=<name>                   - change to directory\n");
   printf("          --info                                  - output index database infos\n");
@@ -531,12 +531,17 @@ LOCAL void clearPercentage(void)
 LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseURI, bool createFlag)
 {
   DatabaseSpecifier databaseSpecifier;
+  bool              validURIPrefix;
   String            printableDataseURI;
   DatabaseOpenModes openMode;
   Errors            error;
 
   // parse URI and fill int default values
-  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
+  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME,&validURIPrefix);
+  if (!validURIPrefix)
+  {
+    printWarning("No valid prefix in database URI");
+  }
   switch (databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -1036,7 +1041,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   DatabaseHandle    oldDatabaseHandle;
 
   // parse URI and fill int default values
-  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
+  Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME,NULL);
   switch (databaseSpecifier.type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -2047,7 +2052,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         {
           const char *indexDefinition;
 
-          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_MYSQL, indexDefinition, error == ERROR_NONE)
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_MARIADB, indexDefinition, error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -6424,7 +6429,34 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
       printInfo("OK\n");
       break;
     case DATABASE_TYPE_MYSQL:
-      // nothing to do
+      {
+        char sqlCommand[256];
+
+        printInfo("Vacuum...");
+
+        error = ERROR_NONE;
+        for (uint i = 0; i < INDEX_DEFINITION_TABLE_NAME_COUNT_MARIADB; i++)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   DATABASE_COLUMN_TYPES(),
+                                   stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                "OPTIMIZE TABLE %s",
+                                                INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
+                                               )
+                                  );
+          if (error != ERROR_NONE)
+          {
+            printInfo("FAIL!\n");
+            printError("vacuum fail (error: %s)!",Error_getText(error));
+            exit(EXITCODE_FAIL);
+          }
+        }
+
+        printInfo("OK\n");
+      }
       break;
   }
 }

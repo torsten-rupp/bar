@@ -7,6 +7,7 @@
     restricted overwrite mode
   * parallel restore
   * use thread-pool
+  * added support for MariaDB database
   * upgrade bzip2 1.0.8
   * upgrade MMXL 3.2
   * upgrade zStandard 1.4.8
