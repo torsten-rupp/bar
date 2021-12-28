@@ -1932,6 +1932,58 @@ LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
 }
 
 /***********************************************************************\
+* Name   : mysqlSetCharacterSet
+* Purpose: set MariaDB character set
+* Input  : handle       - MySQL handle
+*          characterSet - character set name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors mysqlSetCharacterSet(MYSQL      *handle,
+                                  const char *characterSet
+                                 )
+{
+  int    mysqlResult;
+  Errors error;
+
+  assert(handle != NULL);
+  assert(characterSet != NULL);
+
+  mysqlResult = mysql_set_character_set(handle,characterSet);
+  if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
+  {
+    HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
+                        mysqlResult,
+                        mysql_error(handle)
+                       );
+  }
+  else if ((mysqlResult == CR_SERVER_GONE_ERROR) || (mysqlResult == CR_SERVER_LOST))
+  {
+    error = ERRORX_(DATABASE_CONNECTION_LOST,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else if (mysqlResult != 0)
+  {
+    error = ERRORX_(DATABASE,
+                    mysql_errno(handle),
+                    "%s",
+                    mysql_error(handle)
+                   );
+  }
+  else
+  {
+    error = ERROR_NONE;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : mysqlStatementPrepare
 * Purpose: prepare MariaDB statement
 * Input  : statementHandle - statement handle
@@ -2412,9 +2464,9 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
             }
 
             // enable UTF8
-            error = mysqlQuery(databaseHandle->mysql.handle,
-                               "SET NAMES 'utf8'"
-                              );
+            error = mysqlSetCharacterSet(databaseHandle->mysql.handle,
+                                         "utf8mb4"
+                                        );
             if (error != ERROR_NONE)
             {
               mysql_close(databaseHandle->mysql.handle);
