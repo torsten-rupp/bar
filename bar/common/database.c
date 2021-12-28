@@ -2368,15 +2368,11 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
               sem_destroy(&databaseHandle->wakeUp);
               return error;
             }
-
-// TODO:
-#if 0
             optionValue.b = TRUE;
-            mariadb_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
+            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_RECONNECT,&optionValue);
             optionValue.u = MARIADB_TIMEOUT;
-            mariadb_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
-            mariadb_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
-#endif
+            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
+            mysql_options(databaseHandle->mysql.handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
 
             // connect
             if (mysql_real_connect(databaseHandle->mysql.handle,
