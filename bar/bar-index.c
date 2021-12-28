@@ -6429,7 +6429,34 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
       printInfo("OK\n");
       break;
     case DATABASE_TYPE_MYSQL:
-      // nothing to do
+      {
+        char sqlCommand[256];
+
+        printInfo("Vacuum...");
+
+        error = ERROR_NONE;
+        for (uint i = 0; i < INDEX_DEFINITION_TABLE_NAME_COUNT_MARIADB; i++)
+        {
+          error = Database_execute(databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   DATABASE_COLUMN_TYPES(),
+                                   stringFormat(sqlCommand,sizeof(sqlCommand),
+                                                "OPTIMIZE TABLE %s",
+                                                INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
+                                               )
+                                  );
+          if (error != ERROR_NONE)
+          {
+            printInfo("FAIL!\n");
+            printError("vacuum fail (error: %s)!",Error_getText(error));
+            exit(EXITCODE_FAIL);
+          }
+        }
+
+        printInfo("OK\n");
+      }
       break;
   }
 }
