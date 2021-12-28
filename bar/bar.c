@@ -3251,8 +3251,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     case COMMAND_CREATE_FILES:
     case COMMAND_CREATE_IMAGES:
       {
-        EntryTypes entryType;
-        int        i;
+        StorageSpecifier storageSpecifier;
+        EntryTypes       entryType;
+        int              i;
+
+        // init varibales
+        Storage_initSpecifier(&storageSpecifier);
 
         // get storage name
         if (argc > 1)
@@ -3281,6 +3285,47 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             {
               break;
             }
+          }
+        }
+
+        // parse storage name
+        if (error == ERROR_NONE)
+        {
+          error = Storage_parseName(&storageSpecifier,globalOptions.storageName);
+          if (error != ERROR_NONE)
+          {
+            printError(_("Invalid storage '%s' (error: %s)"),
+                       String_cString(globalOptions.storageName),
+                       Error_getText(error)
+                      );
+          }
+        }
+
+        // pre-process command
+        if (error == ERROR_NONE)
+        {
+          if (!String_isEmpty(globalOptions.preProcessScript))
+          {
+            TextMacros (textMacros,6);
+            String     directory;
+
+            directory = String_new();
+            TEXT_MACROS_INIT(textMacros)
+            {
+              TEXT_MACRO_X_CSTRING ("%name",    "",                                                           NULL);
+              TEXT_MACRO_X_STRING ("%archive",  globalOptions.storageName,                                    NULL);
+              TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(globalOptions.archiveType),       NULL);
+              TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(globalOptions.archiveType),  NULL);
+              TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+              TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+            }
+            error = executeTemplate(String_cString(globalOptions.preProcessScript),
+                                    Misc_getCurrentDateTime(),
+                                    textMacros.data,
+                                    textMacros.count,
+                                    CALLBACK_(NULL,NULL)
+                                   );
+            String_delete(directory);
           }
         }
 
@@ -3314,7 +3359,39 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                 );
         }
 
+        // post-process command
+        if (error == ERROR_NONE)
+        {
+          if (!String_isEmpty(globalOptions.postProcessScript))
+          {
+            TextMacros (textMacros,9);
+            String     directory;
+
+            directory = String_new();
+            TEXT_MACROS_INIT(textMacros)
+            {
+              TEXT_MACRO_X_CSTRING("%name",    "",                                                           NULL);
+              TEXT_MACRO_X_STRING ("%archive",  globalOptions.storageName,                                    NULL);
+              TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(globalOptions.archiveType),       NULL);
+              TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(globalOptions.archiveType),  NULL);
+              TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+              TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+              TEXT_MACRO_X_CSTRING("%state",    "",                                                           NULL);
+              TEXT_MACRO_X_INTEGER("%error",    Error_getCode(error),                                         NULL);
+              TEXT_MACRO_X_CSTRING("%message",  Error_getText(error),                                         NULL);
+            }
+            error = executeTemplate(String_cString(globalOptions.postProcessScript),
+                                    Misc_getCurrentDateTime(),
+                                    textMacros.data,
+                                    textMacros.count,
+                                    CALLBACK_(NULL,NULL)
+                                   );
+            String_delete(directory);
+          }
+        }
+
         // free resources
+        Storage_doneSpecifier(&storageSpecifier);
       }
       break;
     case COMMAND_NONE:
@@ -3324,11 +3401,15 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     case COMMAND_RESTORE:
     case COMMAND_CONVERT:
       {
-        StringList storageNameList;
-        int        i;
+        StorageSpecifier storageSpecifier;
+        StringList       storageNameList;
+        int              i;
+
+        // init variables
+        Storage_initSpecifier(&storageSpecifier);
+        StringList_init(&storageNameList);
 
         // get storage names
-        StringList_init(&storageNameList);
         if (globalOptions.storageNameListStdin)
         {
           error = addStorageNameListFromFile(&storageNameList,NULL);
@@ -3452,6 +3533,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 
         // free resources
         StringList_done(&storageNameList);
+        Storage_doneSpecifier(&storageSpecifier);
       }
       break;
     case COMMAND_GENERATE_ENCRYPTION_KEYS:

@@ -4364,39 +4364,17 @@ LOCAL void jobThreadCode(void)
       }
     }
 
-    // job pre-process command
-    if (!String_isEmpty(jobNode->job.options.preProcessScript))
+    // parse storage name
+    if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      TEXT_MACROS_INIT(textMacros)
+      jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
+      if (jobNode->runningInfo.error != ERROR_NONE)
       {
-        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
-        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
-        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
-      }
-      error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
-                              startDateTime,
-                              textMacros.data,
-                              textMacros.count,
-                              CALLBACK_(executeIOOutput,NULL)
-                             );
-      if (error == ERROR_NONE)
-      {
-        logMessage(&logHandle,
-                   LOG_TYPE_INFO,
-                   "Executed pre-command for '%s'",
-                   String_cString(jobName)
-                  );
-      }
-      else
-      {
-        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': pre-command fail (error: %s)",
+                   "Aborted job '%s': invalid storage '%s' (error: %s)",
                    String_cString(jobName),
+                   String_cString(storageName),
                    Error_getText(jobNode->runningInfo.error)
                   );
       }
@@ -4405,25 +4383,54 @@ LOCAL void jobThreadCode(void)
     // get start date/time
     executeStartDateTime = Misc_getCurrentDateTime();
 
+    // job pre-process command
+    if      (!Job_isRemote(jobNode))
+    {
+      if (jobNode->runningInfo.error == ERROR_NONE)
+      {
+        if (!String_isEmpty(jobNode->job.options.preProcessScript))
+        {
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
+            TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+            TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
+            TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+            TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+          }
+          error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
+                                  executeStartDateTime,
+                                  textMacros.data,
+                                  textMacros.count,
+                                  CALLBACK_(executeIOOutput,NULL)
+                                 );
+          if (error == ERROR_NONE)
+          {
+            logMessage(&logHandle,
+                       LOG_TYPE_INFO,
+                       "Executed pre-command for '%s'",
+                       String_cString(jobName)
+                      );
+          }
+          else
+          {
+            if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Aborted job '%s': pre-command fail (error: %s)",
+                       String_cString(jobName),
+                       Error_getText(jobNode->runningInfo.error)
+                      );
+          }
+        }
+      }
+    }
+
+    // execute job
     if      (!Job_isRemote(jobNode))
     {
       // local job -> run on this machine
-
-      // parse storage name
-      if (jobNode->runningInfo.error == ERROR_NONE)
-      {
-        jobNode->runningInfo.error = Storage_parseName(&storageSpecifier,storageName);
-        if (jobNode->runningInfo.error != ERROR_NONE)
-        {
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Aborted job '%s': invalid storage '%s' (error: %s)",
-                     String_cString(jobName),
-                     String_cString(storageName),
-                     Error_getText(jobNode->runningInfo.error)
-                    );
-        }
-      }
 
       // get include/excluded entries from commands
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -4621,6 +4628,50 @@ NULL,//                                                        scheduleTitle,
     // get end date/time
     executeEndDateTime = Misc_getCurrentDateTime();
 
+    // job post-process command
+    if      (!Job_isRemote(jobNode))
+    {
+      if (!String_isEmpty(jobNode->job.options.postProcessScript))
+      {
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
+          TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
+          TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+          TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
+          TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+          TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
+          TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
+          TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
+        }
+        error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
+                                executeStartDateTime,
+                                textMacros.data,
+                                textMacros.count,
+                                CALLBACK_(executeIOOutput,NULL)
+                               );
+        if (error == ERROR_NONE)
+        {
+          logMessage(&logHandle,
+                     LOG_TYPE_INFO,
+                     "Executed post-command for '%s'",
+                     String_cString(jobName)
+                    );
+        }
+        else
+        {
+          if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Aborted job '%s': post-command fail (error: %s)",
+                     String_cString(jobName),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
+        }
+      }
+    }
+
     // store final compress ratio: 100%-totalSum/totalCompressedSum
     jobNode->statusInfo.compressionRatio = (!storageFlags.dryRun && (jobNode->statusInfo.total.size > 0))
                                              ? 100.0-(jobNode->statusInfo.storage.totalSize*100.0)/jobNode->statusInfo.total.size
@@ -4692,47 +4743,6 @@ NULL,//                                                        scheduleTitle,
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       #endif /* NDEBUG */
-    }
-
-    // job post-process command
-    if (!String_isEmpty(jobNode->job.options.postProcessScript))
-    {
-      TEXT_MACROS_INIT(textMacros)
-      {
-        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
-        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
-        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
-        TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
-        TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
-        TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
-      }
-      error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
-                              executeStartDateTime,
-                              textMacros.data,
-                              textMacros.count,
-                              CALLBACK_(executeIOOutput,NULL)
-                             );
-      if (error == ERROR_NONE)
-      {
-        logMessage(&logHandle,
-                   LOG_TYPE_INFO,
-                   "Executed post-command for '%s'",
-                   String_cString(jobName)
-                  );
-      }
-      else
-      {
-        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': post-command fail (error: %s)",
-                   String_cString(jobName),
-                   Error_getText(jobNode->runningInfo.error)
-                  );
-      }
     }
 
     // add index history information
