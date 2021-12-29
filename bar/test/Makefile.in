@@ -2118,7 +2118,22 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar -z zip0 $(TEST_FILES) /dev/ram0 /dev/zero --overwrite-archive-files --comment 'Hello World!' --verbose=2 $(LOG))
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --directory-strip=1 --destination restore $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --directory-strip=1 --destination restore/data $(LOG))
+	$(DIFF) -r \
+          -x unreadable.dat \
+          -x link_not_existing_file.dat \
+          -x circular_link.dat \
+          -x circular_link.dat.marker \
+          -x fifo \
+          -x sub_ignore_dir \
+          -x nodump.dat \
+          -x zero5G.dat \
+          -x random5G.dat \
+          -x hardlinkdata512M.dat \
+          -x hardlink512M1.dat \
+          -x hardlink512M2.dat \
+          -x gmon.out \
+          data restore/data
 	@#
 	# partial restore
 	@$(call functionCleanTestFiles)
