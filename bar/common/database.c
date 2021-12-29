@@ -2432,9 +2432,9 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
                                    String_cString(databaseSpecifier->mysql.userName),
                                    databaseSpecifier->mysql.password.data,
                                    NULL,  // databaseName
-                                   0,
-                                   0,
-                                   0
+                                   0,  // port
+                                   NULL, // unix socket
+                                   0  // client flag
                                   ) == NULL
                )
             {
@@ -2467,6 +2467,21 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
             error = mysqlSetCharacterSet(databaseHandle->mysql.handle,
                                          "utf8mb4"
                                         );
+            if (error != ERROR_NONE)
+            {
+              mysql_close(databaseHandle->mysql.handle);
+              Semaphore_unlock(&databaseList.lock);
+              sem_destroy(&databaseHandle->wakeUp);
+              return error;
+            }
+
+            // other options
+            error = mysqlQuery(databaseHandle->mysql.handle,
+                               stringFormat(sqlCommand,sizeof(sqlCommand),
+                                            "SET innodb_lock_wait_timeout=%u",
+                                            MARIADB_TIMEOUT
+                                           )
+                              );
             if (error != ERROR_NONE)
             {
               mysql_close(databaseHandle->mysql.handle);
@@ -9451,7 +9466,6 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         }
 
         // compare columns
-//  fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
         for (i = 0; i < referenceColumnCount; i++)
         {
           // find column
