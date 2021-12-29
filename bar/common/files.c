@@ -3858,6 +3858,7 @@ Errors File_getInfo(FileInfo    *fileInfo,
 {
   assert(fileInfo != NULL);
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   return File_getInfoCString(fileInfo,String_cString(fileName));
 }
@@ -3871,6 +3872,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
 
   assert(fileInfo != NULL);
   assert(fileName != NULL);
+  assert(!stringIsEmpty(fileName));
 
   // get file meta data
   if (LSTAT(fileName,&fileStat) != 0)
@@ -3973,6 +3975,7 @@ Errors File_setInfo(const FileInfo *fileInfo,
 {
   assert(fileInfo != NULL);
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   return File_setInfoCString(fileInfo,String_cString(fileName));
 }
@@ -3985,6 +3988,7 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
 
   assert(fileInfo != NULL);
   assert(fileName != NULL);
+  assert(!stringIsEmpty(fileName));
 
   // set meta data
   switch (fileInfo->type)
@@ -4046,6 +4050,7 @@ Errors File_getAttributes(FileAttributes *fileAttributes,
 {
   assert(fileAttributes != NULL);
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   return File_getAttributesCString(fileAttributes,String_cString(fileName));
 }
@@ -4067,6 +4072,7 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
 
   assert(fileAttributes != NULL);
   assert(fileName != NULL);
+  assert(!stringIsEmpty(fileName));
 
   attributes = 0LL;
   #ifdef FS_IOC_GETFLAGS
@@ -4146,6 +4152,7 @@ Errors File_setAttributes(FileAttributes fileAttributes,
                          )
 {
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   return File_setAttributesCString(fileAttributes,String_cString(fileName));
 }
@@ -4169,6 +4176,7 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
   #endif /* defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS) */
 
   assert(fileName != NULL);
+  assert(!stringIsEmpty(fileName));
 
   #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
     // open file (first try with O_NOATIME)
@@ -4314,6 +4322,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
 
   assert(fileExtendedAttributeList != NULL);
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   // init variables
   List_init(fileExtendedAttributeList);
@@ -4414,6 +4423,7 @@ Errors File_setExtendedAttributes(ConstString                     fileName,
   #endif /* HAVE_LSETXATTR */
 
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
   assert(fileExtendedAttributeList != NULL);
 
   #ifdef HAVE_LSETXATTR
@@ -4443,6 +4453,7 @@ uint64 File_getFileTimeModified(ConstString fileName)
   FileStat fileStat;
 
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   if (LSTAT(String_cString(fileName),&fileStat) != 0)
   {
@@ -4457,6 +4468,7 @@ Errors File_setPermission(ConstString    fileName,
                          )
 {
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   if (chmod(String_cString(fileName),(mode_t)permission) != 0)
   {
@@ -4480,6 +4492,7 @@ Errors File_setOwner(ConstString fileName,
   #endif /* PLATFORM_... */
 
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   #if   defined(PLATFORM_LINUX)
     #ifdef HAVE_CHOWN
@@ -4541,6 +4554,7 @@ Errors File_makeDirectory(ConstString    pathName,
   Errors          error;
 
   assert(pathName != NULL);
+  assert(!String_isEmpty(pathName));
 
   // initialize variables
   directoryName       = File_newFileName();
@@ -4780,6 +4794,9 @@ Errors File_makeDirectoryCString(const char     *pathName,
   String string;
   Errors error;
 
+  assert(pathName != NULL);
+  assert(!stringIsEmpty(pathName));
+
 // TODO: move code from File_makeDirectory and call in File_makeDirectory this function
   string = File_setFileNameCString(File_newFileName(),pathName);
   error = File_makeDirectory(string,userId,groupId,permission,ignoreExistingFlag);
@@ -4804,6 +4821,7 @@ Errors File_readLink(String      fileName,
   #endif /* HAVE_READLINK */
 
   assert(linkName != NULL);
+  assert(!String_isEmpty(linkName));
   assert(fileName != NULL);
 
   #ifdef HAVE_READLINK
@@ -4857,13 +4875,6 @@ Errors File_readLink(String      fileName,
   #endif /* HAVE_READLINK */
 }
 
-Errors File_changeDirectory(ConstString pathName)
-{
-  assert(pathName != NULL);
-
-  return File_changeDirectoryCString(String_cString(pathName));
-}
-
 String File_getCurrentDirectory(String pathName)
 {
   #ifdef HAVE_GET_CURRENT_DIR_NAME
@@ -4899,8 +4910,17 @@ String File_getCurrentDirectory(String pathName)
   return pathName;
 }
 
+Errors File_changeDirectory(ConstString pathName)
+{
+  assert(pathName != NULL);
+
+  return File_changeDirectoryCString(String_cString(pathName));
+}
+
 Errors File_changeDirectoryCString(const char *pathName)
 {
+  assert(pathName != NULL);
+
   #if   defined(PLATFORM_LINUX)
     if (chdir(pathName) != 0)
     {
@@ -4921,7 +4941,9 @@ Errors File_makeLink(ConstString linkName,
                     )
 {
   assert(linkName != NULL);
+  assert(!String_isEmpty(linkName));
   assert(fileName != NULL);
+  assert(!String_isEmpty(fileName));
 
   #ifdef HAVE_SYMLINK
     unlink(String_cString(linkName));
@@ -4969,6 +4991,7 @@ Errors File_makeSpecial(ConstString      name,
                        )
 {
   assert(name != NULL);
+  assert(!String_isEmpty(name));
 
   #ifdef HAVE_MKNOD
     unlink(String_cString(name));
@@ -5027,6 +5050,7 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
   #endif /* HAVE_STATVFS */
 
   assert(pathName != NULL);
+  assert(!String_isEmpty(pathName));
   assert(fileSystemInfo != NULL);
 
   #ifdef HAVE_STATVFS
