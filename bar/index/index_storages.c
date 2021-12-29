@@ -2453,16 +2453,6 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
   }
 
   EntryList  entryList;
-  DatabaseId entryId;
-  DatabaseId uuidId;
-  DatabaseId entityId;
-  uint       indexType;
-  String     entryName;
-  uint64     timeLastChanged;
-  uint32     userId;
-  uint32     groupId;
-  uint32     permission;
-  uint64     size;
   Errors     error;
   EntryNode  *entryNode;
   bool       transactionFlag;
@@ -2472,8 +2462,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
 
   // init variables
   List_init(&entryList);
-  entryName = String_new();
-  error     = ERROR_NONE;
+  error = ERROR_NONE;
 
   // get entries info to add
   if (error == ERROR_NONE)
@@ -2490,36 +2479,25 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                             UNUSED_VARIABLE(userData);
                             UNUSED_VARIABLE(valueCount);
 
-                            entryId         = values[0].id;
-                            uuidId          = values[1].id;
-                            entityId        = values[2].id;
-                            indexType       = values[3].id;
-                            String_setBuffer(entryName,values[4].text.data,values[4].text.length);
-                            timeLastChanged = values[5].dateTime;
-                            userId          = values[6].u;
-                            groupId         = values[7].u;
-                            permission      = values[8].u;
-                            size            = values[9].u64;
-                            assert(entryId != DATABASE_ID_NONE);
-
                             entryNode = LIST_NEW_NODE(EntryNode);
                             if (entryNode == NULL)
                             {
                               HALT_INSUFFICIENT_MEMORY();
                             }
 
-                            entryNode->entryId                = entryId;
-                            entryNode->uuidId                 = uuidId;
-                            entryNode->entityId               = entityId;
-                            entryNode->indexType              = (IndexTypes)indexType;
-                            entryNode->name                   = String_duplicate(entryName);
-                            entryNode->timeLastChanged        = timeLastChanged;
-                            entryNode->userId                 = (uint32)userId;
-                            entryNode->groupId                = (uint32)groupId;
-                            entryNode->permission             = (uint32)permission;
-                            entryNode->size                   = (uint64)size;
+                            entryNode->entryId                = values[0].id;
+                            entryNode->uuidId                 = values[1].id;
+                            entryNode->entityId               = values[2].id;
+                            entryNode->indexType              = (IndexTypes)values[3].i;
+                            entryNode->name                   = String_newBuffer(values[4].text.data,values[4].text.length);
+                            entryNode->timeLastChanged        = values[5].dateTime;
+                            entryNode->userId                 = (uint32)values[6].u;
+                            entryNode->groupId                = (uint32)values[7].u;
+                            entryNode->permission             = (uint32)values[8].u;
+                            entryNode->size                   = values[9].u64;
                             entryNode->newest.entryId         = DATABASE_ID_NONE;
                             entryNode->newest.timeLastChanged = 0LL;
+                            assert(entryNode->entryId != DATABASE_ID_NONE);
 
                             List_append(&entryList,entryNode);
 
@@ -2692,7 +2670,6 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
 //fprintf(stderr,"%s, %d: add entries to newest entries %d done\n",__FILE__,__LINE__,List_count(&entryList));
 
   // free resources
-  String_delete(entryName);
   List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 
   return error;
@@ -2784,7 +2761,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                }
 
                                entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->name           = String_newBuffer(values[1].text.data,values[1].text.length);
                                entryNode->newest.entryId = DATABASE_ID_NONE;
                                assert(entryNode->entryId != DATABASE_ID_NONE);
 
@@ -5508,7 +5485,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              (
                                DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
                              ),
-                             NULL,  // orderGroup
+"GROUP BY entries.id",//                             NULL,  // orderGroup
                              0LL,
                              DATABASE_UNLIMITED
                             );
