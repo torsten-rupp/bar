@@ -390,6 +390,8 @@ MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 50M
 # build types
 BUILD_SUFFIXES = $(subst $() $(),|,-debug -gcov -gprof -valgrind)
 
+COMMA = ,
+
 #---------------------------------- rules ------------------------------------
 
 # source search paths
@@ -605,10 +607,10 @@ functionDoneTestFiles = \
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
-  $3; rc=$$?; if test $$rc -lt $1 -o $$? -gt $2; then \
+  $3; rc=$$?; if test $$rc -lt $1 -o $$rc -gt $2; then \
     $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
-    false; \
-  fi
+    exit $$rc; \
+  fi;
 
 # helper functions for slave tests
 functionSlaveExecute = \
@@ -659,6 +661,7 @@ functionCreateFileRandom = \
 # call functionTestDeviceCreate,<loop device>,<image file>
 functionTestDeviceCreate = \
   ( \
+    $(SUDO) -n $(LOSETUP) -d $1 || true; \
     $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
     $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
     $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
@@ -669,8 +672,8 @@ functionTestDeviceCreate = \
 # call functionTestDeviceDelete,<loop device>
 functionTestDeviceDelete = \
   ( \
-    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
     $(SYNC); \
+    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
     $(SUDO) -n $(LOSETUP) -d $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
@@ -891,6 +894,8 @@ TEST_FILES_CLEAN = \
   intermediate/*.image \
   intermediate/aux0 \
   intermediate/aux1 \
+  intermediate/dev0 \
+  intermediate/dev1 \
   intermediate/index.db \
   restore \
   intermediate/output.txt \
@@ -2111,11 +2116,10 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --overwrite-archive-files $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --overwrite-archive-files --skip-unreadable=no $(LOG))
 	@#
-	# different options
+	# strip/destination
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar --verbose=2 $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --comment 'Hello World!' $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar -z zip0 $(TEST_FILES) /dev/ram0 /dev/zero --overwrite-archive-files --comment 'Hello World!' --verbose=2 $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar --directory-strip=1 $(TEST_FILES) $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d intermediate/test.bar --destination data $(LOG))
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x intermediate/test.bar --directory-strip=1 --destination restore/data $(LOG))
@@ -2284,6 +2288,26 @@ endif
 	$(BAR_DIR)/bar-keygen --tls-directory=intermediate/keys --private-directory=intermediate/keys --certs-directory=intermediate/keys --openssl --force $(LOG)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --server-ca-file=intermediate/keys/bar-ca.pem --server-cert-file=intermediate/keys/bar-server-cert.pem --server-key-file=intermediate/keys/bar-server-key.pem $(LOG))
 	@$(RMRF) intermediate/keys
+	@#
+	# mount/umount
+	@$(call functionTestDeviceReset)
+	@$(call functionCleanTestFiles)
+	$(call functionCreateFileZero,$(IMAGE0),32,1M)
+	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
+	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
+	$(INSTALL) -d $(MOUNT_POINT0)
+	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar --mount-device-command='sudo mount -p 0 %device %directory' --unmount-command='sudo umount %directory' --mount $(MOUNT_POINT0)$(COMMA)$(LOOP0) $(TEST_FILES) $(LOG))
+	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
+	$(call functionTestDeviceDelete,$(LOOP0))
+	$(RMF) $(IMAGE0)
+	@$(call functionDoneTestFiles)
+	@#
+	# different options
+	@$(call functionCleanTestFiles)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar --verbose=2 $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --comment 'Hello World!' $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar -z zip0 $(TEST_FILES) /dev/ram0 /dev/zero --overwrite-archive-files --comment 'Hello World!' --verbose=2 $(LOG))
 	@#
 	# wrong options
 	@$(call functionCleanTestFiles)

@@ -769,13 +769,13 @@ Errors unmountAll(const MountList *mountList);
 /***********************************************************************\
 * Name   : purgeMounts
 * Purpose: purge not used mounts
-* Input  : -
+* Input  : forceFlag - TRUE to force unmount
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void purgeMounts(void);
+void purgeMounts(bool forceFlag);
 
 // ----------------------------------------------------------------------
 

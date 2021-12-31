@@ -1687,7 +1687,7 @@ Errors unmountAll(const MountList *mountList)
   return ERROR_NONE;
 }
 
-void purgeMounts(void)
+void purgeMounts(bool forceFlag)
 {
   MountedNode *mountedNode;
   Errors      error;
@@ -1698,7 +1698,9 @@ void purgeMounts(void)
     while (mountedNode != NULL)
     {
       if (   (mountedNode->mountCount == 0)
-          && (Misc_getTimestamp() > (mountedNode->lastMountTimestamp+MOUNT_TIMEOUT*US_PER_MS))
+          && (   forceFlag
+              || (Misc_getTimestamp() > (mountedNode->lastMountTimestamp+MOUNT_TIMEOUT*US_PER_MS))
+             )
          )
       {
         if (Device_isMounted(mountedNode->name))
@@ -4239,6 +4241,7 @@ exit(1);
   {
     return ERROR_INVALID_ARGUMENT;
   }
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(globalOptions.mountCommand));
 
   if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
@@ -4377,6 +4380,9 @@ exit(1);
 
   // done thread pools
   ThreadPool_done(&workerThreadPool);
+
+  // umounts
+  purgeMounts(TRUE);
 
   // delete temporary directory
   (void)File_delete(tmpDirectory,TRUE);
