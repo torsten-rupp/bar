@@ -610,7 +610,7 @@ functionTestCheckExitcode = \
   $3; rc=$$?; if test $$rc -lt $1 -o $$rc -gt $2; then \
     $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
     exit $$rc; \
-  fi;
+  fi
 
 # helper functions for slave tests
 functionSlaveExecute = \
