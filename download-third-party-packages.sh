@@ -23,8 +23,6 @@ RMF="rm -f"
 RMRF="rm -rf"
 SVN="svn"
 TAR="tar"
-WGET="wget"
-WGET_OPTIONS="--tries=5 --timeout=300"
 UNZIP="unzip"
 XZ="xz"
 
@@ -56,6 +54,7 @@ SQLITE_YEAR=2020
 SQLITE_VERSION=3270200
 SQLITE_VERSION=3340000
 MARIADB_CLIENT_VERSION=3.1.13
+POSTGRESQL_VERSION=8.4.22
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
@@ -110,7 +109,8 @@ gnutlsFlag=0
 libcdioFlag=0
 pcreFlag=0
 sqliteFlag=0
-mariaDBClientFlag=0
+mariaDBFlag=0
+postgreSQLFlag=0
 icuFlag=0
 mtxFlag=0
 binutilsFlag=0
@@ -240,7 +240,11 @@ while test $# != 0; do
           ;;
         mariadb)
           allFlag=0
-          mariaDBClientFlag=1
+          mariaDBFlag=1
+          ;;
+        postgresql)
+          allFlag=0
+          postgreSQLFlag=1
           ;;
         icu)
           allFlag=0
@@ -355,7 +359,11 @@ while test $# != 0; do
       ;;
     mariadb)
       allFlag=0
-      mariaDBClientFlag=1
+      mariaDBFlag=1
+      ;;
+    postgresql)
+      allFlag=0
+      postgreSQLFlag=1
       ;;
     icu)
       allFlag=0
@@ -425,6 +433,7 @@ if test $helpFlag -eq 1; then
   $ECHO " pcre"
   $ECHO " sqlite"
   $ECHO " mariadb"
+  $ECHO " postgresql"
   $ECHO " icu"
   $ECHO " binutils"
   $ECHO ""
@@ -442,11 +451,6 @@ fi
 type $CURL 1>/dev/null 2>/dev/null && $CURL --version 1>/dev/null 2>/dev/null
 if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'curl' is not available"
-  exit 1
-fi
-type $WGET 1>/dev/null 2>/dev/null && $WGET --version 1>/dev/null 2>/dev/null
-if test $? -gt 0; then
-  $ECHO >&2 "ERROR: command 'wget' is not available"
   exit 1
 fi
 type $SVN 1>/dev/null 2>/dev/null && $SVN --version 1>/dev/null 2>/dev/null
@@ -472,15 +476,6 @@ if test $insecureFlag -eq 1; then
 fi
 if test $verboseFlag -eq 0; then
   curlOptions="$curlOptions --silent"
-fi
-
-# get wget options
-wgetOptions=$WGET_OPTIONS
-if test $insecureFlag -eq 1; then
-  wgetOptions="$wgetOptions --no-check-certificate"
-fi
-if test $verboseFlag -eq 0; then
-  wgetOptions="$wgetOptions --no-verbose"
 fi
 
 # create directory
@@ -1450,7 +1445,7 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $mariaDBClientFlag -eq 1; then
+  if test $allFlag -eq 1 -o $mariaDBFlag -eq 1; then
     # MariaDB
     (
      cd "$destination/extern"
@@ -1484,6 +1479,48 @@ if test $cleanFlag -eq 0; then
     result=$?
     if test $noDecompressFlag -eq 0; then
       (cd "$destination"; $LN -sfT extern/mariadb-connector-c-$MARIADB_CLIENT_VERSION-src mariadb-connector-c)
+    fi
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $postgreSQLFlag -eq 1; then
+    # PostgreSQL
+    (
+     cd "$destination/extern"
+
+     $ECHO_NO_NEW_LINE "Get PostgreSQL ($POSTGRESQL_VERSION)..."
+     fileName="postgresql-$POSTGRESQL_VERSION.tar.bz2"
+     if test ! -f $fileName; then
+       if test -n "$localDirectory" -a -f $localDirectory/postgresql-$POSTGRESQL_VERSION.tar.bz2; then
+         $LN -s $localDirectory/postgresql-$POSTGRESQL_VERSION.tar.bz2 $fileName
+         result=1
+       else
+         url="https://ftp.postgresql.org/pub/source/v$POSTGRESQL_VERSION/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xjf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    if test $noDecompressFlag -eq 0; then
+      (cd "$destination"; $LN -sfT extern/postgresql-$POSTGRESQL_VERSION postgresql)
     fi
     case $result in
       1) $ECHO "ok (local)"; ;;
@@ -2007,6 +2044,24 @@ else
       $RMRF extern/sqlite-*
     )
     $RMF sqlite
+  fi
+
+  if test $allFlag -eq 1 -o $mariaDBFlag -eq 1; then
+    # sqlite
+    (
+      cd "$destination"
+      $RMRF extern/mariadb-connector-c-*
+    )
+    $RMF mariadb-connector-c
+  fi
+
+  if test $allFlag -eq 1 -o $postgreSQLFlag -eq 1; then
+    # sqlite
+    (
+      cd "$destination"
+      $RMRF extern/postgresql-*
+    )
+    $RMF postgresql
   fi
 
   if test $allFlag -eq 1 -o $icuFlag -eq 1; then
