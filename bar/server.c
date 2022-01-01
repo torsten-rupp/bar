@@ -3130,7 +3130,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
         error = purgeExpiredEntities(indexHandle,NULL,ARCHIVE_TYPE_NONE);
 
         // purge expired mounts
-        purgeMounts();
+        purgeMounts(FALSE);
 
         // sleep
         if (error == ERROR_NONE)
