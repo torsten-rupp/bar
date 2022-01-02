@@ -399,7 +399,7 @@ LOCAL void busyHandler(void *userData)
   {
     case DATABASE_TYPE_SQLITE3:
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         if (String_isEmpty(databaseSpecifier->mysql.databaseName))
         {
@@ -3287,7 +3287,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                 String_delete(saveDatabaseName);
               }
               break;
-            case DATABASE_TYPE_MYSQL:
+            case DATABASE_TYPE_MARIADB:
               {
                 String saveDatabaseName;
                 uint   n;

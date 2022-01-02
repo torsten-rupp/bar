@@ -546,7 +546,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   {
     case DATABASE_TYPE_SQLITE3:
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         if (String_isEmpty(databaseSpecifier.mysql.databaseName))
         {
@@ -1046,7 +1046,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   {
     case DATABASE_TYPE_SQLITE3:
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1457,7 +1457,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
       }
       totalCount += (ulong)n;
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       // nothing to do
       break;
   }
@@ -1596,7 +1596,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                  String_cString(name)
                                 );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         // nothing to do
         break;
     }
@@ -1643,7 +1643,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
                                  String_cString(name)
                                 );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         // nothing to do
         break;
     }
@@ -1935,7 +1935,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
           StringList_done(&indexNameList);
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         // nothing to do
         break;
     }
@@ -1966,7 +1966,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
           }
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
         #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2029,7 +2029,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
           }
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
         #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2116,7 +2116,7 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
           }
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
         #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -5601,7 +5601,7 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       printInfo("%lu\n",n);
       total += n;
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       // nothing to do (use views)
       break;
   }
@@ -6199,7 +6199,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
               printPercentage(1*Array_length(&entryIds),2*Array_length(&entryIds));
             }
             break;
-          case DATABASE_TYPE_MYSQL:
+          case DATABASE_TYPE_MARIADB:
             // nothing to do (use views)
             break;
         }
@@ -6267,7 +6267,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                      );
             }
             break;
-          case DATABASE_TYPE_MYSQL:
+          case DATABASE_TYPE_MARIADB:
             // nothing to do (use views)
             break;
         }
@@ -6428,7 +6428,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 
       printInfo("OK\n");
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       {
         char sqlCommand[256];
 
@@ -8150,7 +8150,7 @@ UNUSED_VARIABLE(lostFlag);
     case DATABASE_TYPE_SQLITE3:
       String_format(ftsSubSelect,"SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S'",ftsName);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         String_format(ftsSubSelect,"SELECT id FROM entries WHERE MATCH(name) AGAINST ('%S')",ftsName);
       #else /* HAVE_MARIADB */
@@ -9976,7 +9976,7 @@ if (xxxId != DATABASE_ID_NONE)
           case DATABASE_TYPE_SQLITE3:
             String_insertCString(s,STRING_BEGIN,"EXPLAIN QUERY PLAN ");
             break;
-          case DATABASE_TYPE_MYSQL:
+          case DATABASE_TYPE_MARIADB:
             #if defined(HAVE_MARIADB)
               String_insertCString(s,STRING_BEGIN,"EXPLAIN  ");
             #else /* HAVE_MARIADB */

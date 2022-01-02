@@ -622,7 +622,7 @@ LOCAL_INLINE bool checkDatabaseInitialized(DatabaseHandle *databaseHandle)
   {
     case DATABASE_TYPE_SQLITE3:
       return (databaseHandle->sqlite.handle != NULL);
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         return (databaseHandle->mysql.handle != NULL);
       #else /* HAVE_MARIADB */
@@ -2182,7 +2182,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
             case DATABASE_TYPE_SQLITE3:
               sqlite3_close(databaseHandle->sqlite.handle);
               break;
-            case DATABASE_TYPE_MYSQL:
+            case DATABASE_TYPE_MARIADB:
               #if defined(HAVE_MARIADB)
                 mariadb_close(databaseHandle->mysql.handle);
               #else /* HAVE_MARIADB */
@@ -2203,7 +2203,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
             case DATABASE_TYPE_SQLITE3:
               sqlite3_close(databaseHandle->sqlite.handle);
               break;
-            case DATABASE_TYPE_MYSQL:
+            case DATABASE_TYPE_MARIADB:
               #if defined(HAVE_MARIADB)
                 mariadb_close(databaseHandle->mysql.handle);
               #else /* HAVE_MARIADB */
@@ -2398,7 +2398,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
         String_delete(sqliteName);
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           union
@@ -2561,7 +2561,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
           case DATABASE_TYPE_SQLITE3:
             sqlite3_trace_v2(databaseHandle->sqlite.handle,DATABASE_DEBUG_LOG,logTraceCommandHandler,NULL);
             break;
-          case DATABASE_TYPE_MYSQL:
+          case DATABASE_TYPE_MARIADB:
             #if defined(HAVE_MARIADB)
             #else /* HAVE_MARIADB */
             #endif /* HAVE_MARIADB */
@@ -2577,7 +2577,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
       // set progress handler
       sqlite3_progress_handler(databaseHandle->sqlite.handle,50000,progressHandler,databaseHandle);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
@@ -2658,7 +2658,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
         UNUSED_VARIABLE(sqliteResult);
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
@@ -2681,7 +2681,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
         UNUSED_VARIABLE(sqliteResult);
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           int mariadbResult;
@@ -2820,7 +2820,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
       // clear busy timeout handler
       sqlite3_busy_handler(databaseHandle->sqlite.handle,NULL,NULL);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
@@ -2833,7 +2833,7 @@ LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
     case DATABASE_TYPE_SQLITE3:
       sqlite3_close(databaseHandle->sqlite.handle);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         mysql_close(databaseHandle->mysql.handle);
       #else /* HAVE_MARIADB */
@@ -4275,7 +4275,7 @@ LOCAL int busyHandler(void *userData, int n)
         }
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           // prepare SQL statement
@@ -4472,7 +4472,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
         }
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           const uint MAX_TEXT_LENGTH = 4096;
@@ -4622,7 +4622,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
         if (databaseStatementHandle->sqlite.bind != NULL) free(databaseStatementHandle->sqlite.bind);
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           // finalize statement
@@ -4829,7 +4829,7 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle, long tim
         }
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           int  mariadbResult;
@@ -5047,7 +5047,7 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
         }
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           int mariadbResult;
@@ -5183,7 +5183,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
     case DATABASE_TYPE_SQLITE3:
       id = (DatabaseId)sqlite3_last_insert_rowid(databaseStatementHandle->databaseHandle->sqlite.handle);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         id = (DatabaseId)mysql_stmt_insert_id(databaseStatementHandle->mysql.statementHandle);
       #else /* HAVE_MARIADB */
@@ -5464,7 +5464,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
           }
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
             const uint MAX_TEXT_LENGTH = 4096;
@@ -6021,7 +6021,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         }
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           // bind values
@@ -6314,7 +6314,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
         }
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           for (i = 0; i < filterCount; i++)
@@ -6511,7 +6511,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           databaseHandle->lastInsertId = (DatabaseId)sqlite3_last_insert_rowid(databaseHandle->sqlite.handle);;
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
             MYSQL_RES *result;
@@ -6713,7 +6713,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
           }
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
             // bind values
@@ -6807,7 +6807,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                           sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
                          );
           break;
-        case DATABASE_TYPE_MYSQL:
+        case DATABASE_TYPE_MARIADB:
           #if defined(HAVE_MARIADB)
             error = ERRORX_(DATABASE,
                             mysql_errno(databaseStatementHandle->databaseHandle->mysql.handle),
@@ -6903,7 +6903,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       {
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           if (databaseStatementHandle->valueCount > 0)
@@ -6979,7 +6979,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
           }
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
             error = mariadbStatementExecute(databaseStatementHandle->mysql.statementHandle);
@@ -7193,7 +7193,7 @@ LOCAL Errors getTableColumns(DatabaseColumnName columnNames[],
         });
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           DATABASE_DOX(error,
@@ -7439,7 +7439,7 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
           )
   {
     #if defined(HAVE_MARIADB)
-      databaseSpecifier->type              = DATABASE_TYPE_MYSQL;
+      databaseSpecifier->type              = DATABASE_TYPE_MARIADB;
       databaseSpecifier->mysql.serverName  = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->mysql.userName    = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->mysql.password);
@@ -7463,7 +7463,7 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
           )
   {
     #if defined(HAVE_MARIADB)
-      databaseSpecifier->type               = DATABASE_TYPE_MYSQL;
+      databaseSpecifier->type               = DATABASE_TYPE_MARIADB;
       databaseSpecifier->mysql.serverName   = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->mysql.userName     = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->mysql.password);
@@ -7495,7 +7495,7 @@ void Database_copySpecifier(DatabaseSpecifier       *databaseSpecifier,
     case DATABASE_TYPE_SQLITE3:
       databaseSpecifier->sqlite.fileName = String_duplicate(fromDatabaseSpecifier->sqlite.fileName);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         databaseSpecifier->mysql.serverName   = String_duplicate(fromDatabaseSpecifier->mysql.serverName);
         databaseSpecifier->mysql.userName     = String_duplicate(fromDatabaseSpecifier->mysql.userName);
@@ -7516,7 +7516,7 @@ void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier)
     case DATABASE_TYPE_SQLITE3:
       String_delete(databaseSpecifier->sqlite.fileName);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         String_delete(databaseSpecifier->mysql.databaseName);
         Password_done(&databaseSpecifier->mysql.password);
@@ -7610,7 +7610,7 @@ bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0, const
              );
 
   #if defined(HAVE_MARIADB)
-    return     (databaseSpecifier0->type == DATABASE_TYPE_MYSQL)
+    return     (databaseSpecifier0->type == DATABASE_TYPE_MARIADB)
             && String_equals(databaseSpecifier0->mysql.serverName,databaseSpecifier1->mysql.serverName)
             && String_equals(databaseSpecifier0->mysql.userName,databaseSpecifier1->mysql.userName)
             && String_equals(databaseSpecifier0->mysql.databaseName,databaseSpecifier1->mysql.databaseName);
@@ -7635,7 +7635,7 @@ String Database_getPrintableName(String                  string,
                     databaseSpecifier->sqlite.fileName
                    );
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         String_format(string,
                       "mariadb:%S:%S:*:%S",
@@ -7673,7 +7673,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                          );
       String_set(databaseSpecifier->sqlite.fileName,newDatabaseName);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           DatabaseHandle     databaseHandle;
@@ -7798,7 +7798,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           fprintf(stderr,
                   "Database debug: opened 'mariadb:%s:%s:*:%s'\n",
@@ -7862,7 +7862,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                 String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           fprintf(stderr,
                   "Database debug: close 'mariadb:%s:%s:*:%s'\n",
@@ -8030,7 +8030,7 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
       case DATABASE_TYPE_SQLITE3:
         sqlite3_interrupt(databaseHandle->sqlite.handle);
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
         #else /* HAVE_MARIADB */
         #endif /* HAVE_MARIADB */
@@ -8090,7 +8090,7 @@ Errors Database_getTableList(StringList     *tableList,
                              DATABASE_UNLIMITED
                             );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           error = Database_get(databaseHandle,
                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -8179,7 +8179,7 @@ Errors Database_getViewList(StringList     *viewList,
                              DATABASE_UNLIMITED
                             );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           error = Database_get(databaseHandle,
                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -8274,7 +8274,7 @@ Errors Database_getIndexList(StringList     *indexList,
                              DATABASE_UNLIMITED
                             );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           if (tableName != NULL)
           {
@@ -8414,7 +8414,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
                                  "SELECT name FROM sqlite_master where type='trigger'"
                                 );
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           error = Database_execute(databaseHandle,
                                    CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -9063,7 +9063,7 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
                                 );
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -9103,7 +9103,7 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
                                enabled ? "ON" : "OFF"
                               );
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         error = Database_execute(databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -9150,7 +9150,7 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
                                directoryName
                               );
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         error = ERROR_NONE;  // not supported; ignored
       #else /* HAVE_MARIADB */
@@ -9299,7 +9299,7 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
         StringList_done(&indexNameList);
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
           StringList         tableNameList,indexNameList;
@@ -10858,7 +10858,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
           case DATABASE_TRANSACTION_TYPE_EXCLUSIVE: String_format(sqlString,"BEGIN EXCLUSIVE TRANSACTION"); break;
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           String_format(sqlString,"START TRANSACTION");
         #else /* HAVE_MARIADB */
@@ -11003,7 +11003,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       case DATABASE_TYPE_SQLITE3:
         String_format(sqlString,"END TRANSACTION");
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           String_format(sqlString,"COMMIT");
         #else /* HAVE_MARIADB */
@@ -11065,7 +11065,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
         // try to execute checkpoint
         executeCheckpoint(databaseHandle);
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
         #else /* HAVE_MARIADB */
           return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -11195,7 +11195,7 @@ Errors Database_flush(DatabaseHandle *databaseHandle)
     case DATABASE_TYPE_SQLITE3:
       sqlite3_wal_checkpoint(databaseHandle->sqlite.handle,NULL);
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -11711,7 +11711,7 @@ Errors Database_insert(DatabaseHandle      *databaseHandle,
         String_appendCString(sqlString," OR IGNORE ");
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         if      (IS_SET(flags,DATABASE_FLAG_IGNORE))
         {
@@ -11834,7 +11834,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
         String_appendCString(sqlString," OR IGNORE ");
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         if      (IS_SET(flags,DATABASE_FLAG_IGNORE))
         {
@@ -11969,7 +11969,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
       case DATABASE_TYPE_SQLITE3:
         String_appendCString(sqlString," OR IGNORE ");
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           String_appendCString(sqlString," IGNORE ");
         #else /* HAVE_MARIADB */
@@ -12080,7 +12080,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
         String_formatAppend(sqlString," LIMIT 0,%"PRIu64,limit);
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
@@ -12194,7 +12194,7 @@ Errors Database_select(DatabaseStatementHandle *databaseStatementHandle,
       case DATABASE_TYPE_SQLITE3:
         String_appendCString(sqlString,"OR IGNORE ");
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           String_appendCString(sqlString,"IGNORE ");
         #else /* HAVE_MARIADB */
@@ -13189,7 +13189,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
             break;
         }
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           switch (databaseCheck)
           {
@@ -13264,7 +13264,7 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
                                "REINDEX"
                               );
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -13289,7 +13289,7 @@ void Database_debugPrintSimpleLockInfo(void)
       case DATABASE_TYPE_SQLITE3:
         printf("Database: 'sqlite:%s'\n",String_cString(databaseNode->databaseSpecifier.sqlite.fileName));
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           printf("Database: 'mariadb:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mysql.serverName),String_cString(databaseNode->databaseSpecifier.mysql.userName));
         #else /* HAVE_MARIADB */
@@ -13335,7 +13335,7 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
                    );
 */
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
         #else /* HAVE_MARIADB */
         #endif /* HAVE_MARIADB */
@@ -13357,7 +13357,7 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
                       "PRAGMA vdbe_trace=OFF"
                      );
           break;
-        case DATABASE_TYPE_MYSQL:
+        case DATABASE_TYPE_MARIADB:
           #if defined(HAVE_MARIADB)
           #else /* HAVE_MARIADB */
           #endif /* HAVE_MARIADB */
@@ -13393,7 +13393,7 @@ void Database_debugPrintInfo(void)
                     databaseNode->openCount
                    );
             break;
-          case DATABASE_TYPE_MYSQL:
+          case DATABASE_TYPE_MARIADB:
             #if defined(HAVE_MARIADB)
               fprintf(stderr,
                       "  opened 'mariadb:%s:%s': %u\n",
@@ -13658,7 +13658,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
                   String_cString(databaseHandle->databaseNode->databaseSpecifier.sqlite.fileName)
                  );
           break;
-        case DATABASE_TYPE_MYSQL:
+        case DATABASE_TYPE_MARIADB:
           #if defined(HAVE_MARIADB)
             fprintf(stderr,
                     "Database lock info 'mariadb:%s:%s':\n",
@@ -13753,7 +13753,7 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
               String_cString(databaseStatementHandle->sqlString)
              );
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         fprintf(stderr,
                 "DEBUG database %s, %lu: 'mariadb:%s:%s': %s\n",

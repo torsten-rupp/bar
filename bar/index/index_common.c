@@ -219,7 +219,7 @@ String IndexCommon_getFTSString(String         string,
 
         String_formatAppend(string,"'");
         break;
-      case DATABASE_TYPE_MYSQL:
+      case DATABASE_TYPE_MARIADB:
         String_formatAppend(string,"MATCH(%s) AGAINST('",columnName);
 
         String_initTokenizer(&stringTokenizer,
