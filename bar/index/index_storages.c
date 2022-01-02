@@ -1956,7 +1956,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                       );
       }
       break;
-    case DATABASE_TYPE_MYSQL:
+    case DATABASE_TYPE_MARIADB:
       break;
   }
 
@@ -5012,7 +5012,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
             return error;
           }
           break;
-        case DATABASE_TYPE_MYSQL:
+        case DATABASE_TYPE_MARIADB:
           break;
       }
 
@@ -5190,7 +5190,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
               return error;
             }
             break;
-          case DATABASE_TYPE_MYSQL:
+          case DATABASE_TYPE_MARIADB:
             break;
         }
       }

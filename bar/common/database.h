@@ -53,8 +53,8 @@
 // database type
 typedef enum
 {
-  DATABASE_TYPE_SQLITE3 = 0,
-  DATABASE_TYPE_MYSQL   = 1
+  DATABASE_TYPE_SQLITE3,
+  DATABASE_TYPE_MARIADB
 } DatabaseTypes;
 
 // database specifier

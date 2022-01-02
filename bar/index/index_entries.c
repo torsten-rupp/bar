@@ -4271,7 +4271,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                           )
                                          );
                 break;
-              case DATABASE_TYPE_MYSQL:
+              case DATABASE_TYPE_MARIADB:
                 break;
             }
           }
@@ -4464,7 +4464,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                         )
                                        );
                 break;
-              case DATABASE_TYPE_MYSQL:
+              case DATABASE_TYPE_MARIADB:
                 break;
             }
           }
@@ -4621,7 +4621,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
             return error;
           }
           break;
-        case DATABASE_TYPE_MYSQL:
+        case DATABASE_TYPE_MARIADB:
           break;
       }
 
@@ -4773,7 +4773,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
             return error;
           }
           break;
-        case DATABASE_TYPE_MYSQL:
+        case DATABASE_TYPE_MARIADB:
           break;
       }
 
@@ -4937,7 +4937,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                           )
                                          );
                 break;
-              case DATABASE_TYPE_MYSQL:
+              case DATABASE_TYPE_MARIADB:
                 break;
             }
           }
@@ -5115,7 +5115,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
             return error;
           }
           break;
-        case DATABASE_TYPE_MYSQL:
+        case DATABASE_TYPE_MARIADB:
           break;
       }
 
