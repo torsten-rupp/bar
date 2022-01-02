@@ -777,6 +777,7 @@ AC_SUBST(HAVE_GNU_TLS)                      dnl "1" for GNU TLS support, "" othe
 AC_SUBST(HAVE_ISO9660)                      dnl "1" for ISO9660 support, "" otherwise
 AC_SUBST(HAVE_PCRE)                         dnl "1" for pcre support, "" otherwise
 AC_SUBST(HAVE_MARIADB)                      dnl "1" for MariaDB support, "" otherwise
+AC_SUBST(HAVE_POSTGRESQL)                   dnl "1" for PostgreSQL support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                 dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BREAKPAD)                     dnl "1" for BreakPad support, "" otherwise
 AC_SUBST(HAVE_BFD)                          dnl "1" for BFD support, "" otherwise
@@ -931,6 +932,7 @@ ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
 ENABLE_PCRE="yes"
 ENABLE_MARIADB="yes"
+ENABLE_POSTGRESQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
@@ -1131,6 +1133,16 @@ AC_ARG_ENABLE(
   pcre,
   AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
   [ENABLE_PCRE=$enableval]
+)
+AC_ARG_ENABLE(
+  mariadb,
+  AC_HELP_STRING([--disable-mariadb],[disable MariaDB support]),
+  [ENABLE_MARIADB=$enableval]
+)
+AC_ARG_ENABLE(
+  postgresql,
+  AC_HELP_STRING([--disable-postgresql],[disable PostgreSQL support]),
+  [ENABLE_POSTGRESQL=$enableval]
 )
 AC_ARG_ENABLE(
   crashdump,
@@ -3377,7 +3389,7 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
 fi
 
 # compile MariaDB client
-if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
+if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
     dnl compile MariaDB client library
 
@@ -3458,7 +3470,90 @@ else
 fi
 if test -z "$HAVE_MARIADB"; then
   if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
-    AC_MSG_WARN([MariaDB client not compiled: Maria DB client package missing])
+    AC_MSG_WARN([MariaDB client not compiled: MariaDB client package missing])
+  fi
+fi
+
+# compile PostgreSQL client
+if test -d postgresql -o -d "`readlink postgresql`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+    dnl compile PostgreSQL client library
+
+    cwd=`pwd`
+
+    AC_MSG_COMPILE([PostgreSQL client])
+    result=1
+    if test $result -eq 1; then
+      (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --with-includes=$cwd/extern/includes \
+        --with-libraries=$cwd/extern/lib \
+        --enable-thread-safety \
+        --with-openssl \
+        `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd postgresql; \
+       make clean; \
+       make -C src/interfaces -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd postgresql; \
+       make -C include install PREFIX=$cwd/extern; \
+       make -C src/interfaces install PREFIX=$cwd/extern; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES pq"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pq"
+    fi
+    HAVE_POSTGRESQL=1
+    AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
+  fi
+else
+  dnl search for installed PostgreSQL client library
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+  else
+    if test -z "$HAVE_POSTGRESQL"; then
+      AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+    fi
+    if test -z "$HAVE_POSTGRESQL"; then
+      AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+    fi
+  fi
+fi
+if test -z "$HAVE_POSTGRESQL"; then
+  if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
+    AC_MSG_WARN([PostgreSQL not compiled: PostgreSQL package missing])
   fi
 fi
 
@@ -4025,25 +4120,26 @@ AC_ARG_ENABLE(
   extern-check,
   AC_HELP_STRING([--enable-extern-check],[enable check extern software]),
   [
-   AS_IF(test $HAVE_ICU    ,,AC_MSG_ERROR([icu missing]))
-   AS_IF(test $HAVE_Z      ,,AC_MSG_ERROR([zlib missing]))
-   AS_IF(test $HAVE_BZ2    ,,AC_MSG_ERROR([bzip2 missing]))
-   AS_IF(test $HAVE_LZMA   ,,AC_MSG_ERROR([lzma missing]))
-   AS_IF(test $HAVE_LZO    ,,AC_MSG_ERROR([lzo missing]))
-   AS_IF(test $HAVE_LZ4    ,,AC_MSG_ERROR([lz4 missing]))
-   AS_IF(test $HAVE_ZSTD   ,,AC_MSG_ERROR([zstd missing]))
-   AS_IF(test $HAVE_XDELTA3,,AC_MSG_ERROR([xdelta3 missing]))
-   AS_IF(test $HAVE_GCRYPT ,,AC_MSG_ERROR([gcrypt missing]))
-   AS_IF(test $HAVE_FTP    ,,AC_MSG_ERROR([ftp missing]))
-   AS_IF(test $HAVE_CARES  ,,AC_MSG_ERROR([c-ares missing]))
-   AS_IF(test $HAVE_CURL   ,,AC_MSG_ERROR([curl missing]))
-   AS_IF(test $HAVE_MXML   ,,AC_MSG_ERROR([mxml missing]))
-   AS_IF(test $HAVE_SSL    ,,AC_MSG_ERROR([ssl missing]))
-   AS_IF(test $HAVE_SSH2   ,,AC_MSG_ERROR([ssh2 missing]))
-   AS_IF(test $HAVE_GNU_TLS,,AC_MSG_ERROR([GNU TLS missing]))
-   AS_IF(test $HAVE_ISO9660,,AC_MSG_ERROR([ISO9660 missing]))
-   AS_IF(test $HAVE_PCRE   ,,AC_MSG_ERROR([PCRE missing]))
-   AS_IF(test $HAVE_MARIADB,,AC_MSG_ERROR([MariaDB missing]))
+   AS_IF(test $HAVE_ICU       ,,AC_MSG_ERROR([icu missing]))
+   AS_IF(test $HAVE_Z         ,,AC_MSG_ERROR([zlib missing]))
+   AS_IF(test $HAVE_BZ2       ,,AC_MSG_ERROR([bzip2 missing]))
+   AS_IF(test $HAVE_LZMA      ,,AC_MSG_ERROR([lzma missing]))
+   AS_IF(test $HAVE_LZO       ,,AC_MSG_ERROR([lzo missing]))
+   AS_IF(test $HAVE_LZ4       ,,AC_MSG_ERROR([lz4 missing]))
+   AS_IF(test $HAVE_ZSTD      ,,AC_MSG_ERROR([zstd missing]))
+   AS_IF(test $HAVE_XDELTA3   ,,AC_MSG_ERROR([xdelta3 missing]))
+   AS_IF(test $HAVE_GCRYPT    ,,AC_MSG_ERROR([gcrypt missing]))
+   AS_IF(test $HAVE_FTP       ,,AC_MSG_ERROR([ftp missing]))
+   AS_IF(test $HAVE_CARES     ,,AC_MSG_ERROR([c-ares missing]))
+   AS_IF(test $HAVE_CURL      ,,AC_MSG_ERROR([curl missing]))
+   AS_IF(test $HAVE_MXML      ,,AC_MSG_ERROR([mxml missing]))
+   AS_IF(test $HAVE_SSL       ,,AC_MSG_ERROR([ssl missing]))
+   AS_IF(test $HAVE_SSH2      ,,AC_MSG_ERROR([ssh2 missing]))
+   AS_IF(test $HAVE_GNU_TLS   ,,AC_MSG_ERROR([GNU TLS missing]))
+   AS_IF(test $HAVE_ISO9660   ,,AC_MSG_ERROR([ISO9660 missing]))
+   AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
+   AS_IF(test $HAVE_MARIADB   ,,AC_MSG_ERROR([MariaDB missing]))
+   AS_IF(test $HAVE_POSTGRESQL,,AC_MSG_ERROR([PostgreSQL missing]))
   ]
 )
 
@@ -4070,6 +4166,7 @@ AC_CHECK_HEADERS(\
                  icu.h \
                  libiberty/demangle.h \
                  libintl.h \
+                 libpq-fe.h \
                  link.h \
                  linux/fs.h \
                  linux/tcp.h \
@@ -4517,6 +4614,16 @@ if test $ENABLE_MARIADB = "yes"; then
               VERSION_MARIADB=unknown
              )
 fi
+if test $ENABLE_POSTGRESQL = "yes"; then
+  AC_TRY_LINK([#include <stdio.h>
+               #include "libpq-fe.h"
+              ],
+              [printf("%d",PQlibVersion());
+              ],
+              VERSION_POSTGRESQL=`./conftest$ac_exeext`,
+              VERSION_POSTGRESQL=unknown
+             )
+fi
 
 dnl ------------ autoheader: top/bottom include for config.h -----------
 
@@ -4605,6 +4712,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  SQLite             : yes ($VERSION_SQLITE)";
                     echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
+                    echo "  PostgreSQL support : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -4667,6 +4775,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_MARIADB=$HAVE_MARIADB
+                   HAVE_POSTGRESQL=$HAVE_POSTGRESQL
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -4704,6 +4813,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_PCRE="$VERSION_PCRE"
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_MARIADB="$VERSION_MARIADB"
+                   VERSION_POSTGRESQL="$VERSION_POSTGRESQL"
                   )
 
 AC_OUTPUT

@@ -744,6 +744,7 @@ HAVE_USLEEP
 HAVE_BFD
 HAVE_BREAKPAD
 HAVE_PTHREADS_W32
+HAVE_POSTGRESQL
 HAVE_MARIADB
 HAVE_PCRE
 HAVE_ISO9660
@@ -864,6 +865,8 @@ enable_ssh
 enable_tls
 enable_iso9660
 enable_pcre
+enable_mariadb
+enable_postgresql
 enable_crashdump
 enable_bfd
 enable_gui
@@ -1524,6 +1527,8 @@ Optional Features:
   --disable-tls           disable TLS support
   --disable-iso9660       disable ISO 9660 support
   --disable-pcre          disable PCRE support
+  --disable-mariadb       disable MariaDB support
+  --disable-postgresql    disable PostgreSQL support
   --disable-crashdump     disable crash dump support
   --disable-bfd           disable BFD support
   --disable-gui           disable GUI support (barcontrol)
@@ -2731,6 +2736,7 @@ ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
 ENABLE_PCRE="yes"
 ENABLE_MARIADB="yes"
+ENABLE_POSTGRESQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_BREAKPAD="yes"
 ENABLE_BFD="yes"
@@ -2949,6 +2955,18 @@ fi
 # Check whether --enable-pcre was given.
 if test "${enable_pcre+set}" = set; then :
   enableval=$enable_pcre; ENABLE_PCRE=$enableval
+
+fi
+
+# Check whether --enable-mariadb was given.
+if test "${enable_mariadb+set}" = set; then :
+  enableval=$enable_mariadb; ENABLE_MARIADB=$enableval
+
+fi
+
+# Check whether --enable-postgresql was given.
+if test "${enable_postgresql+set}" = set; then :
+  enableval=$enable_postgresql; ENABLE_POSTGRESQL=$enableval
 
 fi
 
@@ -14901,7 +14919,7 @@ $as_echo "done" >&6; }
 fi
 
 # compile MariaDB client
-if test -d mariadbClient -o -d "`readlink mariadb-connector-c`"; then
+if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
     cwd=`pwd`
@@ -15179,8 +15197,289 @@ fi
 fi
 if test -z "$HAVE_MARIADB"; then
   if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: Maria DB client package missing" >&5
-$as_echo "$as_me: WARNING: MariaDB client not compiled: Maria DB client package missing" >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: MariaDB client package missing" >&5
+$as_echo "$as_me: WARNING: MariaDB client not compiled: MariaDB client package missing" >&2;}
+  fi
+fi
+
+# compile PostgreSQL client
+if test -d postgresql -o -d "`readlink postgresql`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+
+    cwd=`pwd`
+
+
+  $as_echo_n "compile PostgreSQL client... " >&6
+
+    result=1
+    if test $result -eq 1; then
+      (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --with-includes=$cwd/extern/includes \
+        --with-libraries=$cwd/extern/lib \
+        --enable-thread-safety \
+        --with-openssl \
+        `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd postgresql; \
+       make clean; \
+       make -C src/interfaces -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd postgresql; \
+       make -C include install PREFIX=$cwd/extern; \
+       make -C src/interfaces install PREFIX=$cwd/extern; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+$as_echo "fail (make)" >&6; }
+
+  $as_echo "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do $as_echo "  $s"; done
+  $as_echo "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+$as_echo "done" >&6; }
+    fi
+  else
+    result=1
+  fi
+
+  if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES pq"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pq"
+    fi
+    HAVE_POSTGRESQL=1
+
+$as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+  fi
+else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pq_init" >&5
+$as_echo_n "checking for library containing pq_init... " >&6; }
+if ${ac_cv_search_libraries_pq_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pq ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pq_init();"; fi`
+                                         return (int)pq_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_pq_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_pq_init+:} false; then :
+
+else
+  ac_cv_search_libraries_pq_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pq_init" >&5
+$as_echo "$ac_cv_search_libraries_pq_init" >&6; }
+  ac_result=$ac_cv_search_libraries_pq_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";
+$as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+  else
+    if test -z "$HAVE_POSTGRESQL"; then
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing pq_init" >&5
+$as_echo_n "checking for static library containing pq_init... " >&6; }
+if ${ac_cv_search_static_pq_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in pq ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pq_init();"; fi`
+                                         return (int)pq_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_pq_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_pq_init+:} false; then :
+
+else
+  ac_cv_search_static_pq_init=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_pq_init" >&5
+$as_echo "$ac_cv_search_static_pq_init" >&6; }
+  ac_result=$ac_cv_search_static_pq_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";
+$as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+    fi
+    if test -z "$HAVE_POSTGRESQL"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pq_init" >&5
+$as_echo_n "checking for library containing pq_init... " >&6; }
+if ${ac_cv_search_libraries_pq_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pq ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pq_init();"; fi`
+                                         return (int)pq_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_pq_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_pq_init+:} false; then :
+
+else
+  ac_cv_search_libraries_pq_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pq_init" >&5
+$as_echo "$ac_cv_search_libraries_pq_init" >&6; }
+  ac_result=$ac_cv_search_libraries_pq_init
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";
+$as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+    fi
+  fi
+fi
+if test -z "$HAVE_POSTGRESQL"; then
+  if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: PostgreSQL not compiled: PostgreSQL package missing" >&5
+$as_echo "$as_me: WARNING: PostgreSQL not compiled: PostgreSQL package missing" >&2;}
   fi
 fi
 
@@ -16710,100 +17009,105 @@ fi
 # Check whether --enable-extern-check was given.
 if test "${enable_extern_check+set}" = set; then :
   enableval=$enable_extern_check;
-   if test $HAVE_ICU    ; then :
+   if test $HAVE_ICU       ; then :
 
 else
   as_fn_error $? "icu missing" "$LINENO" 5
 fi
-   if test $HAVE_Z      ; then :
+   if test $HAVE_Z         ; then :
 
 else
   as_fn_error $? "zlib missing" "$LINENO" 5
 fi
-   if test $HAVE_BZ2    ; then :
+   if test $HAVE_BZ2       ; then :
 
 else
   as_fn_error $? "bzip2 missing" "$LINENO" 5
 fi
-   if test $HAVE_LZMA   ; then :
+   if test $HAVE_LZMA      ; then :
 
 else
   as_fn_error $? "lzma missing" "$LINENO" 5
 fi
-   if test $HAVE_LZO    ; then :
+   if test $HAVE_LZO       ; then :
 
 else
   as_fn_error $? "lzo missing" "$LINENO" 5
 fi
-   if test $HAVE_LZ4    ; then :
+   if test $HAVE_LZ4       ; then :
 
 else
   as_fn_error $? "lz4 missing" "$LINENO" 5
 fi
-   if test $HAVE_ZSTD   ; then :
+   if test $HAVE_ZSTD      ; then :
 
 else
   as_fn_error $? "zstd missing" "$LINENO" 5
 fi
-   if test $HAVE_XDELTA3; then :
+   if test $HAVE_XDELTA3   ; then :
 
 else
   as_fn_error $? "xdelta3 missing" "$LINENO" 5
 fi
-   if test $HAVE_GCRYPT ; then :
+   if test $HAVE_GCRYPT    ; then :
 
 else
   as_fn_error $? "gcrypt missing" "$LINENO" 5
 fi
-   if test $HAVE_FTP    ; then :
+   if test $HAVE_FTP       ; then :
 
 else
   as_fn_error $? "ftp missing" "$LINENO" 5
 fi
-   if test $HAVE_CARES  ; then :
+   if test $HAVE_CARES     ; then :
 
 else
   as_fn_error $? "c-ares missing" "$LINENO" 5
 fi
-   if test $HAVE_CURL   ; then :
+   if test $HAVE_CURL      ; then :
 
 else
   as_fn_error $? "curl missing" "$LINENO" 5
 fi
-   if test $HAVE_MXML   ; then :
+   if test $HAVE_MXML      ; then :
 
 else
   as_fn_error $? "mxml missing" "$LINENO" 5
 fi
-   if test $HAVE_SSL    ; then :
+   if test $HAVE_SSL       ; then :
 
 else
   as_fn_error $? "ssl missing" "$LINENO" 5
 fi
-   if test $HAVE_SSH2   ; then :
+   if test $HAVE_SSH2      ; then :
 
 else
   as_fn_error $? "ssh2 missing" "$LINENO" 5
 fi
-   if test $HAVE_GNU_TLS; then :
+   if test $HAVE_GNU_TLS   ; then :
 
 else
   as_fn_error $? "GNU TLS missing" "$LINENO" 5
 fi
-   if test $HAVE_ISO9660; then :
+   if test $HAVE_ISO9660   ; then :
 
 else
   as_fn_error $? "ISO9660 missing" "$LINENO" 5
 fi
-   if test $HAVE_PCRE   ; then :
+   if test $HAVE_PCRE      ; then :
 
 else
   as_fn_error $? "PCRE missing" "$LINENO" 5
 fi
-   if test $HAVE_MARIADB; then :
+   if test $HAVE_MARIADB   ; then :
 
 else
   as_fn_error $? "MariaDB missing" "$LINENO" 5
+fi
+   if test $HAVE_POSTGRESQL; then :
+
+else
+  as_fn_error $? "PostgreSQL missing" "$LINENO" 5
 fi
 
 
@@ -17264,6 +17568,7 @@ for ac_header in \
                  icu.h \
                  libiberty/demangle.h \
                  libintl.h \
+                 libpq-fe.h \
                  link.h \
                  linux/fs.h \
                  linux/tcp.h \
@@ -25877,6 +26182,30 @@ fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 fi
+if test $ENABLE_POSTGRESQL = "yes"; then
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+               #include "libpq-fe.h"
+
+int
+main ()
+{
+printf("%d",PQlibVersion());
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_POSTGRESQL=`./conftest$ac_exeext`
+else
+  VERSION_POSTGRESQL=unknown
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
 
 
 ac_config_headers="$ac_config_headers bar/config.h"
@@ -26651,6 +26980,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_MARIADB=$HAVE_MARIADB
+                   HAVE_POSTGRESQL=$HAVE_POSTGRESQL
 
                    HAVE_BFD=$HAVE_BFD
                    HAVE_BREAKPAD=$HAVE_BREAKPAD
@@ -26688,6 +27018,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_PCRE="$VERSION_PCRE"
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_MARIADB="$VERSION_MARIADB"
+                   VERSION_POSTGRESQL="$VERSION_POSTGRESQL"
 
 
 _ACEOF
@@ -27287,6 +27618,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  SQLite             : yes ($VERSION_SQLITE)";
                     echo "  MariaDB support    : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
+                    echo "  PostgreSQL support : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
                     echo "  GUI support        : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support   : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
