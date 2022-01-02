@@ -25,6 +25,9 @@
 #ifdef HAVE_MARIADB_MYSQL_H
   #include "mariadb/mysql.h"
 #endif
+#ifdef HAVE_LIBPQ_FE_H
+  #include "libpq-fe.h"
+#endif
 
 #include "common/global.h"
 #include "common/passwords.h"
@@ -54,7 +57,8 @@
 typedef enum
 {
   DATABASE_TYPE_SQLITE3,
-  DATABASE_TYPE_MARIADB
+  DATABASE_TYPE_MARIADB,
+  DATABASE_TYPE_POSGRESQL
 } DatabaseTypes;
 
 // database specifier
@@ -77,6 +81,15 @@ typedef struct
       String   databaseName;
     } mysql;
     #endif /* HAVE_MARIADB */
+    #if defined(HAVE_POSTGRESQL)
+    struct
+    {
+      String   serverName;
+      String   userName;
+      Password password;
+      String   databaseName;
+    } postgresql;
+    #endif /* HAVE_POSTGRESQL */
   };
 } DatabaseSpecifier;
 
@@ -392,6 +405,13 @@ typedef struct DatabaseHandle
     }
     mysql;
     #endif /* HAVE_MARIADB */
+    #if defined(HAVE_POSGRESQL)
+    struct
+    {
+      PGconn                  *handle;
+    }
+    mysql;
+    #endif /* HAVE_POSGRESQL */
   };
   uint                        readLockCount;
   uint                        readWriteLockCount;
@@ -554,6 +574,25 @@ DatabaseDataTypes *dataTypes;
     }
     mysql;
     #endif /* HAVE_MARIADB */
+    #if defined(HAVE_POSTGRESQL)
+    struct
+    {
+      MYSQL_STMT        *statementHandle;
+// TODO:
+DatabaseDataTypes *dataTypes;
+      struct
+      {
+        MYSQL_BIND      *bind;
+        MYSQL_TIME      *time;
+      }                 values;
+      struct
+      {
+        MYSQL_BIND      *bind;
+        MYSQL_TIME      *time;
+      }                 results;
+    }
+    postgresql;
+    #endif /* HAVE_POSTGRESQL */
   };
 
   uint           valueCount;
@@ -995,6 +1034,7 @@ void Database_doneAll(void);
 *                                  - [(sqlite|sqlite3):]file name, NULL
 *                                    for sqlite3 "in memory",
 *                                  - mariadb:<server>:<user>:<passwored>[:<database>]
+*                                  - postgresql:<server>:<user>:<passwored>[:<database>]
 *          defaultDatabaseName - default database name
 * Output : databaseSpecifier - database specifier
 * Return : validURIPrefixFlag - TRUE iff valid URI prefix is given (can
@@ -1041,6 +1081,7 @@ void Database_doneSpecifier(DatabaseSpecifier *databaseSpecifier);
 *                                  - [(sqlite|sqlite3):]file name, NULL
 *                                    for sqlite3 "in memory",
 *                                  - mariadb:<server>:<user>:<password>[:<database>]
+*                                  - postgresql:<server>:<user>:<password>[:<database>]
            defaultDatabaseName - default database name
 * Return : validURIPrefixFlag - TRUE iff valid URI prefix is given (can
 *                               be NULL)
@@ -1139,6 +1180,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
 *                               - [(sqlite|sqlite3):]file name, NULL for
 *                                 sqlite3 "in memory",
 *                               - mariadb:<server>:<user>[:<database>]
+*                               - postgresql:<server>:<user>[:<database>]
 *          databaseOpenMode - open mode; see DatabaseOpenModes
 *          timeout          - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle
