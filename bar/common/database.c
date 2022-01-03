@@ -1890,8 +1890,8 @@ LOCAL Errors mysqlQuery(MYSQL      *handle,
 \***********************************************************************/
 
 LOCAL Errors mysqlSelectDatabase(MYSQL      *handle,
-                                   const char *databaseName
-                                  )
+                                 const char *databaseName
+                                )
 {
   int    mysqlResult;
   Errors error;
@@ -1994,8 +1994,8 @@ LOCAL Errors mysqlSetCharacterSet(MYSQL      *handle,
 \***********************************************************************/
 
 LOCAL Errors mysqlStatementPrepare(MYSQL_STMT *statementHandle,
-                                     const char *sqlCommand
-                                    )
+                                   const char *sqlCommand
+                                  )
 {
   int    mysqlResult;
   Errors error;
@@ -2042,7 +2042,7 @@ LOCAL Errors mysqlStatementPrepare(MYSQL_STMT *statementHandle,
 }
 
 /***********************************************************************\
-* Name   : mariadbStatementExecute
+* Name   : mysqlStatementExecute
 * Purpose: execute MariaDB statement
 * Input  : statementHandle - statement handle
 * Output : -
@@ -2050,7 +2050,7 @@ LOCAL Errors mysqlStatementPrepare(MYSQL_STMT *statementHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors mariadbStatementExecute(MYSQL_STMT *statementHandle)
+LOCAL Errors mysqlStatementExecute(MYSQL_STMT *statementHandle)
 {
   int    mysqlResult;
   Errors error;
@@ -5141,7 +5141,7 @@ LOCAL Errors executeRowStatement(DatabaseStatementHandle *databaseStatementHandl
             }
           }
 
-          error = mariadbStatementExecute(databaseStatementHandle->mysql.statementHandle);
+          error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
 // TODO: remove
 if (error != ERROR_NONE)
 {
@@ -5633,7 +5633,7 @@ LOCAL Errors vexecuteStatement(DatabaseHandle         *databaseHandle,
             }
 
             // step and process rows
-            error = mariadbStatementExecute(statementHandle);
+            error = mysqlStatementExecute(statementHandle);
             if (error != ERROR_NONE)
             {
               free(values);
@@ -6750,7 +6750,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             }
 
             // do query
-            error = mariadbStatementExecute(databaseStatementHandle->mysql.statementHandle);
+            error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
@@ -6982,7 +6982,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
-            error = mariadbStatementExecute(databaseStatementHandle->mysql.statementHandle);
+            error = mysqlStatementExecute(databaseStatementHandle->mysql.statementHandle);
             if (error != ERROR_NONE)
             {
               break;
