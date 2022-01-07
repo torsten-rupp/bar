@@ -4314,7 +4314,7 @@ Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
                     && String_equals(storageSpecifier->archiveName,name)
                    )
                 || (   (patternString != NULL)
-                    && Pattern_match(&pattern,name,PATTERN_MATCH_MODE_EXACT)
+                    && Pattern_match(&pattern,name,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL)
                    )
                )
            )

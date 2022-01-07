@@ -323,7 +323,7 @@ bool PatternList_match(const PatternList *patternList,
   patternNode = patternList->head;
   while ((patternNode != NULL) && !matchFlag)
   {
-    matchFlag = Pattern_match(&patternNode->pattern,string,patternMatchMode);
+    matchFlag = Pattern_match(&patternNode->pattern,string,STRING_BEGIN,patternMatchMode,NULL,NULL);
     patternNode = patternNode->next;
   }
 
