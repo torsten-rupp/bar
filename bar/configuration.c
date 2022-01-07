@@ -1707,6 +1707,8 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.incrementalListFileName                         = String_new();
 
+  globalOptions.transform.patternString                         = String_new();
+  globalOptions.transform.replace                               = String_new();
   globalOptions.directoryStripCount                             = 0;
   globalOptions.destination                                     = String_new();
   globalOptions.owner.userId                                    = FILE_DEFAULT_USER_ID;
@@ -1938,6 +1940,8 @@ LOCAL void doneGlobalOptions(void)
   Password_done(&globalOptions.cryptPassword);
 
   String_delete(globalOptions.destination);
+  String_delete(globalOptions.transform.replace);
+  String_delete(globalOptions.transform.patternString);
 
   String_delete(globalOptions.incrementalListFileName);
 
@@ -2028,6 +2032,80 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 
   // append to list
   List_append((BandWidthList*)variable,bandWidthNode);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseOwner
+* Purpose: command line option call back for parsing owner
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  String patternString,replace;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+
+  // init variables
+  patternString = String_new();
+  replace       = String_new();
+
+  // parse
+  if      (String_scanCString(value,"extended:%S,%S",patternString,replace))
+  {
+    if (!Pattern_isValid(patternString,PATTERN_TYPE_EXTENDED_REGEX))
+    {
+      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
+      return FALSE;
+    }
+  }
+  else if (String_scanCString(value,"regex:%S,%S",patternString,replace))
+  {
+    if (!Pattern_isValid(patternString,PATTERN_TYPE_REGEX))
+    {
+      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
+      return FALSE;
+    }
+  }
+  else if (String_scanCString(value,"glob:%S,%S",patternString,replace))
+  {
+    if (!Pattern_isValid(patternString,PATTERN_TYPE_GLOB))
+    {
+      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
+      return FALSE;
+    }
+  }
+  else if (String_scanCString(value,"%S,%S",patternString,replace))
+  {
+    if (!Pattern_isValid(patternString,PATTERN_TYPE_REGEX))
+    {
+      stringFormat(errorMessage,errorMessageSize,"Invalid transform pattern '%s'",String_cString(patternString));
+      return FALSE;
+    }
+  }
+  else
+  {
+    stringFormat(errorMessage,errorMessageSize,"Unknown transform value '%s'",value);
+    return FALSE;
+  }
+
+  // store transform values
+  String_set(((Transform*)variable)->patternString,patternString);
+  String_set(((Transform*)variable)->replace,replace);
+
+  // free resources
+  String_delete(replace);
+  String_delete(patternString);
 
   return TRUE;
 }
@@ -7191,6 +7269,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_INTEGER64    ("archive-part-size",                 's',0,2,globalOptions.archivePartSize,                       0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "approximated archive part size","unlimited"                               ),
   CMD_OPTION_INTEGER64    ("fragment-size",                     0,  0,3,globalOptions.fragmentSize,                          0,MAX_LONG_LONG,COMMAND_LINE_BYTES_UNITS,                    "fragment size","unlimited"                                                ),
 
+  CMD_OPTION_SPECIAL      ("transform",                         0,  0,2,&globalOptions.transform,                            cmdOptionParseTransform,NULL,1,                              "transform file names","pattern,string"                                    ),
   CMD_OPTION_INTEGER      ("directory-strip",                   'p',1,2,globalOptions.directoryStripCount,                   -1,MAX_INT,NULL,                                             "number of directories to strip on extract",NULL                           ),
   CMD_OPTION_STRING       ("destination",                       0,  0,2,globalOptions.destination,                                                                                        "destination to restore entries","path"                                    ),
   CMD_OPTION_SPECIAL      ("owner",                             0,  0,2,&globalOptions.owner,                                cmdOptionParseOwner,NULL,1,                                  "user and group of restored files","user:group"                            ),
