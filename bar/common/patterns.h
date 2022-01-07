@@ -257,7 +257,10 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern);
 
 bool Pattern_match(const Pattern     *pattern,
                    ConstString       string,
-                   PatternMatchModes patternMatchMode
+                   ulong             index,
+                   PatternMatchModes patternMatchMode,
+                   ulong             *matchIndex,
+                   ulong             *matchLength
                   );
 
 /***********************************************************************\
@@ -270,6 +273,18 @@ bool Pattern_match(const Pattern     *pattern,
 \***********************************************************************/
 
 bool Pattern_checkIsPattern(const ConstString string);
+
+/***********************************************************************\
+* Name   : Pattern_isValid
+* Purpose: check if string is a valid pattern
+* Input  : string       - string
+*          patternType  - pattern type
+* Output : -
+* Return : TRUE is string is a valid pattern, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Pattern_isValid(const ConstString string, PatternTypes patternType);
 
 #ifdef __cplusplus
   }

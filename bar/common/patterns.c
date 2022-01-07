@@ -84,7 +84,7 @@ LOCAL void getRegularExpression(String       regexString,
   assert(regexFlags != NULL);
   assert(string != NULL);
 
-  (*regexFlags) = REG_NOSUB;
+  (*regexFlags) = 0;
   if ((patternFlags & PATTERN_FLAG_IGNORE_CASE) == PATTERN_FLAG_IGNORE_CASE) (*regexFlags) |= REG_ICASE;
   switch (patternType)
   {
@@ -486,10 +486,14 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern)
 
 bool Pattern_match(const Pattern     *pattern,
                    ConstString       string,
-                   PatternMatchModes patternMatchMode
+                   ulong             index,
+                   PatternMatchModes patternMatchMode,
+                   ulong             *matchIndex,
+                   ulong             *matchLength
                   )
 {
-  bool matchFlag;
+  bool       matchFlag;
+  regmatch_t matches[1];
 
   assert(pattern != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(pattern);
@@ -499,22 +503,34 @@ bool Pattern_match(const Pattern     *pattern,
   switch (patternMatchMode)
   {
     case PATTERN_MATCH_MODE_BEGIN:
-      matchFlag = (regexec(&pattern->regexBegin,String_cString(string),0,NULL,0) == 0);
+      matchFlag = (regexec(&pattern->regexBegin,String_cString(string)+index,1,matches,0) == 0);
       break;
     case PATTERN_MATCH_MODE_END:
-      matchFlag = (regexec(&pattern->regexEnd,String_cString(string),0,NULL,0) == 0);
+      matchFlag = (regexec(&pattern->regexEnd,String_cString(string)+index,1,matches,0) == 0);
       break;
     case PATTERN_MATCH_MODE_EXACT:
-      matchFlag = (regexec(&pattern->regexExact,String_cString(string),0,NULL,0) == 0);
+      matchFlag = (regexec(&pattern->regexExact,String_cString(string)+index,1,matches,0) == 0);
       break;
     case PATTERN_MATCH_MODE_ANY:
-      matchFlag = (regexec(&pattern->regexAny,String_cString(string),0,NULL,0) == 0);
+      matchFlag = (regexec(&pattern->regexAny,String_cString(string)+index,1,matches,0) == 0);
       break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
         break; /* not reached */
     #endif /* NDEBUG */
+  }
+
+  if (matchFlag)
+  {
+    if (matchIndex != NULL)
+    {
+      (*matchIndex) = index+matches[0].rm_so;
+    }
+    if (matchLength != NULL)
+    {
+      (*matchLength) = matches[0].rm_eo-matches[0].rm_so;
+    }
   }
 
   return matchFlag;
@@ -545,6 +561,43 @@ bool Pattern_checkIsPattern(const ConstString string)
   }
 
   return patternFlag;
+}
+
+bool Pattern_isValid(const ConstString string, PatternTypes patternType)
+{
+  bool    isValid;
+  String  regexString;
+  int     regexFlags;
+  regex_t regex;
+
+  assert(string != NULL);
+
+  // init variables
+  regexString = String_new();
+
+  // get regular expression
+  getRegularExpression(regexString,
+                       &regexFlags,
+                       String_cString(string),
+                       patternType,
+                       PATTERN_FLAG_NONE
+                      );
+
+  // compile pattern
+  if (regcomp(&regex,String_cString(string),regexFlags) == 0)
+  {
+    regfree(&regex);
+    isValid = TRUE;
+  }
+  else
+  {
+    isValid = FALSE;
+  }
+
+  // free resources
+  String_delete(regexString);
+
+  return isValid;
 }
 
 #ifdef __cplusplus
