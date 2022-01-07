@@ -249,8 +249,12 @@ Errors Pattern_copy(Pattern *pattern, const Pattern *fromPattern);
 * Purpose: patch string with single pattern
 * Input  : pattern          - pattern
 *          string           - string
+*          index            - start index in string
 *          patternMatchMode - pattern match mode; see PatternMatchModes
-* Output : -
+*          matchIndex       - match index variable (can be NULL)
+*          matchLength      - match length variable (can be NULL)
+* Output : matchIndex       - match index
+*          matchLength      - match length
 * Return : TRUE if pattern match, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
