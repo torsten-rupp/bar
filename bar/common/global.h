@@ -1915,6 +1915,23 @@ static inline uint atomicIncrement(uint *n, int d)
 }
 
 /***********************************************************************\
+* Name   : atomicIncrement64
+* Purpose: atomic increment value
+* Input  : n - value
+*          d - delta
+* Output : -
+* Return : old value
+* Notes  : -
+\***********************************************************************/
+
+static inline uint64 atomicIncrement64(uint64 *n, int d)
+{
+  assert(n != NULL);
+
+  return __sync_fetch_and_add(n,d);
+}
+
+/***********************************************************************\
 * Name   : atomicCompareSwap
 * Purpose: atomic increment value
 * Input  : n                 - value
@@ -3024,6 +3041,145 @@ static inline void stringDelete(char *string)
 }
 
 /***********************************************************************\
+* Name   : stringIsValidUTF8Codepoint
+* Purpose: check if valid UTF8 codepoint
+* Input  : s         - string
+*          index     - index [0..n-1]
+*          nextIndex - next index variable (can be NULL)
+* Output : nextIndex - next index [0..n-1]
+* Return : TRUE iff valid codepoint
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringIsValidUTF8Codepoint(const char *s, ulong index, ulong *nextIndex)
+{
+  if (s != NULL)
+  {
+    assert(index < stringLength(s));
+    if      (   ((s[index] & 0xF8) == 0xF0)
+             && ((s[index+1] & 0xC0) == 0x80)
+             && (s[index+2] != 0x00)
+             && (s[index+3] != 0x00)
+            )
+    {
+      // 4 byte UTF8 codepoint
+      if (nextIndex != NULL) (*nextIndex) = index+4;
+      return TRUE;
+    }
+    else if (   ((s[index] & 0xF0) == 0xE0)
+             && ((s[index+1] & 0xC0) == 0x80)
+             && (s[index+2] != 0x00)
+            )
+    {
+      // 3 byte UTF8 codepoint
+      if (nextIndex != NULL) (*nextIndex) = index+3;
+      return TRUE;
+    }
+    else if (   ((s[index] & 0xE0) == 0xC0)
+             && ((s[index+1] & 0xC0) == 0x80)
+            )
+    {
+      // 2 byte UTF8 codepoint
+      if (nextIndex != NULL) (*nextIndex) = index+2;
+      return TRUE;
+    }
+    else if ((uchar)s[index] <= 0x7F)
+    {
+      // 1 byte UTF8 codepoint
+      if (nextIndex != NULL) (*nextIndex) = index+1;
+      return TRUE;
+    }
+    else
+    {
+      // invalid
+      return FALSE;
+    }
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : stringIsValidUTF8
+* Purpose: check if string has valid UTF8 encoding
+* Input  : s         - string
+*          index     - index [0..n-1]
+* Output : -
+* Return : TRUE iff valid encoding
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringIsValidUTF8(const char *s, ulong index)
+{
+  ulong nextIndex;
+
+  if (s != NULL)
+  {
+    assert(index <= stringLength(s));
+    while (s[index] != NUL)
+    {
+      if (stringIsValidUTF8Codepoint(s,index,&nextIndex))
+      {
+        index = nextIndex;
+      }
+      else
+      {
+        // error
+        break;
+      }
+    }
+
+    return s[index] == NUL;
+  }
+  else
+  {
+    return TRUE;
+  }
+}
+
+/***********************************************************************\
+* Name   : stringMakeValidUTF8
+* Purpose: make valid UTF8 encoded string; discard non UTF8 encodings
+* Input  : string - string
+*          index  - start index [0..n-1] or STRING_BEGIN
+* Output : string - valid UTF8 encoded string
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+static inline char *stringMakeValidUTF8(char *s, ulong index)
+{
+  ulong nextIndex;
+  ulong toIndex;
+
+  if (s != NULL)
+  {
+    toIndex = index;
+    while (s[index] != NUL)
+    {
+      if (stringIsValidUTF8Codepoint(s,index,&nextIndex))
+      {
+        while (index < nextIndex)
+        {
+          s[toIndex] = s[index];
+          index++;
+          toIndex++;
+        }
+      }
+      else
+      {
+        index++;
+      }
+    }
+    s[toIndex] = NUL;
+  }
+
+  return s;
+}
+
+/***********************************************************************\
 * Name   : stringAt, stringAtUTF8
 * Purpose: get character in string
 * Input  : s         - string
@@ -3041,13 +3197,25 @@ static inline char stringAt(const char *s, ulong index)
   return s[index];
 }
 
+/***********************************************************************\
+* Name   : stringAtUTF8
+* Purpose: get codepoint
+* Input  : s         - string
+*          index     - index (0..n-1)
+*          nextIndex - next index variable (can be NULL)
+* Output : nextIndex - next index [0..n-1]
+* Return : codepoint
+* Notes  : -
+\***********************************************************************/
+
 static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextIndex)
 {
   Codepoint ch;
 
   assert(s != NULL);
+  assert(index <= stringLength(s));
 
-  if      ((s[index+0] & 0xF8) == 0xF0)
+  if      ((s[index] & 0xF8) == 0xF0)
   {
     // 4 byte UTF8 codepoint
     ch =   (Codepoint)((s[index+0] & 0x07) << 18)
@@ -3056,7 +3224,7 @@ static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextInde
          | (Codepoint)((s[index+3] & 0x3F) <<  0);
     if (nextIndex != NULL) (*nextIndex) = index+4;
   }
-  else if ((s[index+0] & 0xF0) == 0xE0)
+  else if ((s[index] & 0xF0) == 0xE0)
   {
     // 3 byte UTF8 codepoint
     ch =   (Codepoint)((s[index+0] & 0x0F) << 12)
@@ -3064,7 +3232,7 @@ static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextInde
          | (Codepoint)((s[index+2] & 0x3F) <<  0);
     if (nextIndex != NULL) (*nextIndex) = index+3;
   }
-  else if ((s[index+0] & 0xE0) == 0xC0)
+  else if ((s[index] & 0xE0) == 0xC0)
   {
     // 2 byte UTF8 codepoint
     ch =   (Codepoint)((s[index+0] & 0x1F) << 6)
@@ -3074,7 +3242,7 @@ static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextInde
   else
   {
     // 1 byte UTF8 codepoint
-    ch = (Codepoint)s[index+0];
+    ch = (Codepoint)s[index];
     if (nextIndex != NULL) (*nextIndex) = index+1;
   }
 
@@ -3094,18 +3262,19 @@ static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextInde
 static inline ulong stringNextUTF8(const char *s, ulong index)
 {
   assert(s != NULL);
+  assert(index <= stringLength(s));
 
-  if      ((s[index+0] & 0xF8) == 0xF0)
+  if      ((s[index] & 0xF8) == 0xF0)
   {
     // 4 byte UTF8 codepoint
     index += 4;
   }
-  else if ((s[index+0] & 0xF0) == 0xE0)
+  else if ((s[index] & 0xF0) == 0xE0)
   {
     // 3 byte UTF8 codepoint
     index += 3;
   }
-  else if ((s[index+0] & 0xE0) == 0xC0)
+  else if ((s[index] & 0xE0) == 0xC0)
   {
     // 2 byte UTF8 codepoint
     index += 2;
@@ -3492,6 +3661,46 @@ static inline bool stringGetNextToken(CStringTokenizer *cStringTokenizer, const 
   cStringTokenizer->nextToken = strtok_r(NULL,cStringTokenizer->delimiters,&cStringTokenizer->p);
 
   return (*token) != NULL;
+}
+
+/***********************************************************************\
+* Name   : stringToBool
+* Purpose: convert string to bool-value
+* Input  : string - string (1/true/on/no + 0/false/off/no)
+*          i      - value variable
+* Output : i - value
+* Return : TRUE iff no error
+* Notes  :
+\***********************************************************************/
+
+static inline bool stringToBool(const char *string, bool *b)
+{
+  assert(string != NULL);
+  assert(b != NULL);
+
+  if      (   stringEquals(string,"1")
+           || stringEqualsIgnoreCase(string,"true")
+           || stringEqualsIgnoreCase(string,"on")
+           || stringEqualsIgnoreCase(string,"yes")
+          )
+  {
+    (*b) = TRUE;
+    return TRUE;
+  }
+  else if (   stringEquals(string,"0")
+           || stringEqualsIgnoreCase(string,"false")
+           || stringEqualsIgnoreCase(string,"off")
+           || stringEqualsIgnoreCase(string,"no")
+          )
+  {
+    (*b) = FALSE;
+    return TRUE;
+  }
+  else
+  {
+    (*b) = FALSE;
+    return FALSE;
+  }
 }
 
 /***********************************************************************\

@@ -55,7 +55,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define MAX_SECURE_MEMORY (256*1024)
+#define MAX_SECURE_MEMORY (4*MB)
 
 #define DEBUG_MAX_FREE_LIST 4000
 
