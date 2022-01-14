@@ -526,6 +526,30 @@ bool stringVMatch(const char *string, const char *pattern, const char **matchedS
   return matchFlag;
 }
 
+uint32 stringHash(const char *string)
+{
+  uint   i = 0;
+  uint32 hash = 0;
+
+  hash = 0;
+  if (string != NULL)
+  {
+    while ((*string) != NUL)
+    {
+      hash += *string;
+      hash += hash << 10;
+      hash ^= hash >> 6;
+
+      string++;
+    }
+    hash += hash << 3;
+    hash ^= hash >> 11;
+    hash += hash << 15;
+  }
+
+  return hash;
+}
+
 #ifdef NDEBUG
 void __halt(int        exitcode,
             const char *format,

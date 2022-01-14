@@ -3919,6 +3919,17 @@ static inline bool stringMatch(const char *string, const char *pattern, const ch
   return result;
 }
 
+/***********************************************************************\
+* Name   : stringHash
+* Purpose: calculate 32bit hash from string
+* Input  : string - string
+* Output : -
+* Return : hash value
+* Notes  : -
+\***********************************************************************/
+
+uint32 stringHash(const char *string);
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
