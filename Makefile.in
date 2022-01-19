@@ -853,6 +853,7 @@ deb_docker-x86_64:
 win32_docker:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
@@ -869,6 +870,7 @@ win32_docker:
 win32_docker-x86_64:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
             --name=bar-win32-x86_64 \
@@ -915,6 +917,7 @@ $(DISTRIBUTION_NAME).rpm: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
@@ -929,6 +932,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
@@ -993,6 +997,7 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-debian:8 setarch i686 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
@@ -1005,6 +1010,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             bar-debian-x86_64:8 setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
@@ -1047,6 +1053,7 @@ $(DISTRIBUTION_NAME)-setup.exe: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -e CFLAGS="-m32" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
@@ -1091,15 +1098,17 @@ install_test_rpm: \
 functionInstallTestRPM = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
+      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_rpm.sh \
-        $3
+        $?
 
 # call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
 functionInstallTestDEB = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
+      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_deb.sh \

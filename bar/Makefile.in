@@ -522,6 +522,7 @@ COMMON_SOURCES              = common/arrays.c \
                               common/filesystems.c \
                               common/fragmentlists.c \
                               common/global.c \
+                              common/hashtables.c \
                               common/lists.c \
                               common/minidump.cpp \
                               common/misc.c \
@@ -611,6 +612,7 @@ BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_
 
 BAR_INDEX_SOURCES_COMMON    = common/global.c \
                               common/cmdoptions.c \
+                              common/hashtables.c \
                               common/lists.c \
                               common/strings.c \
                               common/stringlists.c \
@@ -631,6 +633,7 @@ BAR_INDEX_SOURCES_OTHER     = index_definition.pl \
                               index_common.def \
                               index_sqlite.def \
                               index_mariadb.def \
+                              index_postgresql.def \
                               index/index_current.c \
 
 BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
@@ -1113,11 +1116,13 @@ index_definition.c index_definition.h: \
   $(SOURCE_DIR)/index_definition.pl \
   $(SOURCE_DIR)/index_common.def \
   $(SOURCE_DIR)/index_sqlite.def \
-  $(SOURCE_DIR)/index_mariadb.def
+  $(SOURCE_DIR)/index_mariadb.def \
+  $(SOURCE_DIR)/index_postgresql.def
 	$(PERL) $(SOURCE_DIR)/index_definition.pl \
 	  --common $(SOURCE_DIR)/index_common.def \
 	  --sqlite $(SOURCE_DIR)/index_sqlite.def \
 	  --mariadb $(SOURCE_DIR)/index_mariadb.def \
+	  --postgresql $(SOURCE_DIR)/index_postgresql.def \
 	  --source index_definition.c \
 	  --header index_definition.h
 release/index_definition.o: index_definition.c index_definition.h
