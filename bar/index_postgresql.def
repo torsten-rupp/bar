@@ -1,0 +1,408 @@
+/* BAR index database definitions
+
+ database structure:
+
+   job uuid
+     ^
+     |<- entity
+     |     ^
+     |<====|<----------------------------- storages
+     |     |                                 ^
+     |<====|<- entry                         |
+     |     |     ^                           |
+     |     |     |<- entryNewest             |
+     |     |     |                           |
+     |     |     |<- fileEntry               |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- imageEntry              |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- directoryEntry -------->|
+     |     |     |                           |
+     |     |     |<- linkEntry ------------->|
+     |     |     |                           |
+     |     |     |<- hardlinkEntry           |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- specialEntry -----------|
+     |     |...
+     |     |
+     |     |<- skippedEntry
+     |     |...
+     |...
+
+  Legend:  <--  mandadory information
+           <==  redundant information for faster access
+*/
+
+const UUID_LENGTH     = 36
+const MAX_TEXT_LENGTH = 2048
+
+// --- meta ------------------------------------------------------------
+CREATE TABLE meta (
+  name   VARCHAR(255) DEFAULT NULL,
+  value  TEXT
+);
+
+INSERT INTO meta (name,value) VALUES ('version',${VERSION});
+INSERT INTO meta (name,value) VALUES ('datetime',NOW()) ;
+
+
+// --- uuids --------------------------
+CREATE TABLE IF NOT EXISTS uuids(
+  id      BIGSERIAL PRIMARY KEY NOT NULL,
+  jobUUID VARCHAR(${UUID_LENGTH}) NOT NULL,
+  UNIQUE(jobUUID)
+);
+
+CREATE INDEX jobUUID ON uuids(jobUUID);
+
+// --- entities --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entities(
+ id                        BIGSERIAL PRIMARY KEY NOT NULL,
+ jobUUID                   VARCHAR(${UUID_LENGTH}) NOT NULL,
+ scheduleUUID              VARCHAR(${UUID_LENGTH}) NOT NULL DEFAULT '',
+ hostName                  VARCHAR(${MAX_TEXT_LENGTH}) DEFAULT '',
+ userName                  TEXT,
+ created                   TIMESTAMP DEFAULT NULL,
+ type                      INT DEFAULT NULL,
+ parentJobUUID             INT DEFAULT 0,
+ bidFlag                   BOOLEAN DEFAULT FALSE,
+ lockedCount               INT DEFAULT 0,
+ deletedFlag               BOOLEAN DEFAULT FALSE,
+
+  // Note: updated via Index_updateEntitiesInfos()
+ totalEntryCount           BIGINT DEFAULT 0,
+ totalEntrySize            BIGINT DEFAULT 0,
+
+ totalFileCount            BIGINT DEFAULT 0,
+ totalFileSize             BIGINT DEFAULT 0,
+ totalImageCount           BIGINT DEFAULT 0,
+ totalImageSize            BIGINT DEFAULT 0,
+ totalDirectoryCount       BIGINT DEFAULT 0,
+ totalLinkCount            BIGINT DEFAULT 0,
+ totalHardlinkCount        BIGINT DEFAULT 0,
+ totalHardlinkSize         BIGINT DEFAULT 0,
+ totalSpecialCount         BIGINT DEFAULT 0,
+
+ totalEntryCountNewest     BIGINT DEFAULT 0,
+ totalEntrySizeNewest      BIGINT DEFAULT 0,
+
+ totalFileCountNewest      BIGINT DEFAULT 0,
+ totalFileSizeNewest       BIGINT DEFAULT 0,
+ totalImageCountNewest     BIGINT DEFAULT 0,
+ totalImageSizeNewest      BIGINT DEFAULT 0,
+ totalDirectoryCountNewest BIGINT DEFAULT 0,
+ totalLinkCountNewest      BIGINT DEFAULT 0,
+ totalHardlinkCountNewest  BIGINT DEFAULT 0,
+ totalHardlinkSizeNewest   BIGINT DEFAULT 0,
+ totalSpecialCountNewest   BIGINT DEFAULT 0,
+
+  // Note: redundancy for faster access
+  uuidId                   BIGINT DEFAULT 0  // no foreign key reference
+);
+
+CREATE INDEX ON entities(jobUUID,created,type);
+CREATE INDEX ON entities(hostName);
+CREATE INDEX ON entities(deletedFlag);
+
+INSERT INTO entities(id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES (0,'','',CURRENT_TIMESTAMP,0,0,FALSE);
+
+// insert/delete/update triggers
+// TODO: implement multi-line support
+CREATE OR REPLACE FUNCTION uuidTriggerFunction() RETURNS TRIGGER LANGUAGE PLPGSQL AS $$ BEGIN INSERT INTO uuids(jobUUID) VALUES (NEW.jobUUID); END $$;
+CREATE TRIGGER BEFORE UPDATE ON entities FOR EACH ROW EXECUTE PROCEDURE uuidTriggerFunction();
+
+// --- storages --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS storages(
+  id                        BIGSERIAL PRIMARY KEY,
+  entityId                  BIGINT REFERENCES entities(id) ON DELETE CASCADE,
+  name                      VARCHAR(${MAX_TEXT_LENGTH}),
+  created                   TIMESTAMP DEFAULT NULL,
+  size                      BIGINT DEFAULT 0,
+  hostName                  TEXT,
+  userName                  VARCHAR(255),
+  comment                   TEXT,
+  state                     INT DEFAULT ${STATE_CREATE},
+  mode                      INT DEFAULT ${MODE_MANUAL},
+
+  lastChecked               TIMESTAMP DEFAULT '1970-01-01 00:00:00',
+  errorMessage              TEXT,
+  deletedFlag               BOOLEAN DEFAULT FALSE,
+
+  // Note: updated via Index_updateStorageInfos()
+  totalEntryCount           BIGINT DEFAULT 0,  // total number of entries
+  totalEntrySize            BIGINT DEFAULT 0,  // total size of entries [bytes]
+
+  totalFileCount            BIGINT DEFAULT 0,  // total number of file entries
+  totalFileSize             BIGINT DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           BIGINT DEFAULT 0,  // total number of image entries
+  totalImageSize            BIGINT DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalLinkCount            BIGINT DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        BIGINT DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         BIGINT DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         BIGINT DEFAULT 0,  // total number of special entries
+
+  totalEntryCountNewest     BIGINT DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      BIGINT DEFAULT 0,  // total size of newest entries [bytes]
+
+  totalFileCountNewest      BIGINT DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       BIGINT DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     BIGINT DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      BIGINT DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      BIGINT DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  BIGINT DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   BIGINT DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   BIGINT DEFAULT 0,  // total number of newest special entries
+
+  // Note: redundancy for faster access
+  uuidId                    BIGINT DEFAULT 0  // no foreign key reference
+);
+
+CREATE INDEX ON storages(uuidId,entityId,name,created,state);
+CREATE INDEX ON storages(entityId,name,created,state);
+CREATE INDEX ON storages(name,totalEntryCount,created,state);
+CREATE INDEX ON storages(created,name,totalEntryCount,state);
+CREATE INDEX ON storages(userName);
+CREATE INDEX ON storages(state,name,totalEntryCount,created);
+CREATE INDEX ON storages(deletedFlag);
+
+
+//TODO:  FULLTEXT(name) FULLTEXT feature on postgres?
+
+// full-text-search (using a view)
+CREATE VIEW FTS_storages(
+  SELECT id AS storageId,
+         name
+  FROM storages
+);
+
+// --- entries ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entries(
+  id              BIGSERIAL PRIMARY KEY,
+
+  entityId        BIGINT REFERENCES entities(id) ON DELETE CASCADE,
+  type            INT,
+  name            VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
+  timeLastAccess  TIMESTAMP,
+  timeModified    TIMESTAMP,
+  timeLastChanged TIMESTAMP,
+  userId          INT,
+  groupId         INT,
+  permission      INT,
+  deletedFlag     BOOLEAN DEFAULT FALSE,
+
+//TODO: still not used
+  archiveOffset   BIGINT,
+
+  // Note: redundancy for faster access
+  uuidId          BIGINT DEFAULT 0,  // no foreign key reference
+  size            BIGINT DEFAULT 0
+);
+
+CREATE INDEX ON entries(uuidId,entityId,type,name);
+CREATE INDEX ON entries(entityId,type,name);
+CREATE INDEX ON entries(name,size,type,timeLastChanged);
+CREATE INDEX ON entries(type,size,name,timeLastChanged);
+CREATE INDEX ON entries(size,type,name,timeLastChanged);
+CREATE INDEX ON entries(timeLastChanged,name,size,type);
+//TODO: FULLTEXT(name)
+
+
+// newest entries (updated by triggers)
+CREATE TABLE IF NOT EXISTS entriesNewest(
+  id              BIGSERIAL PRIMARY KEY,
+
+  entryId         BIGINT REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
+
+  // Note: redundancy for faster access
+  uuidId          BIGINT DEFAULT 0,  // no foreign key reference
+  entityId        BIGINT REFERENCES entities(id) DEFAULT 0,
+  type            INT DEFAULT 0,
+  name            VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
+  timeLastChanged TIMESTAMP DEFAULT '1970-01-01 00:00:00',
+  userId          INT DEFAULT 0,
+  groupId         INT DEFAULT 0,
+  permission      INT DEFAULT 0,
+
+  size            BIGINT DEFAULT 0,      // file/image/hardlink size
+
+  UNIQUE(name)
+);
+CREATE INDEX ON entriesNewest(entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest(name,size,type,timeLastChanged);
+CREATE INDEX ON entriesNewest(type,entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest(size,type,name,timeLastChanged);
+CREATE INDEX ON entriesNewest(type,size,name,timeLastChanged);
+CREATE INDEX ON entriesNewest(timeLastChanged,name,size,type);
+CREATE INDEX ON entriesNewest(entityId,type,entryId,name,size,timeLastChanged);
+
+
+// TODO: implement multi-line support
+CREATE OR REPLACE FUNCTION entriesTriggerFunction() RETURNS TRIGGER LANGUAGE PLPGSQL AS $$ BEGIN UPDATE entriesNewest  SET uuidId=NEW.uuidId  WHERE entryId=OLD.id;UPDATE entriesNewest  SET entityId=NEW.entityId  WHERE entryId=OLD.id;  UPDATE entriesNewest  SET entryId        =NEW.id,      uuidId         =NEW.uuidId,      entityId       =NEW.entityId,      type           =NEW.type,      timeLastChanged=NEW.timeLastChanged,      userId         =NEW.userId,      groupId        =NEW.groupId,      permission     =NEW.permission,      size           =NEW.size  WHERE     entryId!=NEW.id        AND name=NEW.name        AND type=NEW.type        AND NEW.timeLastChanged>timeLastChanged; END $$;
+CREATE TRIGGER BEFORE UPDATE ON entries FOR EACH ROW EXECUTE PROCEDURE entriesTriggerFunction();
+
+// full-text-search (using a view)
+CREATE VIEW FTS_entries(
+  SELECT id AS entryId,
+         name
+  FROM entries
+);
+
+//TODO
+// --- skipped entries -------------------------------------------------
+CREATE TABLE IF NOT EXISTS skippedEntries(
+  id          BIGSERIAL PRIMARY KEY,
+  entityId    BIGINT REFERENCES entities(id),
+  name        VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
+  type        INT,
+
+  deletedFlag BOOLEAN DEFAULT FALSE
+);
+CREATE INDEX ON skippedEntries(entityId,type,name);
+CREATE INDEX ON skippedEntries(name);
+CREATE INDEX ON skippedEntries(type,name);
+
+
+// --- entry fragments -------------------------------------------------
+CREATE TABLE IF NOT EXISTS entryFragments(
+  id        BIGSERIAL PRIMARY KEY,
+  entryId   BIGINT REFERENCES entries(id) ON DELETE CASCADE,
+  storageId BIGINT REFERENCES storages(id) ON DELETE CASCADE,
+  "offset"  BIGINT DEFAULT 0,   // Note: offset is a reserved word in PostgreSQL
+  size      BIGINT DEFAULT 0
+//  UNIQUE (entryId,"offset")
+);
+
+CREATE INDEX ON entryFragments(entryId);
+CREATE INDEX ON entryFragments(storageId);
+
+// --- files -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fileEntries(
+  id      BIGSERIAL PRIMARY KEY,
+
+  entryId BIGINT REFERENCES entries(id) ON DELETE CASCADE,
+  size    BIGINT,
+
+  UNIQUE (entryId)
+);
+CREATE INDEX ON fileEntries(entryId);
+
+// --- images ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS imageEntries(
+  id             BIGSERIAL PRIMARY KEY,
+
+  entryId        BIGINT REFERENCES entries(id) ON DELETE CASCADE,
+  size           BIGINT,
+  fileSystemType INT,
+  blockSize      INT,                 // size of image block
+
+  UNIQUE (entryId)
+);
+
+CREATE INDEX ON imageEntries(entryId);
+
+// --- directories -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS directoryEntries(
+  id                    BIGSERIAL PRIMARY KEY,
+
+  entryId               BIGINT REFERENCES entries(id) ON DELETE CASCADE,
+  storageId             BIGINT REFERENCES storages(id) ON DELETE CASCADE,
+
+  // Note: redundancy for faster access
+  name                  VARCHAR(${MAX_TEXT_LENGTH}),
+
+  // updated by updateDirectoryContentAggregates()
+  totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
+  totalEntrySize        BIGINT DEFAULT 0,  // total size of directory entries [bytes]
+  totalEntryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
+  totalEntrySizeNewest  BIGINT DEFAULT 0,  // total size of newest directory entries [bytes]
+
+  UNIQUE (entryId)
+);
+
+CREATE INDEX ON directoryEntries(entryId);
+CREATE INDEX ON directoryEntries(storageId,name);
+CREATE INDEX ON directoryEntries(name);
+
+// --- links -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS linkEntries(
+  id              BIGSERIAL PRIMARY KEY,
+
+  entryId         BIGINT REFERENCES entries(id) ON DELETE CASCADE,
+  storageId       BIGINT REFERENCES storages(id) ON DELETE CASCADE,
+  destinationName TEXT,
+
+  UNIQUE (entryId)
+);
+
+CREATE INDEX ON linkEntries(entryId);
+CREATE INDEX ON linkEntries(storageId);
+
+// --- hardlinks -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS hardlinkEntries(
+  id      BIGSERIAL PRIMARY KEY,
+
+  entryId BIGINT REFERENCES entries(id) ON DELETE CASCADE,
+  size    BIGINT,
+
+  UNIQUE (entryId)
+);
+
+CREATE INDEX ON hardlinkEntries(entryId);
+
+// --- special ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS specialEntries(
+  id          BIGSERIAL PRIMARY KEY,
+
+  entryId     BIGINT REFERENCES entries(id) ON DELETE CASCADE,
+  storageId   BIGINT REFERENCES storages(id) ON DELETE CASCADE,
+  specialType INT,
+  major       INT,
+  minor       INT,
+
+  UNIQUE (entryId)
+);
+
+CREATE INDEX ON specialEntries(entryId);
+CREATE INDEX ON specialEntries(storageId);
+
+// --- history ---------------------------------------------------------
+CREATE TABLE IF NOT EXISTS history(
+  id                BIGSERIAL PRIMARY KEY,
+  jobUUID           VARCHAR(${UUID_LENGTH}) NOT NULL,
+  scheduleUUID      TEXT,
+  hostName          TEXT,
+  userName          TEXT,
+  type              INT,
+  created           TIMESTAMP,
+  errorMessage      VARCHAR(${MAX_TEXT_LENGTH}),
+  duration          BIGINT,
+  totalEntryCount   INT,
+  totalEntrySize    BIGINT,
+  skippedEntryCount INT,
+  skippedEntrySize  BIGINT,
+  errorEntryCount   INT,
+  errorEntrySize    BIGINT
+);
+
+CREATE INDEX ON history(jobUUID,created,type);
+CREATE INDEX ON history(created);
+CREATE INDEX ON history(errorMessage);
+
+// --- debug only ------------------------------------------------------
+CREATE TABLE IF NOT EXISTS log(
+  text TEXT
+);
+
+
+CREATE OR REPLACE VIEW table_column_constraints as (SELECT c.table_schema, c.table_name, c.column_name, c.data_type, c.is_nullable, tc.constraint_type, c.column_default FROM information_schema.columns AS c LEFT JOIN information_schema.constraint_column_usage AS ccu USING (column_name, table_name) LEFT JOIN information_schema.table_constraints tc ON tc.constraint_name=ccu.constraint_name WHERE c.table_schema='public');
