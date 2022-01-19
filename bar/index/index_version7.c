@@ -500,7 +500,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
                                 &fileEntryCount,
                                 "fileEntries",
                                 "COUNT(id)",
-                                "GROUP BY entryId"
+                                "entryId"
                                );
   if (error == ERROR_NONE)
   {
@@ -514,7 +514,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
                                 &imageEntryCount,
                                 "imageEntries",
                                 "COUNT(id)",
-                                "GROUP BY entryId"
+                                "entryId"
                                );
   if (error == ERROR_NONE)
   {
@@ -571,7 +571,7 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
                                 &specialEntryCount,
                                 "specialEntries",
                                 "COUNT(id)",
-                                "GROUP BY entryId"
+                                "entryId"
                                 ""
                                );
   if (error == ERROR_NONE)
@@ -879,7 +879,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -923,7 +923,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -975,7 +975,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1196,7 +1196,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1240,7 +1240,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1292,7 +1292,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;

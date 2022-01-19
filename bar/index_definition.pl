@@ -9,7 +9,8 @@
 # $Revision$
 # $Date$
 # $Author$
-# Contents: create header file definition from database definition
+# Contents: create header/implemenetation file definition from database
+#           definitions
 # Systems: all
 #
 # ----------------------------------------------------------------------------
@@ -260,6 +261,34 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
           print CFILE_HANDLE "\n";
         }
+        elsif ($suffix eq "MARIADB")
+        {
+          push(@indexNames, $indexName);
+          push(@definitions, "INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE INDEX $indexName ON $tableName ($columns)\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+        elsif ($suffix eq "POSTGRESQL")
+        {
+          push(@indexNames, $indexName);
+          push(@definitions, "INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE INDEX $indexName ON $tableName ($columns)\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)." = INDEX_DEFINITION_INDEX_".$suffix."_".uc($indexName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
 
         $type       = "";
         $definition = "";
@@ -373,6 +402,20 @@ sub processFile($$)
             print CFILE_HANDLE "\"\n";
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)." = INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)."_;\n";
           }
+          elsif ($suffix eq "POSTGRESQL")
+          {
+            push(@triggerNames, $triggerName);
+            push(@definitions, "INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName));
+
+            print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName).";\n";
+
+            print CFILE_HANDLE "#define INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)."_ \\\n";
+            print CFILE_HANDLE "\"\\\n";
+            print CFILE_HANDLE "CREATE TRIGGER $triggerName $triggerType $triggerOperation ON $tableName \\\n";
+            print CFILE_HANDLE $definition."\\\n";
+            print CFILE_HANDLE "\"\n";
+            print CFILE_HANDLE "const char *INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)." = INDEX_DEFINITION_TRIGGER_".$suffix."_".uc($triggerName)."_;\n";
+          }
         }
         elsif ($type eq $TYPE_VIEW)
         {
@@ -428,6 +471,21 @@ sub processFile($$)
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
             print CFILE_HANDLE "\n";
           }
+          elsif ($suffix eq "POSTGRESQL")
+          {
+            push(@tableNames, $tableName);
+            push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+            print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+            print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+            print CFILE_HANDLE "\"\\\n";
+            print CFILE_HANDLE "CREATE TABLE IF NOT EXISTS $tableName (\\\n";
+            print CFILE_HANDLE $definition."\\\n";
+            print CFILE_HANDLE "\"\n";
+            print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+            print CFILE_HANDLE "\n";
+          }
         }
         elsif ($type eq $TYPE_INDEX)
         {
@@ -460,6 +518,21 @@ sub processFile($$)
             print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
             print CFILE_HANDLE "\"\\\n";
             print CFILE_HANDLE "CREATE VIEW IF NOT EXISTS $tableName(\\\n";
+            print CFILE_HANDLE $definition."\\\n";
+            print CFILE_HANDLE "\"\n";
+            print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+            print CFILE_HANDLE "\n";
+          }
+          elsif ($suffix eq "POSTGRESQL")
+          {
+            push(@ftsTableNames, $tableName);
+            push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+            print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+            print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+            print CFILE_HANDLE "\"\\\n";
+            print CFILE_HANDLE "CREATE OR REPLACE VIEW $tableName\\\n";
             print CFILE_HANDLE $definition."\\\n";
             print CFILE_HANDLE "\"\n";
             print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
@@ -529,6 +602,21 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
           print CFILE_HANDLE "\n";
         }
+        elsif ($suffix eq "POSTGRESQL")
+        {
+          push(@tableNames, $tableName);
+          push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE TABLE IF NOT EXISTS $tableName (\\\n";
+          print CFILE_HANDLE $definition."\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
 
         $type       = "";
         $definition = "";
@@ -556,6 +644,21 @@ sub processFile($$)
           print CFILE_HANDLE "\n";
         }
         elsif ($suffix eq "MARIADB")
+        {
+          push(@ftsTableNames, $tableName);
+          push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
+
+          print HFILE_HANDLE "extern const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName).";\n";
+
+          print CFILE_HANDLE "#define INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "CREATE VIEW IF NOT EXISTS $tableName(\\\n";
+          print CFILE_HANDLE $definition."\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)." = INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+        elsif ($suffix eq "POSTGRESQL")
         {
           push(@ftsTableNames, $tableName);
           push(@definitions, "INDEX_DEFINITION_TABLE_".$suffix."_".uc($tableName));
@@ -622,6 +725,15 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
         }
+        elsif ($suffix eq "POSTGRESQL")
+        {
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "INSERT INTO $tableName $values\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
 
         $definition = "";
       }
@@ -653,6 +765,15 @@ sub processFile($$)
           print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
           print CFILE_HANDLE "\n";
         }
+        elsif ($suffix eq "POSTGRESQL")
+        {
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "INSERT IGNORE INTO $tableName $values\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
 
         $definition = "";
       }
@@ -676,6 +797,15 @@ sub processFile($$)
           print CFILE_HANDLE "\n";
         }
         elsif ($suffix eq "MARIADB")
+        {
+          print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
+          print CFILE_HANDLE "\"\\\n";
+          print CFILE_HANDLE "UPDATE $tableName $values\\\n";
+          print CFILE_HANDLE "\"\n";
+          print CFILE_HANDLE "const char *INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)." = INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_;\n";
+          print CFILE_HANDLE "\n";
+        }
+        elsif ($suffix eq "POSTGRESQL")
         {
           print CFILE_HANDLE "#define INDEX_DEFINITION_INSERT_UPDATE_".$suffix."_".uc($insertName)."_ \\\n";
           print CFILE_HANDLE "\"\\\n";
@@ -855,12 +985,13 @@ sub processFile($$)
 # ------------------------------ main program  -------------------------------
 
 # get options
-GetOptions("common=s"  => \$commonFileName,
-           "sqlite=s"  => \$sqliteFileName,
-           "mariadb=s" => \$mariadbFileName,
-           "source=s"  => \$cFileName,
-           "header=s"  => \$hFileName,
-           "help"      => \$help
+GetOptions("common=s"     => \$commonFileName,
+           "sqlite=s"     => \$sqliteFileName,
+           "mariadb=s"    => \$mariadbFileName,
+           "postgresql=s" => \$postgresqlFileName,
+           "source=s"     => \$cFileName,
+           "header=s"     => \$hFileName,
+           "help"         => \$help
           );
 
 # help
@@ -868,12 +999,13 @@ if ($help == 1)
 {
   print "Usage: $0 <options>\n";
   print "\n";
-  print "Options: --common <file name>  - comon definition file\n";
-  print "         --sqlite <file name>  - SqLite definition file\n";
-  print "         --mariadb <file name> - MariaDB definition file\n";
-  print "         --source <file name>  - C source file\n";
-  print "         --header <file name>  - C header file\n";
-  print "         --help                - output this help\n";
+  print "Options: --common <file name>     - comon definition file\n";
+  print "         --sqlite <file name>     - SqLite definition file\n";
+  print "         --mariadb <file name>    - MariaDB definition file\n";
+  print "         --postgresql <file name> - PostgreSQL definition file\n";
+  print "         --source <file name>     - C source file\n";
+  print "         --header <file name>     - C header file\n";
+  print "         --help                   - output this help\n";
   exit 0;
 }
 
@@ -923,6 +1055,7 @@ print CFILE_HANDLE "/* This file is auto-generated by index_definition.pl. Do NO
 processFile($commonFileName,"");
 processFile($sqliteFileName,"SQLITE");
 processFile($mariadbFileName,"MARIADB");
+processFile($postgresqlFileName,"POSTGRESQL");
 
 print HFILE_HANDLE "
 
@@ -942,47 +1075,56 @@ print CFILE_HANDLE "\
 const IndexDefinitions INDEX_DEFINITIONS[] =
 {
   INDEX_DEFINITIONS_SQLITE,
-  INDEX_DEFINITIONS_MARIADB
+  INDEX_DEFINITIONS_MARIADB,
+  INDEX_DEFINITIONS_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_TABLES[] =
 {
   INDEX_DEFINITION_TABLES_SQLITE,
-  INDEX_DEFINITION_TABLES_MARIADB
+  INDEX_DEFINITION_TABLES_MARIADB,
+  INDEX_DEFINITION_TABLES_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_TABLE_NAMES[] =
 {
   INDEX_DEFINITION_TABLE_NAMES_SQLITE,
-  INDEX_DEFINITION_TABLE_NAMES_MARIADB
+  INDEX_DEFINITION_TABLE_NAMES_MARIADB,
+  INDEX_DEFINITION_TABLE_NAMES_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_FTS_TABLES[] =
 {
   INDEX_DEFINITION_FTS_TABLES_SQLITE,
-  INDEX_DEFINITION_FTS_TABLES_MARIADB
+  INDEX_DEFINITION_FTS_TABLES_MARIADB,
+  INDEX_DEFINITION_FTS_TABLES_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_FTS_TABLE_NAMES[] =
 {
   INDEX_DEFINITION_FTS_TABLE_NAMES_SQLITE,
-  INDEX_DEFINITION_FTS_TABLE_NAMES_MARIADB
+  INDEX_DEFINITION_FTS_TABLE_NAMES_MARIADB,
+  INDEX_DEFINITION_FTS_TABLE_NAMES_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_INDICES[] =
 {
   INDEX_DEFINITION_INDICES_SQLITE,
-  INDEX_DEFINITION_INDICES_MARIADB
+  INDEX_DEFINITION_INDICES_MARIADB,
+  INDEX_DEFINITION_INDICES_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_INDEX_NAMES[] =
 {
   INDEX_DEFINITION_INDEX_NAMES_SQLITE,
-  INDEX_DEFINITION_INDEX_NAMES_MARIADB
+  INDEX_DEFINITION_INDEX_NAMES_MARIADB,
+  INDEX_DEFINITION_INDEX_NAMES_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_TRIGGERS[] =
 {
   INDEX_DEFINITION_TRIGGERS_SQLITE,
-  INDEX_DEFINITION_TRIGGERS_MARIADB
+  INDEX_DEFINITION_TRIGGERS_MARIADB,
+  INDEX_DEFINITION_TRIGGERS_POSTGRESQL
 };
 const IndexDefinitions INDEX_DEFINITION_TRIGGER_NAMES[] =
 {
   INDEX_DEFINITION_TRIGGER_NAMES_SQLITE,
-  INDEX_DEFINITION_TRIGGER_NAMES_MARIADB
+  INDEX_DEFINITION_TRIGGER_NAMES_MARIADB,
+  INDEX_DEFINITION_TRIGGER_NAMES_POSTGRESQL
 };
 ";
 

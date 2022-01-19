@@ -989,7 +989,7 @@ public class TabJobs
       return new MountData(name,device);
     }
 
-    /** compare with other job data
+    /** compare with other mount data
      * @return -1/0+1 iff lower/equals/greater
      */
     @Override
@@ -1986,7 +1986,7 @@ public class TabJobs
     public long         totalEntrySize;
     public boolean      inTransit;
 
-    /** create job data index
+    /** create entity index data index
      * @param indexId index id
      * @param scheduleUUID schedule UUID
      * @param archiveType archive type
@@ -10603,14 +10603,14 @@ TODO: implement delete entity
           {
             /** compare job data
              * @param jobData1, jobData2 file tree data to compare
-             * @return -1 iff jobData1.uuid < jobData2.uuid,
-                        0 iff jobData1.uuid = jobData2.uuid,
-                        1 iff jobData1.uuid > jobData2.uuid
+             * @return -1 iff jobData2.name < jobData1.name,
+                        0 iff jobData2.name = jobData1.name,
+                        1 iff jobData2.name > jobData1.name
              */
             @Override
             public int compare(JobData jobData1, JobData jobData2)
             {
-              return jobData1.uuid.compareTo(jobData2.uuid);
+              return jobData2.name.compareTo(jobData1.name);
             }
           };
 
@@ -15604,7 +15604,8 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,6,1,TableLayoutData.WE);
       {
-        widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("no storage"),Settings.hasExpertRole());
+        widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("do no create storages"),Settings.hasExpertRole());
+        widgetNoStorage.setToolTipText(BARControl.tr("Do not create storage files. Only update incremental data."));
         Widgets.layout(widgetNoStorage,0,0,TableLayoutData.W);
         widgetNoStorage.setSelection(scheduleData.noStorage);
 
@@ -15729,7 +15730,7 @@ throw new Error("NYI");
           BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S noStorage=%y enabled=%y",
                                                        selectedJobData.uuid,
                                                        scheduleData.getDate(),
-                                                       scheduleData.getWeekDays(),
+                                                       scheduleData.weekDaysToString(),
                                                        scheduleData.getTime(),
                                                        scheduleData.archiveType.toString(),
                                                        scheduleData.interval,

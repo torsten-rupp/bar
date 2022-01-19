@@ -36,6 +36,7 @@ ERROR NO_PASSWORD                      TR("no password given")
 // Note: because of name clash with Windows include use INVALID_PASSWORD_ instead of INVALID_PASSWORD
 ERROR INVALID_PASSWORD_                TR("invalid password")
 ERROR PROCESS                          TR("process data fail")
+ERROR ERROR_INVALID_ENCODING           TR("invalid encoding")
 
 // --- patterns ---------------------------------------------------------
 // patterns

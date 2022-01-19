@@ -83,12 +83,12 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   }
 
   // init variables
-  filterString = String_newCString("1");
+  filterString = Database_newFilter();
   orderString  = String_new();
 
   // get filters
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
-  IndexCommon_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
 
   // get ordering
   IndexCommon_appendOrdering(orderString,TRUE,"history.created",ordering);
@@ -98,7 +98,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    char sqlCommand[MAX_SQL_COMMAND_LENGTH];
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
 
     return Database_select(&indexQueryHandle->databaseStatementHandle,
                            &indexHandle->databaseHandle,
@@ -110,7 +110,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                            DATABASE_COLUMNS
                            (
                              DATABASE_COLUMN_KEY     ("history.id"),
-                             DATABASE_COLUMN_KEY     ("IFNULL(uuids.id,0)"),
+                             DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
                              DATABASE_COLUMN_STRING  ("history.jobUUID"),
                              DATABASE_COLUMN_STRING  ("history.scheduleUUID"),
                              DATABASE_COLUMN_STRING  ("history.hostName"),
@@ -126,19 +126,20 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("history.errorEntryCount"),
                              DATABASE_COLUMN_UINT64  ("history.errorEntrySize")
                            ),
-                           stringFormat(sqlCommand,sizeof(sqlCommand),
+                           stringFormat(sqlString,sizeof(sqlString),
                                         " %s \
                                           %s \
-                                          LIMIT ?,? \
                                         ",
                                         String_cString(filterString),
                                         String_cString(orderString)
                                        ),
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT64(offset),
-                             DATABASE_FILTER_UINT64(limit)
-                           )
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderBy,
+                           offset,
+                           limit
                           );
   });
   if (error != ERROR_NONE)
@@ -244,10 +245,11 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      Errors error;
+      Errors     error;
+      DatabaseId databaseId;
 
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              &databaseId,
                               "history",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -266,14 +268,16 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                 DATABASE_VALUE_UINT64  ("skippedEntrySize",  skippedEntrySize),
                                 DATABASE_VALUE_UINT    ("errorEntryCount",   errorEntryCount),
                                 DATABASE_VALUE_UINT64  ("errorEntrySize",    errorEntrySize)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
         return error;
       }
 
-      if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(Database_getLastRowId(&indexHandle->databaseHandle));
+      if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(databaseId);
 
       return ERROR_NONE;
     });
@@ -303,7 +307,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
 
                                       return error;
                                     },NULL),
-                                    "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S userName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
+                                    "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S userName=%'S archiveType=%s createdDateTime=%"PRIu64" errorMessage=%'s duration=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64,
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
                                     hostName,

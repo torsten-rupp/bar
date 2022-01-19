@@ -191,7 +191,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                      CALLBACK_(NULL,NULL),  // post-copy
                                      CALLBACK_(NULL,NULL),  // pause
                                      CALLBACK_(NULL,NULL),  // progress
-                                     "WHERE entryId=%lld LIMIT 0,1",
+                                     "WHERE entryId=%lld LIMIT 01",
                                      fromEntryId
                                     );
           break;
@@ -235,7 +235,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                      CALLBACK_(NULL,NULL),  // post-copy
                                      CALLBACK_(NULL,NULL),  // pause
                                      CALLBACK_(NULL,NULL),  // progress
-                                     "WHERE entryId=%lld LIMIT 0,1",
+                                     "WHERE entryId=%lld LIMIT 1",
                                      fromEntryId
                                     );
           break;
@@ -287,7 +287,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                      CALLBACK_(NULL,NULL),  // post-copy
                                      CALLBACK_(NULL,NULL),  // pause
                                      CALLBACK_(NULL,NULL),  // progress
-                                     "WHERE entryId=%lld LIMIT 0,1",
+                                     "WHERE entryId=%lld LIMIT 1",
                                      fromEntryId
                                     );
           break;

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-01-01 10:32+0100\n"
+"POT-Creation-Date: 2022-01-15 20:02+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -22,36 +22,36 @@ msgid "device"
 msgstr "デバイス"
 
 #: src/BARControl.java:858 src/TabJobs.java:6080 src/TabJobs.java:15535
-#: src/TabJobs.java:16095 src/TabRestore.java:6107 src/TabRestore.java:7716
+#: src/TabJobs.java:16096 src/TabRestore.java:6107 src/TabRestore.java:7716
 #: src/TabStatus.java:911 src/TabStatus.java:3233
 msgid "normal"
 msgstr "通常の"
 
 #: src/BARControl.java:859 src/TabJobs.java:6112 src/TabJobs.java:15540
-#: src/TabJobs.java:16100 src/TabRestore.java:6123 src/TabRestore.java:7727
+#: src/TabJobs.java:16101 src/TabRestore.java:6123 src/TabRestore.java:7727
 #: src/TabStatus.java:941 src/TabStatus.java:3234
 msgid "full"
 msgstr "フル"
 
 #: src/BARControl.java:860 src/TabJobs.java:6144 src/TabJobs.java:15545
-#: src/TabJobs.java:16105 src/TabRestore.java:6139 src/TabRestore.java:7738
+#: src/TabJobs.java:16106 src/TabRestore.java:6139 src/TabRestore.java:7738
 #: src/TabStatus.java:971 src/TabStatus.java:3235
 msgid "incremental"
 msgstr "インクリメンタル"
 
 #: src/BARControl.java:861 src/TabJobs.java:6176 src/TabJobs.java:15550
-#: src/TabJobs.java:16110 src/TabRestore.java:6155 src/TabRestore.java:7750
+#: src/TabJobs.java:16111 src/TabRestore.java:6155 src/TabRestore.java:7750
 #: src/TabStatus.java:1001 src/TabStatus.java:3236
 msgid "differential"
 msgstr "差分"
 
-#: src/BARControl.java:862 src/TabJobs.java:15555 src/TabJobs.java:16115
+#: src/BARControl.java:862 src/TabJobs.java:15555 src/TabJobs.java:16116
 #: src/TabRestore.java:6171 src/TabRestore.java:7761 src/TabStatus.java:3237
 #, fuzzy
 msgid "continuous"
 msgstr "先へ"
 
-#: src/BARControl.java:863 src/BARException.java:279
+#: src/BARControl.java:863 src/BARException.java:280
 #, fuzzy
 msgid "unknown"
 msgstr "ファイル"
@@ -119,7 +119,7 @@ msgid "h"
 msgstr ""
 
 #: src/BARControl.java:1077 src/BARControl.java:1172 src/BARWidgets.java:909
-#: src/TabJobs.java:16127
+#: src/TabJobs.java:16128
 #, fuzzy
 msgid "min"
 msgstr "最小"
@@ -153,7 +153,7 @@ msgstr ""
 msgid "seconds"
 msgstr ""
 
-#: src/BARControl.java:1329 src/TabJobs.java:16174
+#: src/BARControl.java:1329 src/TabJobs.java:16175
 msgid "forever"
 msgstr ""
 
@@ -368,7 +368,7 @@ msgstr "再試行"
 #: src/ServerSettings.java:4082 src/TabJobs.java:10805 src/TabJobs.java:10947
 #: src/TabJobs.java:11102 src/TabJobs.java:12281 src/TabJobs.java:12698
 #: src/TabJobs.java:13179 src/TabJobs.java:13794 src/TabJobs.java:15133
-#: src/TabJobs.java:15625 src/TabJobs.java:16206 src/TabRestore.java:8579
+#: src/TabJobs.java:15626 src/TabJobs.java:16207 src/TabRestore.java:8579
 #: src/TabRestore.java:9833 src/TabStatus.java:2844 src/TabStatus.java:3014
 msgid "Cancel"
 msgstr "キャンセル"
@@ -511,1110 +511,1110 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/BARException.java:282
+#: src/BARException.java:283
 msgid "insufficient memory"
 msgstr ""
 
-#: src/BARException.java:285
+#: src/BARException.java:286
 #, fuzzy
 msgid "initialize fail"
 msgstr "パブリックキーファイル"
 
-#: src/BARException.java:288
+#: src/BARException.java:289
 #, fuzzy
 msgid "invalid argument"
 msgstr "圧縮除外リスト内のエントリを編集。"
 
-#: src/BARException.java:291
+#: src/BARException.java:292
 #, fuzzy
 msgid "configuration error"
 msgstr "最新エラー"
 
-#: src/BARException.java:294
+#: src/BARException.java:295
 #, fuzzy
 msgid "no writable configuration file"
 msgstr "最新エラー"
 
-#: src/BARException.java:297 src/TabStatus.java:102
+#: src/BARException.java:298 src/TabStatus.java:102
 #, fuzzy
 msgid "aborted"
 msgstr "中止"
 
-#: src/BARException.java:300
+#: src/BARException.java:301
 msgid "interrupted"
 msgstr ""
 
-#: src/BARException.java:303
+#: src/BARException.java:304
 msgid "function not supported"
 msgstr ""
 
-#: src/BARException.java:306
+#: src/BARException.java:307
 msgid "function still not implemented"
 msgstr ""
 
-#: src/BARException.java:309
+#: src/BARException.java:310
 msgid "run as daemon fail"
 msgstr ""
 
-#: src/BARException.java:312
+#: src/BARException.java:313
 msgid "inter-process communication fail"
 msgstr ""
 
-#: src/BARException.java:315
+#: src/BARException.java:316
 #, fuzzy
 msgid "initialize password fail"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:318 src/BARException.java:367
+#: src/BARException.java:319 src/BARException.java:371
 #, fuzzy
 msgid "no password given"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:321
+#: src/BARException.java:322
 #, fuzzy
 msgid "invalid password"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:324
+#: src/BARException.java:325
 #, fuzzy
 msgid "process data fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:327
-#, fuzzy
-msgid "invalid pattern"
-msgstr "圧縮除外リスト内のエントリを編集。"
-
-#: src/BARException.java:334
-#, fuzzy
-msgid "no host name given"
-msgstr "保存名"
-
-#: src/BARException.java:337
-#, fuzzy
-msgid "host not found"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:344
-#, fuzzy
-msgid "bind fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:351
-#, fuzzy
-msgid "connect fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:358 src/BARServer.java:1089 src/TabStatus.java:103
-#, fuzzy
-msgid "disconnected"
-msgstr "接続ミス"
-
-#: src/BARException.java:361
-#, fuzzy
-msgid "too many concurrent connections"
-msgstr "リストのエントリ最大数"
-
-#: src/BARException.java:364
-#, fuzzy
-msgid "no login name given"
-msgstr "ファイル名"
-
-#: src/BARException.java:370
-msgid "sending data fail"
-msgstr ""
-
-#: src/BARException.java:377
-msgid "receiving data fail"
-msgstr ""
-
-#: src/BARException.java:380
-#, fuzzy
-msgid "execute command fail"
-msgstr "トレーを開く"
-
-#: src/BARException.java:383
-#, fuzzy
-msgid "timeout send data"
-msgstr "エラー訂正コード追加"
-
-#: src/BARException.java:386
-#, fuzzy
-msgid "timeout receive data"
-msgstr "エラー訂正コード追加"
-
-#: src/BARException.java:389
-msgid "no response from remote program"
-msgstr ""
-
-#: src/BARException.java:392
-msgid "invalid response from remote program"
-msgstr ""
-
-#: src/BARException.java:395
-#, fuzzy
-msgid "initialize TLS (SSL) fail"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:398
-#, fuzzy
-msgid "no TLS (SSL) certificate authority file"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:401
-#, fuzzy
-msgid "no TLS (SSL) certificate file"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:404
-#, fuzzy
-msgid "no or unreadable TLS (SSL) key file"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:407
-#, fuzzy
-msgid "invalid TLS (SSL) certificate authority"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:410
-#, fuzzy
-msgid "invalid TLS (SSL) certificate"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:413
-#, fuzzy
-msgid "TLS (SSL) certificate expired"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:420
-#, fuzzy
-msgid "TLS (SSL) certificate is still not active"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:427
-#, fuzzy
-msgid "TLS (SSL) handshake failure"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:434
-#, fuzzy
-msgid "invalid SSH specifier"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:437
-#, fuzzy
-msgid "no SSH public key"
-msgstr "SSHパブリックキー"
-
-#: src/BARException.java:440
-#, fuzzy
-msgid "no SSH private key"
-msgstr "SSHプライベートキー"
-
-#: src/BARException.java:443
-#, fuzzy
-msgid "no SSH password given"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:446 src/BARException.java:453
-#: src/BARException.java:460 src/BARException.java:470
-#: src/BARException.java:555 src/BARException.java:1003
-msgid " for ''%s''"
-msgstr ""
-
-#: src/BARException.java:450
-#, fuzzy
-msgid "invalid SSH password"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:457
-#, fuzzy
-msgid "invalid SSH private key"
-msgstr "SSHプライベートキー"
-
-#: src/BARException.java:464
-#, fuzzy
-msgid "initialize SSH session fail"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:467
-#, fuzzy
-msgid "SSH authentication fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:480
-msgid "ssh protocol error"
-msgstr ""
-
-#: src/BARException.java:484
-msgid "job ''%s'' already exists"
-msgstr ""
-
-#: src/BARException.java:487
-msgid "job ''%s'' running"
-msgstr ""
-
-#: src/BARException.java:490
-#, fuzzy
-msgid "create job fail"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:497
-#, fuzzy
-msgid "delete job fail"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:504
-#, fuzzy
-msgid "rename job fail"
-msgstr "名称変更タスク"
-
-#: src/BARException.java:511
-#, fuzzy
-msgid "initialize storage fail"
-msgstr "保存ファイル名編集"
-
-#: src/BARException.java:514
-#, fuzzy
-msgid "no storage name given"
-msgstr "保存名"
-
-#: src/BARException.java:517
-#, fuzzy
-msgid "invalid storage"
-msgstr "保存しない"
-
-#: src/BARException.java:520
-#, fuzzy
-msgid "invalid FTP specifier"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:523
-#, fuzzy
-msgid "initialize FTP session fail"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:530
-#, fuzzy
-msgid "no FTP password given"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:533
-#, fuzzy
-msgid "invalid FTP password"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:536
-#, fuzzy
-msgid "invalid FTP user/password"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:543
-#, fuzzy
-msgid "get FTP file size fail"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:546
-#, fuzzy
-msgid "invalid WebDAV specifier"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:549
-#, fuzzy
-msgid "initialize WebDAV session fail"
-msgstr "パートサイズ"
-
-#: src/BARException.java:552
-#, fuzzy
-msgid "no WebDAV password given"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:559
-#, fuzzy
-msgid "invalid WebDAV password"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:562
-#, fuzzy
-msgid "invalid WebDAV user/password"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:565
-msgid "WebDAV bad request"
-msgstr ""
-
-#: src/BARException.java:568
-#, fuzzy
-msgid "get WebDAV file size"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:574
-#, fuzzy
-msgid "fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:577
-#, fuzzy
-msgid "WebDAV upload fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:584
-#, fuzzy
-msgid "WebDAV download fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:591
-#, fuzzy
-msgid "WebDAV fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:598
-#, fuzzy
-msgid "initialize compress fail"
-msgstr "パートサイズ"
-
-#: src/BARException.java:605
-#, fuzzy
-msgid "initialize decompress fail"
-msgstr "パートサイズ"
-
-#: src/BARException.java:612
-#, fuzzy
-msgid "compress fail"
-msgstr "圧縮する"
-
-#: src/BARException.java:619
-#, fuzzy
-msgid "decompress fail"
-msgstr "圧縮する"
-
-#: src/BARException.java:626
-#, fuzzy
-msgid "end of compressed file"
-msgstr "パートサイズ"
-
-#: src/BARException.java:629 src/BARException.java:1312
-#, fuzzy
-msgid "delta source not found"
-msgstr "ソースファイル選択"
-
-#: src/BARException.java:636
-#, fuzzy
-msgid "invalid compress algorithm"
-msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
-
-#: src/BARException.java:639
-#, fuzzy
-msgid "unknown compress algorithm"
-msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
-
-#: src/BARException.java:642
-#, fuzzy
-msgid "compress algorithm not supported"
-msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
-
-#: src/BARException.java:645
-msgid "unsupported block length"
-msgstr ""
-
-#: src/BARException.java:648
-#, fuzzy
-msgid "initialize crypt fail"
-msgstr "パブリックキーファイル"
-
-#: src/BARException.java:655
-#, fuzzy
-msgid "no decrypt key for cipher"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:658
-#, fuzzy
-msgid "no password given for cipher"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:661
-#, fuzzy
-msgid "invalid decryption password"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:664
-#, fuzzy
-msgid "encryption passwords mismatch"
-msgstr "復号化パスワード"
-
-#: src/BARException.java:667
-#, fuzzy
-msgid "initialize cipher fail"
-msgstr "WebDAVログインパスワード"
-
-#: src/BARException.java:674
-#, fuzzy
-msgid "encrypt fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:681
-#, fuzzy
-msgid "decrypt fail"
-msgstr "接続ミス"
-
-#: src/BARException.java:688
-#, fuzzy
-msgid "create public/private key fail"
-msgstr "SSHプライベートキーファイル選択"
-
-#: src/BARException.java:695
+#: src/BARException.java:328 src/BARException.java:699
 #, fuzzy
 msgid "invalid encoding"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:698
+#: src/BARException.java:331
+#, fuzzy
+msgid "invalid pattern"
+msgstr "圧縮除外リスト内のエントリを編集。"
+
+#: src/BARException.java:338
+#, fuzzy
+msgid "no host name given"
+msgstr "保存名"
+
+#: src/BARException.java:341
+#, fuzzy
+msgid "host not found"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:348
+#, fuzzy
+msgid "bind fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:355
+#, fuzzy
+msgid "connect fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:362 src/BARServer.java:1089 src/TabStatus.java:103
+#, fuzzy
+msgid "disconnected"
+msgstr "接続ミス"
+
+#: src/BARException.java:365
+#, fuzzy
+msgid "too many concurrent connections"
+msgstr "リストのエントリ最大数"
+
+#: src/BARException.java:368
+#, fuzzy
+msgid "no login name given"
+msgstr "ファイル名"
+
+#: src/BARException.java:374
+msgid "sending data fail"
+msgstr ""
+
+#: src/BARException.java:381
+msgid "receiving data fail"
+msgstr ""
+
+#: src/BARException.java:384
+#, fuzzy
+msgid "execute command fail"
+msgstr "トレーを開く"
+
+#: src/BARException.java:387
+#, fuzzy
+msgid "timeout send data"
+msgstr "エラー訂正コード追加"
+
+#: src/BARException.java:390
+#, fuzzy
+msgid "timeout receive data"
+msgstr "エラー訂正コード追加"
+
+#: src/BARException.java:393
+msgid "no response from remote program"
+msgstr ""
+
+#: src/BARException.java:396
+msgid "invalid response from remote program"
+msgstr ""
+
+#: src/BARException.java:399
+#, fuzzy
+msgid "initialize TLS (SSL) fail"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:402
+#, fuzzy
+msgid "no TLS (SSL) certificate authority file"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:405
+#, fuzzy
+msgid "no TLS (SSL) certificate file"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:408
+#, fuzzy
+msgid "no or unreadable TLS (SSL) key file"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:411
+#, fuzzy
+msgid "invalid TLS (SSL) certificate authority"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:414
+#, fuzzy
+msgid "invalid TLS (SSL) certificate"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:417
+#, fuzzy
+msgid "TLS (SSL) certificate expired"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:424
+#, fuzzy
+msgid "TLS (SSL) certificate is still not active"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:431
+#, fuzzy
+msgid "TLS (SSL) handshake failure"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:438
+#, fuzzy
+msgid "invalid SSH specifier"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:441
+#, fuzzy
+msgid "no SSH public key"
+msgstr "SSHパブリックキー"
+
+#: src/BARException.java:444
+#, fuzzy
+msgid "no SSH private key"
+msgstr "SSHプライベートキー"
+
+#: src/BARException.java:447
+#, fuzzy
+msgid "no SSH password given"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:450 src/BARException.java:457
+#: src/BARException.java:464 src/BARException.java:474
+#: src/BARException.java:559 src/BARException.java:1007
+msgid " for ''%s''"
+msgstr ""
+
+#: src/BARException.java:454
+#, fuzzy
+msgid "invalid SSH password"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:461
+#, fuzzy
+msgid "invalid SSH private key"
+msgstr "SSHプライベートキー"
+
+#: src/BARException.java:468
+#, fuzzy
+msgid "initialize SSH session fail"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:471
+#, fuzzy
+msgid "SSH authentication fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:484
+msgid "ssh protocol error"
+msgstr ""
+
+#: src/BARException.java:488
+msgid "job ''%s'' already exists"
+msgstr ""
+
+#: src/BARException.java:491
+msgid "job ''%s'' running"
+msgstr ""
+
+#: src/BARException.java:494
+#, fuzzy
+msgid "create job fail"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:501
+#, fuzzy
+msgid "delete job fail"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:508
+#, fuzzy
+msgid "rename job fail"
+msgstr "名称変更タスク"
+
+#: src/BARException.java:515
+#, fuzzy
+msgid "initialize storage fail"
+msgstr "保存ファイル名編集"
+
+#: src/BARException.java:518
+#, fuzzy
+msgid "no storage name given"
+msgstr "保存名"
+
+#: src/BARException.java:521
+#, fuzzy
+msgid "invalid storage"
+msgstr "保存しない"
+
+#: src/BARException.java:524
+#, fuzzy
+msgid "invalid FTP specifier"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:527
+#, fuzzy
+msgid "initialize FTP session fail"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:534
+#, fuzzy
+msgid "no FTP password given"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:537
+#, fuzzy
+msgid "invalid FTP password"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:540
+#, fuzzy
+msgid "invalid FTP user/password"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:547
+#, fuzzy
+msgid "get FTP file size fail"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:550
+#, fuzzy
+msgid "invalid WebDAV specifier"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:553
+#, fuzzy
+msgid "initialize WebDAV session fail"
+msgstr "パートサイズ"
+
+#: src/BARException.java:556
+#, fuzzy
+msgid "no WebDAV password given"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:563
+#, fuzzy
+msgid "invalid WebDAV password"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:566
+#, fuzzy
+msgid "invalid WebDAV user/password"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:569
+msgid "WebDAV bad request"
+msgstr ""
+
+#: src/BARException.java:572
+#, fuzzy
+msgid "get WebDAV file size"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:578
+#, fuzzy
+msgid "fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:581
+#, fuzzy
+msgid "WebDAV upload fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:588
+#, fuzzy
+msgid "WebDAV download fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:595
+#, fuzzy
+msgid "WebDAV fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:602
+#, fuzzy
+msgid "initialize compress fail"
+msgstr "パートサイズ"
+
+#: src/BARException.java:609
+#, fuzzy
+msgid "initialize decompress fail"
+msgstr "パートサイズ"
+
+#: src/BARException.java:616
+#, fuzzy
+msgid "compress fail"
+msgstr "圧縮する"
+
+#: src/BARException.java:623
+#, fuzzy
+msgid "decompress fail"
+msgstr "圧縮する"
+
+#: src/BARException.java:630
+#, fuzzy
+msgid "end of compressed file"
+msgstr "パートサイズ"
+
+#: src/BARException.java:633 src/BARException.java:1316
+#, fuzzy
+msgid "delta source not found"
+msgstr "ソースファイル選択"
+
+#: src/BARException.java:640
+#, fuzzy
+msgid "invalid compress algorithm"
+msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
+
+#: src/BARException.java:643
+#, fuzzy
+msgid "unknown compress algorithm"
+msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
+
+#: src/BARException.java:646
+#, fuzzy
+msgid "compress algorithm not supported"
+msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
+
+#: src/BARException.java:649
+msgid "unsupported block length"
+msgstr ""
+
+#: src/BARException.java:652
+#, fuzzy
+msgid "initialize crypt fail"
+msgstr "パブリックキーファイル"
+
+#: src/BARException.java:659
+#, fuzzy
+msgid "no decrypt key for cipher"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:662
+#, fuzzy
+msgid "no password given for cipher"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:665
+#, fuzzy
+msgid "invalid decryption password"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:668
+#, fuzzy
+msgid "encryption passwords mismatch"
+msgstr "復号化パスワード"
+
+#: src/BARException.java:671
+#, fuzzy
+msgid "initialize cipher fail"
+msgstr "WebDAVログインパスワード"
+
+#: src/BARException.java:678
+#, fuzzy
+msgid "encrypt fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:685
+#, fuzzy
+msgid "decrypt fail"
+msgstr "接続ミス"
+
+#: src/BARException.java:692
+#, fuzzy
+msgid "create public/private key fail"
+msgstr "SSHプライベートキーファイル選択"
+
+#: src/BARException.java:702
 #, fuzzy
 msgid "initialize key fail"
 msgstr "パブリックキーファイル"
 
-#: src/BARException.java:705
+#: src/BARException.java:709
 #, fuzzy
 msgid "public/private key not found"
 msgstr "SSHプライベートキーファイル選択"
 
-#: src/BARException.java:712
+#: src/BARException.java:716
 #, fuzzy
 msgid "read public/private key fail"
 msgstr "SSHプライベートキーファイル選択"
 
-#: src/BARException.java:719
+#: src/BARException.java:723
 #, fuzzy
 msgid "invalid key"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:726
+#: src/BARException.java:730
 #, fuzzy
 msgid "invalid key length"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:729
+#: src/BARException.java:733
 #, fuzzy
 msgid "invalid block length"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:732
+#: src/BARException.java:736
 #, fuzzy
 msgid "invalid salt length"
 msgstr "圧縮除外リスト内のエントリを編集。"
 
-#: src/BARException.java:735
+#: src/BARException.java:739
 #, fuzzy
 msgid "no public encryption key"
 msgstr "SSHパブリックキー"
 
-#: src/BARException.java:738
+#: src/BARException.java:742
 #, fuzzy
 msgid "no private encryption key"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:741
+#: src/BARException.java:745
 #, fuzzy
 msgid "key is not a public encryption key"
 msgstr "SSHパブリックキー"
 
-#: src/BARException.java:748
+#: src/BARException.java:752
 #, fuzzy
 msgid "key is not a private encryption key"
 msgstr "SSHパブリックキー"
 
-#: src/BARException.java:755
+#: src/BARException.java:759
 #, fuzzy
 msgid "no public signature key"
 msgstr "SSHパブリックキー"
 
-#: src/BARException.java:758
+#: src/BARException.java:762
 #, fuzzy
 msgid "no private signature key"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:761
+#: src/BARException.java:765
 #, fuzzy
 msgid "key is not a public signature key"
 msgstr "SSHパブリックキー"
 
-#: src/BARException.java:768
+#: src/BARException.java:772
 #, fuzzy
 msgid "key is not a private signature key"
 msgstr "SSHパブリックキー"
 
-#: src/BARException.java:775
+#: src/BARException.java:779
 #, fuzzy
 msgid "key encryption fail"
 msgstr "接続ミス"
 
-#: src/BARException.java:782
+#: src/BARException.java:786
 #, fuzzy
 msgid "key decryption fail"
 msgstr "接続ミス"
 
-#: src/BARException.java:789
+#: src/BARException.java:793
 #, fuzzy
 msgid "wrong private decryption key"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:792
+#: src/BARException.java:796
 #, fuzzy
 msgid "invalid encryption algorithm"
 msgstr "クリックして使用暗号化アルゴリズム順に並べ替え。"
 
-#: src/BARException.java:795
+#: src/BARException.java:799
 #, fuzzy
 msgid "unknown encryption algorithm"
 msgstr "クリックして使用暗号化アルゴリズム順に並べ替え。"
 
-#: src/BARException.java:798
+#: src/BARException.java:802
 #, fuzzy
 msgid "initialize hash fail"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:801
+#: src/BARException.java:805
 #, fuzzy
 msgid "invalid hash algorithm"
 msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
 
-#: src/BARException.java:804
+#: src/BARException.java:808
 #, fuzzy
 msgid "unknown hash algorithm"
 msgstr "クリックして使用圧縮アルゴリズム順に並べ替え。"
 
-#: src/BARException.java:807
+#: src/BARException.java:811
 #, fuzzy
 msgid "initialize message authentication code fail"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:810
+#: src/BARException.java:814
 #, fuzzy
 msgid "invalid message authentication code algorithm"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:813
+#: src/BARException.java:817
 #, fuzzy
 msgid "unknown message authentication code algorithm"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:816
+#: src/BARException.java:820
 #, fuzzy
 msgid "no file name given"
 msgstr "ファイル名"
 
-#: src/BARException.java:819
+#: src/BARException.java:823
 #, fuzzy
 msgid "create file fail"
 msgstr "ソースファイル選択"
 
-#: src/BARException.java:826
+#: src/BARException.java:830
 #, fuzzy
 msgid "open file fail"
 msgstr "ファイル"
 
-#: src/BARException.java:833
+#: src/BARException.java:837
 #, fuzzy
 msgid "create directory fail"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:840
+#: src/BARException.java:844
 #, fuzzy
 msgid "i/o error"
 msgstr "エラー"
 
-#: src/BARException.java:847
+#: src/BARException.java:851
 #, fuzzy
 msgid "read file fail"
 msgstr "アーカイブファイル上書き"
 
-#: src/BARException.java:854
+#: src/BARException.java:858
 #, fuzzy
 msgid "end of file"
 msgstr "ファイル"
 
-#: src/BARException.java:861
+#: src/BARException.java:865
 #, fuzzy
 msgid "write file fail"
 msgstr "アーカイブファイル上書き"
 
-#: src/BARException.java:868
+#: src/BARException.java:872
 #, fuzzy
 msgid "delete file fail"
 msgstr "ソースファイル選択"
 
-#: src/BARException.java:875
+#: src/BARException.java:879
 #, fuzzy
 msgid "open directory"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:882
+#: src/BARException.java:886
 #, fuzzy
 msgid "read directory fail"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:891
+#: src/BARException.java:895
 msgid "file already exists"
 msgstr ""
 
-#: src/BARException.java:895
+#: src/BARException.java:899
 #, fuzzy
 msgid "file not found"
 msgstr "保存作業"
 
-#: src/BARException.java:902
+#: src/BARException.java:906
 msgid "access denied"
 msgstr ""
 
-#: src/BARException.java:905
+#: src/BARException.java:909
 #, fuzzy
 msgid "not a directory"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:912
+#: src/BARException.java:916
 #, fuzzy
 msgid "end of directory list"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:915
+#: src/BARException.java:919
 #, fuzzy
 msgid "init file notify fail"
 msgstr "パブリックキーファイル"
 
-#: src/BARException.java:918
+#: src/BARException.java:922
 msgid "insufficient file notify entries"
 msgstr ""
 
-#: src/BARException.java:921
+#: src/BARException.java:925
 #, fuzzy
 msgid "CD/DVD/BD device not found"
 msgstr "デバイス"
 
-#: src/BARException.java:928
+#: src/BARException.java:932
 #, fuzzy
 msgid "open CD/DVD/BD disk fail"
 msgstr "デバイス"
 
-#: src/BARException.java:935
+#: src/BARException.java:939
 #, fuzzy
 msgid "open ISO 9660 image fail"
 msgstr "ファイル"
 
-#: src/BARException.java:942
+#: src/BARException.java:946
 #, fuzzy
 msgid "no device name given"
 msgstr "マウントデバイス名"
 
-#: src/BARException.java:945
+#: src/BARException.java:949
 #, fuzzy
 msgid "open device fail"
 msgstr "マウントデバイス"
 
-#: src/BARException.java:952
+#: src/BARException.java:956
 #, fuzzy
 msgid "invalid device block size"
 msgstr "インクリメンタルファイル選択"
 
-#: src/BARException.java:955
+#: src/BARException.java:959
 #, fuzzy
 msgid "read device fail"
 msgstr "アーカイブファイル上書き"
 
-#: src/BARException.java:958
+#: src/BARException.java:962
 #, fuzzy
 msgid "write device fail"
 msgstr "アーカイブファイル上書き"
 
-#: src/BARException.java:961
+#: src/BARException.java:965
 msgid "error parsing device list"
 msgstr ""
 
-#: src/BARException.java:964
+#: src/BARException.java:968
 #, fuzzy
 msgid "mount fail"
 msgstr "接続ミス"
 
-#: src/BARException.java:971
+#: src/BARException.java:975
 #, fuzzy
 msgid "unmount fail"
 msgstr "接続ミス"
 
-#: src/BARException.java:978
+#: src/BARException.java:982
 #, fuzzy
 msgid "no archive file name given"
 msgstr "アーカイブタイプ"
 
-#: src/BARException.java:981
+#: src/BARException.java:985
 #, fuzzy
 msgid "not an archive file"
 msgstr "アーカイブファイル上書き"
 
-#: src/BARException.java:984
+#: src/BARException.java:988
 #, fuzzy
 msgid "archive not found"
 msgstr "保存作業"
 
-#: src/BARException.java:991
+#: src/BARException.java:995
 #, fuzzy
 msgid "end of archive"
 msgstr "復元作業"
 
-#: src/BARException.java:994
+#: src/BARException.java:998
 #, fuzzy
 msgid "no meta entry"
 msgstr "選択した"
 
-#: src/BARException.java:997
+#: src/BARException.java:1001
 #, fuzzy
 msgid "no file entry"
 msgstr "選択した"
 
-#: src/BARException.java:1000
+#: src/BARException.java:1004
 #, fuzzy
 msgid "no file data entry"
 msgstr "選択した"
 
-#: src/BARException.java:1007
+#: src/BARException.java:1011
 #, fuzzy
 msgid "no directory entry"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:1010
+#: src/BARException.java:1014
 #, fuzzy
 msgid "no link entry"
 msgstr "選択した"
 
-#: src/BARException.java:1013
+#: src/BARException.java:1017
 #, fuzzy
 msgid "no hard link entry"
 msgstr "選択した"
 
-#: src/BARException.java:1016
+#: src/BARException.java:1020
 #, fuzzy
 msgid "no special entry"
 msgstr "選択した"
 
-#: src/BARException.java:1019
+#: src/BARException.java:1023
 #, fuzzy
 msgid "no image entry"
 msgstr "選択した"
 
-#: src/BARException.java:1022
+#: src/BARException.java:1026
 #, fuzzy
 msgid "no image data entry"
 msgstr "選択した"
 
-#: src/BARException.java:1025
+#: src/BARException.java:1029
 #, fuzzy
 msgid "end of data"
 msgstr "復元作業"
 
-#: src/BARException.java:1028
+#: src/BARException.java:1032
 #, fuzzy
 msgid "incomplete archive"
 msgstr "ファイル"
 
-#: src/BARException.java:1031
+#: src/BARException.java:1035
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: src/BARException.java:1034
+#: src/BARException.java:1038
 msgid "wrong CRC"
 msgstr ""
 
-#: src/BARException.java:1038
+#: src/BARException.java:1042
 msgid "at offset"
 msgstr ""
 
-#: src/BARException.java:1051
+#: src/BARException.java:1055
 msgid "entry is incomplete"
 msgstr ""
 
-#: src/BARException.java:1058
+#: src/BARException.java:1062
 msgid "wrong entry type"
 msgstr ""
 
-#: src/BARException.java:1065
+#: src/BARException.java:1069
 #, fuzzy
 msgid "entries differ"
 msgstr "新差分"
 
-#: src/BARException.java:1072
+#: src/BARException.java:1076
 #, fuzzy
 msgid "corrupt data or invalid password"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:1079
+#: src/BARException.java:1083
 #, fuzzy
 msgid "invalid chunk size"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:1082
+#: src/BARException.java:1086
 #, fuzzy
 msgid "unknown chunk"
 msgstr "ファイル"
 
-#: src/BARException.java:1089
+#: src/BARException.java:1093
 #, fuzzy
 msgid "invalid signature"
 msgstr "保存しない"
 
-#: src/BARException.java:1092
+#: src/BARException.java:1096
 #, fuzzy
 msgid "invalid incremental file"
 msgstr "インクリメンタルファイル選択"
 
-#: src/BARException.java:1095
+#: src/BARException.java:1099
 #, fuzzy
 msgid "wrong incremental file version"
 msgstr "インクリメンタルファイル名"
 
-#: src/BARException.java:1098
+#: src/BARException.java:1102
 #, fuzzy
 msgid "corrupt incremental file"
 msgstr "インクリメンタルファイル選択"
 
-#: src/BARException.java:1101
+#: src/BARException.java:1105
 #, fuzzy
 msgid "invalid device specifier"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARException.java:1104
+#: src/BARException.java:1108
 #, fuzzy
 msgid "load volume fail"
 msgstr "アーカイブファイル上書き"
 
-#: src/BARException.java:1107
+#: src/BARException.java:1111
 #, fuzzy
 msgid "parse command fail"
 msgstr "トレーを開く"
 
-#: src/BARException.java:1114
+#: src/BARException.java:1118
 #, fuzzy
 msgid "expand command template fail"
 msgstr "トレーを開く"
 
-#: src/BARException.java:1117
+#: src/BARException.java:1121
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1120
+#: src/BARException.java:1124
 #, fuzzy
 msgid "i/o redirect fail"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:1127
+#: src/BARException.java:1131
 #, fuzzy
 msgid "execute external program fail"
 msgstr "トレーを開く"
 
-#: src/BARException.java:1138
+#: src/BARException.java:1142
 #, fuzzy
 msgid "terminate external program fail"
 msgstr "トレーを開く"
 
-#: src/BARException.java:1149
+#: src/BARException.java:1153
 #, fuzzy
 msgid "parsing data fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:1156
+#: src/BARException.java:1160
 #, fuzzy
 msgid "parsing date fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:1163
+#: src/BARException.java:1167
 #, fuzzy
 msgid "parsing time fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:1170
+#: src/BARException.java:1174
 #, fuzzy
 msgid "parsing weekdays fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:1177
+#: src/BARException.java:1181
 #, fuzzy
 msgid "parsing maintenance fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:1184
+#: src/BARException.java:1188
 #, fuzzy
 msgid "parsing schedule fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:1191
+#: src/BARException.java:1195
 #, fuzzy
 msgid "unknown command"
 msgstr "ファイル"
 
-#: src/BARException.java:1198
+#: src/BARException.java:1202
 msgid "expected parameter"
 msgstr ""
 
-#: src/BARException.java:1211
+#: src/BARException.java:1215
 #, fuzzy
 msgid "unknown value"
 msgstr "ファイル"
 
-#: src/BARException.java:1215
+#: src/BARException.java:1219
 #, fuzzy
 msgid "invalid value"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:1222
+#: src/BARException.java:1226
 msgid "deprecated or ignored value"
 msgstr ""
 
-#: src/BARException.java:1229
+#: src/BARException.java:1233
 #, fuzzy
 msgid "authorization fail"
 msgstr "作成作業"
 
-#: src/BARException.java:1232
+#: src/BARException.java:1236
 #, fuzzy
 msgid "job not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1239
+#: src/BARException.java:1243
 #, fuzzy
 msgid "schedule not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1252
+#: src/BARException.java:1256
 #, fuzzy
 msgid "persistence not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1262
+#: src/BARException.java:1266
 #, fuzzy
 msgid "maintenance not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1272
+#: src/BARException.java:1276
 #, fuzzy
 msgid "server not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1282
+#: src/BARException.java:1286
 #, fuzzy
 msgid "entry not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1292
+#: src/BARException.java:1296
 #, fuzzy
 msgid "pattern not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1302
+#: src/BARException.java:1306
 #, fuzzy
 msgid "mount not found"
 msgstr "ソースファイル選択"
 
-#: src/BARException.java:1316
+#: src/BARException.java:1320
 #, fuzzy
 msgid "database"
 msgstr "最新エラー"
 
-#: src/BARException.java:1323
+#: src/BARException.java:1327
 msgid "insufficient database version"
 msgstr ""
 
-#: src/BARException.java:1330
+#: src/BARException.java:1334
 #, fuzzy
 msgid "database connection lost"
 msgstr "接続ミス"
 
-#: src/BARException.java:1333
+#: src/BARException.java:1337
 msgid "database already exists"
 msgstr ""
 
-#: src/BARException.java:1336
+#: src/BARException.java:1340
 #, fuzzy
 msgid "unknown version of index"
 msgstr "クリックして使用暗号化アルゴリズム順に並べ替え。"
 
-#: src/BARException.java:1339
+#: src/BARException.java:1343
 #, fuzzy
 msgid "missing table"
 msgstr "ファイル"
 
-#: src/BARException.java:1346
+#: src/BARException.java:1350
 #, fuzzy
 msgid "missing column"
 msgstr "ファイル"
 
-#: src/BARException.java:1353
+#: src/BARException.java:1357
 msgid "obsolete table"
 msgstr ""
 
-#: src/BARException.java:1360
+#: src/BARException.java:1364
 msgid "obsolete column"
 msgstr ""
 
-#: src/BARException.java:1367
+#: src/BARException.java:1371
 #, fuzzy
 msgid "database bind fail"
 msgstr "接続ミス"
 
-#: src/BARException.java:1374
+#: src/BARException.java:1378
 msgid "type mismatch"
 msgstr ""
 
-#: src/BARException.java:1381
+#: src/BARException.java:1385
 #, fuzzy
 msgid "error creating index"
 msgstr "エラー訂正コード追加"
 
-#: src/BARException.java:1384
+#: src/BARException.java:1388
 #, fuzzy
 msgid "index not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1387
+#: src/BARException.java:1391
 msgid "index still not initialized"
 msgstr ""
 
-#: src/BARException.java:1390
+#: src/BARException.java:1394
 #, fuzzy
 msgid "invalid index"
 msgstr "SSHプライベートキー"
 
-#: src/BARException.java:1397
+#: src/BARException.java:1401
 #, fuzzy
 msgid "parse index id fail"
 msgstr "圧縮する"
 
-#: src/BARException.java:1404
+#: src/BARException.java:1408
 #, fuzzy
 msgid "database busy"
 msgstr "最新エラー"
 
-#: src/BARException.java:1407
+#: src/BARException.java:1411
 #, fuzzy
 msgid "database operation interupted"
 msgstr "接続ミス"
 
-#: src/BARException.java:1410
+#: src/BARException.java:1414
 #, fuzzy
 msgid "timeout accessing index"
 msgstr "エラー訂正コード追加"
 
-#: src/BARException.java:1413
+#: src/BARException.java:1417
 #, fuzzy
 msgid "master disconnected"
 msgstr "接続ミス"
 
-#: src/BARException.java:1416
+#: src/BARException.java:1420
 #, fuzzy
 msgid "slave disconnected"
 msgstr "接続ミス"
 
-#: src/BARException.java:1419
+#: src/BARException.java:1423
 #, fuzzy
 msgid "slave is not paired"
 msgstr "接続ミス"
 
-#: src/BARException.java:1422
+#: src/BARException.java:1426
 #, fuzzy
 msgid "instance is not a slave"
 msgstr "接続ミス"
@@ -2075,24 +2075,24 @@ msgstr "保存ファイルをインデックス・データベースに追加"
 msgid "Index database keep time for not existing storages."
 msgstr "イメージ保存用選択デバイスを含む。"
 
-#: src/ServerSettings.java:1389 src/TabJobs.java:16175
+#: src/ServerSettings.java:1389 src/TabJobs.java:16176
 msgid "1 day"
 msgstr ""
 
-#: src/ServerSettings.java:1390 src/TabJobs.java:16177
+#: src/ServerSettings.java:1390 src/TabJobs.java:16178
 #, fuzzy
 msgid "3 days"
 msgstr "曜日"
 
-#: src/ServerSettings.java:1391 src/TabJobs.java:16181
+#: src/ServerSettings.java:1391 src/TabJobs.java:16182
 msgid "1 week"
 msgstr ""
 
-#: src/ServerSettings.java:1392 src/TabJobs.java:16182
+#: src/ServerSettings.java:1392 src/TabJobs.java:16183
 msgid "2 weeks"
 msgstr ""
 
-#: src/ServerSettings.java:1393 src/TabJobs.java:16183
+#: src/ServerSettings.java:1393 src/TabJobs.java:16184
 msgid "3 weeks"
 msgstr ""
 
@@ -2152,8 +2152,8 @@ msgstr "クリックしてファイル名順に並べ替え。"
 #: src/TabJobs.java:9970 src/TabJobs.java:10209 src/TabJobs.java:10370
 #: src/TabJobs.java:10801 src/TabJobs.java:12466 src/TabJobs.java:12510
 #: src/TabJobs.java:12854 src/TabJobs.java:12896 src/TabJobs.java:13395
-#: src/TabJobs.java:13441 src/TabJobs.java:13947 src/TabJobs.java:15724
-#: src/TabJobs.java:15833 src/TabJobs.java:16374 src/TabJobs.java:16415
+#: src/TabJobs.java:13441 src/TabJobs.java:13947 src/TabJobs.java:15725
+#: src/TabJobs.java:15834 src/TabJobs.java:16375 src/TabJobs.java:16416
 #: src/TabRestore.java:8575
 msgid "Add"
 msgstr "追加"
@@ -2187,7 +2187,7 @@ msgstr "予想時間"
 #: src/ServerSettings.java:1487 src/ServerSettings.java:1767
 #: src/ServerSettings.java:3140 src/TabJobs.java:12485 src/TabJobs.java:12872
 #: src/TabJobs.java:13422 src/TabJobs.java:13966 src/TabJobs.java:15130
-#: src/TabJobs.java:15783 src/TabJobs.java:16394
+#: src/TabJobs.java:15784 src/TabJobs.java:16395
 msgid "Save"
 msgstr "保存"
 
@@ -2289,7 +2289,7 @@ msgid "Storage servers"
 msgstr "サーバ"
 
 #: src/ServerSettings.java:1683 src/TabJobs.java:12219 src/TabJobs.java:15529
-#: src/TabJobs.java:16089 src/TabRestore.java:5012 src/TabRestore.java:5056
+#: src/TabJobs.java:16090 src/TabRestore.java:5012 src/TabRestore.java:5056
 #: src/TabRestore.java:6696 src/TabRestore.java:9649 src/TabStatus.java:685
 #: src/TabStatus.java:762 src/TabStatus.java:3230
 msgid "Type"
@@ -2900,7 +2900,7 @@ msgstr "タスク実行時。一時間ごとの場合'*'のままにしてくだ
 msgid "Minute to execute job. Leave to '*' for every minute."
 msgstr "タスク実行分。毎分の場合'*'のままにしてください。"
 
-#: src/ServerSettings.java:3775 src/TabJobs.java:15696
+#: src/ServerSettings.java:3775 src/TabJobs.java:15697
 #, fuzzy
 msgid "No weekdays specified!"
 msgstr "曜日設定切り替え。"
@@ -3349,7 +3349,7 @@ msgstr "保存"
 msgid "Part size"
 msgstr "パートサイズ"
 
-#: src/TabJobs.java:4452 src/TabJobs.java:16153 src/TabStatus.java:2201
+#: src/TabJobs.java:4452 src/TabJobs.java:16154 src/TabStatus.java:2201
 #: src/TabStatus.java:2223
 msgid "unlimited"
 msgstr "無制限"
@@ -4051,12 +4051,12 @@ msgstr "最新作成"
 msgid "Total entities"
 msgstr "エンティティ合計"
 
-#: src/TabJobs.java:9839 src/TabJobs.java:16522 src/TabRestore.java:4412
+#: src/TabJobs.java:9839 src/TabJobs.java:16523 src/TabRestore.java:4412
 #: src/TabRestore.java:4567
 msgid "Total entries"
 msgstr "エントリ合計"
 
-#: src/TabJobs.java:9849 src/TabJobs.java:10050 src/TabJobs.java:16512
+#: src/TabJobs.java:9849 src/TabJobs.java:10050 src/TabJobs.java:16513
 #: src/TabRestore.java:4402 src/TabRestore.java:4557
 msgid "Total size"
 msgstr "サイズ合計"
@@ -4104,7 +4104,7 @@ msgstr "最大"
 msgid "max. age"
 msgstr "最小"
 
-#: src/TabJobs.java:10048 src/TabJobs.java:16502 src/TabRestore.java:4537
+#: src/TabJobs.java:10048 src/TabJobs.java:16503 src/TabRestore.java:4537
 #: src/TabRestore.java:5032 src/TabRestore.java:5373
 msgid "Created"
 msgstr "作成された"
@@ -4720,23 +4720,23 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabJobs.java:15536 src/TabJobs.java:16096
+#: src/TabJobs.java:15536 src/TabJobs.java:16097
 msgid "Execute job as normal backup (no incremental data)."
 msgstr "通常バックアップとしてタスク実行（インクリメンタルデータではない）。"
 
-#: src/TabJobs.java:15541 src/TabJobs.java:16101
+#: src/TabJobs.java:15541 src/TabJobs.java:16102
 msgid "Execute job as full backup."
 msgstr "フルバックアップとしてタスク実行。"
 
-#: src/TabJobs.java:15546 src/TabJobs.java:16106
+#: src/TabJobs.java:15546 src/TabJobs.java:16107
 msgid "Execute job as incremental backup."
 msgstr "インクリメンタル・バックアップとしてタスク実行。"
 
-#: src/TabJobs.java:15551 src/TabJobs.java:16111
+#: src/TabJobs.java:15551 src/TabJobs.java:16112
 msgid "Execute job as differential backup."
 msgstr "差分バックアップとしてタスクを実行。"
 
-#: src/TabJobs.java:15556 src/TabJobs.java:16116
+#: src/TabJobs.java:15556 src/TabJobs.java:16117
 #, fuzzy
 msgid "Execute job as continuous backup."
 msgstr "フルバックアップとしてタスク実行。"
@@ -4773,30 +4773,36 @@ msgstr ""
 msgid "8 h"
 msgstr ""
 
-#: src/TabJobs.java:15607 src/TabStatus.java:1031
-msgid "no storage"
+#: src/TabJobs.java:15607
+#, fuzzy
+msgid "do no create storages"
 msgstr "保存しない"
 
-#: src/TabJobs.java:15611
+#: src/TabJobs.java:15608
+#, fuzzy
+msgid "Do not create storage files. Only update incremental data."
+msgstr "すべてのファイルを保存し、インクリメンタル・データファイルを作成。"
+
+#: src/TabJobs.java:15612
 msgid "enabled"
 msgstr "有効にした"
 
-#: src/TabJobs.java:15689
+#: src/TabJobs.java:15690
 msgid "No specific time set. Really execute job every minute?"
 msgstr ""
 
-#: src/TabJobs.java:15702
+#: src/TabJobs.java:15703
 msgid ""
 "The job may not be triggered if the specified day is not in the set of "
 "specified weekdays.\n"
 "Really keep this setting?"
 msgstr ""
 
-#: src/TabJobs.java:15724
+#: src/TabJobs.java:15725
 msgid "New schedule"
 msgstr "新スケジュール"
 
-#: src/TabJobs.java:15749
+#: src/TabJobs.java:15750
 #, java-format
 msgid ""
 "Cannot create new schedule:\n"
@@ -4807,11 +4813,11 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:15783
+#: src/TabJobs.java:15784
 msgid "Edit schedule"
 msgstr "スケジュール編集"
 
-#: src/TabJobs.java:15809
+#: src/TabJobs.java:15810
 #, fuzzy, java-format
 msgid ""
 "Cannot update schedule entry:\n"
@@ -4822,11 +4828,11 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:15833
+#: src/TabJobs.java:15834
 msgid "Clone schedule"
 msgstr "スケジュールをクローンする"
 
-#: src/TabJobs.java:15857
+#: src/TabJobs.java:15858
 #, java-format
 msgid ""
 "Cannot clone new schedule:\n"
@@ -4837,13 +4843,13 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:15889
+#: src/TabJobs.java:15890
 #, java-format
 msgid "Delete {0} selected schedule {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 "{0}選択スケジュール{0,choice,0#entries|1#entry|1<entries}を削除しますか？"
 
-#: src/TabJobs.java:15906
+#: src/TabJobs.java:15907
 #, java-format
 msgid ""
 "Cannot delete schedule:\n"
@@ -4854,7 +4860,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:15942 src/TabStatus.java:2349
+#: src/TabJobs.java:15943 src/TabStatus.java:2349
 #, java-format
 msgid ""
 "Cannot trigger schedule of job ''{0}'':\n"
@@ -4865,81 +4871,81 @@ msgstr ""
 "\n"
 "{1}"
 
-#: src/TabJobs.java:16121
+#: src/TabJobs.java:16122
 msgid "Keep"
 msgstr "保存期間"
 
-#: src/TabJobs.java:16131
+#: src/TabJobs.java:16132
 msgid "Min. number of archives to keep."
 msgstr "アーカイブに保存する最小数。"
 
-#: src/TabJobs.java:16148
+#: src/TabJobs.java:16149
 #, fuzzy
 msgid "max"
 msgstr "最大"
 
-#: src/TabJobs.java:16152
+#: src/TabJobs.java:16153
 msgid "Max. number of archives to keep."
 msgstr "アーカイブに保存する最大数。"
 
-#: src/TabJobs.java:16169
+#: src/TabJobs.java:16170
 #, fuzzy
 msgid "age"
 msgstr "画像"
 
-#: src/TabJobs.java:16173
+#: src/TabJobs.java:16174
 msgid "Max. age of archives to keep."
 msgstr "アーカイブに保存する最大年数。"
 
-#: src/TabJobs.java:16176
+#: src/TabJobs.java:16177
 #, fuzzy
 msgid "2 days"
 msgstr "曜日"
 
-#: src/TabJobs.java:16178
+#: src/TabJobs.java:16179
 #, fuzzy
 msgid "4 days"
 msgstr "曜日"
 
-#: src/TabJobs.java:16179
+#: src/TabJobs.java:16180
 #, fuzzy
 msgid "5 days"
 msgstr "曜日"
 
-#: src/TabJobs.java:16180
+#: src/TabJobs.java:16181
 #, fuzzy
 msgid "6 days"
 msgstr "曜日"
 
-#: src/TabJobs.java:16184
+#: src/TabJobs.java:16185
 msgid "4 weeks"
 msgstr ""
 
-#: src/TabJobs.java:16185
+#: src/TabJobs.java:16186
 msgid "2 months"
 msgstr ""
 
-#: src/TabJobs.java:16186
+#: src/TabJobs.java:16187
 msgid "3 months"
 msgstr ""
 
-#: src/TabJobs.java:16187
+#: src/TabJobs.java:16188
 msgid "6 months"
 msgstr ""
 
-#: src/TabJobs.java:16188
+#: src/TabJobs.java:16189
 msgid "12 months"
 msgstr ""
 
-#: src/TabJobs.java:16189
+#: src/TabJobs.java:16190
 msgid "18 months"
 msgstr ""
 
-#: src/TabJobs.java:16190
+#: src/TabJobs.java:16191
 msgid "24 months"
 msgstr ""
 
-#: src/TabJobs.java:16290
+#: src/TabJobs.java:16291
 #, fuzzy, java-format
 msgid ""
 "Cannot add persistence entry:\n"
@@ -4950,7 +4956,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:16325
+#: src/TabJobs.java:16326
 #, fuzzy, java-format
 msgid ""
 "Cannot update persistence data:\n"
@@ -4961,7 +4967,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:16356
+#: src/TabJobs.java:16357
 #, fuzzy, java-format
 msgid ""
 "Cannot remove persistence data:\n"
@@ -4972,37 +4978,37 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:16374
+#: src/TabJobs.java:16375
 #, fuzzy
 msgid "Add new persistence"
 msgstr "新しいスケジュールエントリ追加。"
 
-#: src/TabJobs.java:16394
+#: src/TabJobs.java:16395
 msgid "Edit persistence"
 msgstr ""
 
-#: src/TabJobs.java:16415
+#: src/TabJobs.java:16416
 #, fuzzy
 msgid "Clone persistence"
 msgstr "スケジュールエントリをクローン。"
 
-#: src/TabJobs.java:16432
+#: src/TabJobs.java:16433
 #, fuzzy, java-format
 msgid "Remove {0} persistence {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 "{0}選択スケジュール{0,choice,0#entries|1#entry|1<entries}を削除しますか？"
 
-#: src/TabJobs.java:16481 src/TabRestore.java:4506 src/TabRestore.java:4720
+#: src/TabJobs.java:16482 src/TabRestore.java:4506 src/TabRestore.java:4720
 #, fuzzy
 msgid "Entity id"
 msgstr "エンティティ合計"
 
-#: src/TabJobs.java:16491 src/TabRestore.java:4526
+#: src/TabJobs.java:16492 src/TabRestore.java:4526
 #, fuzzy
 msgid "Schedule UUID"
 msgstr "スケジュール"
 
-#: src/TabJobs.java:16516 src/TabJobs.java:16536 src/TabRestore.java:4406
+#: src/TabJobs.java:16517 src/TabJobs.java:16537 src/TabRestore.java:4406
 #: src/TabRestore.java:4426 src/TabRestore.java:4561 src/TabRestore.java:4581
 #: src/TabRestore.java:4780 src/TabRestore.java:5070
 #, fuzzy, java-format
@@ -5010,19 +5016,19 @@ msgid "{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})"
 msgstr ""
 "{0}{0,choice,0#entries|1#entry|1<entries}のインデックスを更新しますか？"
 
-#: src/TabJobs.java:16526 src/TabRestore.java:4416 src/TabRestore.java:4571
+#: src/TabJobs.java:16527 src/TabRestore.java:4416 src/TabRestore.java:4571
 #: src/TabRestore.java:4770 src/TabStatus.java:3173 src/TabStatus.java:3183
 #: src/TabStatus.java:3199
 #, java-format
 msgid "{0}"
 msgstr ""
 
-#: src/TabJobs.java:16532 src/TabRestore.java:4422 src/TabRestore.java:4577
+#: src/TabJobs.java:16533 src/TabRestore.java:4422 src/TabRestore.java:4577
 #, fuzzy
 msgid "Total entries size"
 msgstr "エントリ合計"
 
-#: src/TabJobs.java:16619
+#: src/TabJobs.java:16620
 #, fuzzy, java-format
 msgid ""
 "Cannot refresh entity index data:\n"
@@ -5033,7 +5039,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:16650
+#: src/TabJobs.java:16651
 #, fuzzy, java-format
 msgid ""
 "Cannot remove entity index data:\n"
@@ -5044,7 +5050,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:16685
+#: src/TabJobs.java:16686
 #, fuzzy, java-format
 msgid ""
 "Cannot delete entity:\n"
@@ -5997,6 +6003,10 @@ msgstr "クリックしてタスク実行予想残り時間順に並び替え。
 #: src/TabStatus.java:860
 msgid "Set optimal column width"
 msgstr ""
+
+#: src/TabStatus.java:1031
+msgid "no storage"
+msgstr "保存しない"
 
 #: src/TabStatus.java:1061
 #, fuzzy

@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS entities(
   totalSpecialCountNewest   BIGINT DEFAULT 0,  // total number of newest special entries
 
   // Note: redundancy for faster access
-  uuidId                    INT DEFAULT 0,
+  uuidId                    BIGINT DEFAULT 0,  // no foreign key reference
 
   INDEX(jobUUID,created,type),
   INDEX(hostName),
@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS storages(
   id                        INT AUTO_INCREMENT PRIMARY KEY,
 
   entityId                  INT,
-  name                      VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
+  name                      VARCHAR(${MAX_TEXT_LENGTH}),
   created                   DATETIME,
   size                      BIGINT DEFAULT 0,
 //TODO: use
@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS storages(
   totalSpecialCountNewest   BIGINT DEFAULT 0,  // total number of newest special entries
 
   // Note: redundancy for faster access
-  uuidId                    INT DEFAULT 0,
+  uuidId                    BIGINT DEFAULT 0,  // no foreign key reference
 
   FOREIGN KEY(entityId) REFERENCES entities(id) ON DELETE CASCADE,
 
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS entries(
   archiveOffset   BIGINT,
 
   // Note: redundancy for faster access
-  uuidId          INT DEFAULT 0,
+  uuidId          BIGINT DEFAULT 0,  // no foreign key reference
   size            BIGINT DEFAULT 0,
 
   FOREIGN KEY(entityId) REFERENCES entities(id) ON DELETE CASCADE,
@@ -240,8 +240,8 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   entryId         INT,  // no 'NOT NULL'
 
   // Note: redundancy for faster access
-  uuidId          INT DEFAULT 0,
-  entityId        INT DEFAULT 0,
+  uuidId          BIGINT DEFAULT 0,  // no foreign key reference
+  entityId        BIGINT DEFAULT 0,
   type            INT DEFAULT 0,
   name            VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
   timeLastChanged DATETIME DEFAULT "1970-01-01 00:00:00",
@@ -252,6 +252,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   size            BIGINT DEFAULT 0,       // file/image/hardlink size
 
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY(entityId) REFERENCES entities(id),
 
   CONSTRAINT entriesNewest UNIQUE (name),
 
@@ -332,7 +333,7 @@ CREATE TABLE IF NOT EXISTS entryFragments(
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
   FOREIGN KEY(storageId) REFERENCES storages(id) ON DELETE CASCADE,
 
-  CONSTRAINT entryFragments UNIQUE (entryId,offset),
+//  CONSTRAINT entryFragments UNIQUE (entryId,offset),
 
   INDEX(entryId),
   INDEX(storageId)

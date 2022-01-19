@@ -156,11 +156,11 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
   return string;
 }
 
-String IndexCommon_getFTSString(String         string,
-                                DatabaseHandle *databaseHandle,
-                                const char     *columnName,
-                                ConstString    patternText
-                               )
+String IndexCommon_getFTSMatchString(String         string,
+                                     DatabaseHandle *databaseHandle,
+                                     const char     *columnName,
+                                     ConstString    patternText
+                                    )
 {
   StringTokenizer stringTokenizer;
   ConstString     token;
@@ -264,39 +264,19 @@ String IndexCommon_getFTSString(String         string,
 
         String_formatAppend(string,"' IN BOOLEAN MODE)");
         break;
+      case DATABASE_TYPE_POSTGRESQL:
+        break;
     }
   }
 
   return string;
 }
 
-void IndexCommon_filterAppend(String filterString, bool condition, const char *concatenator, const char *format, ...)
-{
-  va_list arguments;
-
-  if (condition)
-  {
-    if (!String_isEmpty(filterString))
-    {
-      String_appendChar(filterString,' ');
-      String_appendCString(filterString,concatenator);
-      String_appendChar(filterString,' ');
-    }
-    va_start(arguments,format);
-    String_appendVFormat(filterString,format,arguments);
-    va_end(arguments);
-  }
-}
-
 void IndexCommon_appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering)
 {
   if (condition && (ordering != DATABASE_ORDERING_NONE))
   {
-    if (String_isEmpty(orderString))
-    {
-      String_appendCString(orderString,"ORDER BY ");
-    }
-    else
+    if (!String_isEmpty(orderString))
     {
       String_appendChar(orderString,',');
     }

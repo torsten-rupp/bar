@@ -26,6 +26,7 @@ RUN yum -y install \
   pkg-config \
   psmisc \
   rpm-build \
+  rsync \
   subversion \
   sudo \
   tar \
@@ -42,6 +43,9 @@ RUN yum -y install \
   jre \
   cmake \
   make \
+  bison \
+  flex \
+  readline-devel \
   rpm-build \
   ;
 RUN yum -y install \

@@ -15252,7 +15252,7 @@ $as_echo "fail (make)" >&6; }
     fi
     if test $result -eq 1; then
       (cd postgresql; \
-       make -C include install PREFIX=$cwd/extern; \
+       make -C src/include install PREFIX=$cwd/extern; \
        make -C src/interfaces install PREFIX=$cwd/extern; \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
@@ -15276,9 +15276,9 @@ $as_echo "done" >&6; }
 
   if test $result -eq 1; then
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES pq"
+      LIBRARIES="$LIBRARIES pq pgtypes"
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pq"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
     fi
     HAVE_POSTGRESQL=1
 
@@ -15347,6 +15347,66 @@ $as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
 
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing PGTYPESnumeric_to_long" >&5
+$as_echo_n "checking for library containing PGTYPESnumeric_to_long... " >&6; }
+if ${ac_cv_search_libraries_PGTYPESnumeric_to_long+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgtypes ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void PGTYPESnumeric_to_long();"; fi`
+                                         return (int)PGTYPESnumeric_to_long;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_PGTYPESnumeric_to_long=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_PGTYPESnumeric_to_long+:} false; then :
+
+else
+  ac_cv_search_libraries_PGTYPESnumeric_to_long=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_PGTYPESnumeric_to_long" >&5
+$as_echo "$ac_cv_search_libraries_PGTYPESnumeric_to_long" >&6; }
+  ac_result=$ac_cv_search_libraries_PGTYPESnumeric_to_long
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";
+$as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
   else
     if test -z "$HAVE_POSTGRESQL"; then
 
@@ -15411,6 +15471,68 @@ $as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
 
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing PGTYPESnumeric_to_long" >&5
+$as_echo_n "checking for static library containing PGTYPESnumeric_to_long... " >&6; }
+if ${ac_cv_search_static_PGTYPESnumeric_to_long+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in pgtypes ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void PGTYPESnumeric_to_long();"; fi`
+                                         return (int)PGTYPESnumeric_to_long;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_PGTYPESnumeric_to_long=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_PGTYPESnumeric_to_long+:} false; then :
+
+else
+  ac_cv_search_static_PGTYPESnumeric_to_long=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_PGTYPESnumeric_to_long" >&5
+$as_echo "$ac_cv_search_static_PGTYPESnumeric_to_long" >&6; }
+  ac_result=$ac_cv_search_static_PGTYPESnumeric_to_long
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";
+$as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
     fi
     if test -z "$HAVE_POSTGRESQL"; then
 
@@ -15469,6 +15591,66 @@ $as_echo "$ac_cv_search_libraries_pq_init" >&6; }
   ac_result=$ac_cv_search_libraries_pq_init
   if test "$ac_result" != no; then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";
+$as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing PGTYPESnumeric_to_long" >&5
+$as_echo_n "checking for library containing PGTYPESnumeric_to_long... " >&6; }
+if ${ac_cv_search_libraries_PGTYPESnumeric_to_long+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgtypes ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void PGTYPESnumeric_to_long();"; fi`
+                                         return (int)PGTYPESnumeric_to_long;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_PGTYPESnumeric_to_long=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_PGTYPESnumeric_to_long+:} false; then :
+
+else
+  ac_cv_search_libraries_PGTYPESnumeric_to_long=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_PGTYPESnumeric_to_long" >&5
+$as_echo "$ac_cv_search_libraries_PGTYPESnumeric_to_long" >&6; }
+  ac_result=$ac_cv_search_libraries_PGTYPESnumeric_to_long
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";
 $as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
@@ -15591,6 +15773,11 @@ $as_echo "done" >&6; }
             --enable-static=iso9660 \
             --disable-shared \
             --enable-static \
+            --without-cd-drive \
+            --without-cd-info \
+            --without-cdda-player \
+            --without-iso-info \
+            --without-iso-read \
           ) 1>$tmpFile 2>&1
         else
           (cd libcdio; ./configure \
@@ -15599,6 +15786,11 @@ $as_echo "done" >&6; }
             --disable-cxx \
             --enable-static=iso9660 \
             --disable-shared \
+            --without-cd-drive \
+            --without-cd-info \
+            --without-cdda-player \
+            --without-iso-info \
+            --without-iso-read \
           ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then

@@ -409,6 +409,16 @@ LOCAL void busyHandler(void *userData)
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+        if (String_isEmpty(databaseSpecifier->postgresql.databaseName))
+        {
+          String_setCString(databaseSpecifier->postgresql.databaseName,DEFAULT_DATABASE_NAME);
+        }
+      #else /* HAVE_POSTGRESQL */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_POSTGRESQL */
+      break;
   }
 
   // open index database
@@ -438,7 +448,7 @@ LOCAL void busyHandler(void *userData)
       return error;
     }
 
-    // create tables/indicees/triggers
+    // create tables/indices/triggers
     INDEX_DOX(error,
               indexHandle,
     {
@@ -448,12 +458,14 @@ LOCAL void busyHandler(void *userData)
                                 )
       {
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
                                  DATABASE_COLUMN_TYPES(),
-                                 indexDefinition
+                                 indexDefinition,
+                                 DATABASE_PARAMETERS_NONE
                                 );
+fprintf(stderr,"%s:%d: %s error=%s\n",__FILE__,__LINE__,indexDefinition,Error_getText(error));
+
       }
 
       return error;
@@ -612,11 +624,11 @@ LOCAL Errors renameIndex(DatabaseSpecifier *databaseSpecifier, ConstString newDa
   INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(&databaseHandle)], indexDefinition, error == ERROR_NONE)
   {
     error = Database_execute(&databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
                              DATABASE_COLUMN_TYPES(),
-                             indexDefinition
+                             indexDefinition,
+                             DATABASE_PARAMETERS_NONE
                             );
   }
   if (error != ERROR_NONE)
@@ -1187,6 +1199,9 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
              );
 
   // init variables
+
+  error = ERROR_NONE;
+
 //  name = String_new();
   INDEX_DOX(error,
             indexHandle,
@@ -1248,7 +1263,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
                               "meta",
                               DATABASE_FLAG_NONE,
                               "    name=? \
-                               AND (rowid NOT IN (SELECT rowid FROM meta WHERE name=? ORDER BY rowId DESC LIMIT 0,1)) \
+                               AND (rowid NOT IN (SELECT rowid FROM meta WHERE name=? ORDER BY rowId DESC LIMIT 1)) \
                               ",
                               DATABASE_FILTERS
                               (
@@ -1352,10 +1367,9 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           (
                             DATABASE_VALUE_UINT("state", INDEX_STATE_NONE),
                           ),
-                          "deletedFlag=?",
+                          "deletedFlag!=TRUE",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_BOOL(TRUE),
                           )
                          );
 
@@ -1755,7 +1769,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                                                         (
                                                                           DATABASE_VALUE_KEY("entityId", entityId)
                                                                         ),
-                                                                        NULL,
+                                                                        "id=?",
                                                                         DATABASE_FILTERS
                                                                         (
                                                                           DATABASE_FILTER_KEY(storageId)
@@ -1791,7 +1805,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                          }
 
                          error = Database_insert(&indexHandle->databaseHandle,
-                                                 NULL,  // changedRowCount
+                                                 NULL,  // insertRowId
                                                  "entities",
                                                  DATABASE_FLAG_NONE,
                                                  DATABASE_VALUES
@@ -1842,7 +1856,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                                                                           (
                                                                             DATABASE_VALUE_KEY("entityId", entityId),
                                                                           ),
-                                                                          NULL,
+                                                                          "id=?",
                                                                           DATABASE_FILTERS
                                                                           (
                                                                             DATABASE_FILTER_KEY(storageId)
@@ -1971,7 +1985,7 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
                              "storages",
                              "id",
                              "    ((state<?) OR (state>?)) \
-                              AND deletedFlag!=1 \
+                              AND deletedFlag!=TRUE \
                              ",
                              DATABASE_FILTERS
                              (
@@ -2144,7 +2158,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                     (
                                       DATABASE_VALUE_UINT("entityId", entityDatabaseId),
                                     ),
-                                    NULL,
+                                    "id=?",
                                     DATABASE_FILTERS
                                     (
                                       DATABASE_FILTER_KEY(storageDatabaseId)
@@ -2156,7 +2170,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
         }
 
         error = Database_insert(&newIndexHandle->databaseHandle,
-                                NULL,  // changedRowCount
+                                NULL,  // insertRowId
                                 "entities",
                                 DATABASE_FLAG_NONE,
                                 DATABASE_VALUES
@@ -2474,7 +2488,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           {
             // insert
             error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
+                                    NULL,  // insertRowId
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
@@ -2806,13 +2820,14 @@ LOCAL void indexThreadCode(void)
                                   DATABASE_COLUMN_STRING("name")
                                 ),
                                 "    state!=? \
-                                 AND deletedFlag=1 \
+                                 AND deletedFlag=TRUE \
                                 ",
                                 DATABASE_FILTERS
                                 (
                                   DATABASE_FILTER_UINT(INDEX_STATE_UPDATE)
                                 ),
-                                NULL,  // orderGroup
+                                NULL,  // groupBy
+                                NULL,  // orderBy
                                 0LL,
                                 1LL
                                );
@@ -3217,13 +3232,12 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
                   void                    *IndexCommon_isMaintenanceTimeUserData
                  )
 {
-  String            printableDatabaseURI;
-  bool              createFlag;
-  Errors            error;
-  uint              indexVersion;
-  DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, { 0LL } };
-  IndexHandle       indexHandleReference,indexHandle;
-  ProgressInfo      progressInfo;
+  String       printableDatabaseURI;
+  bool         createFlag;
+  Errors       error;
+  uint         indexVersion;
+  IndexHandle  indexHandle;
+  ProgressInfo progressInfo;
 
   assert(databaseSpecifier != NULL);
 
@@ -3243,6 +3257,8 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
 
   createFlag = FALSE;
 
+// TODO: revert
+#if 0
   // check if index exists, check version
   if (!createFlag)
   {
@@ -3366,6 +3382,11 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     // check if database is outdated or corrupt
     if (Database_exists(indexDatabaseSpecifier,NULL))
     {
+      #ifndef NDEBUG
+        DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, { .sqlite.fileName = String_newCString("/tmp/reference.db") } };
+      #else
+        DatabaseSpecifier indexDatabaseSpecifierReference = { DATABASE_TYPE_SQLITE3, { .sqlite.fileName = NULL } };
+      #endif
       error = openIndex(&indexHandleReference,&indexDatabaseSpecifierReference,NULL,INDEX_OPEN_MODE_CREATE,NO_WAIT);
       if (error == ERROR_NONE)
       {
@@ -3382,6 +3403,10 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         }
         closeIndex(&indexHandleReference);
       }
+      #ifndef NDEBUG
+        String_delete(indexDatabaseSpecifierReference.sqlite.fileName);
+      #endif
+
       if (error != ERROR_NONE)
       {
         // outdated or corrupt -> create new
@@ -3421,6 +3446,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       }
     }
   }
+#endif
 
   if (createFlag)
   {
@@ -3463,6 +3489,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                 indexVersion
                );
   }
+
+fprintf(stderr,"%s:%d: +++++++++++++++++++\n",__FILE__,__LINE__);
 
   // initial clean-up
   error = openIndex(&indexHandle,indexDatabaseSpecifier,NULL,INDEX_OPEN_MODE_READ_WRITE,NO_WAIT);
@@ -3792,7 +3820,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                totalEntityCount,
                                "entities",
                                "COUNT(entities.id)",
-                               "deletedFlag!=1",
+                               "deletedFlag!=TRUE",
                                DATABASE_FILTERS
                                (
                                ),
@@ -3928,11 +3956,12 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                              DATABASE_COLUMN_UINT  ("COUNT(id)"),
                              DATABASE_COLUMN_UINT64("SUM(size)")
                            ),
-                           "deletedFlag!=1",
+                           "deletedFlag!=TRUE",
                            DATABASE_FILTERS
                            (
                            ),
-                           NULL,  // orderGroup
+                           NULL,  // groupBy
+                           NULL,  // orderBy
                            0LL,
                            1LL
                           );

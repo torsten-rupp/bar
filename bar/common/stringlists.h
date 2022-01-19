@@ -328,20 +328,20 @@ INLINE ulong StringList_count(const StringList *stringList)
 *          string     - string to insert (will be copied!)
 *          nextNode   - insert node before nextNode (could be NULL)
 * Output : -
-* Return : -
+* Return : string node
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void StringList_insert(StringList *stringList, ConstString string, StringNode *nextStringNode);
-void StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode);
-void StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode);
-void StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
+StringNode *StringList_insert(StringList *stringList, ConstString string, StringNode *nextStringNode);
+StringNode *StringList_insertCString(StringList *stringList, const char *s, StringNode *nextStringNode);
+StringNode *StringList_insertChar(StringList *stringList, char ch, StringNode *nextStringNode);
+StringNode *StringList_insertBuffer(StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
 #else /* not NDEBUG */
-void __StringList_insert(const char *__fileName__, ulong __lineNb__, StringList *stringList, ConstString string, StringNode *nextStringNode);
-void __StringList_insertCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s, StringNode *nextStringNode);
-void __StringList_insertChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch, StringNode *nextStringNode);
-void __StringList_insertBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
+StringNode *__StringList_insert(const char *__fileName__, ulong __lineNb__, StringList *stringList, ConstString string, StringNode *nextStringNode);
+StringNode *__StringList_insertCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s, StringNode *nextStringNode);
+StringNode *__StringList_insertChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch, StringNode *nextStringNode);
+StringNode *__StringList_insertBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength, StringNode *nextStringNode);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -351,22 +351,22 @@ void __StringList_insertBuffer(const char *__fileName__, ulong __lineNb__, Strin
 * Input  : stringList - string list
 *          string     - string to append to list (will be copied!)
 * Output : -
-* Return : -
+* Return : string node
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void StringList_append(StringList *stringList, ConstString string);
-void StringList_appendCString(StringList *stringList, const char *s);
-void StringList_appendChar(StringList *stringList, char ch);
-void StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength);
-void StringList_appendFormat(StringList *stringList, const char *format, ...);
+StringNode *StringList_append(StringList *stringList, ConstString string);
+StringNode *StringList_appendCString(StringList *stringList, const char *s);
+StringNode *StringList_appendChar(StringList *stringList, char ch);
+StringNode *StringList_appendBuffer(StringList *stringList, char *buffer, ulong bufferLength);
+StringNode *StringList_appendFormat(StringList *stringList, const char *format, ...);
 #else /* not NDEBUG */
-void __StringList_append(const char *__fileName__, ulong __lineNb__, StringList *stringList, ConstString string);
-void __StringList_appendCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s);
-void __StringList_appendChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch);
-void __StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength);
-void __StringList_appendFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, ...);
+StringNode *__StringList_append(const char *__fileName__, ulong __lineNb__, StringList *stringList, ConstString string);
+StringNode *__StringList_appendCString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *s);
+StringNode *__StringList_appendChar(const char *__fileName__, ulong __lineNb__, StringList *stringList, char ch);
+StringNode *__StringList_appendBuffer(const char *__fileName__, ulong __lineNb__, StringList *stringList, char *buffer, ulong bufferLength);
+StringNode *__StringList_appendFormat(const char *__fileName__, ulong __lineNb__, StringList *stringList, const char *format, ...);
 #endif /* NDEBUG */
 
 /***********************************************************************\

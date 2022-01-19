@@ -3682,7 +3682,7 @@ String String_replaceAll(String string, ulong index, ConstString fromString, Con
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  return String_map(string,index,&fromString,&toString,1);
+  return String_map(string,index,&fromString,&toString,1,NULL);
 }
 
 String String_replaceAllCString(String string, ulong index, const char *from, const char *to)
@@ -3690,7 +3690,7 @@ String String_replaceAllCString(String string, ulong index, const char *from, co
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  return String_mapCString(string,index,&from,&to,1);
+  return String_mapCString(string,index,&from,&to,1,NULL);
 }
 
 String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
@@ -3698,74 +3698,152 @@ String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  return String_mapChar(string,index,&fromCh,&toCh,1);
+  return String_mapChar(string,index,&fromCh,&toCh,1,NULL);
 }
 
-String String_map(String string, ulong index, ConstString from[], ConstString to[], uint count)
+String String_map(String      string,
+                  ulong       index,
+                  ConstString from[],
+                  ConstString to[],
+                  uint        count,
+                  const char  *quoteChars
+                 )
 {
-  uint  z;
-  ulong l0,l1;
-  bool  replaceFlag;
+  const char *t;
+  char       quoteChar;
+  uint       i;
+  ulong      l0,l1;
+  bool       replaceFlag;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  while (index < String_length(string))
+  if (string != NULL)
   {
-    replaceFlag = FALSE;
-    for (z = 0; z < count; z++)
-    {
-      l0 = String_length(from[z]);
-      l1 = String_length(to[z]);
+    assert(string->data != NULL);
 
-      if (String_subEquals(string,from[z],index,l0))
+    while (index < String_length(string))
+    {
+      // skip quoted parts
+      if (quoteChars != NULL)
       {
-        String_replace(string,index,l0,to[z]);
-        index += l1;
-        replaceFlag = TRUE;
-        break;
+        t = strchr(quoteChars,string->data[index]);
+        if (t != NULL)
+        {
+          quoteChar = (*t);
+          do
+          {
+            index++;
+          }
+          while (   (index < string->length)
+                 && (string->data[index] != quoteChar)
+                );
+          if (index < string->length) index++;
+        }
+      }
+
+      // map
+      if (index < string->length)
+      {
+        replaceFlag = FALSE;
+        for (i = 0; i < count; i++)
+        {
+          l0 = String_length(from[i]);
+          l1 = String_length(to[i]);
+
+          if (String_subEquals(string,from[i],index,l0))
+          {
+            String_replace(string,index,l0,to[i]);
+            index += l1;
+            replaceFlag = TRUE;
+            break;
+          }
+        }
+        if (!replaceFlag) index++;
       }
     }
-    if (!replaceFlag) index++;
   }
 
   return string;
 }
 
-String String_mapCString(String string, ulong index, const char* from[], const char* to[], uint count)
+String String_mapCString(String     string,
+                         ulong      index,
+                         const char *from[],
+                         const char *to[],
+                         uint       count,
+                         const char *quoteChars
+                        )
 {
-  uint  z;
-  ulong l0,l1;
-  bool  replaceFlag;
+  const char *t;
+  char       quoteChar;
+  uint       i;
+  ulong      l0,l1;
+  bool       replaceFlag;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  while (index < String_length(string))
+  if (string != NULL)
   {
-    replaceFlag = FALSE;
-    for (z = 0; z < count; z++)
-    {
-      l0 = strlen(from[z]);
-      l1 = strlen(to[z]);
+    assert(string->data != NULL);
 
-      if (String_subEqualsCString(string,from[z],index,l0))
+    while (index < String_length(string))
+    {
+      // skip quoted parts
+      if (quoteChars != NULL)
       {
-        String_replaceCString(string,index,l0,to[z]);
-        index += l1;
-        replaceFlag = TRUE;
-        break;
+        t = strchr(quoteChars,string->data[index]);
+        if (t != NULL)
+        {
+          quoteChar = (*t);
+          do
+          {
+            index++;
+          }
+          while (   (index < string->length)
+                 && (string->data[index] != quoteChar)
+                );
+          if (index < string->length) index++;
+        }
+      }
+
+      // map
+      if (index < string->length)
+      {
+        replaceFlag = FALSE;
+        for (i = 0; i < count; i++)
+        {
+          l0 = strlen(from[i]);
+          l1 = strlen(to[i]);
+
+          if (String_subEqualsCString(string,from[i],index,l0))
+          {
+            String_replaceCString(string,index,l0,to[i]);
+            index += l1;
+            replaceFlag = TRUE;
+            break;
+          }
+        }
+        if (!replaceFlag) index++;
       }
     }
-    if (!replaceFlag) index++;
   }
 
   return string;
 }
 
-String String_mapChar(String string, ulong index, const char from[], const char to[], uint count)
+String String_mapChar(String     string,
+                      ulong      index,
+                      const char from[],
+                      const char to[],
+                      uint       count,
+                      const char *quoteChars
+                     )
 {
-  uint z;
+  const char *t;
+  char       quoteChar;
+  uint       i;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -3776,14 +3854,37 @@ String String_mapChar(String string, ulong index, const char from[], const char 
 
     while (index < string->length)
     {
-      for (z = 0; z < count; z++)
+      // skip quoted parts
+      if (quoteChars != NULL)
       {
-        if (string->data[index] == from[z])
+        t = strchr(quoteChars,string->data[index]);
+        if (t != NULL)
         {
-          string->data[index] = to[z];
-          break;
+          quoteChar = (*t);
+          do
+          {
+            index++;
+          }
+          while (   (index < string->length)
+                 && (string->data[index] != quoteChar)
+                );
+          if (index < string->length) index++;
         }
       }
+
+      // map
+      if (index < string->length)
+      {
+        for (i = 0; i < count; i++)
+        {
+          if (string->data[index] == from[i])
+          {
+            string->data[index] = to[i];
+            break;
+          }
+        }
+      }
+
       index++;
     }
   }
@@ -4004,6 +4105,41 @@ String String_joinBuffer(String string, const char *buffer, ulong bufferLength, 
 
   if (!String_isEmpty(string)) String_appendChar(string,joinChar);
   String_appendBuffer(string,buffer,bufferLength);
+
+  return string;
+}
+
+String String_makeValidUTF8(String string, ulong index)
+{
+  ulong nextIndex;
+  ulong toIndex;
+
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    toIndex = index;
+    while (string->data[index] != NUL)
+    {
+      if (stringIsValidUTF8Codepoint(string->data,index,&nextIndex))
+      {
+        while (index < nextIndex)
+        {
+          string->data[toIndex] = string->data[index];
+          index++;
+          toIndex++;
+        }
+      }
+      else
+      {
+        index++;
+      }
+    }
+    string->length = toIndex;
+
+    STRING_UPDATE_VALID(string);
+  }
 
   return string;
 }
@@ -5267,7 +5403,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
                           ConstString     string,
                           ulong           index,
                           const char      *separatorChars,
-                          const char      *stringQuotes,
+                          const char      *quoteChars,
                           bool            skipEmptyTokens
                          )
 {
@@ -5280,7 +5416,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
   stringTokenizer->length          = string->length;
   stringTokenizer->index           = index;
   stringTokenizer->separatorChars  = separatorChars;
-  stringTokenizer->stringQuotes    = stringQuotes;
+  stringTokenizer->quoteChars      = quoteChars;
   stringTokenizer->skipEmptyTokens = skipEmptyTokens;
   #ifdef NDEBUG
     stringTokenizer->token         = String_new();
@@ -5292,7 +5428,7 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
 void String_initTokenizerCString(StringTokenizer *stringTokenizer,
                                  const char      *s,
                                  const char      *separatorChars,
-                                 const char      *stringQuotes,
+                                 const char      *quoteChars,
                                  bool            skipEmptyTokens
                                 )
 {
@@ -5303,7 +5439,7 @@ void String_initTokenizerCString(StringTokenizer *stringTokenizer,
   stringTokenizer->length          = strlen(s);
   stringTokenizer->index           = 0;
   stringTokenizer->separatorChars  = separatorChars;
-  stringTokenizer->stringQuotes    = stringQuotes;
+  stringTokenizer->quoteChars      = quoteChars;
   stringTokenizer->skipEmptyTokens = skipEmptyTokens;
   #ifdef NDEBUG
     stringTokenizer->token         = String_new();
@@ -5329,89 +5465,93 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 
   assert(stringTokenizer != NULL);
 
-  // check index
-  if (stringTokenizer->index >= (long)stringTokenizer->length)
+  do
   {
-    return FALSE;
-  }
-
-  if (stringTokenizer->skipEmptyTokens)
-  {
-    // skip separator chars
-    while (   (stringTokenizer->index < (long)stringTokenizer->length)
-           && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
-          )
+    // check index
+    if (stringTokenizer->index >= (long)stringTokenizer->length)
     {
-      stringTokenizer->index++;
+      return FALSE;
     }
-    if (stringTokenizer->index >= (long)stringTokenizer->length) return FALSE;
-  }
 
-  // get token
-  if (tokenIndex != NULL) (*tokenIndex) = stringTokenizer->index;
-  String_clear(stringTokenizer->token);
-  if (stringTokenizer->stringQuotes != NULL)
-  {
-    while (   (stringTokenizer->index < (long)stringTokenizer->length)
-           && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
-          )
+    if (stringTokenizer->skipEmptyTokens)
     {
-      s = strchr(stringTokenizer->stringQuotes,stringTokenizer->data[stringTokenizer->index]);
-      if (s != NULL)
+      // skip separator chars
+      while (   (stringTokenizer->index < (long)stringTokenizer->length)
+             && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
+            )
       {
-        String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
         stringTokenizer->index++;
-        while (   (stringTokenizer->index < (long)stringTokenizer->length)
-               && (stringTokenizer->data[stringTokenizer->index] != (*s))
-              )
+      }
+      if (stringTokenizer->index >= (long)stringTokenizer->length) return FALSE;
+    }
+
+    // get token
+    if (tokenIndex != NULL) (*tokenIndex) = stringTokenizer->index;
+    String_clear(stringTokenizer->token);
+    if (stringTokenizer->quoteChars != NULL)
+    {
+      while (   (stringTokenizer->index < (long)stringTokenizer->length)
+             && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
+            )
+      {
+        s = strchr(stringTokenizer->quoteChars,stringTokenizer->data[stringTokenizer->index]);
+        if (s != NULL)
         {
-          if (   ((stringTokenizer->index+1) < (long)stringTokenizer->length)
-              && (   (stringTokenizer->data[stringTokenizer->index] == STRING_ESCAPE_CHARACTER)
-                  || (stringTokenizer->data[stringTokenizer->index] == (*s))
-                 )
-             )
+          stringTokenizer->index++;
+          while (   (stringTokenizer->index < (long)stringTokenizer->length)
+                 && (stringTokenizer->data[stringTokenizer->index] != (*s))
+                )
           {
-            String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index+1]);
-            stringTokenizer->index += 2;
+            if (   ((stringTokenizer->index+1) < (long)stringTokenizer->length)
+                && (   (stringTokenizer->data[stringTokenizer->index] == STRING_ESCAPE_CHARACTER)
+                    || (stringTokenizer->data[stringTokenizer->index] == (*s))
+                   )
+               )
+            {
+              String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index+1]);
+              stringTokenizer->index += 2;
+            }
+            else
+            {
+              String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
+              stringTokenizer->index++;
+            }
           }
-          else
+          if (stringTokenizer->index < (long)stringTokenizer->length)
           {
-            String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
             stringTokenizer->index++;
           }
         }
-        if (stringTokenizer->index < (long)stringTokenizer->length)
+        else
         {
           String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
           stringTokenizer->index++;
         }
       }
-      else
+    }
+    else
+    {
+      while (   (stringTokenizer->index < (long)stringTokenizer->length)
+             && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
+            )
       {
         String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
         stringTokenizer->index++;
       }
     }
-  }
-  else
-  {
-    while (   (stringTokenizer->index < (long)stringTokenizer->length)
-           && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
-          )
+    if (token != NULL) (*token) = stringTokenizer->token;
+
+    // skip token separator
+    if (   (stringTokenizer->index < (long)stringTokenizer->length)
+        && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
+       )
     {
-      String_appendChar(stringTokenizer->token,stringTokenizer->data[stringTokenizer->index]);
       stringTokenizer->index++;
     }
   }
-  if (token != NULL) (*token) = stringTokenizer->token;
-
-  // skip token separator
-  if (   (stringTokenizer->index < (long)stringTokenizer->length)
-      && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) != NULL)
-     )
-  {
-    stringTokenizer->index++;
-  }
+  while (   stringTokenizer->skipEmptyTokens
+         && String_isEmpty(stringTokenizer->token)
+        );
 
   return TRUE;
 }

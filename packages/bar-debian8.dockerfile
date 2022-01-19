@@ -56,6 +56,9 @@ RUN apt-get -y install \
   default-jre \
   cmake \
   make \
+  bison \
+  flex \
+  libreadline-dev \
   unoconv \
   txt2man \
   valgrind \

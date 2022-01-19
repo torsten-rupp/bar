@@ -4241,7 +4241,6 @@ exit(1);
   {
     return ERROR_INVALID_ARGUMENT;
   }
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(globalOptions.mountCommand));
 
   if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {

@@ -3513,7 +3513,7 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
     fi
     if test $result -eq 1; then
       (cd postgresql; \
-       make -C include install PREFIX=$cwd/extern; \
+       make -C src/include install PREFIX=$cwd/extern; \
        make -C src/interfaces install PREFIX=$cwd/extern; \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
@@ -3531,9 +3531,9 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
 
   if test $result -eq 1; then
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES pq"
+      LIBRARIES="$LIBRARIES pq pgtypes"
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pq"
+      STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
     fi
     HAVE_POSTGRESQL=1
     AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
@@ -3542,12 +3542,15 @@ else
   dnl search for installed PostgreSQL client library
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+    AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
   else
     if test -z "$HAVE_POSTGRESQL"; then
       AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      AC_SEARCH_STATIC_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
     fi
     if test -z "$HAVE_POSTGRESQL"; then
       AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
     fi
   fi
 fi
@@ -3635,6 +3638,11 @@ if test $ENABLE_ISO9660 = "yes"; then
             --enable-static=iso9660 \
             --disable-shared \
             --enable-static \
+            --without-cd-drive \
+            --without-cd-info \
+            --without-cdda-player \
+            --without-iso-info \
+            --without-iso-read \
           ) 1>$tmpFile 2>&1
         else
           (cd libcdio; ./configure \
@@ -3643,6 +3651,11 @@ if test $ENABLE_ISO9660 = "yes"; then
             --disable-cxx \
             --enable-static=iso9660 \
             --disable-shared \
+            --without-cd-drive \
+            --without-cd-info \
+            --without-cdda-player \
+            --without-iso-info \
+            --without-iso-read \
           ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then

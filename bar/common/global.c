@@ -528,8 +528,7 @@ bool stringVMatch(const char *string, const char *pattern, const char **matchedS
 
 uint32 stringHash(const char *string)
 {
-  uint   i = 0;
-  uint32 hash = 0;
+  uint32 hash;
 
   hash = 0;
   if (string != NULL)

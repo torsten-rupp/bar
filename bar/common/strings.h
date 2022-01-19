@@ -82,7 +82,7 @@ typedef struct
   ulong      length;                    // string length
   long       index;                     // index in string
   const char *separatorChars;           // token separator characters
-  const char *stringQuotes;             // string quote characters
+  const char *quoteChars;               // string quote characters
   bool       skipEmptyTokens;           // TRUE for skipping empty tokens
   String     token;                     // next token
 } StringTokenizer;
@@ -566,17 +566,35 @@ String String_replaceAllChar(String string, ulong index, char fromCh, char toCh)
 * Notes  : -
 \***********************************************************************/
 
-String String_map(String string, ulong index, ConstString from[], ConstString to[], uint count);
-String String_mapCString(String string, ulong index, const char* from[], const char* to[], uint count);
-String String_mapChar(String string, ulong index, const char from[], const char to[], uint count);
+String String_map(String      string,
+                  ulong       index,
+                  ConstString from[],
+                  ConstString to[],
+                  uint        count,
+                  const char  *quoteChars
+                 );
+String String_mapCString(String     string,
+                         ulong      index,
+                         const char *from[],
+                         const char *to[],
+                         uint       count,
+                         const char  *quoteChars
+                        );
+String String_mapChar(String     string,
+                      ulong      index,
+                      const char from[],
+                      const char to[],
+                      uint       count,
+                      const char *quoteChars
+                     );
 
 /***********************************************************************\
 * Name   : String_sub, String_subCString, String_subBuffer
 * Purpose: get sub-string from string
 * Input  : string/buffer - string/buffer to set
 *          fromString    - string to get sub-string from
-*          index         - start index (0..n-1)
-*          length        - length of sub-string (0..n) or STRING_END
+*          index         - start index [0..n-1]
+*          length        - length of sub-string [0..n] or STRING_END
 * Output : -
 * Return : new sub-string/buffer
 * Notes  : -
@@ -611,7 +629,7 @@ String String_joinBuffer(String string, const char *buffer, ulong bufferLength, 
 * Purpose: get string length
 * Input  : string - string
 * Output : -
-* Return : length of string (0..n)
+* Return : length of string [0..n]
 * Notes  : -
 \***********************************************************************/
 
@@ -667,7 +685,7 @@ INLINE bool String_isEmpty(ConstString string)
 * Name   : String_index
 * Purpose: get char at index
 * Input  : string - string
-*          index  - index (0..n-1) or STRING_END to get last
+*          index  - index [0..n-1] or STRING_END to get last
 *                   character
 * Output : -
 * Return : character at position "index"
@@ -706,12 +724,88 @@ INLINE char String_index(ConstString string, ulong index)
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
+/***********************************************************************\
+* Name   : String_isValidUTF8
+* Purpose: check if string has valid UTF8 encoding
+* Input  : string - string
+*          index  - index [0..n-1]
+* Output : -
+* Return : TRUE iff encoding is valid
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool String_isValidUTF8Codepoint(ConstString string, ulong index, ulong *nextIndex);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE bool String_isValidUTF8Codepoint(ConstString string, ulong index, ulong *nextIndex)
+{
+  STRING_CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    return stringIsValidUTF8Codepoint(string->data,index,nextIndex);
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : String_isValidUTF8
+* Purpose: check if string has valid UTF8 encoding
+* Input  : string - string
+*          index  - index [0..n-1]
+* Output : -
+* Return : TRUE iff encoding is valid
+* Notes  : -
+\***********************************************************************/
+
+INLINE Codepoint String_isValidUTF8(ConstString string, ulong index);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE Codepoint String_isValidUTF8(ConstString string, ulong index)
+{
+  STRING_CHECK_VALID(string);
+
+  if (string != NULL)
+  {
+    return stringIsValidUTF8(string->data,index);
+  }
+  else
+  {
+    return TRUE;
+  }
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : String_makeValidUTF8
+* Purpose: make valid UTF8 encoded string; discard non UTF8 encodings
+* Input  : string - string
+*          index  - start index [0..n-1] or STRING_BEGIN
+* Output : string - valid UTF8 encoded string
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String String_makeValidUTF8(String string, ulong index);
+
+/***********************************************************************\
+* Name   : String_atUTF8
+* Purpose: get codepoint
+* Input  : string - string
+*          index     - index (0..n-1)
+*          nextIndex - next index variable (can be NULL)
+* Output : nextIndex - next index [0..n-1]
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE Codepoint String_atUTF8(ConstString string, ulong index, ulong *nextIndex)
 {
   Codepoint codepoint;
-
 
   STRING_CHECK_VALID(string);
 
@@ -886,7 +980,7 @@ bool String_endsWithBuffer(ConstString string, const char *buffer, ulong bufferL
 *          String_findLast, String_findLastCString, String_findLastChar
 * Purpose: find string in string
 * Input  : string - string
-*          index - index to start search (0..n-1)
+*          index - index to start search [0..n-1]
 *          findString - string to find/s - C-string to find/
 *          ch - character to find
 * Output : -
@@ -1140,7 +1234,7 @@ String String_fillChar(String string, ulong length, char ch);
 * Input  : stringTokenizer - string tokenizer
 *          string          - string
 *          separatorChars  - token seperator characters, e. g. " "
-*          stringQuotes    - token string quote characters, e. g. ",'
+*          quoteChars      - token string quote characters, e. g. ",'
 *          skipEmptyTokens - TRUE to skip empty tokens, FALSE to get
 *                            also empty tokens
 * Output : -
@@ -1153,13 +1247,13 @@ void String_initTokenizer(StringTokenizer *stringTokenizer,
                           ConstString     string,
                           ulong           index,
                           const char      *separatorChars,
-                          const char      *stringQuotes,
+                          const char      *quoteChars,
                           bool            skipEmptyTokens
                          );
 void String_initTokenizerCString(StringTokenizer *stringTokenizer,
                                  const char      *string,
                                  const char      *separatorChars,
-                                 const char      *stringQuotes,
+                                 const char      *quoteChars,
                                  bool            skipEmptyTokens
                                 );
 void String_doneTokenizer(StringTokenizer *stringTokenizer);

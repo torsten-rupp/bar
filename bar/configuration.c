@@ -5063,7 +5063,7 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *userData, vo
                 );
 
   // append to list
-  String_mapCString(string,STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+  String_mapCString(string,STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM),NULL);
   error = EntryList_append((EntryList*)variable,entryType,string,patternType,NULL);
   if (error != ERROR_NONE)
   {
@@ -5153,7 +5153,7 @@ LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueO
         }
         if (entryNode != NULL)
         {
-          fileName = String_mapCString(String_duplicate(entryNode->string),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+          fileName = String_mapCString(String_duplicate(entryNode->string),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM),NULL);
           switch (entryNode->pattern.type)
           {
             case PATTERN_TYPE_GLOB:

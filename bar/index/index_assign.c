@@ -132,7 +132,8 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
                          (
                            DATABASE_FILTER_KEY (storageId)
                          ),
-                         NULL,  // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          1LL
                         );
@@ -750,19 +751,20 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     // assign entity to job
     if (error == ERROR_NONE)
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+      error = Database_update(&indexHandle->databaseHandle,
                                NULL,  // changedRowCount
+                               "entities",
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
-                               "UPDATE entities \
-                                SET uuidId =%lld, \
-                                    jobUUID=%'S \
-                                WHERE id=%lld \
-                               ",
-                               toUUIDId,
-                               toJobUUID,
-                               entityId
+                               DATABASE_VALUES
+                               (
+                                 DATABASE_VALUE_KEY   ("uuidId", toUUIDId),
+                                 DATABASE_VALUE_STRING("jobUUID",toJobUUID),
+                               ),
+                               "id=?",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_KEY(entityId)
+                               )
                               );
     }
 
