@@ -287,6 +287,14 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+// transform
+typedef struct
+{
+  PatternTypes patternType;
+  String       patternString;
+  String       replace;
+} Transform;
+
 // owner
 typedef struct
 {
@@ -876,6 +884,7 @@ typedef struct
 
   String                      incrementalListFileName;        // name of incremental list file
 
+  Transform                   transform;                      // transform pattern+string
   int                         directoryStripCount;            // number of directories to strip in restore
   String                      destination;                    // destination for restore
   Owner                       owner;                          // restore owner

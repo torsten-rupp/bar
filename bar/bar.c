@@ -2243,7 +2243,7 @@ bool isIncluded(const EntryNode *includeEntryNode,
   assert(includeEntryNode != NULL);
   assert(name != NULL);
 
-  return Pattern_match(&includeEntryNode->pattern,name,PATTERN_MATCH_MODE_BEGIN);
+  return Pattern_match(&includeEntryNode->pattern,name,STRING_BEGIN,PATTERN_MATCH_MODE_BEGIN,NULL,NULL);
 }
 
 bool isInIncludedList(const EntryList *includeEntryList,
@@ -2257,7 +2257,7 @@ bool isInIncludedList(const EntryList *includeEntryList,
 
   LIST_ITERATE(includeEntryList,entryNode)
   {
-    if (Pattern_match(&entryNode->pattern,name,PATTERN_MATCH_MODE_BEGIN))
+    if (Pattern_match(&entryNode->pattern,name,STRING_BEGIN,PATTERN_MATCH_MODE_BEGIN,NULL,NULL))
     {
       return TRUE;
     }

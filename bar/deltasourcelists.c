@@ -302,7 +302,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           }
 
          // match pattern
-          if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
+          if (!Pattern_match(&pattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
           {
             continue;
           }
@@ -458,7 +458,7 @@ UNUSED_VARIABLE(id);
           }
 
          // match pattern
-          if (!Pattern_match(&pattern,fileName,PATTERN_MATCH_MODE_EXACT))
+          if (!Pattern_match(&pattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
           {
             continue;
           }

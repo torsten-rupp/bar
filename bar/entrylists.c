@@ -473,7 +473,7 @@ bool EntryList_match(const EntryList   *entryList,
   entryNode = entryList->head;
   while ((entryNode != NULL) && !matchFlag)
   {
-    matchFlag = Pattern_match(&entryNode->pattern,string,patternMatchMode);
+    matchFlag = Pattern_match(&entryNode->pattern,string,STRING_BEGIN,patternMatchMode,NULL,NULL);
     entryNode = entryNode->next;
   }
 

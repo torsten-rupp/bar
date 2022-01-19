@@ -1656,7 +1656,7 @@ NULL,  //               requestedAbortFlag,
           // match pattern
           if (!String_isEmpty(storageSpecifier.archivePatternString))
           {
-            if (!Pattern_match(&storageSpecifier.archivePattern,fileName,PATTERN_MATCH_MODE_EXACT))
+            if (!Pattern_match(&storageSpecifier.archivePattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
             {
               continue;
             }

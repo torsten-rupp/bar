@@ -5892,6 +5892,75 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 }
 
 /***********************************************************************\
+* Name   : getArchiveEntryName
+* Purpose: transform archive entry name
+* Input  : archiveEntryName - archive entry name variable
+*          name             - name to transform
+* Output : -
+* Return : archive entry name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getArchiveEntryName(String archiveEntryName, ConstString name)
+{
+  Pattern pattern;
+  ulong   index;
+  ulong   matchIndex,matchLength;
+
+  assert(archiveEntryName != NULL);
+  assert(name != NULL);
+
+  if (!String_isEmpty(globalOptions.transform.patternString))
+  {
+    // transform name with matching pattern
+    String_clear(archiveEntryName);
+    Pattern_init(&pattern,globalOptions.transform.patternString,globalOptions.transform.patternType,PATTERN_FLAG_NONE);
+    index = STRING_BEGIN;
+    while (Pattern_match(&pattern,name,index,PATTERN_MATCH_MODE_ANY,&matchIndex,&matchLength))
+    {
+      String_appendBuffer(archiveEntryName,String_cString(name)+index,matchIndex-index);
+      String_append(archiveEntryName,globalOptions.transform.replace);
+      index = matchIndex+matchLength;
+    }
+    Pattern_done(&pattern);
+    String_appendCString(archiveEntryName,String_cString(name)+index);
+  }
+  else
+  {
+    // keep name
+    String_set(archiveEntryName,name);
+  }
+
+  return archiveEntryName;
+}
+
+/***********************************************************************\
+* Name   : getArchiveEntryNameList
+* Purpose: transform archive entry name list
+* Input  : archiveEntryNameList - archive entry name list variable
+*          nameList             - name list to transform
+* Output : archiveEntryNameList - archive entry name list
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getArchiveEntryNameList(StringList *archiveEntryNameList, const StringList *nameList)
+{
+  String     archiveEntryName;
+  StringNode *iterator;
+  String     name;
+
+  assert(archiveEntryNameList != NULL);
+
+  archiveEntryName = String_new();
+  STRINGLIST_ITERATE(nameList,iterator,name)
+  {
+    StringList_append(archiveEntryNameList,getArchiveEntryName(archiveEntryName,name));
+  }
+  String_delete(archiveEntryName);
+}
+
+/***********************************************************************\
 * Name   : storeFileEntry
 * Purpose: store a file entry into archive
 * Input  : createInfo     - create info structure
@@ -5923,6 +5992,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
   ArchiveFlags              archiveFlags;
+  String                    archiveEntryName;
   ArchiveEntryInfo          archiveEntryInfo;
   uint64                    offset;
   uint64                    size;
@@ -6059,11 +6129,12 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     }
 
     // create new archive file entry
+    archiveEntryName = getArchiveEntryName(String_new(),fileName);
     error = Archive_newFileEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  createInfo->jobOptions->compressAlgorithms.delta,
                                  createInfo->jobOptions->compressAlgorithms.byte,
-                                 fileName,
+                                 archiveEntryName,
                                  fileInfo,
                                  &fileExtendedAttributeList,
                                  fragmentOffset,
@@ -6077,11 +6148,13 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+      String_delete(archiveEntryName);
       (void)File_close(&fileHandle);
       fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+    String_delete(archiveEntryName);
 
     // seek to start offset
     error = File_seek(&fileHandle,fragmentOffset);
@@ -6377,6 +6450,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   bool             fileSystemFlag;
   FileSystemHandle fileSystemHandle;
   ArchiveFlags     archiveFlags;
+  String           archiveEntryName;
   ArchiveEntryInfo archiveEntryInfo;
   uint64           blockOffset;
   uint64           blockCount;
@@ -6491,11 +6565,12 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
 
     // create new archive image entry
+    archiveEntryName = getArchiveEntryName(String_new(),deviceName);
     error = Archive_newImageEntry(&archiveEntryInfo,
                                   &createInfo->archiveHandle,
                                   createInfo->jobOptions->compressAlgorithms.delta,
                                   createInfo->jobOptions->compressAlgorithms.byte,
-                                  deviceName,
+                                  archiveEntryName,
                                   deviceInfo,
                                   fileSystemHandle.type,
                                   fragmentOffset/(uint64)deviceInfo->blockSize,
@@ -6509,11 +6584,13 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                  String_cString(deviceName),
                  Error_getText(error)
                 );
+      String_delete(archiveEntryName);
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
       return error;
     }
+    String_delete(archiveEntryName);
 
     // write device content to archive
     blockOffset = fragmentOffset/(uint64)deviceInfo->blockSize;
@@ -6808,6 +6885,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
 {
   Errors                    error;
   FileExtendedAttributeList fileExtendedAttributeList;
+  String                    archiveEntryName;
   ArchiveEntryInfo          archiveEntryInfo;
 
   assert(createInfo != NULL);
@@ -6870,9 +6948,10 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
   if (!createInfo->storageFlags.noStorage)
   {
     // new directory
+    archiveEntryName = getArchiveEntryName(String_new(),directoryName);
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
-                                      directoryName,
+                                      archiveEntryName,
                                       fileInfo,
                                       &fileExtendedAttributeList
                                      );
@@ -6889,11 +6968,11 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
                  String_cString(directoryName),
                  Error_getText(error)
                 );
-
+      String_delete(archiveEntryName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
-
       return error;
     }
+    String_delete(archiveEntryName);
 
     // close archive entry
     error = Archive_closeEntry(&archiveEntryInfo);
@@ -6964,6 +7043,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
   Errors                    error;
   FileExtendedAttributeList fileExtendedAttributeList;
   String                    fileName;
+  String                    archiveEntryName;
   ArchiveEntryInfo          archiveEntryInfo;
 
   assert(createInfo != NULL);
@@ -7068,9 +7148,10 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     }
 
     // new linke
+    archiveEntryName = getArchiveEntryName(String_new(),linkName);
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
-                                 linkName,
+                                 archiveEntryName,
                                  fileName,
                                  fileInfo,
                                  &fileExtendedAttributeList
@@ -7082,10 +7163,12 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
                  String_cString(linkName),
                  Error_getText(error)
                 );
+      String_delete(archiveEntryName);
       String_delete(fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+    String_delete(archiveEntryName);
 
     // update status info
     STATUS_INFO_UPDATE(createInfo,linkName,NULL)
@@ -7179,6 +7262,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
   ArchiveFlags              archiveFlags;
+  StringList                archiveEntryNameList;
   ArchiveEntryInfo          archiveEntryInfo;
   uint64                    offset;
   uint64                    size;
@@ -7315,11 +7399,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // create new archive hard link entry
+    StringList_init(&archiveEntryNameList);
+    getArchiveEntryNameList(&archiveEntryNameList,fileNameList);
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
                                      &createInfo->archiveHandle,
                                      createInfo->jobOptions->compressAlgorithms.delta,
                                      createInfo->jobOptions->compressAlgorithms.byte,
-                                     fileNameList,
+                                     &archiveEntryNameList,
                                      fileInfo,
                                      &fileExtendedAttributeList,
                                      fragmentOffset,
@@ -7333,11 +7419,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
+      StringList_done(&archiveEntryNameList);
       (void)File_close(&fileHandle);
       fragmentDone(createInfo,StringList_first(fileNameList,NULL));
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+    StringList_done(&archiveEntryNameList);
 
     // seek to start offset
     error = File_seek(&fileHandle,fragmentOffset);
@@ -7622,6 +7710,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
 {
   Errors                    error;
   FileExtendedAttributeList fileExtendedAttributeList;
+  String                    archiveEntryName;
   ArchiveEntryInfo          archiveEntryInfo;
 
   assert(createInfo != NULL);
@@ -7685,9 +7774,10 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
   if (!createInfo->storageFlags.noStorage)
   {
     // new special
+    archiveEntryName = getArchiveEntryName(String_new(),fileName);
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
-                                    fileName,
+                                    archiveEntryName,
                                     fileInfo,
                                     &fileExtendedAttributeList
                                    );
@@ -7698,9 +7788,11 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+      String_delete(archiveEntryName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+    String_delete(archiveEntryName);
 
     // close archive entry
     error = Archive_closeEntry(&archiveEntryInfo);

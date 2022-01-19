@@ -396,8 +396,6 @@ MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 50M
 # build types
 BUILD_SUFFIXES = $(subst $() $(),|,-debug -gcov -gprof -valgrind)
 
-COMMA = ,
-
 #---------------------------------- rules ------------------------------------
 
 # source search paths
@@ -2124,9 +2122,9 @@ endif
 	@#
 	# transform
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar --transform="data/$(COMMA)DATA/" $(TEST_FILES) $(LOG))
-	test -z "`$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l intermediate/test.bar -#data/*`" $(LOG)
-	test -n "`$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l intermediate/test.bar -#DATA/*`" $(LOG)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c intermediate/test.bar --transform=data$(COMMA)DATA $(TEST_FILES) $(LOG))
+	test -z "`$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) intermediate/test.bar --no-header-footer -# 'data/*'`" $(LOG)
+	test -n "`$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) intermediate/test.bar --no-header-footer -# 'DATA/*'`" $(LOG)
 	@#
 	# strip/destination
 	@$(call functionCleanTestFiles)
