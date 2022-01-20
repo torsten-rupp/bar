@@ -15217,7 +15217,7 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
         --host=$host \
         --build=$build \
         --prefix=$cwd/extern \
-        --with-includes=$cwd/extern/includes \
+        --with-includes=$cwd/extern/include \
         --with-libraries=$cwd/extern/lib \
         --enable-thread-safety \
         --with-openssl \
