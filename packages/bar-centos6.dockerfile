@@ -18,12 +18,15 @@ RUN yum -y install \
   curl \
   e2fsprogs \
   gettext \
+  git \
   initscripts \
   lua \
   m4 \
+  mariadb-client \
   openssl \
   patch \
   pkg-config \
+  postgresql \
   psmisc \
   rpm-build \
   rsync \
@@ -46,9 +49,6 @@ RUN yum -y install \
   bison \
   flex \
   rpm-build \
-  ;
-RUN yum -y install \
-  postgresql-devel \
   ;
 
 # fix systemd

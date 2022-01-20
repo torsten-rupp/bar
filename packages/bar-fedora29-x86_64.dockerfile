@@ -14,12 +14,15 @@ RUN yum -y install \
   curl \
   e2fsprogs \
   gettext \
+  git \
   joe \
   less \
   lua \
   m4 \
+  mariadb-client \
   patch \
   pkg-config \
+  postgresql \
   psmisc \
   rpm-build \
   rsync \
@@ -44,9 +47,6 @@ RUN yum -y install \
   unoconv \
   txt2man \
   valgrind \
-  ;
-RUN yum -y install \
-  postgresql-devel \
   ;
 
 # fix systemd

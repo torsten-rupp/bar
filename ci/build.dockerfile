@@ -14,13 +14,16 @@ RUN apt-get -y install \
   devscripts \
   e2fsprogs \
   gettext \
+  git \
   imagemagick \
   joe \
   less \
   lua5.3 \
   m4 \
+  mariadb-client \
   patch \
   pkg-config \
+  postgresql \
   rsync \
   subversion \
   sudo \

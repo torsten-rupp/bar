@@ -19,12 +19,15 @@ RUN apt-get -y install \
   devscripts \
   e2fsprogs \
   gettext \
+  git \
   joe \
   less \
   lua5.1 \
   m4 \
+  mariadb-client \
   patch \
   pkg-config \
+  postgresql \
   rsync \
   subversion \
   sudo \
@@ -50,9 +53,6 @@ RUN apt-get -y install \
   unoconv \
   txt2man \
   valgrind \
-  ;
-RUN apt-get -y install \
-  libpq-dev \
   ;
 
 # mounts
