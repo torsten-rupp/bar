@@ -15221,6 +15221,7 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
         --with-libraries=$cwd/extern/lib \
         --enable-thread-safety \
         --with-openssl \
+        --without-readline \
         `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then

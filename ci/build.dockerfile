@@ -43,7 +43,6 @@ RUN apt-get -y install \
   make \
   bison \
   flex \
-  libreadline-dev \
   unoconv \
   txt2man \
   valgrind \

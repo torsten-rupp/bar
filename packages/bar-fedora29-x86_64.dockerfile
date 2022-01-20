@@ -40,7 +40,6 @@ RUN yum -y install \
   make \
   bison \
   flex \
-  readline-devel \
   rpm-build \
   unoconv \
   txt2man \

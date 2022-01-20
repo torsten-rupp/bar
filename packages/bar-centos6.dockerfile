@@ -45,7 +45,6 @@ RUN yum -y install \
   make \
   bison \
   flex \
-  readline-devel \
   rpm-build \
   ;
 RUN yum -y install \

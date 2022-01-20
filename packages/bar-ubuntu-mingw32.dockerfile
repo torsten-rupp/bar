@@ -50,7 +50,6 @@ RUN apt-get -y install \
   make \
   bison \
   flex \
-  libreadline-dev \
   mingw-w64-i686-dev \
   gcc-mingw-w64-i686 \
   g++-mingw-w64-i686 \
