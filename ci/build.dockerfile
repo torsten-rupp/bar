@@ -22,7 +22,7 @@ RUN apt-get -y install \
   less \
   lua5.3 \
   m4 \
-  mariadb-client \
+  mariadb-client mariadb-client-core-10.1 \
   patch \
   pkg-config \
   postgresql \
