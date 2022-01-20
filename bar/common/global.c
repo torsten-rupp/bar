@@ -55,7 +55,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define MAX_SECURE_MEMORY (256*1024)
+#define MAX_SECURE_MEMORY (4*MB)
 
 #define DEBUG_MAX_FREE_LIST 4000
 
@@ -524,6 +524,29 @@ bool stringVMatch(const char *string, const char *pattern, const char **matchedS
   }
 
   return matchFlag;
+}
+
+uint32 stringHash(const char *string)
+{
+  uint32 hash;
+
+  hash = 0;
+  if (string != NULL)
+  {
+    while ((*string) != NUL)
+    {
+      hash += *string;
+      hash += hash << 10;
+      hash ^= hash >> 6;
+
+      string++;
+    }
+    hash += hash << 3;
+    hash ^= hash >> 11;
+    hash += hash << 15;
+  }
+
+  return hash;
 }
 
 #ifdef NDEBUG

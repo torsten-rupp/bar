@@ -253,7 +253,7 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
                   doneFlag,
                   deletedCounter,
                   "fileEntries",
-                  "id=%lld",
+                  "id=%"PRIi64,
                   databaseId
                  );
   }
@@ -289,7 +289,7 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
                   doneFlag,
                   deletedCounter,
                   "imageEntries",
-                  "id=%lld",
+                  "id=%"PRIi64,
                   databaseId
                  );
   }
@@ -325,7 +325,7 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
                   doneFlag,
                   deletedCounter,
                   "hardlinkEntries",
-                  "id=%lld",
+                  "id=%"PRIi64,
                   databaseId
                  );
   }
@@ -418,7 +418,7 @@ LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
 //fprintf(stderr,"%s, %d: 1 fragments done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
 #endif
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged fragments: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -540,7 +540,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                       DATABASE_VALUE_UINT  ("groupId",         groupId),
                                       DATABASE_VALUE_UINT  ("permission",      permission),
                                     ),
-                                    "id=%lld",
+                                    "id=?",
                                     DATABASE_FILTERS
                                     (
                                       DATABASE_FILTER_KEY(newestEntryId)
@@ -552,7 +552,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             // insert
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
+                                    NULL,  // insertRowId
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
@@ -626,7 +626,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
 // TODO:
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     error = Database_insert(&indexHandle->databaseHandle,
-                            NULL,  // changedRowCount
+                            NULL,  // insertRowId
                             "entriesNewest",
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES
@@ -824,7 +824,9 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                                 DATABASE_VALUE       ("totalEntryCountNewest", "totalEntryCountNewest+1"),
                                 DATABASE_VALUE_UINT64("totalEntrySizeNewest",  "totalEntrySizeNewest+?", size),
                               ),
-                              NULL,
+                              "    storageId=? \
+                               AND name=? \
+                              ",
                               DATABASE_FILTERS
                               (
                                 DATABASE_FILTER_KEY   (storageId),
@@ -972,7 +974,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
     dt[3] = Misc_getTimestamp()-t0;
   #endif
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, %lu entries to purge: fragment %llums, directory %llums, link %llums, special %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, %lu entries to purge: fragment %"PRIu64"ms, directory %"PRIu64"ms, link %"PRIu64"ms, special %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             Array_length(&entryIds),
             dt[0]/US_PER_MS,
@@ -1027,10 +1029,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   uuidIdsString   = String_new();
   entityIdsString = String_new();
   entryIdsString  = String_new();
-  filterString    = String_new();
+  filterString    = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -1039,11 +1041,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     {
       case INDEX_TYPE_UUID:
         if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-        String_appendFormat(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(uuidIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
         if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-        String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
         break;
@@ -1057,7 +1059,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   for (i = 0; i < entryIdCount; i++)
   {
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-    String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+    String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
   }
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_getEntriesInfo --------------------------------------------------------\n",__FILE__,__LINE__);
@@ -1068,10 +1070,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // get filters
-  String_setCString(filterString,"1");
-  IndexCommon_filterAppend(filterString,!String_isEmpty(uuidIdsString),"AND","uuids.id IN (%S)",uuidIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(uuidIdsString),"AND","uuids.id IN (%S)",uuidIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   error = ERROR_NONE;
   if (String_isEmpty(ftsMatchString))
@@ -1131,15 +1132,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySizeNewest)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1177,15 +1179,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalFileSizeNewest)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1223,15 +1226,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalImageSizeNewest)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1269,15 +1273,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1315,15 +1320,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1361,15 +1367,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalHardlinkSizeNewest)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1407,15 +1414,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1460,15 +1468,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                    DATABASE_COLUMN_UINT64("SUM(entriesNewest.size)")
                                  ),
                                  stringFormat(sqlCommand,sizeof(sqlCommand),
-                                              "    %s \
-                                               AND entities.deletedFlag!=1 \
+                                              "    entities.deletedFlag!=TRUE \
+                                               AND %s \
                                               ",
                                               String_cString(filterString)
                                              ),
                                  DATABASE_FILTERS
                                  (
                                  ),
-                                 NULL,  // orderGroup
+                                 NULL,  // groupBy
+                                 NULL,  // orderby
                                  0LL,
                                  1LL
                                 );
@@ -1515,15 +1524,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1561,15 +1571,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalFileSize)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1607,15 +1618,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalImageSize)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1653,15 +1665,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1699,15 +1712,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1745,15 +1759,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("SUM(entities.totalHardlinkSize)")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1791,15 +1806,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                        DATABASE_COLUMN_UINT64("0")
                                      ),
                                      stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                  "    %s \
-                                                   AND entities.deletedFlag!=1 \
+                                                  "    entities.deletedFlag!=TRUE \
+                                                   AND %s \
                                                   ",
                                                   String_cString(filterString)
                                                  ),
                                      DATABASE_FILTERS
                                      (
                                      ),
-                                     NULL,  // orderGroup
+                                     NULL,  // groupBy
+                                     NULL,  // orderby
                                      0LL,
                                      1LL
                                     );
@@ -1844,15 +1860,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                    DATABASE_COLUMN_UINT64("SUM(entries.size)")
                                  ),
                                  stringFormat(sqlCommand,sizeof(sqlCommand),
-                                              "    %s \
-                                               AND entities.deletedFlag!=1 \
+                                              "    entities.deletedFlag!=TRUE \
+                                               AND %s \
                                               ",
                                               String_cString(filterString)
                                              ),
                                  DATABASE_FILTERS
                                  (
                                  ),
-                                 NULL,  // orderGroup
+                                 NULL,  // groupBy
+                                 NULL,  // orderby
                                  0LL,
                                  1LL
                                 );
@@ -1920,7 +1937,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "    entities.deletedFlag!=1 \
+                                            "    entities.deletedFlag!=TRUE \
                                              AND %s \
                                             ",
                                             String_cString(filterString)
@@ -1928,7 +1945,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
-                               NULL,  // orderGroup
+                               NULL,  // groupBy
+                               NULL,  // orderby
                                0LL,
                                1LL
                               );
@@ -1964,7 +1982,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                    DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
                                  ),
                                  stringFormat(sqlCommand,sizeof(sqlCommand),
-                                              "    entities.deletedFlag!=1 \
+                                              "    entities.deletedFlag!=TRUE \
                                                AND %s \
                                               ",
                                               String_cString(filterString)
@@ -1972,7 +1990,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_FILTERS
                                  (
                                  ),
-                                 NULL,  // orderGroup
+                                 NULL,  // groupBy
+                                 NULL,  // orderby
                                  0LL,
                                  1LL
                                );
@@ -2011,7 +2030,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                    DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                  ),
                                  stringFormat(sqlCommand,sizeof(sqlCommand),
-                                              "    entities.deletedFlag!=1 \
+                                              "    entities.deletedFlag!=TRUE \
                                                AND %s \
                                               ",
                                               String_cString(filterString)
@@ -2019,7 +2038,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_FILTERS
                                  (
                                  ),
-                                 NULL,  // orderGroup
+                                 NULL,  // groupBy
+                                 NULL,  // orderby
                                  0LL,
                                  1LL
                                 );
@@ -2046,16 +2066,16 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
     // names selected
 
     // get filters
-    IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","%S",ftsMatchString);
+    Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","%S",ftsMatchString);
     if (newestOnly)
     {
-      IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
-      IndexCommon_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
+      Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+      Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
     }
     else
     {
-      IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
-      IndexCommon_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
+      Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+      Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
     }
 
     if (error == ERROR_NONE)
@@ -2102,8 +2122,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_COLUMN_UINT64("SUM(entriesNewest.size)"),
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "    entities.deletedFlag!=1 \
-                                                 AND entriesNewest.id IS NOT NULL \
+                                                "    entities.deletedFlag!=TRUE \
+                                                 AND entriesNewest.id IS NOTNULL \
                                                  AND %s \
                                                 ",
                                                 String_cString(filterString)
@@ -2111,7 +2131,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
-                               NULL,  // orderGroup
+                               NULL,  // groupBy
+                               NULL,  // orderby
                                0LL,
                                1LL
                               );
@@ -2148,8 +2169,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_COLUMN_UINT64("SUM(entries.size)")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                                "    entities.deletedFlag!=1 \
-                                                 AND entries.id IS NOT NULL \
+                                                "    entities.deletedFlag!=TRUE \
+                                                 AND entries.id IS NOTNULL \
                                                  AND %s \
                                                 ",
                                                 String_cString(filterString)
@@ -2157,7 +2178,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
-                               NULL,  // orderGroup
+                               NULL,  // groupBy
+                               NULL,  // orderby
                                0LL,
                                1LL
                               );
@@ -2223,7 +2245,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "    storages.deletedFlag!=1 \
+                                            "    storages.deletedFlag!=TRUE \
                                              AND %s \
                                             ",
                                             String_cString(filterString)
@@ -2231,7 +2253,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
-                               NULL,  // orderGroup
+                               NULL,  // groupBy
+                               NULL,  // orderby
                                0LL,
                                1LL
                               );
@@ -2268,7 +2291,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                  DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "    storages.deletedFlag!=1 \
+                                            "    storages.deletedFlag!=TRUE \
                                              AND %s \
                                             ",
                                             String_cString(filterString)
@@ -2276,7 +2299,8 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                DATABASE_FILTERS
                                (
                                ),
-                               NULL,  // orderGroup
+                               NULL,  // groupBy
+                               NULL,  // orderby
                                0LL,
                                1LL
                               );
@@ -2299,7 +2323,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
@@ -2350,8 +2374,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   entryIdsString   = String_new();
   orderString      = String_new();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
@@ -2382,17 +2406,17 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   }
 
   // get filters
-  filterString = String_newCString("1");
-  IndexCommon_filterAppend(filterString,!String_isEmpty(uuidIdsString),"AND","uuids.id IN (%S)",uuidIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  filterString = Database_newFilter();
+  Database_filterAppend(filterString,!String_isEmpty(uuidIdsString),"AND","uuids.id IN (%S)",uuidIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
   if (newestOnly)
   {
-    IndexCommon_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
+    Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entriesNewest.type=%u",indexType);
   }
   else
   {
-    IndexCommon_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
+    Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
   }
 
   // get sort mode, ordering
@@ -2421,11 +2445,11 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     // get additional filters
     if (newestOnly)
     {
-      IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+      Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
     }
     else
     {
-      IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+      Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
     }
 
     INDEX_DOX(error,
@@ -2496,11 +2520,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64("hardlinkEntries.size")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "     entities.deletedFlag!=1 \
-                                             AND entriesNewest.id IS NOT NULL \
+                                            "     entities.deletedFlag!=TRUE \
+                                             AND entriesNewest.id IS NOTNULL \
                                              AND %s \
                                              %s \
-                                             LIMIT ?,? \
                                             ",
                                             String_cString(filterString),
                                             String_cString(orderString)
@@ -2519,11 +2542,12 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
-                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
-
-                                 DATABASE_FILTER_UINT64(offset),
-                                 DATABASE_FILTER_UINT64(limit)
-                               )
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
+                               ),
+                               NULL,  // groupBy
+                               NULL,  // orderby
+                               offset,
+                               limit
                               );
       }
       else
@@ -2588,10 +2612,9 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64("hardlinkEntries.size")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "     entities.deletedFlag!=1 \
+                                            "     entities.deletedFlag!=TRUE \
                                              AND %s \
                                              %s \
-                                             LIMIT ?,? \
                                             ",
                                             String_cString(filterString),
                                             String_cString(orderString)
@@ -2610,11 +2633,12 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
-                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
-
-                                 DATABASE_FILTER_UINT64(offset),
-                                 DATABASE_FILTER_UINT64(limit)
-                               )
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
+                               ),
+                               NULL,  // groupBy
+                               NULL,  // orderby
+                               offset,
+                               limit
                               );
       }
     });
@@ -2624,14 +2648,14 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     // names (and optional entries) selected
 
     // get additional filters
-    IndexCommon_filterAppend(filterString,TRUE,"AND",String_cString(ftsMatchString));
+    Database_filterAppend(filterString,TRUE,"AND",String_cString(ftsMatchString));
     if (newestOnly)
     {
-      IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
+      Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entriesNewest.entryId IN (%S)",entryIdsString);
     }
     else
     {
-      IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+      Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
     }
 
     if (newestOnly)
@@ -2703,11 +2727,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64("hardlinkEntries.size")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "     entities.deletedFlag!=1 \
-                                              AND entriesNewest.id IS NOT NULL \
+                                            "     entities.deletedFlag!=TRUE \
+                                              AND entriesNewest.id IS NOTNULL \
                                               AND %s \
                                               %s \
-                                              LIMIT ?,? \
                                             ",
                                             String_cString(filterString),
                                             String_cString(orderString)
@@ -2726,11 +2749,12 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
-                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
-
-                                 DATABASE_FILTER_UINT64(offset),
-                                 DATABASE_FILTER_UINT64(limit)
-                               )
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
+                               ),
+                               NULL,  // groupBy
+                               NULL,  // orderby
+                               offset,
+                               limit
                               );
       });
     }
@@ -2803,10 +2827,9 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
-                                            "     entities.deletedFlag!=1 \
+                                            "     entities.deletedFlag!=TRUE \
                                                AND %s \
                                                %s \
-                                               LIMIT ?,? \
                                             ",
                                             String_cString(filterString),
                                             String_cString(orderString)
@@ -2825,11 +2848,12 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_DIRECTORY),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_LINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
-                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL),
-
-                                 DATABASE_FILTER_UINT64(offset),
-                                 DATABASE_FILTER_UINT64(limit)
-                               )
+                                 DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
+                               ),
+                               NULL,  // groupBy
+                               NULL,  // orderby
+                               offset,
+                               limit
                               );
       });
     }
@@ -2838,7 +2862,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
     String_delete(orderString);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
@@ -2852,7 +2876,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 
   // free resources
   String_delete(orderString);
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
@@ -2995,17 +3019,17 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT64  ("entryFragments.offset"),
                              DATABASE_COLUMN_UINT64  ("entryFragments.size ")
                            ),
-                           "storages.deletedFlag!=1 \
-                                   AND entryFragments.entryId=? \
-                             ORDER BY offset ASC \
-                             LIMIT ?,? \
+                           "    storages.deletedFlag!=TRUE \
+                            AND entryFragments.entryId=? \
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId)),
-                             DATABASE_FILTER_UINT64(offset),
-                             DATABASE_FILTER_UINT64(limit)
-                           )
+                             DATABASE_FILTER_KEY   (Index_getDatabaseId(entryId))
+                           ),
+                           NULL,  // groupBy
+                           "offset ASC",
+                           offset,
+                           limit
                           );
   });
   if (error != ERROR_NONE)
@@ -3268,10 +3292,10 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_new();
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3279,7 +3303,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   {
     assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -3287,15 +3311,15 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_FILE)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
     }
   }
 
   // get filters
-  IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_FILE);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  Database_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_FILE);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -3322,20 +3346,24 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=1 \
+                                        "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
                                         String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderby
+                           0L,
+                           DATABASE_UNLIMITED
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(ftsMatchString);
@@ -3343,7 +3371,7 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(ftsMatchString);
@@ -3423,10 +3451,10 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_new();
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3434,7 +3462,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   {
     assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -3442,15 +3470,15 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_IMAGE)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
     }
   }
 
   // get filters
-  IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  Database_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -3475,20 +3503,24 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT64  ("entries.size")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=1 \
+                                        "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
                                         String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderby
+                           0L,
+                           DATABASE_UNLIMITED
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(ftsMatchString);
@@ -3496,7 +3528,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(ftsMatchString);
@@ -3579,10 +3611,10 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_new();
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3590,7 +3622,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   {
     assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -3598,15 +3630,15 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_DIRECTORY)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
     }
   }
 
   // get filters
-  IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  Database_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -3632,21 +3664,25 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=1 \
+                                        "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
                                         String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderby
+                           0L,
+                           DATABASE_UNLIMITED
                           );
   });
 //Database_debugEnable(0);
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(ftsMatchString);
@@ -3654,7 +3690,7 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(ftsMatchString);
@@ -3732,10 +3768,10 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_new();
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3743,7 +3779,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   {
     assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -3751,16 +3787,16 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_LINK)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
     }
   }
   String_appendCString(entryIdsString,"))");
 
   // get filters
-  IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  Database_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -3788,20 +3824,24 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=1 \
+                                        "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
                                         String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderby
+                           0L,
+                           DATABASE_UNLIMITED
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(ftsMatchString);
@@ -3809,7 +3849,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(ftsMatchString);
@@ -3889,10 +3929,10 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_new();
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -3900,7 +3940,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   {
     assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
   }
   entryIdsString = String_new();
   for (i = 0; i < entryIdCount; i++)
@@ -3908,15 +3948,15 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
     if (Index_getType(entryIds[i]) == INDEX_TYPE_HARDLINK)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
     }
   }
 
   // get filters
-  IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entries.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  Database_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entries.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -3943,20 +3983,24 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=1 \
+                                        "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
                                         String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderby
+                           0L,
+                           DATABASE_UNLIMITED
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(ftsMatchString);
@@ -3964,7 +4008,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(ftsMatchString);
@@ -4044,10 +4088,10 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_new();
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_entries.name",name);
 
   // get id sets
   entityIdsString = String_new();
@@ -4056,22 +4100,22 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   {
     assert(Index_getType(entityIds[i]) == INDEX_TYPE_STORAGE);
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(entityIds[i]));
+    String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(entityIds[i]));
   }
   for (i = 0; i < entryIdCount; i++)
   {
     if (Index_getType(entryIds[i]) == INDEX_TYPE_SPECIAL)
     {
       if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-      String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
+      String_appendFormat(entryIdsString,"%"PRIi64,Index_getDatabaseId(entryIds[i]));
     }
   }
 
   // get filters
-  IndexCommon_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
+  Database_filterAppend(filterString,TRUE,"AND","entries.type=%u",INDEX_TYPE_DIRECTORY);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","entries.id IN (SELECT entryId FROM FTS_entries WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -4097,20 +4141,24 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_UINT    ("entries.permission")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag!=1 \
+                                        "    entities.deletedFlag!=TRUE \
                                          AND %s \
                                         ",
                                         String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                           )
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderby
+                           0L,
+                           DATABASE_UNLIMITED
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
     String_delete(ftsMatchString);
@@ -4118,7 +4166,7 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);
   String_delete(ftsMatchString);
@@ -4213,21 +4261,20 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                "    entityId=? \
                                 AND type=? \
                                 AND name=? \
-                                AND deletedFlag=? \
+                                AND deletedFlag!=TRUE \
                                ",
                                DATABASE_FILTERS
                                (
                                  DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_FILE),
-                                 DATABASE_FILTER_STRING(name),
-                                 DATABASE_FILTER_BOOL  (FALSE)
+                                 DATABASE_FILTER_STRING(name)
                                )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
+                                  &entryId,
                                   "entries",
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
@@ -4244,14 +4291,10 @@ Errors Index_addFile(IndexHandle *indexHandle,
 
                                     DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
                                     DATABASE_VALUE_UINT64  ("size",            size)
-                                  )
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
                                  );
-
-          // get entry id
-          if (error == ERROR_NONE)
-          {
-            entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-          }
 
           // add FTS entry
 // TODO: do this wit a trigger again?
@@ -4261,17 +4304,21 @@ Errors Index_addFile(IndexHandle *indexHandle,
             {
               case DATABASE_TYPE_SQLITE3:
                   error = Database_insert(&indexHandle->databaseHandle,
-                                          NULL,  // changedRowCount
+                                          NULL,  // insertRowId
                                           "FTS_entries",
                                           DATABASE_FLAG_NONE,
                                           DATABASE_VALUES
                                           (
                                             DATABASE_VALUE_KEY   ("entryId", entryId),
                                             DATABASE_VALUE_STRING("name",    name)
-                                          )
+                                          ),
+                                          DATABASE_COLUMNS_NONE,
+                                          DATABASE_FILTERS_NONE
                                          );
                 break;
               case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
                 break;
             }
           }
@@ -4280,14 +4327,16 @@ Errors Index_addFile(IndexHandle *indexHandle,
           if (error == ERROR_NONE)
           {
             error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
+                                    NULL,  // insertRowId
                                     "fileEntries",
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId", entryId),
                                       DATABASE_VALUE_UINT64("size",    size)
-                                    )
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
                                    );
           }
         }
@@ -4299,7 +4348,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 
       // add file entry fragment
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "entryFragments",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4308,7 +4357,9 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    fragmentOffset),
                                 DATABASE_VALUE_UINT64("size",      fragmentSize)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -4346,7 +4397,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_FILE uuidId=%lld entityId=%lld storageId=%llu name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_FILE uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIu64" name=%'S size=%"PRIu64" timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64,
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -4406,23 +4457,22 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                "entries",
                                "id",
                                "    entityId=? \
-                                AND type=?\
+                                AND type=? \
                                 AND name=? \
-                                AND deletedFlag=? \
+                                AND deletedFlag!=TRUE \
                                ",
                                DATABASE_FILTERS
                                (
                                  DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_IMAGE),
-                                 DATABASE_FILTER_STRING(name),
-                                 DATABASE_FILTER_BOOL  (FALSE)
+                                 DATABASE_FILTER_STRING(name)
                                )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
+                                  &entryId,
                                   "entries",
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
@@ -4439,13 +4489,10 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 
                                     DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
                                     DATABASE_VALUE_UINT64  ("size",            size)
-                                  )
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
                                  );
-          // get entry id
-          if (error == ERROR_NONE)
-          {
-            entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-          }
 
           // add FTS entry
           if (error == ERROR_NONE)
@@ -4454,17 +4501,21 @@ Errors Index_addImage(IndexHandle     *indexHandle,
             {
               case DATABASE_TYPE_SQLITE3:
                 error = Database_insert(&indexHandle->databaseHandle,
-                                        NULL,  // changedRowCount
+                                        NULL,  // insertRowId
                                         "FTS_entries",
                                         DATABASE_FLAG_NONE,
                                         DATABASE_VALUES
                                         (
                                           DATABASE_VALUE_KEY   ("entryId", entryId),
                                           DATABASE_VALUE_STRING("name",    name)
-                                        )
+                                        ),
+                                        DATABASE_COLUMNS_NONE,
+                                        DATABASE_FILTERS_NONE
                                        );
                 break;
               case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
                 break;
             }
           }
@@ -4473,7 +4524,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
           if (error == ERROR_NONE)
           {
             error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
+                                    NULL,  // insertRowId
                                     "imageEntries",
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
@@ -4482,7 +4533,9 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                       DATABASE_VALUE_UINT  ("fileSystemType", fileSystemType),
                                       DATABASE_VALUE_UINT64("size",           size),
                                       DATABASE_VALUE_UINT  ("blockSize",      blockSize)
-                                    )
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
                                    );
           }
         }
@@ -4494,7 +4547,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 
       // add image entry fragment
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "entryFragments",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4503,7 +4556,9 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    blockOffset*(uint64)blockSize),
                                 DATABASE_VALUE_UINT64("size",      blockCount*(uint64)blockSize)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -4511,8 +4566,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
       }
 
       #ifndef NDEBUG
-        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%lld AND totalEntrySize<0",Index_getDatabaseId(storageId));
-        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%lld AND totalFileSize<0",Index_getDatabaseId(storageId));
+        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%"PRIi64" AND totalEntrySize<0",Index_getDatabaseId(storageId));
+        IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE id=%"PRIi64" AND totalFileSize<0",Index_getDatabaseId(storageId));
       #endif /* not NDEBUG */
 
       return ERROR_NONE;
@@ -4524,7 +4579,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_IMAGE uuidId=%lld entityId=%lld storageId=%llu type=IMAGE name=%'S fileSystemType=%'s size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    "INDEX_ADD_IMAGE uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIu64" type=IMAGE name=%'S fileSystemType=%'s size=%"PRIu64" blockSize=%lu blockOffset=%"PRIu64" blockCount=%"PRIu64,
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -4574,7 +4629,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     {
       // add entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              &entryId,
                               "entries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4591,15 +4646,14 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 
                                 DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
                                 DATABASE_VALUE_UINT64  ("size",            0)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
         return error;
       }
-
-      // get entry id
-      entryId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // add FTS entry
 // TODO: do this again with a trigger?
@@ -4607,14 +4661,16 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       {
         case DATABASE_TYPE_SQLITE3:
           error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
+                                  NULL,  // insertRowId
                                   "FTS_entries",
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId", entryId),
                                     DATABASE_VALUE_STRING("name",    name)
-                                  )
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
                                  );
           if (error != ERROR_NONE)
           {
@@ -4623,11 +4679,13 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
           break;
         case DATABASE_TYPE_MARIADB:
           break;
+        case DATABASE_TYPE_POSTGRESQL:
+          break;
       }
 
       // add directory entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "directoryEntries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4635,7 +4693,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                 DATABASE_VALUE_KEY   ("entryId",   entryId),
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
                                 DATABASE_VALUE_STRING("name",      name)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -4671,7 +4731,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_DIRECTORY uuidId=%lld entityId=%lld storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_DIRECTORY uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIu64" type=DIRECTORY name=%'S timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -4726,7 +4786,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
     {
       // add entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              &entryId,
                               "entries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4743,15 +4803,14 @@ Errors Index_addLink(IndexHandle *indexHandle,
 
                                 DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
                                 DATABASE_VALUE_UINT64  ("size",            0)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
         return error;
       }
-
-      // get entry id
-      entryId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // add FTS entry
 // TODO: do this in a trigger again?
@@ -4759,14 +4818,16 @@ Errors Index_addLink(IndexHandle *indexHandle,
       {
         case DATABASE_TYPE_SQLITE3:
           error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
+                                  NULL,  // insertRowId
                                   "FTS_entries",
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId", entryId),
                                     DATABASE_VALUE_STRING("name",    linkName)
-                                  )
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
                                  );
           if (error != ERROR_NONE)
           {
@@ -4775,11 +4836,13 @@ Errors Index_addLink(IndexHandle *indexHandle,
           break;
         case DATABASE_TYPE_MARIADB:
           break;
+        case DATABASE_TYPE_POSTGRESQL:
+          break;
       }
 
       // add link entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "linkEntries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4787,7 +4850,9 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                 DATABASE_VALUE_KEY   ("entryId",         entryId),
                                 DATABASE_VALUE_KEY   ("storageId",       Index_getDatabaseId(storageId)),
                                 DATABASE_VALUE_STRING("destinationName", destinationName)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -4815,7 +4880,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_LINK uuidId=%lld entityId=%lld storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_LINK uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIi64" type=LINK name=%'S destinationName=%'S timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -4879,21 +4944,20 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                "    entityId=? \
                                 AND type=? \
                                 AND name=? \
-                                AND deletedFlag=? \
+                                AND deletedFlag!=TRUE \
                                ",
                                DATABASE_FILTERS
                                (
                                  DATABASE_FILTER_KEY   (Index_getDatabaseId(entityId)),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_STRING(name),
-                                 DATABASE_FILTER_BOOL  (FALSE)
                                )
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
+                                  &entryId,
                                   "entries",
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
@@ -4910,14 +4974,10 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 
                                     DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
                                     DATABASE_VALUE_UINT64  ("size",            size)
-                                  )
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
                                  );
-
-          // get entry id
-          if (error == ERROR_NONE)
-          {
-            entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-          }
 
           // add FTS entry
           if (error == ERROR_NONE)
@@ -4927,17 +4987,21 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
             {
               case DATABASE_TYPE_SQLITE3:
                   error = Database_insert(&indexHandle->databaseHandle,
-                                          NULL,  // changedRowCount
+                                          NULL,  // insertRowId
                                           "FTS_entries",
                                           DATABASE_FLAG_NONE,
                                           DATABASE_VALUES
                                           (
                                             DATABASE_VALUE_KEY   ("entryId", entryId),
                                             DATABASE_VALUE_STRING("name",    name)
-                                          )
+                                          ),
+                                          DATABASE_COLUMNS_NONE,
+                                          DATABASE_FILTERS_NONE
                                          );
                 break;
               case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
                 break;
             }
           }
@@ -4946,14 +5010,16 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
           if (error == ERROR_NONE)
           {
             error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
+                                    NULL,  // insertRowId
                                     "hardlinkEntries",
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
                                       DATABASE_VALUE_KEY   ("entryId", entryId),
                                       DATABASE_VALUE_UINT64("size",    size)
-                                    )
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
                                    );
           }
         }
@@ -4965,7 +5031,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 
       // add hard link entry fragment
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "entryFragments",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4974,7 +5040,9 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                 DATABASE_VALUE_KEY   ("storageId", Index_getDatabaseId(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    fragmentOffset),
                                 DATABASE_VALUE_UINT64("size",      fragmentSize)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -5012,7 +5080,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_HARDLINK uuidId=%lld entityId=%lld storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_HARDLINK uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIi64" type=HARDLINK name=%'S size=%"PRIu64" timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64,
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -5069,7 +5137,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     {
       // add entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              &entryId,
                               "entries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -5086,29 +5154,30 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 
                                 DATABASE_VALUE_KEY     ("uuidId",          Index_getDatabaseId(uuidId)),
                                 DATABASE_VALUE_UINT64  ("size",            0)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
         return error;
       }
 
-      // get entry id
-      entryId = Database_getLastRowId(&indexHandle->databaseHandle);
-
       // add FTS entry
       switch (Database_getType(&indexHandle->databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
           error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
+                                  NULL,  // insertRowId
                                   "FTS_entries",
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
                                     DATABASE_VALUE_KEY   ("entryId", entryId),
                                     DATABASE_VALUE_STRING("name",    name)
-                                  )
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
                                  );
           if (error != ERROR_NONE)
           {
@@ -5117,11 +5186,13 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
           break;
         case DATABASE_TYPE_MARIADB:
           break;
+        case DATABASE_TYPE_POSTGRESQL:
+          break;
       }
 
       // add special entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "specialEntries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -5131,7 +5202,9 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                 DATABASE_VALUE_UINT  ("specialType", specialType),
                                 DATABASE_VALUE_UINT  ("major",       major),
                                 DATABASE_VALUE_UINT  ("minor",       minor)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -5159,7 +5232,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_SPECIAL uuidId=%lld entityId=%lld storageId=%llu type=SPECIAL name=%'S specialType=%s timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
+                                    "INDEX_ADD_SPECIAL uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIi64" type=SPECIAL name=%'S specialType=%s timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o major=%u minor=%u",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -5265,7 +5338,7 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
             indexHandle,
   {
     error = Database_insert(&indexHandle->databaseHandle,
-                            NULL,  // changedRowCount
+                            NULL,  // insertRowId
                             "",
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES
@@ -5273,7 +5346,9 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
                               DATABASE_VALUE_KEY   ("entityId", Index_getDatabaseId(entityId)),
                               DATABASE_VALUE_UINT  ("type",     indexType),
                               DATABASE_VALUE_STRING("name",     entryName)
-                            )
+                            ),
+                            DATABASE_COLUMNS_NONE,
+                            DATABASE_FILTERS_NONE
                            );
     if (error != ERROR_NONE)
     {

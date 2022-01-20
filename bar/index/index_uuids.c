@@ -235,7 +235,7 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Purged UUID #%llu: no entities",
+                "Purged UUID #%"PRIu64": no entities",
                 Index_getDatabaseId(uuidId)
                );
   }
@@ -337,7 +337,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     uint64       *totalEntrySize
                    )
 {
-  String filterString;
   Errors error;
 
   assert(indexHandle != NULL);
@@ -350,17 +349,9 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
-    // filters
-    filterString = String_newCString("1");
-    IndexCommon_filterAppend(filterString,!stringIsEmpty(findJobUUID),"AND","uuids.jobUUID=%'s",findJobUUID);
-    IndexCommon_filterAppend(filterString,!stringIsEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'s",findScheduleUUID);
-
     INDEX_DOX(error,
               indexHandle,
     {
-//TODO: explain
-      char sqlCommand[MAX_SQL_COMMAND_LENGTH];
-
       return Database_get(&indexHandle->databaseHandle,
                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                           {
@@ -394,7 +385,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                           (
                             "uuids \
                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                               LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
+                               LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=TRUE) \
                             "
                           ),
                           DATABASE_FLAG_NONE,
@@ -406,22 +397,20 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                             DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
                             DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
                             DATABASE_COLUMN_UINT  ("(SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=?)"),
-                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
-                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
-                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
-                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
-                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND COALESCE(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND COALESCE(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND COALESCE(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND COALESCE(history.errorMessage,'')='' AND history.type=?)"),
+                            DATABASE_COLUMN_UINT  ("(SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND COALESCE(history.errorMessage,'')='' AND history.type=?)"),
                             DATABASE_COLUMN_UINT  ("COUNT(entities.id)"),
                             DATABASE_COLUMN_UINT  ("COUNT(storages.id)"),
                             DATABASE_COLUMN_UINT64("SUM(storages.size)"),
                             DATABASE_COLUMN_UINT  ("SUM(storages.totalEntryCount)"),
                             DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
                           ),
-                          stringFormat(sqlCommand,sizeof(sqlCommand),
-                                       "%s \
-                                       ",
-                                       String_cString(filterString)
-                                      ),
+                          "    ? OR uuids.jobUUID=? \
+                           AND ? OR entities.scheduleUUID=? \
+                          ",
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_NORMAL),
@@ -429,19 +418,24 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_INCREMENTAL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_DIFFERENTIAL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_CONTINUOUS),
+
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_NORMAL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_FULL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_INCREMENTAL),
                             DATABASE_FILTER_UINT(ARCHIVE_TYPE_DIFFERENTIAL),
-                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_CONTINUOUS)
+                            DATABASE_FILTER_UINT(ARCHIVE_TYPE_CONTINUOUS),
+
+                            DATABASE_FILTER_BOOL   (stringIsEmpty(findJobUUID)),
+                            DATABASE_FILTER_CSTRING(findJobUUID),
+                            DATABASE_FILTER_BOOL   (stringIsEmpty(findScheduleUUID)),
+                            DATABASE_FILTER_CSTRING(findScheduleUUID)
                           ),
-                          "GROUP BY uuids.id",
+                          "uuids.id",
+                          NULL,  // orderBy
                           0LL,
                           1LL
                          );
     });
-
-    String_delete(filterString);
   }
   else
   {
@@ -518,16 +512,16 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_newCString("1");
+  filterString   = Database_newFilter();
 
-  // get FTS
+  // get FTS match string
 // TODO: FTS_uuids do not exists
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_uuids.name",name);
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_uuids.name",name);
 
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
-  IndexCommon_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID='%S'",scheduleUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","uuids.jobUUID='%S'",jobUUID);
+  Database_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID='%S'",scheduleUUID);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","uuids.id IN (SELECT uuidId FROM FTS_uuids WHERE %S)",ftsMatchString);
 
   INDEX_DOX(error,
             indexHandle,
@@ -575,20 +569,21 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
                        DATABASE_FILTERS
                        (
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
   });
   if (error != ERROR_NONE)
   {
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(ftsMatchString);
     return error;
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(ftsMatchString);
 
   return ERROR_NONE;
@@ -896,7 +891,7 @@ UNUSED_VARIABLE(uuidId);
       }
 
       // update aggregate data
-fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+fprintf(stderr,"%s, %d: aggregate %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
       error = Database_update(&indexHandle->databaseHandle,
                               NULL,  // changedRowCount
                               "uuids",
@@ -1208,7 +1203,7 @@ fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+
       }
 
       // update newest aggregate data
-//fprintf(stderr,"%s, %d: newest aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+//fprintf(stderr,"%s, %d: newest aggregate %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
       error = Database_update(&indexHandle->databaseHandle,
                               NULL,  // changedRowCount
                               "uuids",
@@ -1294,16 +1289,16 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_newCString("1");
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get filters
   string = String_new();
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
-  IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
+  Database_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
 
   // prepare list
@@ -1318,7 +1313,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
 //TODO newest
                            "uuids \
                               LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                              LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
+                              LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE \
                            ",
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
@@ -1326,7 +1321,7 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                              DATABASE_COLUMN_KEY     ("uuids.id"),
                              DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
                              DATABASE_COLUMN_DATETIME("(SELECT MAX(entities.created) FROM entities WHERE entities.jobUUID=uuids.jobUUID)"),
-                             DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
+                             DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 1)"),
                              DATABASE_COLUMN_UINT64  ("SUM(storages.size)"),
                              DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
                              DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)")
@@ -1334,29 +1329,29 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                            stringFormat(sqlCommand,sizeof(sqlCommand),
                                         "     %s \
                                           AND uuids.jobUUID!='' \
-                                          GROUP BY uuids.id \
-                                          LIMIT ?,? \
                                         ",
                                         String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT64(offset),
-                             DATABASE_FILTER_UINT64(limit)
-                           )
+                           ),
+                           "uuids.id",
+                           NULL,  // orderBy
+                           offset,
+                           limit
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(ftsMatchString);
     return error;
   }
 //Database_debugPrintQueryInfo(&indexQueryHandle->databaseStatementHandle);
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
@@ -1424,21 +1419,25 @@ Errors Index_newUUID(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
+      DatabaseId databaseId;
+
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              &databaseId,
                               "uuids",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_CSTRING("jobUUID", jobUUID),
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
         return error;
       }
 
-      (*uuidId) = INDEX_ID_UUID(Database_getLastRowId(&indexHandle->databaseHandle));
+      (*uuidId) = INDEX_ID_UUID(databaseId);
 
       return ERROR_NONE;
     });
@@ -1523,7 +1522,8 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
                          (
                            DATABASE_FILTER_KEY (Index_getDatabaseId(uuidId))
                          ),
-                         NULL,  // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0,
                          DATABASE_UNLIMITED
                         );

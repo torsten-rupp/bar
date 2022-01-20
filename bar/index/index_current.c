@@ -85,16 +85,18 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
 
                         size = values[0].u64;
 
-                        DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
                         error = Database_insert(newDatabaseHandle,
-                                                NULL,  // changedRowCount
+                                                NULL,  // insertRowId
                                                 "fileEntries",
                                                 DATABASE_FLAG_NONE,
                                                 DATABASE_VALUES
                                                 (
                                                   DATABASE_VALUE_KEY   ("entryId", toEntryId),
                                                   DATABASE_VALUE_UINT64("size",    size)
-                                                )
+                                                ),
+                                                DATABASE_COLUMNS_NONE,
+                                                DATABASE_FILTERS_NONE
                                                );
                         if (error != ERROR_NONE)
                         {
@@ -131,7 +133,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
 
                                                DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                                                error = Database_insert(newDatabaseHandle,
-                                                                       NULL,  // changedRowCount
+                                                                       NULL,  // insertRowId
                                                                        "entryFragments",
                                                                        DATABASE_FLAG_NONE,
                                                                        DATABASE_VALUES
@@ -140,7 +142,9 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                                                          DATABASE_VALUE_KEY   ("storageId",toStorageId),
                                                                          DATABASE_VALUE_UINT64("offset",   fragmentOffset),
                                                                          DATABASE_VALUE_UINT64("size",     fragmentSize)
-                                                                       )
+                                                                       ),
+                                                                       DATABASE_COLUMNS_NONE,
+                                                                       DATABASE_FILTERS_NONE
                                                                       );
                                                if (error != ERROR_NONE)
                                                {
@@ -167,7 +171,8 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
                                              ),
-                                             NULL, // orderGroup
+                                             NULL,  // groupBy
+                                             NULL,  // orderBy
                                              0LL,
                                              DATABASE_UNLIMITED
                                            );
@@ -194,7 +199,8 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
                       ),
-                      NULL,  // orderGroup
+                      NULL,  // groupBy
+                      NULL,  // orderBy
                       0LL,
                       DATABASE_UNLIMITED
                     );
@@ -243,16 +249,18 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
 
                         size = values[0].u64;
 
-                        DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        DIMPORT("import image entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
                         error = Database_insert(newDatabaseHandle,
-                                                NULL,  // changedRowCount
+                                                NULL,  // insertRowId
                                                 "imageEntries",
                                                 DATABASE_FLAG_NONE,
                                                 DATABASE_VALUES
                                                 (
                                                   DATABASE_VALUE_KEY   ("entryId", toEntryId),
                                                   DATABASE_VALUE_UINT64("size",    size)
-                                                )
+                                                ),
+                                                DATABASE_COLUMNS_NONE,
+                                                DATABASE_FILTERS_NONE
                                                );
                         if (error != ERROR_NONE)
                         {
@@ -289,7 +297,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
 
                                                DIMPORT("import image fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                                                error = Database_insert(newDatabaseHandle,
-                                                                       NULL,  // changedRowCount
+                                                                       NULL,  // insertRowId
                                                                        "entryFragments",
                                                                        DATABASE_FLAG_NONE,
                                                                        DATABASE_VALUES
@@ -298,7 +306,9 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                                                          DATABASE_VALUE_KEY   ("storageId",toStorageId),
                                                                          DATABASE_VALUE_UINT64("offset",   fragmentOffset),
                                                                          DATABASE_VALUE_UINT64("size",     fragmentSize)
-                                                                       )
+                                                                       ),
+                                                                       DATABASE_COLUMNS_NONE,
+                                                                       DATABASE_FILTERS_NONE
                                                                       );
                                                if (error != ERROR_NONE)
                                                {
@@ -325,7 +335,8 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
                                              ),
-                                             NULL, // orderGroup
+                                             NULL,  // groupBy
+                                             NULL,  // orderBy
                                              0LL,
                                              DATABASE_UNLIMITED
                                            );
@@ -352,7 +363,8 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
                       ),
-                      NULL,  // orderGroup
+                      NULL,  // groupBy
+                      NULL,  // orderBy
                       0LL,
                       DATABASE_UNLIMITED
                     );
@@ -401,16 +413,18 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
 
                         size = values[0].u64;
 
-                        DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+                        DIMPORT("import hardlink entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
                         error = Database_insert(newDatabaseHandle,
-                                                NULL,  // changedRowCount
+                                                NULL,  // insertRowId
                                                 "hardlinkEntries",
                                                 DATABASE_FLAG_NONE,
                                                 DATABASE_VALUES
                                                 (
                                                   DATABASE_VALUE_KEY   ("entryId", toEntryId),
                                                   DATABASE_VALUE_UINT64("size",    size)
-                                                )
+                                                ),
+                                                DATABASE_COLUMNS_NONE,
+                                                DATABASE_FILTERS_NONE
                                                );
                         if (error != ERROR_NONE)
                         {
@@ -447,7 +461,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
 
                                                DIMPORT("import hardlink fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                                                error = Database_insert(newDatabaseHandle,
-                                                                       NULL,  // changedRowCount
+                                                                       NULL,  // insertRowId
                                                                        "entryFragments",
                                                                        DATABASE_FLAG_NONE,
                                                                        DATABASE_VALUES
@@ -456,7 +470,9 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                                                          DATABASE_VALUE_KEY   ("storageId",toStorageId),
                                                                          DATABASE_VALUE_UINT64("offset",   fragmentOffset),
                                                                          DATABASE_VALUE_UINT64("size",     fragmentSize)
-                                                                       )
+                                                                       ),
+                                                                       DATABASE_COLUMNS_NONE,
+                                                                       DATABASE_FILTERS_NONE
                                                                       );
                                                if (error != ERROR_NONE)
                                                {
@@ -483,7 +499,8 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                                              (
                                                DATABASE_FILTER_KEY (fromEntryId)
                                              ),
-                                             NULL, // orderGroup
+                                             NULL,  // groupBy
+                                             NULL,  // orderBy
                                              0LL,
                                              DATABASE_UNLIMITED
                                            );
@@ -510,7 +527,8 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                       (
                         DATABASE_FILTER_KEY (fromEntryId)
                       ),
-                      NULL,  // orderGroup
+                      NULL,  // groupBy
+                      NULL,  // orderBy
                       0LL,
                       DATABASE_UNLIMITED
                     );
@@ -620,7 +638,7 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
                             "fileEntries",
                             "COUNT(id)",
                             DATABASE_FILTERS_NONE,
-                            "GROUP BY entryId"
+                            "entryId"
                            );
   if (error == ERROR_NONE)
   {
@@ -635,7 +653,7 @@ LOCAL ulong getImportStepsVersion7(DatabaseHandle *oldDatabaseHandle,
                             "imageEntries",
                             "COUNT(id)",
                             DATABASE_FILTERS_NONE,
-                            "GROUP BY entryId"
+                            "entryId"
                            );
   if (error == ERROR_NONE)
   {
@@ -922,6 +940,8 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                }
                                Dictionary_doneIterator(&dictionaryIterator);
 
+// TODO: revert
+#if 1
                                // transfer entries of entity
                                DIMPORT("import entity %ld -> %ld: jobUUID=%s, storages=%s",fromEntityId,toEntityId,Database_getTableColumnCString(fromColumnInfo,"jobUUID",NULL),String_cString(storageIdsString));
                                t0 = Misc_getTimestamp();
@@ -1038,7 +1058,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1089,7 +1109,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1149,7 +1169,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1172,6 +1192,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                {
                                  return error;
                                }
+#endif
                                t1 = Misc_getTimestamp();
 
                                logImportProgress("(%llus)\n",
@@ -1191,6 +1212,8 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
     return error;
   }
 
+// TODO: revert
+#if 0
   // transfer storages and entries without entity
   DatabaseId toEntityId;
   error = Database_copyTable(oldDatabaseHandle,
@@ -1357,7 +1380,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1407,7 +1430,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1465,7 +1488,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                                                                                            CALLBACK_(NULL,NULL),  // post-copy
                                                                                            CALLBACK_(NULL,NULL),  // pause
                                                                                            CALLBACK_(NULL,NULL),  // progress
-                                                                                           "WHERE entryId=%lld LIMIT 0,1",
+                                                                                           "WHERE entryId=%lld LIMIT 1",
                                                                                            fromEntryId
                                                                                           );
                                                                 break;
@@ -1500,6 +1523,7 @@ LOCAL Errors importIndexVersion7XXX(DatabaseHandle *oldDatabaseHandle,
                              CALLBACK_(progressStep,NULL),
                              "WHERE entityId IS NULL"
                             );
+#endif
   String_delete(storageIdsString);
   Dictionary_done(&storageIdDictionary);
   if (error != ERROR_NONE)

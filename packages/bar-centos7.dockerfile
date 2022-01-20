@@ -44,6 +44,8 @@ RUN yum -y install \
   jre \
   cmake \
   make \
+  bison \
+  flex \
   rpm-build \
   valgrind \
   ;

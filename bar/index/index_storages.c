@@ -124,10 +124,9 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           (
                             DATABASE_VALUE_UINT("state", INDEX_STATE_NONE),
                           ),
-                          "deletedFlag=?",
+                          "deletedFlag=TRUE",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_BOOL(TRUE),
                           )
                          );
 
@@ -174,7 +173,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Requested update index #%lld: %s",
+                    "Requested update index #%"PRIi64": %s",
                     indexId,
                     String_cString(printableStorageName)
                    );
@@ -457,7 +456,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                         if (error == ERROR_NONE)
                         {
                           error = Database_insert(&indexHandle->databaseHandle,
-                                                  NULL,  // changedRowCount
+                                                  NULL,  // insertRowId
                                                   "entities",
                                                   DATABASE_FLAG_NONE,
                                                   DATABASE_VALUES
@@ -635,7 +634,7 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
                              "storages",
                              "id",
                              "    ((state<?) OR (state>?)) \
-                              AND deletedFlag!=1 \
+                              AND deletedFlag!=TRUE \
                              ",
                              DATABASE_FILTERS
                              (
@@ -795,7 +794,8 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                                (
                                                  DATABASE_FILTER_STRING(uuid)
                                                ),
-                                               NULL,  // orderGroup
+                                               NULL,  // groupBy
+                                               NULL,  // orderBy
                                                0LL,
                                                DATABASE_UNLIMITED
                                               );
@@ -803,7 +803,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                           if (error == ERROR_NONE)
                           {
                             error = Database_insert(&indexHandle->databaseHandle,
-                                                    NULL,  // changedRowCount
+                                                    &entityId,
                                                     "entities",
                                                     DATABASE_FLAG_NONE,
                                                     DATABASE_VALUES
@@ -811,16 +811,13 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                                       DATABASE_VALUE_STRING  ("jobUUID", uuid),
                                                       DATABASE_VALUE_DATETIME("created", createdDateTime),
                                                       DATABASE_VALUE_UINT    ("type",    ARCHIVE_TYPE_FULL),
-                                                    )
+                                                    ),
+                                                    DATABASE_COLUMNS_NONE,
+                                                    DATABASE_FILTERS_NONE
                                                    );
-                            if (error == ERROR_NONE)
-                            {
-                              // get entity id
-                              entityId = Database_getLastRowId(&indexHandle->databaseHandle);
-                            }
                           }
 
-                          return ERROR_NONE;
+                          return error;
                         },NULL),
                         NULL,  // changedRowCount
                         DATABASE_TABLES
@@ -838,6 +835,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                         DATABASE_FILTERS
                         (
                         ),
+                        NULL,  // groupBy
                         "ORDER BY name ASC",
                         0LL,
                         DATABASE_UNLIMITED
@@ -922,7 +920,8 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
                       (
                         DATABASE_FILTER_KEY (storageId)
                       ),
-                      NULL,  // orderGroup
+                      NULL,  // groupBy
+                      NULL,  // orderBy
                       0LL,
                       1LL
                      );
@@ -1002,7 +1001,7 @@ LOCAL Errors clearStorageFragments(IndexHandle  *indexHandle,
 //fprintf(stderr,"%s, %d: 1 fragments done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
 #endif
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged fragments: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1028,6 +1027,7 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
                                    )
 {
   String               entryIdsString;
+  String               filterString;
   bool                 transactionFlag;
   Errors               error;
   bool                 doneFlag;
@@ -1044,8 +1044,9 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-  entryIdsString  = String_new();
-  error           = ERROR_NONE;
+  entryIdsString = String_new();
+  filterString   = Database_newFilter();
+  error          = ERROR_NONE;
 
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
@@ -1062,9 +1063,13 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
         ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
+          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
         }
 
+        Database_filter(filterString,
+                        "entryId IN (%S)",
+                        entryIdsString
+                       );
         do
         {
           doneFlag = TRUE;
@@ -1076,10 +1081,9 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "FTS_entries",
-                                    "entryId IN (?)",
+                                    String_cString(filterString),
                                     DATABASE_FILTERS
                                     (
-                                      DATABASE_FILTER_STRING(entryIdsString)
                                     )
                                    );
           if (error == ERROR_NONE)
@@ -1094,13 +1098,14 @@ LOCAL Errors clearStorageFTSEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged FTS entries: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged FTS entries: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
   #endif
 
   // free resources
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
 
   return error;
@@ -1126,6 +1131,7 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                    )
 {
   String               entryIdsString;
+  String               filterString;
   bool                 transactionFlag;
   Errors               error;
   bool                 doneFlag;
@@ -1143,6 +1149,7 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
 
   // init variables
   entryIdsString  = String_new();
+  filterString    = Database_newFilter();
   error           = ERROR_NONE;
 
   #ifdef INDEX_DEBUG_PURGE
@@ -1161,9 +1168,15 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
         ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
+          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
         }
 
+        Database_filter(filterString,
+                        "    entryId IN (%S) \
+                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 1) \
+                        ",
+                        entryIdsString
+                       );
         do
         {
           doneFlag = TRUE;
@@ -1175,12 +1188,9 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "fileEntries",
-                                    "    entryId IN (?) \
-                                     AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId LIMIT 0,1) \
-                                    ",
+                                    String_cString(filterString),
                                     DATABASE_FILTERS
                                     (
-                                      DATABASE_FILTER_STRING(entryIdsString)
                                     )
                                    );
           if (error == ERROR_NONE)
@@ -1195,7 +1205,7 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged file entries without fragments: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged file entries without fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1216,9 +1226,15 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
         ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
+          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
         }
 
+        Database_filter(filterString,
+                        "    entryId IN (%S) \
+                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 1) \
+                        ",
+                        entryIdsString
+                       );
         do
         {
           doneFlag = TRUE;
@@ -1230,12 +1246,9 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "imageEntries",
-                                    "    entryId IN (?) \
-                                     AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId LIMIT 0,1) \
-                                    ",
+                                    String_cString(filterString),
                                     DATABASE_FILTERS
                                     (
-                                      DATABASE_FILTER_STRING(entryIdsString)
                                     )
                                    );
           if (error == ERROR_NONE)
@@ -1250,7 +1263,7 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged image entries without fragments: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged image entries without fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1294,7 +1307,7 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged directory entries: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged directory entries: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1338,7 +1351,7 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged link entries: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged link entries: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1359,9 +1372,15 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
         ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
+          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
         }
 
+        Database_filter(filterString,
+                        "    entryId IN (%S) \
+                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 1) \
+                        ",
+                        entryIdsString
+                       );
         do
         {
           doneFlag = TRUE;
@@ -1373,12 +1392,9 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "hardlinkEntries",
-                                    "    entryId IN (?) \
-                                     AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId LIMIT 0,1) \
-                                    ",
+                                    String_cString(filterString),
                                     DATABASE_FILTERS
                                     (
-                                      DATABASE_FILTER_STRING(entryIdsString)
                                     )
                                    );
           if (error == ERROR_NONE)
@@ -1393,7 +1409,7 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged hardlink entries without fragments: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged hardlink entries without fragments: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1437,13 +1453,14 @@ LOCAL Errors clearStorageSubEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged special entries: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged special entries: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
   #endif
 
   // free resources
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
 
   return error;
@@ -1466,6 +1483,7 @@ LOCAL Errors clearStorageEntries(IndexHandle  *indexHandle,
                                 )
 {
   String               entryIdsString;
+  String               filterString;
   bool                 transactionFlag;
   Errors               error;
   bool                 doneFlag;
@@ -1482,8 +1500,9 @@ LOCAL Errors clearStorageEntries(IndexHandle  *indexHandle,
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
-  entryIdsString  = String_new();
-  error           = ERROR_NONE;
+  entryIdsString = String_new();
+  filterString   = Database_newFilter();
+  error          = ERROR_NONE;
 
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
@@ -1500,9 +1519,14 @@ LOCAL Errors clearStorageEntries(IndexHandle  *indexHandle,
         ARRAY_SEGMENT_ITERATE(entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
+          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
         }
 
+        Database_filter(filterString,
+                        "id IN (%S) \
+                        ",
+                        entryIdsString
+                       );
         do
         {
           doneFlag = TRUE;
@@ -1514,10 +1538,9 @@ LOCAL Errors clearStorageEntries(IndexHandle  *indexHandle,
                                       NULL,  // deletedCounter
                                     #endif
                                     "entries",
-                                    "id IN (?)",
+                                    String_cString(filterString),
                                     DATABASE_FILTERS
                                     (
-                                      DATABASE_FILTER_STRING(entryIdsString)
                                     )
                                    );
           if (error == ERROR_NONE)
@@ -1532,13 +1555,14 @@ LOCAL Errors clearStorageEntries(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged entries: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged entries: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
   #endif
 
   // free resources
+  Database_deleteFilter(filterString);
   String_delete(entryIdsString);
 
   return error;
@@ -1638,7 +1662,7 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
     }
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, updated aggregates: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, updated aggregates: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1859,7 +1883,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
     dt[5] = Misc_getTimestamp()-t0;
   #endif
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, %lu entries without associated entry to purge: file %llums, image %llums, directory %llums, link %llums, hardlink %llums, special %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, %lu entries without associated entry to purge: file %"PRIu64"ms, image %"PRIu64"ms, directory %"PRIu64"ms, link %"PRIu64"ms, hardlink %"PRIu64"ms, special %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             Array_length(&entryIds),
             dt[0]/US_PER_MS,
@@ -1888,7 +1912,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
         ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
+          String_formatAppend(entryIdsString,"%"PRIi64,entryId);
         }
 
         do
@@ -1917,7 +1941,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
     });
   }
   #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: error: %s, purged orphaned entries: %llums\n",__FILE__,__LINE__,
+    fprintf(stderr,"%s, %d: error: %s, purged orphaned entries: %"PRIu64"ms\n",__FILE__,__LINE__,
             Error_getText(error),
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
@@ -1958,6 +1982,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
       break;
     case DATABASE_TYPE_MARIADB:
       break;
+    case DATABASE_TYPE_POSTGRESQL:
+      break;
   }
 
   // purge file/image/directory/link/hardlink/special entries
@@ -1993,7 +2019,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                            );
     }
     #ifdef INDEX_DEBUG_PURGE
-      fprintf(stderr,"%s, %d: error: %s, removed from newest entries: %llums\n",__FILE__,__LINE__,
+      fprintf(stderr,"%s, %d: error: %s, removed from newest entries: %"PRIu64"ms\n",__FILE__,__LINE__,
               Error_getText(error),
               (Misc_getTimestamp()-t0)/US_PER_MS
              );
@@ -2312,7 +2338,8 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId)
                        ),
-                       NULL, // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -2328,40 +2355,49 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
     error = clearStorage(indexHandle,storageId,progressInfo);
   }
 
-  // purge FTS storages
-  if (error == ERROR_NONE)
+  switch (Database_getType(&indexHandle->databaseHandle))
   {
-    INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                      indexHandle,
-                                      transactionFlag,
-    {
-      do
+    case DATABASE_TYPE_SQLITE3:
+      // purge FTS storages
+      if (error == ERROR_NONE)
       {
-        doneFlag = TRUE;
-// TODO:
-        error = IndexCommon_purge(indexHandle,
-                                  &doneFlag,
-                                  #ifndef NDEBUG
-                                    &deletedCounter,
-                                  #else
-                                    NULL,  // deletedCounter
-                                  #endif
-                                  "FTS_storages",
-                                  "storageId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(storageId)
-                                  )
-                                 );
-        if (error == ERROR_NONE)
+        INDEX_INTERRUPTABLE_OPERATION_DOX(error,
+                                          indexHandle,
+                                          transactionFlag,
         {
-          error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
-        }
-      }
-      while ((error == ERROR_NONE) && !doneFlag);
+          do
+          {
+            doneFlag = TRUE;
+    // TODO:
+            error = IndexCommon_purge(indexHandle,
+                                      &doneFlag,
+                                      #ifndef NDEBUG
+                                        &deletedCounter,
+                                      #else
+                                        NULL,  // deletedCounter
+                                      #endif
+                                      "FTS_storages",
+                                      "storageId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(storageId)
+                                      )
+                                     );
+            if (error == ERROR_NONE)
+            {
+              error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
+            }
+          }
+          while ((error == ERROR_NONE) && !doneFlag);
 
-      return error;
-    });
+          return error;
+        });
+      }
+      break;
+    case DATABASE_TYPE_MARIADB:
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      break;
   }
 
   // delete storage
@@ -2390,7 +2426,7 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Removed deleted storage #%llu from index: %s, created at %s",
+              "Removed deleted storage #%"PRIu64" from index: %s, created at %s",
               storageId,
               String_cString(name),
               (createdDateTime != 0LL) ? String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL)) : "unknown"
@@ -2506,20 +2542,20 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                           NULL,  // changedRowCount
                           DATABASE_TABLES
                           (
-                            "storages \
-                              LEFT JOIN entryFragments ON entryFragments.storageId=storages.id \
+                            "entryFragments \
+                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
                               LEFT JOIN entries ON entries.id=entryFragments.entryId \
                             ",
-                            "storages \
-                              LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
+                            "directoryEntries \
+                              LEFT JOIN storages ON storages.id=directoryEntries.storageId \
                               LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                             ",
-                            "storages \
-                              LEFT JOIN linkEntries ON linkEntries.storageId=storages.id \
+                            "linkEntries \
+                              LEFT JOIN storages ON storages.id=linkEntries.storageId \
                               LEFT JOIN entries ON entries.id=linkEntries.entryId \
                             ",
-                            "storages \
-                              LEFT JOIN specialEntries ON specialEntries.storageId=storages.id \
+                            "specialEntries \
+                              LEFT JOIN storages ON storages.id=specialEntries.storageId \
                               LEFT JOIN entries ON entries.id=specialEntries.entryId \
                             "
                           ),
@@ -2538,14 +2574,14 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                             DATABASE_COLUMN_UINT64  ("entries.size")
                           ),
                           "    storages.id=? \
-                           AND entries.deletedFlag=? \
+                           AND entries.deletedFlag!=TRUE \
                           ",
                           DATABASE_FILTERS
                           (
-                            DATABASE_FILTER_KEY   (storageId),
-                            DATABASE_FILTER_BOOL  (FALSE)
+                            DATABASE_FILTER_KEY   (storageId)
                           ),
-                          "GROUP BY entries.id ORDER BY timeLastChanged DESC",
+                          "entries.id",
+                          "timeLastChanged DESC",
                           0LL,
                           DATABASE_UNLIMITED
                          );
@@ -2576,20 +2612,39 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                           NULL,  // changedRowCount
                           DATABASE_TABLES
                           (
-                            "entriesNewest",
+                            "entryFragments \
+                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
+                            ",
+                            "directoryEntries \
+                              LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
+                            ",
+                            "linkEntries \
+                              LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
+                            ",
+                            "specialEntries \
+                              LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
+                            "
                           ),
                           DATABASE_FLAG_NONE,
                           DATABASE_COLUMNS
                           (
-                            DATABASE_COLUMN_KEY     ("id"),
-                            DATABASE_COLUMN_DATETIME("timeLastChanged")
+                            DATABASE_COLUMN_KEY     ("entriesNewest.id"),
+                            DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged","timeLastChanged")
                           ),
-                          "entriesNewest.name=?",
+                          "    storages.deletedFlag!=TRUE \
+                           AND entriesNewest.name=? \
+                           AND entriesNewest.id NOTNULL \
+                          ",
                           DATABASE_FILTERS
                           (
                             DATABASE_FILTER_STRING(entryNode->name)
                           ),
-                          NULL,  // orderGroup
+                          NULL,  // groupBy
+                          NULL,  // orderBy
                           0LL,
                           1LL
                          );
@@ -2636,7 +2691,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
           else
           {
             return Database_insert(&indexHandle->databaseHandle,
-                                   NULL,  // changedRowCount
+                                   NULL,  // insertRowId
                                    "entriesNewest",
                                    DATABASE_FLAG_REPLACE,
                                    DATABASE_VALUES
@@ -2651,12 +2706,20 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                                      DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
                                      DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
                                      DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                   ),
+                                   DATABASE_COLUMNS
+                                   (
+                                     DATABASE_COLUMN_STRING("name")
+                                   ),
+                                   "EXCLUDED.name=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_STRING(entryNode->name)
                                    )
                                   );
           }
         });
       }
-
 #if 1
       if (error == ERROR_NONE)
       {
@@ -2787,7 +2850,8 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -2835,7 +2899,8 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -2883,7 +2948,8 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -2931,7 +2997,8 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                              (
                                DATABASE_FILTER_KEY(storageId)
                              ),
-                             NULL, // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -3006,12 +3073,13 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                               DATABASE_COLUMN_UINT    ("entries.permission"),
                               DATABASE_COLUMN_UINT64  ("entries.size")
                             ),
-                            "    storages.deletedFlag!=1 \
+                            "    storages.deletedFlag!=TRUE \
                              AND entries.name=?",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_STRING(entryNode->name)
                             ),
+                            NULL,  // groupBy
                             "ORDER BY entries.timeLastChanged DESC",
                             0LL,
                             1LL
@@ -3049,7 +3117,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
         if (entryNode->newest.entryId != DATABASE_ID_NONE)
         {
           error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // changedRowCount
+                                  NULL,  // insertRowId
                                   "entriesNewest",
                                   DATABASE_FLAG_REPLACE,
                                   DATABASE_VALUES
@@ -3064,6 +3132,15 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                     DATABASE_VALUE_UINT  ("groupId",        entryNode->newest.groupId),
                                     DATABASE_VALUE_UINT  ("permission",     entryNode->newest.permission),
                                     DATABASE_VALUE_UINT64("size",           entryNode->newest.size)
+                                  ),
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_STRING("name")
+                                  ),
+                                  "EXCLUDED.name=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(entryNode->name)
                                   )
                                  );
           if (error != ERROR_NONE)
@@ -3098,6 +3175,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                                     )
 {
   Errors     error;
+
   ulong      totalFileCount;
   uint64     totalFileSize;
   ulong      totalImageCount;
@@ -3107,6 +3185,17 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
   ulong      totalHardlinkCount;
   uint64     totalHardlinkSize;
   ulong      totalSpecialCount;
+
+  ulong      totalFileCountNewest;
+  uint64     totalFileSizeNewest;
+  ulong      totalImageCountNewest;
+  uint64     totalImageSizeNewest;
+  ulong      totalDirectoryCountNewest;
+  ulong      totalLinkCountNewest;
+  ulong      totalHardlinkCountNewest;
+  uint64     totalHardlinkSizeNewest;
+  ulong      totalSpecialCountNewest;
+
   DatabaseId entityId;
 
   assert(indexHandle != NULL);
@@ -3148,7 +3237,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
                        ),
-                       NULL, // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -3193,7 +3283,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
                        ),
-                       NULL, // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -3233,7 +3324,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId),
                        ),
-                       NULL, // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -3273,7 +3365,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId),
                        ),
-                       NULL, // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -3318,7 +3411,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
                        ),
-                       NULL, // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -3358,7 +3452,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId),
                        ),
-                       NULL, // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -3409,8 +3504,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         totalFileCount = values[0].u;
-                         totalFileSize  = values[1].u64;
+                         totalFileCountNewest = values[0].u;
+                         totalFileSizeNewest  = values[1].u64;
 
                          return ERROR_NONE;
                        },NULL),
@@ -3435,14 +3530,15 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
   if (error != ERROR_NONE)
   {
-    totalFileCount = 0L;
-    totalFileSize  = 0LL;
+    totalFileCountNewest = 0L;
+    totalFileSizeNewest  = 0LL;
   }
 
   // get newest image aggregate data
@@ -3455,8 +3551,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         totalImageCount = values[0].u;
-                         totalImageSize  = values[1].u64;
+                         totalImageCountNewest = values[0].u;
+                         totalImageSizeNewest  = values[1].u64;
 
                          return ERROR_NONE;
                        },NULL),
@@ -3481,14 +3577,15 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
   if (error != ERROR_NONE)
   {
-    totalImageCount = 0L;
-    totalImageSize  = 0LL;
+    totalImageCountNewest = 0L;
+    totalImageSizeNewest  = 0LL;
   }
 
   // get newest directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
@@ -3501,7 +3598,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         totalDirectoryCount = values[0].u;
+                         totalDirectoryCountNewest = values[0].u;
 
                          return ERROR_NONE;
                        },NULL),
@@ -3522,13 +3619,14 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
   if (error != ERROR_NONE)
   {
-    totalDirectoryCount = 0L;
+    totalDirectoryCountNewest = 0L;
   }
 
   // get newest link aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
@@ -3541,7 +3639,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         totalLinkCount = values[0].u;
+                         totalLinkCountNewest = values[0].u;
 
                          return ERROR_NONE;
                        },NULL),
@@ -3562,13 +3660,14 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
   if (error != ERROR_NONE)
   {
-    totalLinkCount = 0L;
+    totalLinkCountNewest = 0L;
   }
 
   // get newest hardlink aggregate data
@@ -3581,8 +3680,8 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         totalHardlinkCount = values[0].u;
-                         totalHardlinkSize  = values[0].u64;
+                         totalHardlinkCountNewest = values[0].u;
+                         totalHardlinkSizeNewest  = values[1].u64;
 
                          return ERROR_NONE;
                        },NULL),
@@ -3607,14 +3706,15 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_KEY (storageId),
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
   if (error != ERROR_NONE)
   {
-    totalHardlinkCount = 0L;
-    totalHardlinkSize  = 0LL;
+    totalHardlinkCountNewest = 0L;
+    totalHardlinkSizeNewest  = 0LL;
   }
 
   // get newest special aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
@@ -3627,7 +3727,7 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         totalSpecialCount = values[0].u;
+                         totalSpecialCountNewest = values[0].u;
 
                          return ERROR_NONE;
                        },NULL),
@@ -3648,43 +3748,43 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        (
                          DATABASE_FILTER_KEY (storageId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
   if (error != ERROR_NONE)
   {
-    totalSpecialCount = 0L;
+    totalSpecialCountNewest = 0L;
   }
 
   // update newest aggregate data
-// TODO:
   error = Database_update(&indexHandle->databaseHandle,
                           NULL,  // changedRowCount
                           "storages",
                           DATABASE_FLAG_NONE,
                           DATABASE_VALUES
                           (
-                            DATABASE_VALUE_UINT64("totalEntryCountNewest",      totalFileCount
-                                                                               +totalImageCount
-                                                                               +totalDirectoryCount
-                                                                               +totalLinkCount
-                                                                               +totalHardlinkCount
-                                                                               +totalSpecialCount
+                            DATABASE_VALUE_UINT64("totalEntryCountNewest",      totalFileCountNewest
+                                                                               +totalImageCountNewest
+                                                                               +totalDirectoryCountNewest
+                                                                               +totalLinkCountNewest
+                                                                               +totalHardlinkCountNewest
+                                                                               +totalSpecialCountNewest
                                                  ),
-                            DATABASE_VALUE_UINT64("totalEntrySizeNewest",       totalFileSize
-                                                                               +totalImageSize
-                                                                               +totalHardlinkSize
+                            DATABASE_VALUE_UINT64("totalEntrySizeNewest",       totalFileSizeNewest
+                                                                               +totalImageSizeNewest
+                                                                               +totalHardlinkSizeNewest
                                                  ),
-                            DATABASE_VALUE_UINT64("totalFileCountNewest",      totalFileCount),
-                            DATABASE_VALUE_UINT64("totalFileSizeNewest",       totalFileSize),
-                            DATABASE_VALUE_UINT64("totalImageCountNewest",     totalImageCount),
-                            DATABASE_VALUE_UINT64("totalImageSizeNewest",      totalImageSize),
-                            DATABASE_VALUE_UINT64("totalDirectoryCountNewest", totalDirectoryCount),
-                            DATABASE_VALUE_UINT64("totalLinkCountNewest",      totalLinkCount),
-                            DATABASE_VALUE_UINT64("totalHardlinkCountNewest",  totalHardlinkCount),
-                            DATABASE_VALUE_UINT64("totalHardlinkSizeNewest",   totalHardlinkSize),
-                            DATABASE_VALUE_UINT64("totalSpecialCountNewest",   totalSpecialCount)
+                            DATABASE_VALUE_UINT64("totalFileCountNewest",      totalFileCountNewest),
+                            DATABASE_VALUE_UINT64("totalFileSizeNewest",       totalFileSizeNewest),
+                            DATABASE_VALUE_UINT64("totalImageCountNewest",     totalImageCountNewest),
+                            DATABASE_VALUE_UINT64("totalImageSizeNewest",      totalImageSizeNewest),
+                            DATABASE_VALUE_UINT64("totalDirectoryCountNewest", totalDirectoryCountNewest),
+                            DATABASE_VALUE_UINT64("totalLinkCountNewest",      totalLinkCountNewest),
+                            DATABASE_VALUE_UINT64("totalHardlinkCountNewest",  totalHardlinkCountNewest),
+                            DATABASE_VALUE_UINT64("totalHardlinkSizeNewest",   totalHardlinkSizeNewest),
+                            DATABASE_VALUE_UINT64("totalSpecialCountNewest",   totalSpecialCountNewest)
                           ),
                           "id=?",
                           DATABASE_FILTERS
@@ -3846,8 +3946,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                         (
                           DATABASE_COLUMN_STRING  ("entities.jobUUID"),
                           DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
-                          DATABASE_COLUMN_UINT    ("IFNULL(uuids.id,0)"),
-                          DATABASE_COLUMN_UINT    ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_UINT    ("COALESCE(uuids.id,0)"),
+                          DATABASE_COLUMN_UINT    ("COALESCE(entities.id,0)"),
                           DATABASE_COLUMN_STRING  ("storages.name"),
                           DATABASE_COLUMN_DATETIME("storages.created"),
                           DATABASE_COLUMN_UINT64  ("storages.size"),
@@ -3858,14 +3958,15 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                           DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
                           DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
-                        "    storages.deletedFlag!=1 \
+                        "    storages.deletedFlag!=TRUE \
                          AND storages.id=? \
                         ",
                         DATABASE_FILTERS
                         (
-                          DATABASE_FILTER_KEY(Index_getDatabaseId(findStorageId))
+                          DATABASE_FILTER_KEY (Index_getDatabaseId(findStorageId))
                         ),
-                        NULL,  // orderGroup
+                        NULL,  // groupBy
+                        NULL,  // orderBy
                         0LL,
                         1LL
                        );
@@ -3966,8 +4067,8 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_UINT    ("IFNULL(uuids.id,0)"),
-                          DATABASE_COLUMN_UINT    ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_UINT    ("COALESCE(uuids.id,0)"),
+                          DATABASE_COLUMN_UINT    ("COALESCE(entities.id,0)"),
                           DATABASE_COLUMN_STRING  ("entities.jobUUID"),
                           DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
                           DATABASE_COLUMN_UINT    ("storages.id"),
@@ -3981,12 +4082,12 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                           DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
                           DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
-                        "storages.deletedFlag=?",
+                        "storages.deletedFlag!=TRUE",
                         DATABASE_FILTERS
                         (
-                          DATABASE_FILTER_BOOL(FALSE)
                         ),
-                        "GROUP BY storages.id",  // orderGroup
+                        NULL,  // groupBy
+                        NULL,  // orderBy
                         0LL,
                         DATABASE_UNLIMITED
                        );
@@ -4040,9 +4141,12 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
 
   foundFlag = FALSE;
 
+  IndexCommon_getIndexStateSetString(indexStateSetString,findIndexStateSet);
   INDEX_DOX(error,
             indexHandle,
   {
+    char   sqlString[MAX_SQL_COMMAND_LENGTH];
+
     return Database_get(&indexHandle->databaseHandle,
                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                         {
@@ -4082,9 +4186,9 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_UINT    ("IFNULL(uuids.id,0)"),
+                          DATABASE_COLUMN_UINT    ("COALESCE(uuids.id,0)"),
                           DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                          DATABASE_COLUMN_UINT    ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_UINT    ("COALESCE(entities.id,0)"),
                           DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
                           DATABASE_COLUMN_UINT    ("storages.id"),
                           DATABASE_COLUMN_STRING  ("storages.name"),
@@ -4096,14 +4200,17 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                           DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
                           DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
-                        "    storages.deletedFlag!=1 \
-                         AND (storages.state IN (?)) \
-                        ",
+                        stringFormat(sqlString,sizeof(sqlString),
+                                     "    storages.deletedFlag!=TRUE \
+                                      AND (storages.state IN (%s)) \
+                                     ",
+                                     String_cString(indexStateSetString)
+                                    ),
                         DATABASE_FILTERS
                         (
-                          DATABASE_FILTER_STRING(IndexCommon_getIndexStateSetString(indexStateSetString,findIndexStateSet))
                         ),
-                        NULL,  // orderGroup
+                        NULL,  // groupBy
+                        NULL,  // orderBy
                         0LL,
                         1LL
                        );
@@ -4289,7 +4396,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_SET_STATE indexId=%lld indexState=%'s lastCheckedDateTime=%llu errorMessage=%'S",
+                                    "INDEX_SET_STATE indexId=%"PRIi64" indexState=%'s lastCheckedDateTime=%"PRIu64" errorMessage=%'S",
                                     indexId,
                                     Index_stateToString(indexState,NULL),
                                     lastCheckedDateTime,
@@ -4403,10 +4510,10 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_newCString("1");
+  filterString   = Database_newFilter();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -4436,17 +4543,17 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
 
   filterIdsString = String_new();
   string          = String_new();
-  IndexCommon_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_UUID) && !String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  IndexCommon_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) && !String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) && !String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(entityId),"AND","storages.entityId=%lld",Index_getDatabaseId(entityId));
-  IndexCommon_filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
-  IndexCommon_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
-  IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
+  Database_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_UUID) && !String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  Database_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) && !String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) && !String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","entity.uuidId=%"PRIi64,Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(entityId),"AND","storages.entityId=%"PRIi64,Index_getDatabaseId(entityId));
+  Database_filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
+  Database_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
+  Database_filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
+  Database_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
   String_delete(filterIdsString);
 
@@ -4504,7 +4611,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                            DATABASE_COLUMN_UINT64("SUM(storages.totalEntrySize)")
                          ),
                          stringFormat(sqlCommand,sizeof(sqlCommand),
-                                      "    storages.deletedFlag!=1 \
+                                      "    storages.deletedFlag!=TRUE \
                                        AND %s \
                                       ",
                                       String_cString(filterString)
@@ -4512,7 +4619,8 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                          DATABASE_FILTERS
                          (
                          ),
-                         NULL, // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          1LL
                         );
@@ -4599,7 +4707,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
     String_delete(storageIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(ftsMatchString);
     return error;
   }
@@ -4614,7 +4722,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   String_delete(storageIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(ftsMatchString);
 
   return ERROR_NONE;
@@ -4643,7 +4751,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_STORAGE_UPDATE_INFOS storageId=%lld",
+                                    "INDEX_STORAGE_UPDATE_INFOS storageId=%"PRIi64,
                                     storageId
                                    );
   }
@@ -4699,11 +4807,11 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_newCString("1");
+  filterString   = Database_newFilter();
   orderString    = String_new();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get id sets
   uuidIdsString    = String_new();
@@ -4715,15 +4823,15 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     {
       case INDEX_TYPE_UUID:
         if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-        String_appendFormat(uuidIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(uuidIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_ENTITY:
         if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-        String_appendFormat(entityIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(entityIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       case INDEX_TYPE_STORAGE:
         if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
-        String_appendFormat(storageIdsString,"%lld",Index_getDatabaseId(indexIds[i]));
+        String_appendFormat(storageIdsString,"%"PRIi64,Index_getDatabaseId(indexIds[i]));
         break;
       default:
         // ignore other types
@@ -4734,19 +4842,19 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   // get filters
   filterIdsString = String_new();
   string          = String_new();
-  IndexCommon_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_UUID) && !String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  IndexCommon_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) && !String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-  IndexCommon_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) && !String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(entityId),"AND","storages.entityId=%lld",Index_getDatabaseId(entityId));
-  IndexCommon_filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%s'",jobUUID);
-  IndexCommon_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%s'",scheduleUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(hostName),"AND","entities.hostName LIKE %S",hostName);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(userName),"AND","storages.userName LIKE %S",userName);
-// TODO:  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
-  IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
+  Database_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_UUID) && !String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  Database_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) && !String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  Database_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) && !String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
+  Database_filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64,Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(entityId),"AND","storages.entityId=%"PRIi64,Index_getDatabaseId(entityId));
+  Database_filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%s'",jobUUID);
+  Database_filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%s'",scheduleUUID);
+  Database_filterAppend(filterString,!String_isEmpty(hostName),"AND","entities.hostName LIKE %S",hostName);
+  Database_filterAppend(filterString,!String_isEmpty(userName),"AND","storages.userName LIKE %S",userName);
+// TODO:  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
+  Database_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
   String_delete(filterIdsString);
 
@@ -4786,9 +4894,9 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY     ("IFNULL(uuids.id,0)"),
+                             DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
                              DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                             DATABASE_COLUMN_KEY     ("IFNULL(entities.id,0)"),
+                             DATABASE_COLUMN_KEY     ("COALESCE(entities.id,0)"),
                              DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
                              DATABASE_COLUMN_STRING  ("storages.hostName"),
                              DATABASE_COLUMN_STRING  ("storages.userName"),
@@ -4807,27 +4915,25 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                              DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    storages.deletedFlag!=1 \
+                                        "    storages.deletedFlag!=TRUE \
                                          AND %s \
-                                         GROUP BY storages.id \
-                                         %s \
-                                         LIMIT ?,? \
                                         ",
-                                        String_cString(filterString),
-                                        String_cString(orderString)
+                                        String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT64(offset),
-                             DATABASE_FILTER_UINT64(limit)
-                           )
+                           ),
+                           "uuids.id,entities.id,storages.id",
+                           String_cString(orderString),
+                           offset,
+                           limit
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
     String_delete(orderString);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(storageIdsString);
     String_delete(entityIdsString);
     String_delete(uuidIdsString);
@@ -4841,7 +4947,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // free resources
   String_delete(orderString);
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(storageIdsString);
   String_delete(entityIdsString);
   String_delete(uuidIdsString);
@@ -4953,12 +5059,12 @@ Errors Index_newStorage(IndexHandle *indexHandle,
     {
       StaticString (s,MISC_UUID_STRING_LENGTH);
 
-//TODO: remove with index version 8 without storage constraint
+//TODO: remove with index version 8 without storage constraint name not NULL
       Misc_getUUID(s);
 
       // insert storage
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              &databaseId,
                               "storages",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4973,13 +5079,14 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                 DATABASE_VALUE_UINT    ("state",       indexState),
                                 DATABASE_VALUE_UINT    ("mode",        indexMode),
                                 DATABASE_VALUE_DATETIME("lastChecked", "NOW()")
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
         return error;
       }
-      databaseId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // insert FTS storage
 // TODO: do this again with a trigger?
@@ -4987,14 +5094,16 @@ Errors Index_newStorage(IndexHandle *indexHandle,
       {
         case DATABASE_TYPE_SQLITE3:
           error = Database_insert(&indexHandle->databaseHandle,
-                                   NULL,  // changedRowCount
+                                   NULL,  // insertRowId
                                    "FTS_storages",
                                    DATABASE_FLAG_NONE,
                                    DATABASE_VALUES
                                    (
                                      DATABASE_VALUE_KEY   ("storageId", databaseId),
                                      DATABASE_VALUE_STRING("name",      storageName)
-                                   )
+                                   ),
+                                   DATABASE_COLUMNS_NONE,
+                                   DATABASE_FILTERS_NONE
                                   );
           if (error != ERROR_NONE)
           {
@@ -5013,6 +5122,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
           }
           break;
         case DATABASE_TYPE_MARIADB:
+          break;
+        case DATABASE_TYPE_POSTGRESQL:
           break;
       }
 
@@ -5041,7 +5152,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
-                                    "INDEX_NEW_STORAGE uuidId=%lld entityId=%lld hostName=%'S userName=%'S storageName=%'S dateTime=%llu size=%llu indexState=%s indexMode=%s",
+                                    "INDEX_NEW_STORAGE uuidId=%"PRIi64" entityId=%"PRIi64" hostName=%'S userName=%'S storageName=%'S dateTime=%"PRIu64" size=%"PRIu64" indexState=%s indexMode=%s",
                                     uuidId,
                                     entityId,
                                     hostName,
@@ -5192,6 +5303,8 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
             break;
           case DATABASE_TYPE_MARIADB:
             break;
+          case DATABASE_TYPE_POSTGRESQL:
+            break;
         }
       }
 
@@ -5279,7 +5392,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_STORAGE_UPDATE storageId=%lld hostName=%'S userName=%'S storageName=%'S dateTime=%llu storageSize=%llu comment=%'S updateNewest=%y",
+                                    "INDEX_STORAGE_UPDATE storageId=%"PRIi64" hostName=%'S userName=%'S storageName=%'S dateTime=%"PRIu64" storageSize=%"PRIu64" comment=%'S updateNewest=%y",
                                     storageId,
                                     hostName,
                                     userName,
@@ -5386,14 +5499,15 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              DATABASE_COLUMN_UINT64("totalHardlinkSize"),
                              DATABASE_COLUMN_UINT  ("totalSpecialCount")
                            ),
-                           "    deletedFlag!=1 \
+                           "    deletedFlag!=TRUE \
                             AND id=? \
                            ",
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_KEY (Index_getDatabaseId(storageId))
                            ),
-                           NULL,  // orderGroup
+                           NULL,  // groupBy
+                           NULL,  // orderBy
                            0LL,
                            1LL
                           );
@@ -5415,6 +5529,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
       DATABASE_TRANSACTION_DO(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         // set deleted flag in entries
+// TODO:
 #if 1
         error = Database_get(&indexHandle->databaseHandle,
                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -5485,7 +5600,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              (
                                DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
                              ),
-"GROUP BY entries.id",//                             NULL,  // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -5547,7 +5663,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
                                DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
                              ),
-                             NULL,  // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -5609,7 +5726,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
                                DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
                              ),
-                             NULL,  // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -5671,7 +5789,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
                                DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
                              ),
-                             NULL,  // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -5763,7 +5882,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                              (
                                DATABASE_FILTER_KEY   (Index_getDatabaseId(storageId))
                              ),
-                             NULL,  // orderGroup
+                             NULL,  // groupBy
+                             NULL,  // orderBy
                              0LL,
                              DATABASE_UNLIMITED
                             );
@@ -5773,6 +5893,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
           return error;
         }
 #endif
+
         // set deleted flag in storages
         error = Database_update(&indexHandle->databaseHandle,
                                 NULL,  // changedRowCount
@@ -5796,7 +5917,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
 //fprintf(stderr,"%s, %d: deleted storageId=%lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
 #if 0
 fprintf(stderr,"%s, %d: deleted storage %lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
-fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu %llu  totalDirectory=%lu  totalLink=%lu  totalHardlink=%lu %llu totalSpecial=%lu\n",__FILE__,__LINE__,
+fprintf(stderr,"%s, %d: totalEntry=%lu %"PRIu64"  totalFile=%lu %"PRIu64"  totalImage=%lu %"PRIu64"  totalDirectory=%lu  totalLink=%lu  totalHardlink=%lu %"PRIu64" totalSpecial=%lu\n",__FILE__,__LINE__,
                                totalEntryCount,
                                totalEntrySize,
                                totalFileCount,
@@ -5871,7 +5992,7 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_STORAGE_DELETE storageId=%lld",
+                                    "INDEX_STORAGE_DELETE storageId=%"PRIi64,
                                     storageId
                                    );
   }
@@ -5897,7 +6018,7 @@ bool Index_hasDeletedStorages(IndexHandle *indexHandle,
                                &n,
                                "storages",
                                "COUNT(id)",
-                               "deletedFlag=1",
+                               "deletedFlag=TRUE",
                                DATABASE_FILTERS
                                (
                                ),
@@ -5936,10 +6057,10 @@ bool Index_isDeletedStorage(IndexHandle *indexHandle,
       return !Database_existsValue(&indexHandle->databaseHandle,
                                    "storages",
                                    "id",
-                                   "id=? AND deletedFlag!=1",
+                                   "id=? AND deletedFlag!=TRUE",
                                    DATABASE_FILTERS
                                    (
-                                     DATABASE_FILTER_KEY(Index_getDatabaseId(storageId))
+                                     DATABASE_FILTER_KEY (Index_getDatabaseId(storageId))
                                    )
                                   );
     });
@@ -6070,7 +6191,8 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                          (
                            DATABASE_FILTER_KEY (Index_getDatabaseId(storageId))
                          ),
-                         NULL,  // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          1LL
                         );

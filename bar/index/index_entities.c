@@ -189,7 +189,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                           if (error -= ERROR_NONE)
                           {
                             error = Database_insert(&indexHandle->databaseHandle,
-                                                    NULL,  // changedRowCount
+                                                    NULL,  // insertRowId
                                                     "entities",
                                                     DATABASE_FLAG_NONE,
                                                     DATABASE_VALUES
@@ -651,7 +651,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
           {
             // insert
             error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // changedRowCount
+                                    NULL,  // insertRowId
                                     "entriesNewest",
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
@@ -956,7 +956,8 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                          (
                            DATABASE_FILTER_KEY (storageId)
                          ),
-                         NULL,  // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderby
                          0LL,
                          1LL
                         );
@@ -1400,7 +1401,8 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                            (
                              DATABASE_FILTER_KEY (entityId)
                            ),
-                           NULL,  // orderGroup
+                           NULL,  // groupBy
+                           NULL,  // orderby
                            0LL,
                            1LL
                           );
@@ -1450,7 +1452,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Purged entity #%llu, job %s, type '%s' created at %s: no archives",
+                  "Purged entity #%"PRIu64", job %s, type '%s' created at %s: no archives",
                   entityId,
                   String_cString(jobUUID),
                   Archive_archiveTypeToString(archiveType),
@@ -1593,7 +1595,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1638,7 +1641,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1676,10 +1680,11 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                        ",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_UINT(totalLinkCount),
+                         DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1720,7 +1725,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1765,7 +1771,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1806,7 +1813,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1892,7 +1900,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_FILE),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1938,7 +1947,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -1980,7 +1990,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_DIRECTORY),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -2023,7 +2034,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_LINK),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -2068,7 +2080,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -2112,7 +2125,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                          DATABASE_FILTER_UINT(INDEX_TYPE_SPECIAL),
                          DATABASE_FILTER_KEY (entityId)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderby
                        0LL,
                        1LL
                       );
@@ -2196,13 +2210,13 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   }
 
   // get filters
-  filterString = String_newCString("1");
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%lld",Index_getDatabaseId(findEntityId));
-  IndexCommon_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
-  IndexCommon_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",findArchiveType);
-  IndexCommon_filterAppend(filterString,findCreatedDateTime != 0LL,"AND","entities.created=%llu",findCreatedDateTime);
+  filterString = Database_newFilter();
+  Database_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%lld",Index_getDatabaseId(findEntityId));
+  Database_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
+  Database_filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
+  Database_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
+  Database_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",findArchiveType);
+  Database_filterAppend(filterString,findCreatedDateTime != 0LL,"AND","entities.created=%"PRIu64,findCreatedDateTime);
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(filterString));
 
   result = FALSE;
@@ -2245,38 +2259,38 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                         DATABASE_FLAG_NONE,
                         DATABASE_COLUMNS
                         (
-                          DATABASE_COLUMN_KEY     ("IFNULL(uuids.id,0)"),
+                          DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
                           DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                          DATABASE_COLUMN_KEY     ("IFNULL(entities.id,0)"),
+                          DATABASE_COLUMN_KEY     ("COALESCE(entities.id,0)"),
                           DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
                           DATABASE_COLUMN_DATETIME("entities.created"),
                           DATABASE_COLUMN_UINT    ("entities.type"),
-                          DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1)"),
+                          DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 1)"),
                           DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)"),
                           DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize)  FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)")
                         ),
                         stringFormat(sqlCommand,sizeof(sqlCommand),
-                                     "    entities.deletedFlag=? \
+                                     "    entities.deletedFlag!=TRUE \
                                       AND %s",
                                       String_cString(filterString)
                                     ),
                         DATABASE_FILTERS
                         (
-                          DATABASE_FILTER_BOOL(FALSE)
                         ),
-                        NULL,  // orderGroup
+                        NULL,  // groupBy
+                        NULL,  // orderby
                         0LL,
                         1LL
                        );
   });
   if (error != ERROR_NONE)
   {
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     return FALSE;
   }
 
   // free resources
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
 
   return result;
 }
@@ -2378,21 +2392,22 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
 
   // init variables
   ftsMatchString = String_new();
-  filterString   = String_format(String_new(),"entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  filterString   = Database_newFilter();
   orderString    = String_new();
 
-  // get FTS
-  IndexCommon_getFTSString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
+  // get FTS match string
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages.name",name);
 
   // get filters
-  string = String_newCString("1");
-  IndexCommon_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
-  IndexCommon_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
-  IndexCommon_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
-  IndexCommon_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
-  IndexCommon_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
-  IndexCommon_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
+  string = String_new();
+  Database_filterAppend(filterString,TRUE,"AND","entities.id!=%lld",INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
+  Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
+  Database_filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
+  Database_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
+  Database_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
   String_delete(string);
 
   // get sort mode, ordering
@@ -2417,46 +2432,43 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
                            &indexHandle->databaseHandle,
                            "entities \
                               LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                              LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
+                              LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE \
                            ",
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY     ("IFNULL(uuids.id,0)"),
+                             DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
                              DATABASE_COLUMN_STRING  ("entities.jobUUID"),
                              DATABASE_COLUMN_KEY     ("entities.id"),
                              DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
                              DATABASE_COLUMN_DATETIME("entities.created"),
                              DATABASE_COLUMN_UINT    ("entities.type"),
-                             DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 0,1)"),
+                             DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
                              DATABASE_COLUMN_UINT64  ("SUM(storages.size)"),
                              DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
                              DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)"),
                              DATABASE_COLUMN_UINT    ("entities.lockedCount")
                            ),
                            stringFormat(sqlCommand,sizeof(sqlCommand),
-                                        "    entities.deletedFlag=? \
+                                        "    entities.deletedFlag!=TRUE \
                                          AND %s \
-                                         GROUP BY entities.id \
-                                         %s \
-                                         LIMIT ?,? \
                                         ",
-                                        String_cString(filterString),
-                                        String_cString(orderString)
+                                        String_cString(filterString)
                                        ),
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_BOOL  (FALSE),
-                             DATABASE_FILTER_UINT64(offset),
-                             DATABASE_FILTER_UINT64(limit)
-                           )
+                           ),
+                           "uuids.id,entities.id",
+                           String_cString(orderString),
+                           offset,
+                           limit
                           );
   });
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
     String_delete(orderString);
-    String_delete(filterString);
+    Database_deleteFilter(filterString);
     String_delete(ftsMatchString);
     return error;
   }
@@ -2467,7 +2479,7 @@ Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
 
   // free resources
   String_delete(orderString);
-  String_delete(filterString);
+  Database_deleteFilter(filterString);
   String_delete(ftsMatchString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
@@ -2552,15 +2564,19 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
+      DatabaseId databaseId;
+
       // create UUID (if it does not exists)
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "uuids",
                               DATABASE_FLAG_IGNORE,
                               DATABASE_VALUES
                               (
                                 DATABASE_VALUE_CSTRING("jobUUID", jobUUID)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
@@ -2586,7 +2602,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       // create entity
       if (createdDateTime == 0LL) createdDateTime = Misc_getCurrentDateTime();
       error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
+                              &databaseId,
                               "entities",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -2599,14 +2615,16 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                 DATABASE_VALUE_DATETIME("created",      createdDateTime),
                                 DATABASE_VALUE_UINT    ("type",         archiveType),
                                 DATABASE_VALUE_UINT    ("lockedCount",  locked ? 1 : 0)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
       if (error != ERROR_NONE)
       {
         return error;
       }
 
-      (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
+      (*entityId) = INDEX_ID_ENTITY(databaseId);
 
       return ERROR_NONE;
     });
@@ -2631,7 +2649,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
-                                    "INDEX_NEW_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%llu locked=%y",
+                                    "INDEX_NEW_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64" locked=%y",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? scheduleUUID : "",
                                     hostName,
@@ -2708,7 +2726,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),
-                                    "INDEX_UPDATE_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%llu",
+                                    "INDEX_UPDATE_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64,
                                     jobUUID,
                                     (scheduleUUID != NULL) ? scheduleUUID : "",
                                     hostName,

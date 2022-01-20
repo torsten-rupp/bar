@@ -336,11 +336,11 @@ LOCAL void printNotifies(void)
 
   // create tables
   error = Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
-                           CONTINUOUS_TABLE_DEFINITION
+DATABASE_COLUMN_TYPES(),
+                           CONTINUOUS_TABLE_DEFINITION,
+                           DATABASE_PARAMETERS_NONE
                           );
   if (error != ERROR_NONE)
   {
@@ -1185,11 +1185,12 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
                           NULL,  // changedRowCount
                           "names",
                           DATABASE_FLAG_NONE,
-                          "    storedFlag=1 \
+                          "    storedFlag=? \
                            AND DATETIME('now','-? seconds')>=dateTime \
                           ",
                           DATABASE_FILTERS
                           (
+                            DATABASE_FILTER_BOOL  (TRUE),
                             DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta)
                           ),
                           DATABASE_UNLIMITED
@@ -1199,31 +1200,20 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  // add entry (if not already exists or
-  error = Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
-                           "INSERT INTO names \
-                              (\
-                               jobUUID,\
-                               scheduleUUID,\
-                               name\
-                              ) \
-                            VALUES \
-                              (\
-                               %'s,\
-                               %'s,\
-                               %'S\
-                              ) \
-                            ON CONFLICT(jobUUID,name) DO UPDATE SET \
-                              storedFlag=0 \
-                           ",
-                           jobUUID,
-                           scheduleUUID,
-                           name
-                          );
+  // add entry (if not already exists)
+  error = Database_insert(databaseHandle,
+                          NULL,  // insertRowId
+                          "names",
+                          DATABASE_FLAG_IGNORE,
+                          DATABASE_VALUES
+                          (
+                            DATABASE_VALUE_STRING  ("jobUUID",      jobUUID),
+                            DATABASE_VALUE_STRING  ("scheduleUUID", scheduleUUID),
+                            DATABASE_VALUE_STRING  ("name",         name)
+                          ),
+                          DATABASE_COLUMNS_NONE,
+                          DATABASE_FILTERS_NONE
+                         );
   if (error != ERROR_NONE)
   {
     return error;
@@ -1249,14 +1239,17 @@ LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
 {
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
-  return Database_execute(databaseHandle,
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          DATABASE_FLAG_NONE,
-                          DATABASE_COLUMN_TYPES(),
-                          "DELETE FROM names WHERE id=%lld;",
-                          databaseId
-                         );
+  return Database_delete(databaseHandle,
+                         NULL,  // changedRowCount
+                         "names",
+                         DATABASE_FLAG_NONE,
+                         "id=?",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_KEY(databaseId)
+                         ),
+                         DATABASE_UNLIMITED
+                        );
 }
 
 /***********************************************************************\
@@ -1275,14 +1268,21 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
 {
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
-  return Database_execute(databaseHandle,
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          DATABASE_FLAG_NONE,
-                          DATABASE_COLUMN_TYPES(),
-                          "UPDATE names SET dateTime=DATETIME('now'),storedFlag=1 WHERE id=%lld;",
-                          databaseId
-                         );
+  return Database_update(databaseHandle,
+                         NULL,  // changedRowCount
+                         "names",
+                         DATABASE_FLAG_NONE,
+                         DATABASE_VALUES
+                         (
+                           DATABASE_VALUE_DATETIME("dateTime", "NOW()"),
+                           DATABASE_VALUE_BOOL    ("storedFag",TRUE)
+                         ),
+                         "id=?",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_KEY(databaseId)
+                         )
+                        );
 }
 
 /***********************************************************************\
@@ -1930,7 +1930,8 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                        DATABASE_FILTER_CSTRING(jobUUID),
                        DATABASE_FILTER_CSTRING(scheduleUUID)
                      ),
-                     NULL,  // orderGroup
+                     NULL,  // groupBy
+                     NULL,  // orderBy
                      0LL,
                      1LL
                     ) != ERROR_NONE
@@ -1970,13 +1971,14 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                               "    DATETIME('now','-? seconds')>=dateTime \
                                AND jobUUID=? \
                                AND scheduleUUID=? \
-                               AND storedFlag=0 \
+                               AND storedFlag=? \
                               ",
                               DATABASE_FILTERS
                               (
                                 DATABASE_FILTER_UINT  (globalOptions.continuousMinTimeDelta),
                                 DATABASE_FILTER_STRING(jobUUID),
-                                DATABASE_FILTER_STRING(scheduleUUID)
+                                DATABASE_FILTER_STRING(scheduleUUID),
+                                DATABASE_FILTER_BOOL  (FALSE)
                               )
                              );
 }
@@ -2005,7 +2007,7 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                             DATABASE_COLUMN_KEY   ("id"),
                             DATABASE_COLUMN_STRING("name")
                           ),
-                          "    storedFlag=0 \
+                          "    storedFlag=FALSE \
                            AND DATETIME('now','-? seconds')>=dateTime \
                            AND jobUUID=? \
                            AND scheduleUUID=? \
@@ -2015,7 +2017,11 @@ Errors Continuous_initList(DatabaseStatementHandle *databaseStatementHandle,
                             DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
                             DATABASE_FILTER_CSTRING(jobUUID),
                             DATABASE_FILTER_CSTRING(scheduleUUID)
-                          )
+                          ),
+                          NULL,  // groupBy
+                          NULL,  // orderBy
+                          0LL,
+                          DATABASE_UNLIMITED
                         );
   if (error != ERROR_NONE)
   {
@@ -2099,7 +2105,8 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                  DATABASE_FILTER_CSTRING(jobUUID),
                  DATABASE_FILTER_CSTRING(scheduleUUID)
                ),
-               NULL,  // orderGroup
+               NULL,  // groupBy
+               NULL,  // orderBy
                0LL,
                DATABASE_UNLIMITED
               );

@@ -63,28 +63,6 @@ const char *ARCHIVE_TYPES[] =
 #define INDEX_CONST_TYPE_ANY 0
 
 /***************************** Datatypes *******************************/
-#if 0
-// index types
-typedef enum
-{
-  INDEX_TYPE_NONE      = 0,
-
-  INDEX_TYPE_UUID      = INDEX_CONST_TYPE_UUID,
-  INDEX_TYPE_ENTITY    = INDEX_CONST_TYPE_ENTITY,
-  INDEX_TYPE_STORAGE   = INDEX_CONST_TYPE_STORAGE,
-  INDEX_TYPE_ENTRY     = INDEX_CONST_TYPE_ENTRY,
-  INDEX_TYPE_FILE      = INDEX_CONST_TYPE_FILE,
-  INDEX_TYPE_IMAGE     = INDEX_CONST_TYPE_IMAGE,
-  INDEX_TYPE_DIRECTORY = INDEX_CONST_TYPE_DIRECTORY,
-  INDEX_TYPE_LINK      = INDEX_CONST_TYPE_LINK,
-  INDEX_TYPE_HARDLINK  = INDEX_CONST_TYPE_HARDLINK,
-  INDEX_TYPE_SPECIAL   = INDEX_CONST_TYPE_SPECIAL,
-  INDEX_TYPE_HISTORY   = INDEX_CONST_TYPE_HISTORY,
-
-  INDEX_TYPE_ANY       = 0xF
-} IndexTypes;
-#endif
-
 typedef struct
 {
   bool   showHeaderFlag;
@@ -96,12 +74,12 @@ typedef struct
 // TODO: still not used
 LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 (
-  CMD_OPTION_BOOLEAN      ("table-names",                       0  , 1, 0, showTableNames,   "output version"                  ),
-  CMD_OPTION_BOOLEAN      ("index-names",                       0  , 1, 0, showIndexNames,   "output version"                  ),
-  CMD_OPTION_BOOLEAN      ("trigger-names",                     0  , 1, 0, showTriggerNames, "output version"                  ),
-  CMD_OPTION_BOOLEAN      ("drop-tables",                       0  , 1, 0, dropTriggersFlag, "output version"                  ),
-  CMD_OPTION_BOOLEAN      ("drop-triggers",                     0  , 1, 0, dropTriggersFlag, "output version"                  ),
-  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0  , 1, 0, dropIndizesFlag,  "output version"                  ),
+  CMD_OPTION_BOOLEAN      ("table-names",                       0  , 1, 0, showTableNames,   "xxx"                  ),
+  CMD_OPTION_BOOLEAN      ("index-names",                       0  , 1, 0, showIndexNames,   ""                  ),
+  CMD_OPTION_BOOLEAN      ("trigger-names",                     0  , 1, 0, showTriggerNames, ""                  ),
+  CMD_OPTION_BOOLEAN      ("drop-tables",                       0  , 1, 0, dropTablesFlag,   ""                  ),
+  CMD_OPTION_BOOLEAN      ("drop-triggers",                     0  , 1, 0, dropTriggersFlag, ""                  ),
+  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0  , 1, 0, dropIndizesFlag,  ""                  ),
   CMD_OPTION_BOOLEAN      ("help",                              'h', 0, 0, helpFlag,         "output this help"                ),
   CMD_OPTION_BOOLEAN      ("xhelp",                             0,   0, 0, xhelpFlag,        "output help to extended options" ),
 );
@@ -156,6 +134,7 @@ LOCAL bool       timeFlag                             = FALSE;
 LOCAL bool       explainQueryPlanFlag                 = FALSE;
 LOCAL const char *jobUUID                             = NULL;
 LOCAL const char *toFileName                          = NULL;
+// TODO:
 //LOCAL bool       helpFlag                             = FALSE;
 //LOCAL bool       xhelpFlag                            = FALSE;
 
@@ -215,6 +194,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("\n");
   printf("URI: [sqlite:]<file name>\n");
   printf("     mariadb:<server>:<user>:<password>\n");
+  printf("     postgresql:<server>:<user>:<password>\n");
   printf("\n");
   printf("Options:  -C|--directory=<name>                   - change to directory\n");
   printf("          --info                                  - output index database infos\n");
@@ -234,7 +214,7 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --create                                - create new index database\n");
   printf("          --create-triggers                       - re-create triggers\n");
   printf("          --create-indizes                        - re-create indizes\n");
-  printf("          --create-fts-indizes                  - re-create FTS indizes (full text search)\n");
+  printf("          --create-fts-indizes                    - re-create FTS indizes (full text search)\n");
   printf("          --create-newest[=id,...]                - re-create newest data\n");
   printf("          --create-aggregates                     - re-create aggregated data\n");
   printf("          --create-aggregates-directory-content   - re-create aggregated data directory content\n");
@@ -556,6 +536,15 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+        if (String_isEmpty(databaseSpecifier.postgresql.databaseName))
+        {
+          String_setCString(databaseSpecifier.postgresql.databaseName,DEFAULT_DATABASE_NAME);
+        }
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
+      break;
   }
   printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
 
@@ -682,21 +671,29 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
     if (error == ERROR_NONE)
     {
       error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
-                               "DROP TABLE IF EXISTS FTS_storages"
+                               DATABASE_COLUMN_TYPES
+                               (
+                               ),
+                               "DROP TABLE IF EXISTS FTS_storages",
+                               DATABASE_PARAMETERS
+                               (
+                               )
                               );
     }
     if (error == ERROR_NONE)
     {
       error = Database_execute(databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
-                               "DROP TABLE IF EXISTS FTS_entries"
+                               DATABASE_COLUMN_TYPES
+                               (
+                               ),
+                               "DROP TABLE IF EXISTS FTS_entries",
+                               DATABASE_PARAMETERS
+                               (
+                               )
                               );
     }
 
@@ -775,11 +772,15 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
                             )
   {
     error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(),
-                             indexDefinition
+                             DATABASE_COLUMN_TYPES
+                             (
+                             ),
+                             indexDefinition,
+                             DATABASE_PARAMETERS
+                             (
+                             )
                             );
   }
   if (error != ERROR_NONE)
@@ -944,13 +945,15 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
   {
     Misc_getUUID(jobUUID);
     error = Database_insert(newDatabaseHandle,
-                            NULL,  // changedRowCount
+                            NULL,  // insertRowId
                             "uuids",
                             DATABASE_FLAG_IGNORE,
                             DATABASE_VALUES
                             (
                               DATABASE_VALUE_STRING("jobUUID", jobUUID)
-                            )
+                            ),
+                            DATABASE_COLUMNS_NONE,
+                            DATABASE_FILTERS_NONE
                            );
 
     // get uuid id
@@ -972,7 +975,7 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
     if (error == ERROR_NONE)
     {
       error = Database_insert(newDatabaseHandle,
-                              NULL,  // changedRowCount
+                              entityId,
                               "entities",
                               DATABASE_FLAG_IGNORE,
                               DATABASE_VALUES
@@ -981,13 +984,10 @@ LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
                                 DATABASE_VALUE_STRING("jobUUID",     jobUUID),
                                 DATABASE_VALUE_UINT  ("type",        ARCHIVE_TYPE_FULL),
                                 DATABASE_VALUE_UINT  ("lockedCount", 1)
-                              )
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
                              );
-    }
-
-    if (error == ERROR_NONE)
-    {
-      (*entityId) = Database_getLastRowId(newDatabaseHandle);
     }
   }
   else
@@ -1048,9 +1048,17 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
+// TODO:
       #else /* HAVE_MARIADB */
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+// TODO:
+      #else /* HAVE_POSTGRESQL */
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_POSTGRESQL */
       break;
   }
   printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier);
@@ -1165,7 +1173,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1186,7 +1194,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1207,7 +1215,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1233,7 +1241,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1257,7 +1265,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1281,7 +1289,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1305,7 +1313,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1329,7 +1337,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1353,7 +1361,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1376,7 +1384,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1402,7 +1410,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                );
       if (error == ERROR_NONE)
       {
-        printInfo("%lld\n",n);
+        printInfo("%"PRIi64"\n",n);
       }
       else
       {
@@ -1425,7 +1433,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                );
       if (error == ERROR_NONE)
       {
-        printInfo("%lld\n",n);
+        printInfo("%"PRIi64"\n",n);
       }
       else
       {
@@ -1448,7 +1456,7 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                );
       if (error == ERROR_NONE)
       {
-        printInfo("%lld\n",n);
+        printInfo("%"PRIi64"\n",n);
       }
       else
       {
@@ -1458,7 +1466,10 @@ LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
       totalCount += (ulong)n;
       break;
     case DATABASE_TYPE_MARIADB:
-      // nothing to do
+// TODO:
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+// TODO:
       break;
   }
 
@@ -1521,18 +1532,18 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
                        (
                          DATABASE_COLUMN_STRING("name")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       "ORDER BY name",
+                       NULL,  // groupBy
+                       "name",
                        0LL,
                        DATABASE_UNLIMITED
                       );
   if (error == ERROR_NONE)
   {
-    printInfo("%lld\n",n);
+    printInfo("%"PRIi64"\n",n);
   }
   else
   {
@@ -1588,15 +1599,22 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     {
       case DATABASE_TYPE_SQLITE3:
         error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
-                                 "ANALYZE %s",
-                                 String_cString(name)
+                                 DATABASE_COLUMN_TYPES
+                                 (
+                                 ),
+                                 "ANALYZE ?",
+                                 DATABASE_PARAMETERS
+                                 (
+                                   DATABASE_PARAMETER_STRING(name)
+                                 )
                                 );
         break;
       case DATABASE_TYPE_MARIADB:
+        // nothing to do
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
         // nothing to do
         break;
     }
@@ -1635,15 +1653,22 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
     {
       case DATABASE_TYPE_SQLITE3:
         error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
-                                 "ANALYZE %s",
-                                 String_cString(name)
+                                 DATABASE_COLUMN_TYPES
+                                 (
+                                 ),
+                                 "ANALYZE ?",
+                                 DATABASE_PARAMETERS
+                                 (
+                                   DATABASE_PARAMETER_STRING(name)
+                                 )
                                 );
         break;
       case DATABASE_TYPE_MARIADB:
+        // nothing to do
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
         // nothing to do
         break;
     }
@@ -1758,12 +1783,16 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TRIGGER_NAMES[Database_getType(databaseHandle)], triggerName)
   {
     error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(),
-                             "DROP TRIGGER %s",
-                             triggerName
+                             DATABASE_COLUMN_TYPES
+                             (
+                             ),
+                             "DROP TRIGGER ?",
+                             DATABASE_PARAMETERS
+                             (
+                               DATABASE_PARAMETER_STRING(triggerName)
+                             )
                             );
   }
   if (error != ERROR_NONE)
@@ -1777,11 +1806,15 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_TRIGGERS[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(),
-                             indexDefinition
+                             DATABASE_COLUMN_TYPES
+                             (
+                             ),
+                             indexDefinition,
+                             DATABASE_PARAMETERS
+                             (
+                             )
                             );
   }
   if (error != ERROR_NONE)
@@ -1924,12 +1957,16 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
           STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
-                                     "DROP INDEX IF EXISTS %s",
-                                     String_cString(indexName)
+                                     DATABASE_COLUMN_TYPES
+                                     (
+                                     ),
+                                     "DROP INDEX IF EXISTS ?",
+                                     DATABASE_PARAMETERS
+                                     (
+                                       DATABASE_PARAMETER_STRING(indexName)
+                                     )
                                     );
           }
           StringList_done(&indexNameList);
@@ -1937,6 +1974,9 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
         break;
       case DATABASE_TYPE_MARIADB:
         // nothing to do
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+// TODO:
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -1957,21 +1997,31 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
-                                     indexDefinition
+                                     DATABASE_COLUMN_TYPES
+                                     (
+                                     ),
+                                     indexDefinition,
+                                     DATABASE_PARAMETERS
+                                     (
+                                     )
                                     );
           }
         }
         break;
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
+// TODO:
         #else /* HAVE_MARIADB */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        #if defined(HAVE_POSTGRESQL)
 // TODO:
+        #else /* HAVE_POSTGRESQL */
+        #endif /* HAVE_POSTGRESQL */
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -2019,22 +2069,25 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLE_NAMES[Database_getType(databaseHandle)], name, error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
-                                     "DROP TABLE IF EXISTS %s",
-                                     name
+                                     DATABASE_COLUMN_TYPES
+                                     (
+                                     ),
+                                     "DROP TABLE IF EXISTS ?",
+                                     DATABASE_PARAMETERS
+                                     (
+                                       DATABASE_PARAMETER_STRING(name)
+                                     )
                                     );
           }
         }
         break;
       case DATABASE_TYPE_MARIADB:
-        #if defined(HAVE_MARIADB)
-        #else /* HAVE_MARIADB */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MARIADB */
-// TODO:
+        // nothing to do
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        // nothing to do
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -2055,11 +2108,15 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_MARIADB, indexDefinition, error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
-                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
-                                     indexDefinition
+                                     DATABASE_COLUMN_TYPES
+                                     (
+                                     ),
+                                     indexDefinition,
+                                     DATABASE_PARAMETERS
+                                     (
+                                     )
                                     );
           }
           if (error == ERROR_NONE)
@@ -2083,7 +2140,8 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                             DATABASE_COLUMN_STRING("name")
                                           ),
                                           DATABASE_FILTERS_NONE,
-                                          NULL,  // orderGroup
+                                          NULL,  // groupBy
+                                          NULL,  // orderBy
                                           0LL,
                                           DATABASE_UNLIMITED
                                          );
@@ -2109,7 +2167,8 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
                                             DATABASE_COLUMN_STRING("name")
                                           ),
                                           DATABASE_FILTERS_NONE,
-                                          NULL,  // orderGroup
+                                          NULL,  // groupBy
+                                          NULL,  // orderBy
                                           0LL,
                                           DATABASE_UNLIMITED
                                          );
@@ -2117,11 +2176,10 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
         }
         break;
       case DATABASE_TYPE_MARIADB:
-        #if defined(HAVE_MARIADB)
-        #else /* HAVE_MARIADB */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_MARIADB */
-        // nothing to do (use views)
+        // nothing to do
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        // nothing to do
         break;
     }
     printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
@@ -2331,7 +2389,8 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                          (
                            DATABASE_FILTER_KEY(storageId)
                          ),
-                         "ORDER BY timeLastChanged DESC",
+                         NULL,  // groupBy
+                         "timeLastChanged DESC",
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -2359,19 +2418,19 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                          (
                            "entryFragments \
                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.id=entryFragments.entryId \
+                             LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
                            ",
                            "directoryEntries \
                              LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.id=directoryEntries.entryId \
+                             LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
                            ",
                            "linkEntries \
                              LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.id=linkEntries.entryId \
+                             LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
                            ",
                            "specialEntries \
                              LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                             LEFT JOIN entriesNewest ON entriesNewest.id=specialEntries.entryId \
+                             LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
                            "
                          ),
                          DATABASE_FLAG_NONE,
@@ -2380,14 +2439,16 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                            DATABASE_COLUMN_KEY     ("entriesNewest.id"),
                            DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged","timeLastChanged")
                          ),
-                         "    storages.deletedFlag!=1 \
+                         "    storages.deletedFlag!=TRUE \
                           AND entriesNewest.name=? \
+                          AND entriesNewest.id NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
                            DATABASE_FILTER_STRING(entryNode->name)
                          ),
-                         "ORDER BY timeLastChanged DESC",
+                         NULL,  // groupBy
+                         "timeLastChanged DESC",
                          0LL,
                          1LL
                         );
@@ -2427,7 +2488,7 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
       else
       {
         error = Database_insert(databaseHandle,
-                                NULL,  // changedRowCount
+                                NULL,  // insertRowId
                                 "entriesNewest",
                                 DATABASE_FLAG_REPLACE,
                                 DATABASE_VALUES
@@ -2442,6 +2503,15 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                                   DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
                                   DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
                                   DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                ),
+                                DATABASE_COLUMNS
+                                (
+                                  DATABASE_COLUMN_STRING("name")
+                                ),
+                                "entriesNewest.name=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_STRING(entryNode->name)
                                 )
                                );
       }
@@ -2569,7 +2639,8 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                          (
                            DATABASE_FILTER_KEY(storageId)
                          ),
-                         NULL, // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -2617,7 +2688,8 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                          (
                            DATABASE_FILTER_KEY(storageId)
                          ),
-                         NULL, // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -2665,7 +2737,8 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                          (
                            DATABASE_FILTER_KEY(storageId)
                          ),
-                         NULL, // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -2713,7 +2786,8 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                          (
                            DATABASE_FILTER_KEY(storageId)
                          ),
-                         NULL, // orderGroup
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -2777,13 +2851,14 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                              DATABASE_COLUMN_UINT    ("entries.permission"),
                              DATABASE_COLUMN_UINT64  ("entries.size")
                            ),
-                           "    storages.deletedFlag!=1 \
+                           "    storages.deletedFlag!=TRUE \
                             AND entries.name=?",
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_STRING(entryNode->name)
                            ),
-                           "ORDER BY entries.timeLastChanged DESC",
+                           NULL,  // groupBy
+                           "entries.timeLastChanged DESC",
                            0LL,
                            1LL
                           );
@@ -2813,7 +2888,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
     if (entryNode->newest.entryId != DATABASE_ID_NONE)
     {
       error = Database_insert(databaseHandle,
-                              NULL,  // changedRowCount
+                              NULL,  // insertRowId
                               "entriesNewest",
                               DATABASE_FLAG_REPLACE,
                               DATABASE_VALUES
@@ -2828,6 +2903,15 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                                 DATABASE_VALUE_UINT  ("groupId",        entryNode->newest.groupId),
                                 DATABASE_VALUE_UINT  ("permission",     entryNode->newest.permission),
                                 DATABASE_VALUE_UINT64("size",           entryNode->newest.size)
+                              ),
+                              DATABASE_COLUMNS
+                              (
+                                DATABASE_COLUMN_STRING("name")
+                              ),
+                              "name=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_STRING(entryNode->name)
                               )
                              );
       if (error != ERROR_NONE)
@@ -2874,7 +2958,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
                             &storageIds,
                             "storages",
                             "id",
-                            "deletedFlag!=1",
+                            "deletedFlag!=TRUE",
                             DATABASE_FILTERS
                             (
                             )
@@ -2962,7 +3046,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     printInfo("Create newest entries:\n");
     ARRAY_ITERATE(&storageIds,arrayIterator,storageId)
     {
-      printInfo("  %lld...",storageId);
+      printInfo("  %"PRIi64"...",storageId);
       if (error == ERROR_NONE)
       {
         error = removeFromNewest(databaseHandle,storageId);
@@ -3024,7 +3108,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=fileEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOT NULL",
+                             "entries.id IS NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3039,7 +3123,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOT NULL",
+                             "entries.id IS NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3054,7 +3138,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOT NULL",
+                             "entries.id IS NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3069,7 +3153,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOT NULL",
+                             "entries.id IS NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3084,7 +3168,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOT NULL",
+                             "entries.id IS NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3097,7 +3181,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              &entityCount,
                              "entities",
                              "COUNT(id)",
-                             "id IS NOT NULL",
+                             "id IS NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3161,15 +3245,10 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
                            totalSize = values[2].u64;
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
-//if (String_equalsCString(name,"/home/torsten/tmp/blender/yofrankie/trunk/textures/level_nut/X.png"))
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
-
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
                            {
-//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                              error = Database_update(databaseHandle,
                                                      NULL,  // changedRowCount
                                                      "directoryEntries",
@@ -3216,15 +3295,16 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
                            DATABASE_COLUMN_STRING("entries.name"),
-                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)"),
+                           DATABASE_COLUMN_UINT64("entryFragments.size"),
                          ),
-                         "    entries.id IS NOT NULL \
-                          AND entryFragments.storageId IS NOT NULL \
+                         "    entries.id IS NOTNULL \
+                          AND entryFragments.storageId IS NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entries.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3246,12 +3326,10 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
                            totalSize = values[2].u64;
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                            // update directory content count/size aggregates in all newest directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
                            {
-//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                              error = Database_update(databaseHandle,
                                                      NULL,  // changedRowCount
                                                      "directoryEntries",
@@ -3298,15 +3376,16 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name"),
-                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                           DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entriesNewest.id IS NOT NULL \
-                          AND entryFragments.storageId IS NOT NULL \
+                         "    entriesNewest.id IS NOTNULL \
+                          AND entryFragments.storageId IS NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entriesNewest.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3338,7 +3417,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3388,11 +3466,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id IS NOT NULL",
+                         "entries.id IS NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entries.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3412,7 +3491,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3462,11 +3540,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id IS NOT NULL",
+                         "entriesNewest.id IS NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entriesNewest.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3498,7 +3577,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3549,11 +3627,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id IS NOT NULL",
+                         "entries.id IS NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entries.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3573,12 +3652,10 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
                            {
-//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                              error = Database_update(databaseHandle,
                                                      NULL,  // changedRowCount
                                                      "directoryEntries",
@@ -3624,11 +3701,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id IS NOT NULL",
+                         "entriesNewest.id IS NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entriesNewest.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3662,12 +3740,10 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
                            totalSize = values[2].u64;
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
                            {
-//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                              error = Database_update(databaseHandle,
                                                      NULL,  // changedRowCount
                                                      "directoryEntries",
@@ -3714,15 +3790,16 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
                            DATABASE_COLUMN_STRING("entries.name"),
-                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                           DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entries.id IS NOT NULL \
-                          AND entryFragments.storageId IS NOT NULL \
+                         "    entries.id IS NOTNULL \
+                          AND entryFragments.storageId IS NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entries.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3744,12 +3821,10 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
                            totalSize = values[2].u64;
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
                            {
-//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                              error = Database_update(databaseHandle,
                                                      NULL,  // changedRowCount
                                                      "directoryEntries",
@@ -3796,15 +3871,16 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                          (
                            DATABASE_COLUMN_KEY   ("entryFragments.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name"),
-                           DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                           DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entriesNewest.id IS NOT NULL \
-                          AND entryFragments.storageId IS NOT NULL \
+                         "    entriesNewest.id IS NOTNULL \
+                          AND entryFragments.storageId IS NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entriesNewest.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3836,7 +3912,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3886,11 +3961,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id IS NOT NULL",
+                         "entries.id IS NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entries.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3910,7 +3986,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                            storageId = values[0].id;
                            name      = String_newCString(values[1].text.data);
-//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3960,11 +4035,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id IS NOT NULL",
+                         "entriesNewest.id IS NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
-                         "GROUP BY entriesNewest.name",
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -3999,7 +4075,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   DatabaseId entityId;
   Errors     error;
   uint       totalCount;
-  char       filterString[256];
+  char       filterString[1024];
   ulong      n;
 
   // init variables
@@ -4007,7 +4083,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_formatAppend(entityIdsString,"%lld",entityId);
+    String_formatAppend(entityIdsString,"%"PRIi64,entityId);
   }
 
   printInfo("Create aggregates for entities...");
@@ -4019,15 +4095,14 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                            "entities",
                            "COUNT(id)",
                            stringFormat(filterString,sizeof(filterString),
-                                        "    (%d OR id IN (%s)) \
-                                         AND deletedFlag=? \
+                                        "    (? OR id IN (%s)) \
+                                         AND deletedFlag!=TRUE \
                                         ",
-                                        String_isEmpty(entityIdsString) ? 1 : 0,
                                         !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
                                        ),
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_BOOL(FALSE)
+                             DATABASE_FILTER_BOOL(String_isEmpty(entityIdsString))
                            ),
                            NULL  // group
                           );
@@ -4469,15 +4544,18 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                          (
                            DATABASE_COLUMN_KEY("id")
                          ),
-                         "     (? OR id IN (?)) \
-                          AND deletedFlag!=1 \
-                         ",
+                         stringFormat(filterString,sizeof(filterString),
+                                      "     (? OR id IN (%s)) \
+                                       AND deletedFlag!=TRUE \
+                                      ",
+                                      !Array_isEmpty(&entityIds) ? String_cString(entityIdsString) : "0"
+                                     ),
                          DATABASE_FILTERS
                          (
-                           DATABASE_FILTER_BOOL   (String_isEmpty(entityIdsString)),
-                           DATABASE_FILTER_CSTRING(!String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0")
+                           DATABASE_FILTER_BOOL   (Array_isEmpty(&entityIds))
                          ),
-                         NULL,  // order
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -4516,14 +4594,14 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   DatabaseId storageId;
   Errors     error;
   uint       totalCount;
-  char       filterString[256];
+  char       filterString[1024];
   ulong      n;
 
   storageIdsString = String_new();
   ARRAY_ITERATE(&storageIds,i,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
-    String_formatAppend(storageIdsString,"%lld",storageId);
+    String_formatAppend(storageIdsString,"%"PRIi64,storageId);
   }
 
   printInfo("Create aggregates for storages...");
@@ -4535,15 +4613,14 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                            "storages",
                            "COUNT(id)",
                            stringFormat(filterString,sizeof(filterString),
-                                        "    (%d OR id IN (%s)) \
-                                         AND deletedFlag=? \
+                                        "    (? OR id IN (%s)) \
+                                         AND deletedFlag!=TRUE \
                                         ",
-                                        String_isEmpty(storageIdsString) ? 1 : 0,
                                         !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
                                        ),
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_BOOL(FALSE)
+                             DATABASE_FILTER_BOOL(String_isEmpty(storageIdsString))
                            ),
                            NULL  // group
                           );
@@ -4591,336 +4668,531 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
                            storageId = values[0].id;
 
-                           // get count/sizes
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalFileCount,
-                                                    "entries \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entries.id)",
-                                                    "entries.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalImageCount,
-                                                    "entries \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entries.id)",
-                                                    "entries.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalDirectoryCount,
-                                                    "entries \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entries.id)",
-                                                    "entries.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalLinkCount,
-                                                    "entries \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entries.id)",
-                                                    "entries.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalHardlinkCount,
-                                                    "entries \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entries.id)",
-                                                    "entries.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalSpecialCount,
-                                                    "entries \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entries.id)",
-                                                    "entries.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
+                           // get file aggregate data
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 2);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalFileCount = values[0].u;
+                                                  totalFileSize  = values[1].u64;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "entryFragments \
+                                                     LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                                                  DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                                                ),
+                                                "    entryFragments.storageId=? \
+                                                 AND entries.type=? \
+                                                ",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
                            if (error != ERROR_NONE)
                            {
                              return error;
                            }
 
-                           error = Database_getUInt64(databaseHandle,
-                                                      &totalFileSize,
-                                                      "entries \
-                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                      ",
-                                                      "SUM(entryFragments.size)",
-                                                      "entries.type=? AND entryFragments.storageId=?",
-                                                      DATABASE_FILTERS
-                                                      (
-                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
-                                                        DATABASE_FILTER_KEY   (storageId)
-                                                      ),
-                                                      NULL  // group
-                                                     );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt64(databaseHandle,
-                                                      &totalImageSize,
-                                                      "entries \
-                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                      ",
-                                                      "SUM(entryFragments.size)",
-                                                      "entries.type=? AND entryFragments.storageId=?",
-                                                      DATABASE_FILTERS
-                                                      (
-                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
-                                                        DATABASE_FILTER_KEY   (storageId)
-                                                      ),
-                                                      NULL  // group
-                                                     );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt64(databaseHandle,
-                                                      &totalHardlinkSize,
-                                                      "entries \
-                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                                                      ",
-                                                      "SUM(entryFragments.size)",
-                                                      "entries.type=? AND entryFragments.storageId=?",
-                                                      DATABASE_FILTERS
-                                                      (
-                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
-                                                        DATABASE_FILTER_KEY   (storageId)
-                                                      ),
-                                                      NULL  // group
-                                                     );
+                           // get image aggregate data
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 2);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalImageCount = values[0].u;
+                                                  totalImageSize  = values[1].u64;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "entryFragments \
+                                                     LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                                                  DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                                                ),
+                                                "    entryFragments.storageId=? \
+                                                  AND entries.type=? \
+                                                ",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
                            if (error != ERROR_NONE)
                            {
                              return error;
                            }
 
-                           // get count/sizes newest
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalFileCountNewest,
-                                                    "entriesNewest \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entriesNewest.id)",
-                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalImageCountNewest,
-                                                    "entriesNewest \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entriesNewest.id)",
-                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalDirectoryCountNewest,
-                                                    "entriesNewest \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entriesNewest.id)",
-                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalLinkCountNewest,
-                                                    "entriesNewest \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entriesNewest.id)",
-                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalHardlinkCountNewest,
-                                                    "entriesNewest \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entriesNewest.id)",
-                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt(databaseHandle,
-                                                    &totalSpecialCountNewest,
-                                                    "entriesNewest \
-                                                       LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                    ",
-                                                    "COUNT(DISTINCT entriesNewest.id)",
-                                                    "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                    DATABASE_FILTERS
-                                                    (
-                                                      DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
-                                                      DATABASE_FILTER_KEY   (storageId)
-                                                    ),
-                                                    NULL  // group
-                                                   );
+                           // get directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 1);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalDirectoryCount = values[0].u;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "directoryEntries \
+                                                     LEFT JOIN entries ON entries.id=directoryEntries.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)")
+                                                ),
+                                                "directoryEntries.storageId=?",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
                            if (error != ERROR_NONE)
                            {
                              return error;
                            }
 
-                           error = Database_getUInt64(databaseHandle,
-                                                      &totalFileSizeNewest,
-                                                      "entriesNewest \
-                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                      ",
-                                                      "SUM(entryFragments.size)",
-                                                      "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                      DATABASE_FILTERS
-                                                      (
-                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_FILE),
-                                                        DATABASE_FILTER_KEY   (storageId)
-                                                      ),
-                                                      NULL  // group
-                                                     );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt64(databaseHandle,
-                                                      &totalImageSizeNewest,
-                                                      "entriesNewest \
-                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                      ",
-                                                      "SUM(entryFragments.size)",
-                                                      "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                      DATABASE_FILTERS
-                                                      (
-                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_IMAGE),
-                                                        DATABASE_FILTER_KEY   (storageId)
-                                                      ),
-                                                      NULL  // group
-                                                     );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
-                           error = Database_getUInt64(databaseHandle,
-                                                      &totalHardlinkSizeNewest,
-                                                      "entriesNewest \
-                                                         LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.id \
-                                                      ",
-                                                      "SUM(entryFragments.size)",
-                                                      "entriesNewest.type=? AND entryFragments.storageId=?",
-                                                      DATABASE_FILTERS
-                                                      (
-                                                        DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_HARDLINK),
-                                                        DATABASE_FILTER_KEY   (storageId)
-                                                      ),
-                                                      NULL  // group
-                                                     );
+                           // get link aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 1);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalLinkCount = values[0].u;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "linkEntries \
+                                                     LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
+                                                ),
+                                                "linkEntries.storageId=?",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
                            if (error != ERROR_NONE)
                            {
                              return error;
                            }
 
+                           // get hardlink aggregate data
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 2);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalHardlinkCount = values[0].u;
+                                                  totalHardlinkSize  = values[1].u64;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "entryFragments \
+                                                     LEFT JOIN entries ON entries.id=entryFragments.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entries.id)"),
+                                                  DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                                                ),
+                                                "    entryFragments.storageId=? \
+                                                 AND entries.type=? \
+                                                ",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           // get special aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 1);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalSpecialCount = values[0].u;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "specialEntries \
+                                                     LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
+                                                ),
+                                                "specialEntries.storageId=?",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             return error;
+                           }
+
+                           // get newest file aggregate data
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 2);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalFileCountNewest = values[0].u;
+                                                  totalFileSizeNewest  = values[1].u64;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "entryFragments \
+                                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
+                                                  DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                                                ),
+                                                "    entryFragments.storageId=? \
+                                                 AND entriesNewest.type=? \
+                                                ",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_UINT(INDEX_TYPE_FILE)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             totalFileCountNewest = 0L;
+                             totalFileSizeNewest  = 0LL;
+                           }
+
+                           // get newest image aggregate data
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 2);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalImageCountNewest = values[0].u;
+                                                  totalImageSizeNewest  = values[1].u64;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "entryFragments \
+                                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
+                                                  DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                                                ),
+                                                "    entryFragments.storageId=? \
+                                                 AND entriesNewest.type=? \
+                                                ",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_UINT(INDEX_TYPE_IMAGE)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             totalImageCountNewest = 0L;
+                             totalImageSizeNewest  = 0LL;
+                           }
+
+                           // get newest directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 1);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalDirectoryCountNewest = values[0].u;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "directoryEntries \
+                                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
+                                                ),
+                                                "directoryEntries.storageId=?",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             totalDirectoryCountNewest = 0L;
+                           }
+
+                           // get newest link aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 1);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalLinkCountNewest = values[0].u;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "linkEntries \
+                                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
+                                                ),
+                                                "linkEntries.storageId=?",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             totalLinkCountNewest = 0L;
+                           }
+
+                           // get newest hardlink aggregate data
+                         //vs bar-index: getUInt
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 2);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalHardlinkCountNewest = values[0].u;
+                                                  totalHardlinkSizeNewest  = values[1].u64;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "entryFragments \
+                                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=entryFragments.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)"),
+                                                  DATABASE_COLUMN_UINT64("SUM(entryFragments.size)")
+                                                ),
+                                                "    entryFragments.storageId=? \
+                                                 AND entriesNewest.type=? \
+                                                ",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_UINT(INDEX_TYPE_HARDLINK)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             totalHardlinkCountNewest = 0L;
+                             totalHardlinkSizeNewest  = 0LL;
+                           }
+
+                           // get newest special aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
+                           error = Database_get(databaseHandle,
+                                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                                                {
+                                                  assert(values != NULL);
+                                                  assert(valueCount == 1);
+
+                                                  UNUSED_VARIABLE(userData);
+                                                  UNUSED_VARIABLE(valueCount);
+
+                                                  totalSpecialCountNewest = values[0].u;
+
+                                                  return ERROR_NONE;
+                                                },NULL),
+                                                NULL,  // changedRowCount
+                                                DATABASE_TABLES
+                                                (
+                                                  "specialEntries \
+                                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
+                                                  "
+                                                ),
+                                                DATABASE_FLAG_NONE,
+                                                DATABASE_COLUMNS
+                                                (
+                                                  DATABASE_COLUMN_UINT  ("COUNT(DISTINCT entriesNewest.id)")
+                                                ),
+                                                "specialEntries.storageId=?",
+                                                DATABASE_FILTERS
+                                                (
+                                                  DATABASE_FILTER_KEY (storageId)
+                                                ),
+                                                NULL,  // groupBy
+                                                NULL,  // orderBy
+                                                0LL,
+                                                1LL
+                                               );
+                           if (error != ERROR_NONE)
+                           {
+                             totalSpecialCountNewest = 0L;
+                           }
                            // update total count/size
                            error = Database_update(databaseHandle,
                                                    NULL,  // changedRowCount
@@ -4993,7 +5265,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                          NULL,  // changedRowCount
                          DATABASE_TABLES
                          (
-                            "storages"
+                           "storages"
                          ),
                          DATABASE_FLAG_NONE,
                          DATABASE_COLUMNS
@@ -5001,17 +5273,17 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                            DATABASE_COLUMN_KEY("id")
                          ),
                          stringFormat(filterString,sizeof(filterString),
-                                      "    (%d OR id IN (%s)) \
-                                       AND deletedFlag=? \
+                                      "    (? OR id IN (%s)) \
+                                       AND deletedFlag!=TRUE \
                                       ",
-                                      String_isEmpty(storageIdsString) ? 1 : 0,
                                       !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0"
                                      ),
                          DATABASE_FILTERS
                          (
-                           DATABASE_FILTER_BOOL(FALSE)
+                           DATABASE_FILTER_BOOL(String_isEmpty(storageIdsString))
                          ),
-                         NULL,  // groupOrder
+                         NULL,  // groupBy
+                         NULL,  // orderBy
                          0LL,
                          DATABASE_UNLIMITED
                         );
@@ -5604,6 +5876,9 @@ LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     case DATABASE_TYPE_MARIADB:
       // nothing to do (use views)
       break;
+    case DATABASE_TYPE_POSTGRESQL:
+// TODO:
+      break;
   }
 
 //TODO: obsolete, remove
@@ -6022,11 +6297,11 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_KEY   ("id"),
                          DATABASE_COLUMN_STRING("name")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
+                       NULL,  // groupBy
                        "ORDER BY name",
                        0LL,
                        DATABASE_UNLIMITED
@@ -6202,6 +6477,9 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
           case DATABASE_TYPE_MARIADB:
             // nothing to do (use views)
             break;
+          case DATABASE_TYPE_POSTGRESQL:
+// TODO:
+            break;
         }
 
         // purge directory/link/special entries
@@ -6269,6 +6547,9 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
             break;
           case DATABASE_TYPE_MARIADB:
             // nothing to do (use views)
+            break;
+          case DATABASE_TYPE_POSTGRESQL:
+// TODO:
             break;
         }
 
@@ -6394,12 +6675,16 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         // vacuum into file
     // TODO: move to databaes.c
         error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
-                                 "VACUUM INTO '%s'",
-                                 toFileName
+                                 DATABASE_COLUMN_TYPES
+                                 (
+                                 ),
+                                 "VACUUM INTO ?",
+                                 DATABASE_PARAMETERS
+                                 (
+                                   DATABASE_PARAMETER_STRING(toFileName)
+                                 )
                                 );
         if (error != ERROR_NONE)
         {
@@ -6412,11 +6697,15 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
       {
         // vacuum
         error = Database_execute(databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
-                                 "VACUUM"
+                                 DATABASE_COLUMN_TYPES
+                                 (
+                                 ),
+                                 "VACUUM",
+                                 DATABASE_PARAMETERS
+                                 (
+                                 )
                                 );
         if (error != ERROR_NONE)
         {
@@ -6438,14 +6727,18 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
         for (uint i = 0; i < INDEX_DEFINITION_TABLE_NAME_COUNT_MARIADB; i++)
         {
           error = Database_execute(databaseHandle,
-                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
+                                   DATABASE_COLUMN_TYPES
+                                   (
+                                   ),
                                    stringFormat(sqlCommand,sizeof(sqlCommand),
                                                 "OPTIMIZE TABLE %s",
                                                 INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
-                                               )
+                                               ),
+                                   DATABASE_PARAMETERS
+                                   (
+                                   )
                                   );
           if (error != ERROR_NONE)
           {
@@ -6457,6 +6750,9 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 
         printInfo("OK\n");
       }
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+// TODO:
       break;
   }
 }
@@ -6662,7 +6958,8 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_STRING("value")
                        ),
                        DATABASE_FILTERS_NONE,
-                       NULL,  // groupOrder
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        DATABASE_UNLIMITED
                       );
@@ -6680,10 +6977,9 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              &n,
                              "entities",
                              "COUNT(id)",
-                             "id!=0 AND deletedFlag=?",
+                             "id!=0 AND deletedFlag!=TRUE",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_BOOL(FALSE)
                              ),
                              NULL  // group
                             );
@@ -6794,10 +7090,9 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                              &n,
                              "storages",
                              "COUNT(id)",
-                             "deletedFlag=?",
+                             "deletedFlag!=TRUE",
                              DATABASE_FILTERS
                              (
-                               DATABASE_FILTER_BOOL(FALSE)
                              ),
                              NULL  // group
                             );
@@ -6814,11 +7109,10 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            &n,
                            "storages",
                            "COUNT(id)",
-                           "state=? AND deletedFlag=?",
+                           "state=? AND deletedFlag!=TRUE",
                            DATABASE_FILTERS
                            (
                              DATABASE_FILTER_UINT  (INDEX_CONST_STATE_OK),
-                             DATABASE_FILTER_BOOL  (FALSE),
                            ),
                            NULL  // group
                           );
@@ -6833,11 +7127,10 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            &n,
                            "storages",
                            "COUNT(id)",
-                           "state=? AND deletedFlag=?",
+                           "state=? AND deletedFlag!=TRUE",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_STATE_UPDATE_REQUESTED),
-                             DATABASE_FILTER_BOOL  (FALSE)
+                             DATABASE_FILTER_UINT  (INDEX_CONST_STATE_UPDATE_REQUESTED)
                            ),
                            NULL  // group
                           );
@@ -6852,11 +7145,10 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            &n,
                            "storages",
                            "COUNT(id)",
-                           "state=? AND deletedFlag=?",
+                           "state=? AND deletedFlag!=TRUE",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_STATE_ERROR),
-                             DATABASE_FILTER_BOOL  (FALSE)
+                             DATABASE_FILTER_UINT  (INDEX_CONST_STATE_ERROR)
                            ),
                            NULL  // group
                           );
@@ -6871,10 +7163,9 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            &n,
                            "storages",
                            "COUNT(id)",
-                           "deletedFlag=?",
+                           "deletedFlag!=TRUE",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_BOOL  (TRUE)
                            ),
                            NULL  // group
                           );
@@ -6934,12 +7225,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalEntryCount)"),
                          DATABASE_COLUMN_UINT64("SUM(totalEntrySize)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -6978,12 +7269,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalFileCount)"),
                          DATABASE_COLUMN_UINT64("SUM(totalFileSize)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7022,12 +7313,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalImageCount)"),
                          DATABASE_COLUMN_UINT64("SUM(totalImageSize)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7060,12 +7351,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        (
                          DATABASE_COLUMN_UINT  ("SUM(totalDirectoryCount)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7098,12 +7389,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        (
                          DATABASE_COLUMN_UINT  ("SUM(totalLinkCount)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7142,12 +7433,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalHardlinkCount)"),
                          DATABASE_COLUMN_UINT64("SUM(totalHardlinkSize)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7180,12 +7471,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        (
                          DATABASE_COLUMN_UINT  ("SUM(totalSpecialCount)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7244,12 +7535,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalEntryCountNewest)"),
                          DATABASE_COLUMN_UINT64("SUM(totalEntrySizeNewest)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7288,12 +7579,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalFileCountNewest)"),
                          DATABASE_COLUMN_UINT64("SUM(totalFileSizeNewest)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7332,12 +7623,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalImageCountNewest)"),
                          DATABASE_COLUMN_UINT64("SUM(totalImageSizeNewest)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7370,12 +7661,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        (
                          DATABASE_COLUMN_UINT  ("SUM(totalDirectoryCountNewest)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7408,12 +7699,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        (
                          DATABASE_COLUMN_UINT  ("SUM(totalLinkCountNewest)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7452,12 +7743,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_UINT  ("SUM(totalHardlinkCountNewest)"),
                          DATABASE_COLUMN_UINT64("SUM(totalHardlinkSizeNewest)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7490,12 +7781,12 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        (
                          DATABASE_COLUMN_UINT  ("SUM(totalSpecialCountNewest)")
                        ),
-                       "deletedFlag=?",
+                       "deletedFlag!=TRUE",
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        1LL
                       );
@@ -7517,7 +7808,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, const Array uuIds)
+LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, const Array uuids)
 {
   String       uuidIdsString,uuidsString;
   char         s[MISC_UUID_STRING_LENGTH];
@@ -7525,16 +7816,16 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
   ulong        i;
   DatabaseId   uuidId;
   Errors       error;
-  char         filterString[256];
+  char         filterString[1024];
 
   uuidIdsString = String_new();
-  uuidsString = String_new();
+  uuidsString   = String_new();
   ARRAY_ITERATE(&uuidIds,i,uuidId)
   {
     if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
-    String_formatAppend(uuidIdsString,"%lld",uuidId);
+    String_formatAppend(uuidIdsString,"%"PRIi64,uuidId);
   }
-  ARRAY_ITERATE(&uuIds,i,s)
+  ARRAY_ITERATE(&uuids,i,s)
   {
     String_setBuffer(uuid,s,MISC_UUID_STRING_LENGTH);
     if (!String_isEmpty(uuidsString)) String_appendChar(uuidsString,',');
@@ -7617,14 +7908,14 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                         DATABASE_COLUMN_KEY("id")
                                       ),
                                       "    uuidId=? \
-                                       AND deletedFlag=? \
+                                       AND deletedFlag!=TRUE \
                                       ",
                                       DATABASE_FILTERS
                                       (
-                                        DATABASE_FILTER_KEY  (uuidId),
-                                        DATABASE_FILTER_BOOL (FALSE)
+                                        DATABASE_FILTER_KEY  (uuidId)
                                       ),
-                                      NULL,  // orderGroup
+                                      NULL,  // groupBy
+                                      NULL,  // orderBy
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
@@ -7656,14 +7947,14 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                         DATABASE_COLUMN_KEY("id")
                                       ),
                                       "    uuidId=? \
-                                       AND deletedFlag=? \
+                                       AND deletedFlag!=TRUE \
                                       ",
                                       DATABASE_FILTERS
                                       (
-                                        DATABASE_FILTER_KEY  (uuidId),
-                                        DATABASE_FILTER_BOOL (FALSE)
+                                        DATABASE_FILTER_KEY  (uuidId)
                                       ),
-                                      NULL,  // orderGroup
+                                      NULL,  // groupBy
+                                      NULL,  // orderBy
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
@@ -7711,18 +8002,19 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                          DATABASE_COLUMN_UINT  ("(SELECT SUM(totalSpecialCountNewest) FROM entities WHERE entities.uuidId=uuids.id)")
                        ),
                        stringFormat(filterString,sizeof(filterString),
-                                    "    (%d OR id IN (%s)) \
-                                     AND (%d OR jobUUID IN (%s)) \
+                                    "    (? OR id IN (%s)) \
+                                     AND (? OR jobUUID IN (%s)) \
                                     ",
-                                    String_isEmpty(uuidIdsString) ? 1 : 0,
-                                    !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0",
-                                    String_isEmpty(uuidsString) ? 1 : 0,
-                                    !String_isEmpty(uuidIdsString) ? String_cString(uuidIdsString) : "0"
+                                    !Array_isEmpty(&uuidIds) ? String_cString(uuidIdsString) : "0",
+                                    !Array_isEmpty(&uuids  ) ? String_cString(uuidsString  ) : "''"
                                    ),
                        DATABASE_FILTERS
                        (
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(&uuidIds)),
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(&uuids))
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        DATABASE_UNLIMITED
                       );
@@ -7755,13 +8047,13 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
   ulong      i;
   DatabaseId entityId;
   Errors     error;
-  char       filterString[256];
+  char       filterString[1024];
 
   entityIdsString = String_new();
   ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_formatAppend(entityIdsString,"%lld",entityId);
+    String_formatAppend(entityIdsString,"%"PRIi64,entityId);
   }
 
   printf("Entities:\n");
@@ -7823,6 +8115,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          printf("    UUID id       : %"PRIi64"\n",uuidId);
 
                          idsString = String_new();
+// TODO: reenable
+#if 0
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -7848,17 +8142,18 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                         DATABASE_COLUMN_KEY  ("id")
                                       ),
                                       "    entityId=? \
-                                       AND deletedFlag=? \
+                                       AND deletedFlag!=TRUE \
                                       ",
                                       DATABASE_FILTERS
                                       (
-                                        DATABASE_FILTER_KEY  (entityId),
-                                        DATABASE_FILTER_BOOL (FALSE)
+                                        DATABASE_FILTER_KEY  (entityId)
                                       ),
-                                      NULL,  // groupOrder
+                                      NULL,  // groupBy
+                                      NULL,  // orderBy
                                       0LL,
                                       DATABASE_UNLIMITED
                                      );
+#endif
                          printf("    Storage ids   : %s\n",String_cString(idsString));
                          String_delete(idsString);
 
@@ -7906,17 +8201,17 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          DATABASE_COLUMN_KEY   ("uuidId")
                        ),
                        stringFormat(filterString,sizeof(filterString),
-                                    "    (%d OR id IN (%s)) \
-                                     AND deletedFlag=? \
+                                    "    (? OR id IN (%s)) \
+                                     AND deletedFlag!=TRUE \
                                     ",
-                                    String_isEmpty(entityIdsString) ? 1 : 0,
-                                    !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
+                                    !Array_isEmpty(&entityIds) ? String_cString(entityIdsString) : "0"
                                    ),
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(&entityIds))
                        ),
-                       NULL,  // groupOrder
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        DATABASE_UNLIMITED
                       );
@@ -7953,14 +8248,14 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   ulong      i;
   DatabaseId storageId;
   Errors     error;
-  char       filterString[256];
+  char       filterString[1024];
   char       buffer[64];
 
   storageIdsString = String_new();
   ARRAY_ITERATE(&storageIds,i,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
-    String_formatAppend(storageIdsString,"%lld",storageId);
+    String_formatAppend(storageIdsString,"%"PRIi64,storageId);
   }
 
   printf("%s:\n",lostFlag ? "Lost storages" : "Storages");
@@ -8081,19 +8376,20 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                          DATABASE_COLUMN_UINT    ("storages.totalSpecialCountNewest")
                        ),
                        stringFormat(filterString,sizeof(filterString),
-                                    "     (%d OR storages.id IN (%s)) \
-                                     AND (%d OR entities.id IS NULL) \
-                                     AND storages.deletedFlag=? \
+                                    "    (? OR storages.id IN (%s)) \
+                                     AND (? OR entities.id IS NULL) \
+                                     AND storages.deletedFlag!=TRUE \
                                     ",
-                                    String_isEmpty(storageIdsString) ? 1 : 0,
-                                    !String_isEmpty(storageIdsString) ? String_cString(storageIdsString) : "0",
-                                    !lostFlag
+                                    !Array_isEmpty(&storageIds) ? String_cString(storageIdsString) : "0"
                                    ),
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
+
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(&storageIds)),
+                         DATABASE_FILTER_BOOL  (!lostFlag)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        DATABASE_UNLIMITED
                       );
@@ -8129,16 +8425,13 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   ulong      i;
   DatabaseId entityId;
   Errors     error;
-  char       filterString[256];
-
-//TODO: lostFlag
-UNUSED_VARIABLE(lostFlag);
+  char       filterString[1024];
 
   entityIdsString = String_new();
   ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-    String_formatAppend(entityIdsString,"%lld",entityId);
+    String_formatAppend(entityIdsString,"%"PRIi64,entityId);
   }
 
   ftsName = String_new();
@@ -8154,8 +8447,15 @@ UNUSED_VARIABLE(lostFlag);
       #if defined(HAVE_MARIADB)
         String_format(ftsSubSelect,"SELECT id FROM entries WHERE MATCH(name) AGAINST ('%S')",ftsName);
       #else /* HAVE_MARIADB */
-        return;
       #endif /* HAVE_MARIADB */
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      #if defined(HAVE_POSTGRESQL)
+// TODO:
+//        String_format(ftsSubSelect,"xxxx",ftsName);
+//        textsearchable_index_col @@ to_tsquery('create & table')
+      #else /* HAVE_POSTGRESQL */
+      #endif /* HAVE_POSTGRESQL */
       break;
   }
 
@@ -8271,18 +8571,19 @@ UNUSED_VARIABLE(lostFlag);
                                               stringFormat(filterString,sizeof(filterString),
                                                            "    entries.entityId=? \
                                                             AND (? OR (type=?)) \
-                                                            AND (%d OR entries.id IN (%s)) \
+                                                            AND (? OR entries.id IN (%s)) \
                                                            ",
-                                                           String_isEmpty(ftsName) ? 1 : 0,
-                                                           String_cString(ftsSubSelect)
+                                                           !String_isEmpty(ftsSubSelect) ? String_cString(ftsSubSelect) : "0"
                                                           ),
                                               DATABASE_FILTERS
                                               (
-                                                DATABASE_FILTER_KEY  (entityId),
+                                                DATABASE_FILTER_KEY  (!lostFlag ? entityId : DATABASE_ID_NONE),
                                                 DATABASE_FILTER_BOOL (entryType == INDEX_CONST_TYPE_ANY),
-                                                DATABASE_FILTER_KEY  (entryType)
+                                                DATABASE_FILTER_UINT (entryType),
+                                                DATABASE_FILTER_BOOL (String_isEmpty(ftsSubSelect))
                                               ),
-                                              NULL,  // groupOrder
+                                              NULL,  // groupBy
+                                              NULL,  // orderBy
                                               0LL,
                                               DATABASE_UNLIMITED
                                              );
@@ -8305,17 +8606,22 @@ UNUSED_VARIABLE(lostFlag);
                          DATABASE_COLUMN_KEY("uuidId")
                        ),
                        stringFormat(filterString,sizeof(filterString),
-                                    "    (%d OR id IN (%s)) \
-                                     AND deletedFlag=? \
+                                    "    (   (NOT ? AND (? OR id IN (%s))) \
+                                          OR (    ? AND (id=?)) \
+                                         ) \
+                                     AND deletedFlag!=TRUE \
                                     ",
-                                    String_isEmpty(entityIdsString) ? 1 : 0,
-                                    !String_isEmpty(entityIdsString) ? String_cString(entityIdsString) : "0"
+                                    !Array_isEmpty(&entityIds) ? String_cString(entityIdsString) : "0"
                                    ),
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL(FALSE)
+                         DATABASE_FILTER_BOOL  (lostFlag),
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(&entityIds)),
+                         DATABASE_FILTER_BOOL  (lostFlag),
+                         DATABASE_FILTER_KEY   (DATABASE_ID_NONE)
                        ),
-                       NULL,  // orderGroup
+                       NULL,  // groupBy
+                       NULL,  // orderBy
                        0LL,
                        DATABASE_UNLIMITED
                       );
@@ -8409,69 +8715,79 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
                                        );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     printInfo("FAIL!\n");
     return;
   }
 
-  error = Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
-                           "INSERT INTO %1 \
-                              ( \
-                                storageId, \
-                                entryId, \
-                                name, \
-                                timeLastChanged \
-                              ) \
-                                  SELECT entryFragments.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
-                                  FROM entryFragments \
+  error = Database_insertSelect(databaseHandle,
+                                NULL,  // changedRowCount
+                                "%1",
+                                DATABASE_FLAG_IGNORE,
+                                DATABASE_COLUMNS
+                                (
+                                  DATABASE_COLUMN_KEY   ("storageId"),
+                                  DATABASE_COLUMN_KEY   ("entryId"),
+                                  DATABASE_COLUMN_STRING("name"),
+                                  DATABASE_COLUMN_UINT64("timeLastChanged")
+                                ),
+                                DATABASE_TABLES
+                                (
+                                  "entryFragments \
                                     LEFT JOIN entries ON entries.id=entryFragments.entryId \
-                                  WHERE storageId=%lld \
-                            UNION SELECT directoryEntries.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
-                                  FROM directoryEntries \
+                                  ",
+                                  "directoryEntries \
                                     LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                                  WHERE storageId=%lld \
-                            UNION SELECT linkEntries.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
-                                  FROM linkEntries \
-                                    LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                                  WHERE storageId=%lld \
-                            UNION SELECT specialEntries.storageId,entries.id AS entryId,entries.name,entries.timeLastChanged \
-                                  FROM specialEntries \
-                                    LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                                  WHERE storageId=%lld \
-                           ",
-                           storageId,
-                           storageId,
-                           storageId,
-                           storageId
-                          );
+                                  ",
+                                  "linkEntries \
+                                     LEFT JOIN entries ON entries.id=linkEntries.entryId \
+                                  ",
+                                  "specialEntries \
+                                     LEFT JOIN entries ON entries.id=specialEntries.entryId \
+                                  "
+                                ),
+                                DATABASE_COLUMNS
+                                (
+                                  DATABASE_COLUMN_KEY   ("storageId"),
+                                  DATABASE_COLUMN_KEY   ("entryId"),
+                                  DATABASE_COLUMN_STRING("name"),
+                                  DATABASE_COLUMN_UINT64("timeLastChanged")
+                                ),
+                                "storageId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY   (storageId)
+                                ),
+                                NULL,  // groupBy
+                                NULL,  // orderBy
+                                0LL,
+                                DATABASE_UNLIMITED
+                               );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     printInfo("FAIL!\n");
     return;
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
+                           DATABASE_COLUMN_TYPES
+                           (
+                           ),
                            "UPDATE %1 \
-                            SET entriesNewestId=IFNULL((SELECT entriesNewest.id \
-                                                        FROM entriesNewest \
-                                                        WHERE entriesNewest.entryId=%1.entryId \
-                                                        LIMIT 0,1 \
-                                                       ), \
-                                                       0 \
-                                                      ) \
-                           "
+                            SET entriesNewestId=COALESCE((SELECT entriesNewest.id \
+                                                         FROM entriesNewest \
+                                                         WHERE entriesNewest.entryId=%1.entryId \
+                                                          LIMIT 0,1 \
+                                                         ), \
+                                                         0 \
+                                                        ) \
+                           ",
+                           DATABASE_PARAMETERS
+                           (
+                           )
                           );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     printInfo("FAIL!\n");
     return;
   }
@@ -8480,26 +8796,34 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   {
     printInfo("storages:\n");
     n = 0;
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
 fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,values[1].text.data);
 n++;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(KEY,CSTRING),
-                             "SELECT entryFragments.storageId,storages.name FROM entryFragments \
-                                LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                              WHERE storages.deletedFlag!=1 \
-                              GROUP BY storageId \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_PLAIN("SELECT entryFragments.storageId,storages.name FROM entryFragments \
+                                           LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                                         WHERE storages.deletedFlag!=TRUE \
+                                        "
+                                       ),
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_STRING("storageId"),
+                           DATABASE_COLUMN_STRING("name")
+                         ),
+                         DATABASE_FILTERS_NONE,
+                         "storageId",  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -8513,39 +8837,50 @@ fprintf(stdout,"%lu storages\n",n);
   {
     printInfo("newest entries:\n");
     n = 0;
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
 fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime);
 n++;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(KEY,KEY,CSTRING,DATETIME),
-                             "      SELECT entryFragments.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
-                                    FROM entriesNewest \
-                                      LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                                    WHERE entriesNewest.type IN (5,6,9) \
-                                    GROUP BY entriesNewest.entryId \
-                              UNION SELECT directoryEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
-                                    FROM entriesNewest \
-                                      LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                    WHERE entriesNewest.type=7 \
-                              UNION SELECT linkEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
-                                    FROM entriesNewest \
-                                      LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
-                                    WHERE entriesNewest.type=8 \
-                              UNION SELECT specialEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
-                                    FROM entriesNewest \
-                                      LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.entryId \
-                                    WHERE entriesNewest.type=10 \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_PLAIN("      SELECT entryFragments.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                               FROM entriesNewest \
+                                                 LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                                               WHERE entriesNewest.type IN (5,6,9) \
+                                               GROUP BY entriesNewest.entryId \
+                                         UNION SELECT directoryEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                               FROM entriesNewest \
+                                                 LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                               WHERE entriesNewest.type=7 \
+                                         UNION SELECT linkEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                               FROM entriesNewest \
+                                                 LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
+                                               WHERE entriesNewest.type=8 \
+                                         UNION SELECT specialEntries.storageId,entriesNewest.entryId,entriesNewest.name,entriesNewest.timeLastChanged \
+                                               FROM entriesNewest \
+                                                 LEFT JOIN specialEntries ON specialEntries.entryId=entriesNewest.entryId \
+                                               WHERE entriesNewest.type=10 \
+                                        "
+                                       ),
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY     ("storageId"),
+                           DATABASE_COLUMN_KEY     ("entryId"),
+                           DATABASE_COLUMN_STRING  ("name"),
+                           DATABASE_COLUMN_DATETIME("timeLastChanged"),
+                         ),
+                         DATABASE_FILTERS_NONE,
+                         NULL,  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -8559,23 +8894,37 @@ fprintf(stdout,"%lu newest entries\n",n);
   {
     printInfo("entries of storage:\n");
     n = 0;
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
 fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64" entriesNewestId=%"PRIi64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime,values[4].id);
 n++;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(KEY,KEY,CSTRING,DATETIME,KEY),
-                             "SELECT storageId,entryId,name,timeLastChanged,entriesNewestId FROM %1 \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "%1"
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY     ("storageId"),
+                           DATABASE_COLUMN_KEY     ("entryId"),
+                           DATABASE_COLUMN_STRING  ("name"),
+                           DATABASE_COLUMN_DATETIME("timeLastChanged"),
+                           DATABASE_COLUMN_KEY     ("entriesNewestId")
+                         ),
+                         DATABASE_FILTERS_NONE,
+                         NULL,  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -8589,24 +8938,39 @@ fprintf(stdout,"%lu entries\n",n);
   {
     printInfo("newest entries of storage:\n");
     n = 0;
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
 fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime);
 n++;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(KEY,KEY,CSTRING,DATETIME),
-                             "SELECT storageId,entryId,name,timeLastChanged FROM %1 \
-                              WHERE %1.entriesNewestId!=0 \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "%1",
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY     ("storageId"),
+                           DATABASE_COLUMN_KEY     ("entryId"),
+                           DATABASE_COLUMN_STRING  ("name"),
+                           DATABASE_COLUMN_DATETIME("timeLastChanged")
+                         ),
+                         "%1.entriesNewestId!=0",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         NULL,  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -8620,24 +8984,38 @@ fprintf(stdout,"%lu newest entries\n",n);
   {
 fprintf(stderr,"%s, %d: newest entry to remove\n",__FILE__,__LINE__);
     n = 0;
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
 fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].text.data,values[2].dateTime);
 n++;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(KEY,CSTRING,DATETIME),
-                             "SELECT entryId,name,timeLastChanged FROM %1 \
-                              WHERE %1.entriesNewestId!=0 \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "%1"
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY     ("entryId"),
+                           DATABASE_COLUMN_STRING  ("name"),
+                           DATABASE_COLUMN_DATETIME("timeLastChanged")
+                         ),
+                         "%1.entriesNewestId!=0",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         NULL,  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -8651,30 +9029,45 @@ fprintf(stdout,"%lu newest entries to remove for storage %ld\n",n,storageId);
   {
 fprintf(stderr,"%s, %d: newest entry to add from entries\n",__FILE__,__LINE__);
     n = 0;
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               UNUSED_VARIABLE(valueCount);
-                               UNUSED_VARIABLE(userData);
+    error = Database_get(databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
 
 fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].text.data,values[2].dateTime);
 n++;
 
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(KEY,CSTRING,DATETIME),
-                             "SELECT entries.id AS entryId,%1.name,entries.timeLastChanged FROM %1 \
-                                LEFT JOIN entries ON entries.id=(SELECT id \
-                                                                 FROM entries \
-                                                                 WHERE name=%1.name \
-                                                                 ORDER BY timeLastChanged DESC \
-                                                                 LIMIT 0,1 \
-                                                                ) \
-                              WHERE entries.id=%1.entryId \
-                             "
-                            );
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "entries.id AS entryId,%1.name,entries.timeLastChanged FROM %1 \
+                              LEFT JOIN entries ON entries.id=(SELECT id \
+                                                               FROM entries \
+                                                               WHERE name=%1.name \
+                                                               ORDER BY timeLastChanged DESC \
+                                                               LIMIT 0,1 \
+                                                              ) \
+                           "
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_KEY     ("entryId"),
+                           DATABASE_COLUMN_STRING  ("name"),
+                           DATABASE_COLUMN_DATETIME("timeLastChanged")
+                         ),
+                         "entries.id=%1.entryId",
+                         DATABASE_FILTERS
+                         (
+                         ),
+                         NULL,  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         DATABASE_UNLIMITED
+                        );
     if (error != ERROR_NONE)
     {
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
@@ -9653,7 +10046,8 @@ if (xxxId != DATABASE_ID_NONE)
                    DATABASE_FILTER_BOOL  (jobUUID == NULL),
                    DATABASE_FILTER_STRING(jobUUID)
                  ),
-                 NULL,  // groupOrder
+                 NULL,  // groupBy
+                 NULL,  // orderBy
                  0LL,
                  1LL
                 );
@@ -9704,7 +10098,8 @@ if (xxxId != DATABASE_ID_NONE)
                    DATABASE_FILTER_BOOL  (jobUUID == NULL),
                    DATABASE_FILTER_STRING(jobUUID)
                  ),
-                 "ORDER BY storages.name ASC",
+                 NULL,  // groupBy
+                 "storages.name ASC",
                  0LL,
                  DATABASE_UNLIMITED
                 );
@@ -9770,7 +10165,8 @@ if (xxxId != DATABASE_ID_NONE)
                    DATABASE_FILTER_BOOL  (jobUUID == NULL),
                    DATABASE_FILTER_STRING(jobUUID)
                  ),
-                 NULL,  // groupOrder
+                 NULL,  // groupBy
+                 NULL,  // orderBy
                  0LL,
                  1LL
                 );
@@ -9827,7 +10223,8 @@ if (xxxId != DATABASE_ID_NONE)
                    DATABASE_FILTER_BOOL  (jobUUID == NULL),
                    DATABASE_FILTER_STRING(jobUUID)
                  ),
-                 "ORDER BY entryName ASC",
+                 NULL,  // groupBy
+                 "entryName ASC",
                  0LL,
                  DATABASE_UNLIMITED
 
@@ -9894,7 +10291,8 @@ if (xxxId != DATABASE_ID_NONE)
                    DATABASE_FILTER_BOOL  (jobUUID == NULL),
                    DATABASE_FILTER_STRING(jobUUID)
                  ),
-                 NULL,  // groupOrder
+                 NULL,  // groupBy
+                 NULL,  // orderBy
                  0LL,
                  1LL
                 );
@@ -9951,7 +10349,8 @@ if (xxxId != DATABASE_ID_NONE)
                    DATABASE_FILTER_BOOL  (jobUUID == NULL),
                    DATABASE_FILTER_STRING(jobUUID)
                  ),
-                 "ORDER BY entriesNewestName ASC",
+                 NULL,  // groupBy
+                 "entriesNewestName ASC",
                  0LL,
                  DATABASE_UNLIMITED
                 );
@@ -9982,8 +10381,16 @@ if (xxxId != DATABASE_ID_NONE)
             #else /* HAVE_MARIADB */
             #endif /* HAVE_MARIADB */
             break;
+          case DATABASE_TYPE_POSTGRESQL:
+// TODO:
+            #if defined(HAVE_POSTGRESQL)
+            #else /* HAVE_POSTGRESQL */
+            #endif /* HAVE_POSTGRESQL */
+            break;
         }
       }
+
+// TODO: get columns
 
       printRowData.showHeaderFlag    = showHeaderFlag;
       printRowData.headerPrintedFlag = FALSE;
@@ -9992,13 +10399,27 @@ if (xxxId != DATABASE_ID_NONE)
       {
         if (error == ERROR_NONE)
         {
-          error = Database_execute(&databaseHandle,
-                                   CALLBACK_(calculateColumnWidths,&printRowData),
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_COLUMN_NAMES,
-                                   DATABASE_COLUMN_TYPES(),
-                                   String_cString(s)
-                                  );
+          error = Database_get(&databaseHandle,
+                               CALLBACK_(calculateColumnWidths,&printRowData),
+                               NULL,  // changedRowCount
+                               DATABASE_TABLES
+                               (
+                                 String_cString(s)
+                               ),
+                               DATABASE_FLAG_PLAIN|DATABASE_FLAG_COLUMN_NAMES,
+#if 0
+                               DATABASE_COLUMNS
+                               (
+                               ),
+#else
+NULL,0,
+#endif
+                               DATABASE_FILTERS_NONE,
+                               NULL,  // groupBy
+                               NULL,  // orderBy
+                               0LL,
+                               DATABASE_UNLIMITED
+                              );
         }
       }
       t0 = 0L;
@@ -10006,13 +10427,27 @@ if (xxxId != DATABASE_ID_NONE)
       if (error == ERROR_NONE)
       {
         t0 = Misc_getTimestamp();
-        error = Database_execute(&databaseHandle,
-                                 CALLBACK_(printRow,&printRowData),
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_COLUMN_NAMES,
-                                 DATABASE_COLUMN_TYPES(),
-                                 String_cString(s)
-                                );
+        error = Database_get(&databaseHandle,
+                             CALLBACK_(printRow,&printRowData),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               String_cString(s)
+                             ),
+                             DATABASE_FLAG_PLAIN|DATABASE_FLAG_COLUMN_NAMES,
+#if 0
+                             DATABASE_COLUMNS
+                             (
+                             ),
+#else
+NULL,0,
+#endif
+                             DATABASE_FILTERS_NONE,
+                             NULL,  // groupBy
+                             NULL,  // orderBy
+                             0LL,
+                             DATABASE_UNLIMITED
+                            );
         t1 = Misc_getTimestamp();
       }
       freeColumnsWidth(printRowData.widths);
@@ -10057,14 +10492,20 @@ if (xxxId != DATABASE_ID_NONE)
     {
       l = stringTrim(line);
       t0 = Misc_getTimestamp();
-      error = Database_execute(&databaseHandle,
-                               CALLBACK_(printRow,NULL),
-                               NULL,  // changedRowCount,
-                               DATABASE_FLAG_COLUMN_NAMES,
-                               DATABASE_COLUMN_TYPES(),
-                               "%s",
-                               l
-                              );
+      error = Database_get(&databaseHandle,
+                           CALLBACK_(printRow,NULL),
+                           NULL,  // changedRowCount,
+//                           DATABASE_FLAG_COLUMN_NAMES,
+                           DATABASE_PLAIN(l),
+                           DATABASE_COLUMNS
+                           (
+                           ),
+                           DATABASE_FILTERS_NONE,
+                           NULL,  // groupBy
+                           NULL,  // orderBy
+                           0LL,
+                           DATABASE_UNLIMITED
+                          );
       if (error == ERROR_NONE)
       {
         if (verboseFlag) fprintf(stderr,"Result: %s\n",Error_getText(error));

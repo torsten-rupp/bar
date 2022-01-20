@@ -48,6 +48,8 @@ RUN apt-get -y install \
   openjdk-8-jre \
   cmake \
   make \
+  bison \
+  flex \
   mingw-w64-i686-dev \
   gcc-mingw-w64-i686 \
   g++-mingw-w64-i686 \

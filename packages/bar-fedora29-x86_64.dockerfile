@@ -38,6 +38,8 @@ RUN yum -y install \
   jre \
   cmake \
   make \
+  bison \
+  flex \
   rpm-build \
   unoconv \
   txt2man \

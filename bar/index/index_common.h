@@ -501,8 +501,8 @@ String IndexCommon_getIndexStateSetString(String string, IndexStateSet indexStat
 String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSet);
 
 /***********************************************************************\
-* Name   : IndexCommon_getFTSString
-* Purpose: get full-text-search filter string
+* Name   : IndexCommon_getFTSMatchString
+* Purpose: get full-text-search filter match string
 * Input  : string      - string variable
 *          patternText - pattern text
 * Output : -
@@ -510,26 +510,11 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
 * Notes  : -
 \***********************************************************************/
 
-String IndexCommon_getFTSString(String         string,
-                                DatabaseHandle *databaseHandle,
-                                const char     *columnName,
-                                ConstString    patternText
-                               );
-
-/***********************************************************************\
-* Name   : IndexCommon_filterAppend
-* Purpose: append to SQL filter string
-* Input  : filterString - filter string
-*          condition    - append iff true
-*          concatenator - concatenator string
-*          format       - format string (printf-style)
-*          ...          - optional arguments for format
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void IndexCommon_filterAppend(String filterString, bool condition, const char *concatenator, const char *format, ...);
+String IndexCommon_getFTSMatchString(String         string,
+                                     DatabaseHandle *databaseHandle,
+                                     const char     *columnName,
+                                     ConstString    patternText
+                                    );
 
 /***********************************************************************\
 * Name   : IndexCommon_appendOrdering
@@ -543,6 +528,7 @@ void IndexCommon_filterAppend(String filterString, bool condition, const char *c
 * Notes  : -
 \***********************************************************************/
 
+// TODO: replace by separate parameter in select
 void IndexCommon_appendOrdering(String orderString, bool condition, const char *columnName, DatabaseOrdering ordering);
 
 /***********************************************************************\

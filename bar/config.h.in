@@ -241,6 +241,9 @@
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
+/* Define to 1 if you have the <libpq-fe.h> header file. */
+#undef HAVE_LIBPQ_FE_H
+
 /* link() available */
 #undef HAVE_LINK
 
@@ -372,6 +375,9 @@
 
 /* posix_fadvise() available */
 #undef HAVE_POSIX_FADVISE
+
+/* pq installed */
+#undef HAVE_POSTGRESQL
 
 /* pselect() available */
 #undef HAVE_PSELECT

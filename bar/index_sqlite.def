@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS entities(
   totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
 
   // Note: redundancy for faster access
-  uuidId                    INTEGER DEFAULT 0
+  uuidId                    INTEGER DEFAULT 0  // no foreign key reference
 );
 CREATE INDEX ON entities (jobUUID,created,type);
 CREATE INDEX ON entities (hostName);
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS storages(
   id                        INTEGER PRIMARY KEY,
 
   entityId                  INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-  name                      TEXT NOT NULL,
+  name                      TEXT,
   created                   INTEGER,
   size                      INTEGER DEFAULT 0,
 //TODO: use
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS storages(
   totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
 
   // Note: redundancy for faster access
-  uuidId                    INTEGER DEFAULT 0
+  uuidId                    INTEGER DEFAULT 0  // no foreign key reference
 );
 CREATE INDEX ON storages (uuidId,entityId,name,created,state);
 CREATE INDEX ON storages (entityId,name,created,state);
@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS entries(
   archiveOffset   INTEGER,
 
   // Note: redundancy for faster access
-  uuidId          INTEGER DEFAULT 0,
+  uuidId          INTEGER DEFAULT 0,  // no foreign key reference
   size            INTEGER DEFAULT 0
 );
 CREATE INDEX ON entries (uuidId,entityId,type,name);
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   entryId         INTEGER REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
 
   // Note: redundancy for faster access
-  uuidId          INTEGER DEFAULT 0,
+  uuidId          INTEGER DEFAULT 0,  // no foreign key reference
   entityId        INTEGER DEFAULT 0,
   type            INTEGER DEFAULT 0,
   name            TEXT NOT NULL,
@@ -275,9 +275,9 @@ CREATE TABLE IF NOT EXISTS entryFragments(
   entryId   INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   storageId INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
   offset    INTEGER,
-  size      INTEGER,
+  size      INTEGER
 
-  CONSTRAINT entryFragments UNIQUE (entryId,offset)
+//  CONSTRAINT entryFragments UNIQUE (entryId,offset)
 );
 CREATE INDEX ON entryFragments (entryId);
 CREATE INDEX ON entryFragments (storageId);
