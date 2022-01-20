@@ -21,6 +21,7 @@ def build()
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
 sh "type mysql"
+sh "dpkg -l"
           sh "./configure"
 
           // make
