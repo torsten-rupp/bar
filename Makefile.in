@@ -63,6 +63,7 @@ TXT2MAN          = @TXT2MAN@
 UNOCONV          = @UNOCONV@
 
 SVNVERSION       = svnversion
+GIT              = git
 
 #---------------------------------- commands----------------------------------
 
@@ -623,7 +624,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
           $(GREP) MAJOR version; \
           $(GREP) MINOR version; \
           $(GREP) PATCH version; \
-          $(ECHO) "RELEASE=$(shell $(SVNVERSION) .)"; \
+          $(ECHO) "RELEASE=$(shell $(GIT) rev-parse HEAD)"; \
         ) > tmp/$(DISTRIBUTION_NAME)/version
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \
