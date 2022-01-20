@@ -41,6 +41,9 @@ RUN apt-get -y install \
   openjdk-8-jre \
   cmake \
   make \
+  bison \
+  flex \
+  libreadline-dev \
   unoconv \
   txt2man \
   valgrind \
