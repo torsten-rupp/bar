@@ -4,8 +4,10 @@ ENV container docker
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
-# install packages
+# update
 RUN apt-get -y update
+
+# install packages
 RUN apt-get -y install \
   bc \
   bzip2 \

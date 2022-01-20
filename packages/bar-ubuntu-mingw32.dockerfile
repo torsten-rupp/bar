@@ -11,9 +11,10 @@ RUN useradd -g $GID -u $UID build
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
+# update
+RUN apt-get -y update
+
 # install packages
-#RUN dpkg --add-architecture i386;
-RUN apt-get -y update;
 RUN apt-get -y install \
   bc \
   bzip2 \
@@ -62,7 +63,13 @@ RUN apt-get -y install \
   unoconv \
   txt2man \
   valgrind \
-  libwine \
+  ;
+
+# install wine32
+RUN dpkg --add-architecture i386
+RUN apt-get -y update
+RUN apt-get -y install \
+  wine32 \
   ;
 
 # install Inno Setup
