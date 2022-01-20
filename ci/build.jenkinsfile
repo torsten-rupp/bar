@@ -20,6 +20,7 @@ def build()
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
+sh "type mysql"
           sh "./configure"
 
           // make
