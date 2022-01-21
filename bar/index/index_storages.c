@@ -2400,7 +2400,7 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
       break;
   }
 
-  // delete storage
+  // delete storage (set deleted flag)
   if (error == ERROR_NONE)
   {
     error = Database_delete(&indexHandle->databaseHandle,
