@@ -7238,11 +7238,11 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
 
         for (i = 0; i < filterCount; i++)
         {
-            assertx(databaseStatementHandle->parameterIndex < databaseStatementHandle->parameterCount,
-                    "invalid values: index %u, count %u",
-                    databaseStatementHandle->parameterIndex,
-                    databaseStatementHandle->parameterCount
-                   );
+          assertx(databaseStatementHandle->parameterIndex < databaseStatementHandle->parameterCount,
+                  "invalid values: index %u, count %u",
+                  databaseStatementHandle->parameterIndex,
+                  databaseStatementHandle->parameterCount
+                 );
 
           switch (filters[i].type)
           {
@@ -7348,8 +7348,6 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          assertx(databaseStatementHandle->parameterIndex < databaseStatementHandle->parameterCount,"invalid value count: given %u, expected %u",databaseStatementHandle->parameterIndex,databaseStatementHandle->parameterCount);
-
           for (i = 0; i < filterCount; i++)
           {
             assertx(databaseStatementHandle->parameterIndex < databaseStatementHandle->parameterCount,
@@ -11351,10 +11349,6 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
-
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-if (error != ERROR_NONE) abort();
 
   return error;
 }
