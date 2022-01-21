@@ -11127,7 +11127,6 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
                          )
 {
   Errors error;
-  char   sqlString[256];
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -11136,23 +11135,9 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      error = Database_execute(databaseHandle,
-                               NULL,  // changedRowCount
-                               DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES
-                               (
-                               ),
-                               stringFormat(sqlString,sizeof(sqlString),
-                                            "DROP TABLE %s",
-                                            tableName
-                                           ),
-                               DATABASE_PARAMETERS
-                               (
-                               )
-                              );
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
+      {
+        char sqlString[256];
+
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
@@ -11167,26 +11152,52 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
                                  (
                                  )
                                 );
+      }
+      break;
+    case DATABASE_TYPE_MARIADB:
+      #if defined(HAVE_MARIADB)
+        {
+          char sqlString[256];
+
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   DATABASE_COLUMN_TYPES
+                                   (
+                                   ),
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "DROP TABLE %s",
+                                                tableName
+                                               ),
+                                   DATABASE_PARAMETERS
+                                   (
+                                   )
+                                  );
+        }
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_MARIADB */
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "DROP TABLE %s CASCADE",
-                                              tableName
-                                             ),
-                                 DATABASE_PARAMETERS
-                                 (
-                                 )
-                                );
+        {
+          char sqlString[256];
+
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   DATABASE_COLUMN_TYPES
+                                   (
+                                   ),
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "DROP TABLE %s CASCADE",
+                                                tableName
+                                               ),
+                                   DATABASE_PARAMETERS
+                                   (
+                                   )
+                                  );
+        }
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -11383,16 +11394,22 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      error = Database_execute(databaseHandle,
-                               NULL,  // changedRowCount
-                               DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
-                               "DROP INDEX ?",
-                               DATABASE_PARAMETERS
-                               (
-                                 DATABASE_PARAMETER_STRING(indexName)
-                               )
-                              );
+      {
+        char sqlString[256];
+
+        error = Database_execute(databaseHandle,
+                                 NULL,  // changedRowCount
+                                 DATABASE_FLAG_NONE,
+                                 DATABASE_COLUMN_TYPES(),
+                                 stringFormat(sqlString,sizeof(sqlString),
+                                              "DROP INDEX %s",
+                                              indexName
+                                             ),
+                                 DATABASE_PARAMETERS
+                                 (
+                                 )
+                                );
+      }
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
