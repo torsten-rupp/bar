@@ -20,7 +20,6 @@ def build()
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
-sh "dpkg -l"
           sh "./configure"
 
           // make
