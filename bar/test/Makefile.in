@@ -338,7 +338,7 @@ TEST_POSTGRESQL_PASSWORD         = test
 
 # databases
 TEST_INDEX_DATABASE_SQLITE       =  sqlite:intermediate/index.db
-TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MYSQL_SERVER):$(TEST_MYSQL_USER):$(TEST_MYSQL_PASSWORD)
+TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
 TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
 TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
 
@@ -571,30 +571,30 @@ COLUMNS ?= 80
 LOG = $(if $(QUIET),</dev/null 1>/dev/null)
 
 # helper function to output info lines
-functionInfoBegin = $(ECHO_NO_LF) >&2 "?..."; $(ECHO) "?" $(if $(QUIET),1>/dev/null)
-functionInfoEnd = $(ECHO) >&2 "?"
-functionInfoHeader = $(ECHO) `$(ECHO) "--- ? --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
+functionInfoBegin = $(ECHO_NO_LF) >&2 "$1..."; $(ECHO) "$1" $(if $(QUIET),1>/dev/null)
+functionInfoEnd = $(ECHO) >&2 "$1"
+functionInfoHeader = $(ECHO) `$(ECHO) "--- $1 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
 functionInfoFooter = $(ECHO) `$(ECHO) "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
 
 # helper function for test names
-functionTestNames = $(foreach name,?,$(name) $(addprefix $(name),-debug -gcov -gprof -valgrind))
+functionTestNames = $(foreach name,$1,$(name) $(addprefix $(name),-debug -gcov -gprof -valgrind))
 
 # helper function to quote and join strings
-functionJoin = $(subst $() $(),?,$(foreach i,?,?$(i)?))
+functionJoin = $(subst $() $(),$3,$(foreach i,$1,$2$(i)$2))
 
 # helper function to create SQL list
-functionSQLList = $(call functionJoin,?,',$(COMMA))
+functionSQLList = $(call functionJoin,$1,',$(COMMA))
 
 # helper function to execute binary
 functionExec = \
-  $(EXE_PREFIX)?
+  $(EXE_PREFIX)$1
 
 # helper function for test files/databases
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
   $(CHMOD) o+w intermediate 2>/dev/null || true
 functionCleanTestDatabases = \
-  MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
+  MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
     $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE'" | $(CUT) -f 1 | \
   MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
     $(XARGS) -n 1 -I "{}" \
@@ -611,16 +611,16 @@ functionDoneTestFiles = \
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
-  ?; rc=$$?; if test $$rc -lt ? -o $$rc -gt ?; then \
-    $(ECHO) >&2 "ERROR: wrong exit code. Expected ?..?, got $$rc"; \
+  $3; rc=$$?; if test $$rc -lt $1 -o $$rc -gt $2; then \
+    $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
     exit $$rc; \
   fi
 
 # helper functions for slave tests
 functionSlaveExecute = \
-  $(SSHPASS) -p $(TEST_SLAVE_PASSWORD) $(SSH) $(TEST_SLAVE_USERNAME)@$(TEST_SLAVE_HOST) "?"
+  $(SSHPASS) -p $(TEST_SLAVE_PASSWORD) $(SSH) $(TEST_SLAVE_USERNAME)@$(TEST_SLAVE_HOST) "$1"
 functionSlaveCopy = \
-  $(SSHPASS) -p $(TEST_SLAVE_PASSWORD) $(SCP) ? $(TEST_SLAVE_USERNAME)@$(TEST_SLAVE_HOST):?
+  $(SSHPASS) -p $(TEST_SLAVE_PASSWORD) $(SCP) $1 $(TEST_SLAVE_USERNAME)@$(TEST_SLAVE_HOST):$2
 
 # helper function to create a test device
 # call functionTestDeviceReset
@@ -641,35 +641,35 @@ functionTestDeviceReset = \
 # call functionCreateFileZero,<file>,<count>,<size>
 functionCreateFileZero = \
   ( \
-    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=? bs=? count=?; \
-    $(DD) if=$(DEVICE_ZERO) of=? bs=? count=? 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=$1 bs=$3 count=$2; \
+    $(DD) if=$(DEVICE_ZERO) of=$1 bs=$3 count=$2 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to create huge spare test file
 # call functionCreateFileSpare,<file>,<size>
 functionCreateFileSpare = \
   ( \
-    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=? seek=? bs=1 count=1; \
-    $(DD) if=$(DEVICE_ZERO) of=? seek=? bs=1 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(DD) if=$(DEVICE_ZERO) of=$1 seek=$2 bs=1 count=1; \
+    $(DD) if=$(DEVICE_ZERO) of=$1 seek=$2 bs=1 count=1 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to create test file with data
 # call functionCreateFileRandom,<file>,<count>,<size>
 functionCreateFileRandom = \
   ( \
-    $(ECHO) $(DD) if=$(DEVICE_RANDOM) of=? bs=? count=?; \
-    $(DD) if=$(DEVICE_RANDOM) of=? bs=? count=? 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(DD) if=$(DEVICE_RANDOM) of=$1 bs=$3 count=$2; \
+    $(DD) if=$(DEVICE_RANDOM) of=$1 bs=$3 count=$2 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to create a test device
 # call functionTestDeviceCreate,<loop device>,<image file>
 functionTestDeviceCreate = \
   ( \
-    $(SUDO) -n $(LOSETUP) -d ? || true; \
-    $(ECHO) $(SUDO) -n $(LOSETUP) ? ?; \
-    $(SUDO) -n $(LOSETUP) ? ?; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) -n $(CHMOD) o+rw ?; \
-    $(SUDO) -n $(CHMOD) o+rw ?; \
+    $(SUDO) -n $(LOSETUP) -d $1 || true; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
+    $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
+    $(SUDO) -n $(CHMOD) o+rw $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to delete a test device
@@ -677,30 +677,30 @@ functionTestDeviceCreate = \
 functionTestDeviceDelete = \
   ( \
     $(SYNC); \
-    $(ECHO) $(SUDO) -n $(LOSETUP) -d ?; \
-    $(SUDO) -n $(LOSETUP) -d ?; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
+    $(SUDO) -n $(LOSETUP) -d $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to create file system on test device
 # call functionTestDeviceInitFilesystem,<loop device>,<mkfs options>
 functionTestDeviceInitFilesystem = \
   ( \
-    $(ECHO) $(SUDO) -n $(MKFS) ? ?; \
-    $(SUDO) -n $(MKFS) ? ? 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(MKFS) $2 $1; \
+    $(SUDO) -n $(MKFS) $2 $1 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to initialize file system on a test device
 # call functionInitFilesystem,<image file>,<mkfs options>[,<files>]
 functionInitFilesystem = \
   ( \
-    $(call functionTestDeviceCreate,$(LOOP0),?); \
-    $(call functionTestDeviceInitFilesystem,$(LOOP0),?); \
-    $(if ?,$(ECHO) $(INSTALL) -d $(MOUNT_POINT0); \
+    $(call functionTestDeviceCreate,$(LOOP0),$1); \
+    $(call functionTestDeviceInitFilesystem,$(LOOP0),$2); \
+    $(if $3,$(ECHO) $(INSTALL) -d $(MOUNT_POINT0); \
             $(INSTALL) -d $(MOUNT_POINT0); \
             $(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) $(MOUNT_POINT0); \
             $(SUDO) -n $(MOUNT) $(LOOP0) $(MOUNT_POINT0); rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-            $(ECHO) $(SUDO) -n $(CP) -r -p ? $(MOUNT_POINT0); \
-            $(SUDO) -n $(CP) -r -p ? $(MOUNT_POINT0) 1>/dev/null 2>/dev/null; \
+            $(ECHO) $(SUDO) -n $(CP) -r -p $3 $(MOUNT_POINT0); \
+            $(SUDO) -n $(CP) -r -p $3 $(MOUNT_POINT0) 1>/dev/null 2>/dev/null; \
             $(SYNC); \
             $(ECHO) $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0); \
             $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0); \
@@ -712,42 +712,42 @@ functionInitFilesystem = \
 # call functionDeviceMount,<loop device>,<image file>,<mount point>
 functionDeviceMount = \
   ( \
-    $(ECHO) $(SUDO) -n $(LOSETUP) ? ?; \
-    $(SUDO) -n $(LOSETUP) ? ?; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) -n $(CHMOD) o+rw ?; \
-    $(SUDO) -n $(CHMOD) o+rw ?; \
-    $(ECHO) $(INSTALL) -d ?; \
-    $(INSTALL) -d ?; \
-    $(ECHO) $(SUDO) -n $(MOUNT) ? ?; \
-    $(SUDO) -n $(MOUNT) ? ?; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
+    $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
+    $(SUDO) -n $(CHMOD) o+rw $1; \
+    $(ECHO) $(INSTALL) -d $3; \
+    $(INSTALL) -d $3; \
+    $(ECHO) $(SUDO) -n $(MOUNT) $1 $3; \
+    $(SUDO) -n $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to umount a test device
 # call functionDeviceUmount,<loop device>,<mount point>
 functionDeviceUmount = \
   ( \
-    $(ECHO) $(SUDO) -n $(UMOUNT) ?; \
-    $(SUDO) -n $(UMOUNT) ?; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(UMOUNT) $2; \
+    $(SUDO) -n $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
     $(SYNC); \
-    $(ECHO) $(SUDO) -n $(LOSETUP) -d ?; \
-    $(SUDO) -n $(LOSETUP) -d ?; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
+    $(SUDO) -n $(LOSETUP) -d $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to dump content of device to file
 # call functionTestDeviceDump,<loop device>,<file>
 functionTestDeviceDump = \
   ( \
-    $(ECHO) $(SUDO) -n $(DD) if=? of=- \> ?; \
-    ($(SUDO) -n $(DD) if=? of=-) >? 2>/dev/null; \
+    $(ECHO) $(SUDO) -n $(DD) if=$1 of=- \> $2; \
+    ($(SUDO) -n $(DD) if=$1 of=-) >$2 2>/dev/null; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to wait for process, kill process
 # call functionWaitProcess,<pid file>,<timeout [s]>
 functionWaitProcess = \
   ( \
-    if test -f "?"; then \
-      pid=`$(PGREP) --pidfile ? 2>/dev/null`; \
-      $(TIMEOUT) --signal=KILL ? $(TAIL) --pid=$$pid -f /dev/null 2>/dev/null; \
+    if test -f "$1"; then \
+      pid=`$(PGREP) --pidfile $1 2>/dev/null`; \
+      $(TIMEOUT) --signal=KILL $2 $(TAIL) --pid=$$pid -f /dev/null 2>/dev/null; \
       $(KILL) $$pid 2>/dev/null; \
     fi; \
     true; \
@@ -1796,19 +1796,23 @@ test13 test_index:
 	@$(call functionInfoEnd,OK)
 
 test13-debug test_index-debug: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index
 
 test13-gcov test_index-gcov: \
-  $(TEST_BAR_GCOV)
+  $(TEST_BAR_GCOV) \
+  $(TEST_BAR_INDEX_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index
 
 test13-gprof test_index-gprof: \
-  $(TEST_BAR_GPROF)
+  $(TEST_BAR_GPROF) \
+  $(TEST_BAR_INDEX_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index
 
 test13-valgrind test_index-valgrind: \
-  $(TEST_BAR_VALGRIND)
+  $(TEST_BAR_VALGRIND) \
+  $(TEST_BAR_INDEX_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)"  test_index
 
 test14 test_server:
@@ -2485,7 +2489,7 @@ show_debug_test_code test_code:
 	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
           ( \
             while read fileName; do \
-              cat $$fileName | $(PERL) -n -e 'if (/DEBUG_TEST_CODE\("(.*)"\)/) { print "'$$fileName': $?=1\n"; };'; \
+              cat $$fileName | $(PERL) -n -e 'if (/DEBUG_TEST_CODE\("(.*)"\)/) { print "'$$fileName': $$1=1\n"; };'; \
             done; \
           )
 
@@ -2763,11 +2767,11 @@ data/zero128.dat:
 # helper function to check if parameter exists
 # call functionVerifyParameter,<name>[,message]
 functionVerifyParameter = \
-  if test -z "$(?)"; then \
-    if test -n "?"; then \
-      $(ECHO) >&2 "ERROR: ?"; \
+  if test -z "$($1)"; then \
+    if test -n "$1"; then \
+      $(ECHO) >&2 "ERROR: $1"; \
     else \
-      $(ECHO) >&2 "ERROR: parameter '?' not set"; \
+      $(ECHO) >&2 "ERROR: parameter '$1' not set"; \
     fi; \
     exit 1; \
   fi
@@ -2775,17 +2779,17 @@ functionVerifyParameter = \
 # helper function for index database SQL command
 # call functionIndex,<sql command>
 functionIndex = \
-  $(CD) $(UP_DIR); $(TEST_BAR_INDEX) -C $(SUB_DIR) $(TEST_INDEX_DATABASE) -q ?
+  $(CD) $(UP_DIR); $(TEST_BAR_INDEX) -C $(SUB_DIR) $(TEST_INDEX_DATABASE) -q $1
 
 # helper function for query of index database
 # call functionIndexQuery,<sql command>
 functionIndexQuery = \
-  $(call functionIndex,?)
+  $(call functionIndex,$1)
 
 # helper function to check if quert index database return empty result
 # call functionIndexQueryEmpty,<sql command>
 functionIndexQueryEmpty = \
-  test -z "`$(call functionIndexQuery,?)`"
+  test -z "`$(call functionIndexQuery,$1)`"
 
 .PHONY: test_file_operations
 test_file_operations: \
@@ -4702,31 +4706,35 @@ test_index_operations_server: \
 
 .PHONY: test_index_operations-debug
 test_index_operations-debug: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index_operations
 
 .PHONY: test_index_operations-gcov
 test_index_operations-gcov: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index_operations
 
 .PHONY: test_index_operations-gprof
 test_index_operations-gprof: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index_operations
 
 .PHONY: test_index_operations-valgrind
 test_index_operations-valgrind: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index_operations
 
 # send command to server
 functionServerCommandSocket = \
-  $(ECHO) ?: ? ?; $(ECHO) ? ?|$(NETCAT) -w1 ?|$(TAIL) -n +2
+  $(ECHO) $1: $1 $1; $(ECHO) $1 $1|$(NETCAT) -w1 $1|$(TAIL) -n +2
 functionServerCommandBatch = \
-  $(ECHO) ? ?
+  $(ECHO) $1 $1
 functionSlaveCommandSocket = \
-  $(ECHO) ?: ? ?; $(ECHO) ? ?|$(NETCAT) -w1 ?|$(TAIL) -n +2
+  $(ECHO) $1: $1 $1; $(ECHO) $1 $1|$(NETCAT) -w1 $1|$(TAIL) -n +2
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
 test_server_operations: \

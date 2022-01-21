@@ -1367,7 +1367,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                           (
                             DATABASE_VALUE_UINT("state", INDEX_STATE_NONE),
                           ),
-                          "deletedFlag!=TRUE",
+                          "deletedFlag=TRUE",
                           DATABASE_FILTERS
                           (
                           )
@@ -3839,7 +3839,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                totalDeletedEntityCount,
                                "entities",
                                "COUNT(entities.id)",
-                               "deletedFlag=1",
+                               "deletedFlag=TRUE",
                                DATABASE_FILTERS
                                (
                                ),
@@ -3978,7 +3978,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                totalDeletedStorageCount,
                                "storages",
                                "COUNT(id)",
-                               "deletedFlag=1",
+                               "deletedFlag=TRUE",
                                DATABASE_FILTERS
                                (
                                ),

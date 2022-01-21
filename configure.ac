@@ -834,7 +834,7 @@ AC_SUBST(XGETTEXT)                          dnl xgettext command
 AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
-AC_SUBST(MARIADB)                           dnl MariaDB command
+AC_SUBST(MYSQL)                             dnl mysql command
 
 AC_SUBST(JAVA_DATA_MODEL)                   dnl java data model (32 or 64)
 AC_SUBST(JAVA_FLAGS)                        dnl java flags
@@ -1291,7 +1291,21 @@ if test -z "$INSTALL"; then
   AC_MSG_ERROR([Cannot find a 'install' in PATH. Please check your PATH environment variable.])
 fi
 
+if test $ENABLE_MARIADB = "yes"; then
+  AC_PATH_PROGS(MYSQL,mysql)
+  if test -z "$MYSQL"; then
+    AC_MSG_ERROR([Cannot find a 'mysql' in PATH. Please check your PATH environment variable.])
+  fi
+fi
+if test $ENABLE_POSTGRESQL = "yes"; then
+  AC_PATH_PROGS(PSQL,psql)
+  if test -z "$PSQL"; then
+    AC_MSG_ERROR([Cannot find a 'psql' in PATH. Please check your PATH environment variable.])
+  fi
+fi
+
 AC_PATH_PROGS(SVNVERSION,svnversion)
+AC_PATH_PROGS(GIT,git)
 
 if test $ENABLE_EPM = "yes"; then
   if test -d epm -o -d "`readlink epm`"; then

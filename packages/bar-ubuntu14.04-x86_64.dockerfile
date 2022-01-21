@@ -8,8 +8,10 @@ RUN useradd -g 1000 -u 1000 build
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
-# install packages
+# update
 RUN apt-get -y update
+
+# install packages
 RUN apt-get -y install \
   bc \
   bzip2 \
@@ -19,13 +21,16 @@ RUN apt-get -y install \
   devscripts \
   e2fsprogs \
   gettext \
+  git \
   imagemagick \
   joe \
   less \
   lua5.1 \
   m4 \
+  mariadb-client \
   patch \
   pkg-config \
+  postgresql \
   rsync \
   subversion \
   sudo \
@@ -51,9 +56,6 @@ RUN apt-get -y install \
   unoconv \
   txt2man \
   valgrind \
-  ;
-RUN apt-get -y install \
-  libpq-dev \
   ;
 
 # mounts

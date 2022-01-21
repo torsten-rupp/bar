@@ -4,8 +4,10 @@ ENV container docker
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
-# install packages
+# update
 RUN apt-get -y update
+
+# install packages
 RUN apt-get -y install \
   bc \
   bzip2 \
@@ -14,13 +16,16 @@ RUN apt-get -y install \
   devscripts \
   e2fsprogs \
   gettext \
+  git \
   imagemagick \
   joe \
   less \
   lua5.3 \
   m4 \
+  mariadb-client \
   patch \
   pkg-config \
+  postgresql \
   rsync \
   subversion \
   sudo \

@@ -11,9 +11,10 @@ RUN useradd -g $GID -u $UID build
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
+# update
+RUN apt-get -y update
+
 # install packages
-RUN dpkg --add-architecture i386;
-RUN apt-get -y update;
 RUN apt-get -y install \
   bc \
   bzip2 \
@@ -23,12 +24,15 @@ RUN apt-get -y install \
   devscripts \
   e2fsprogs \
   gettext \
+  git \
   joe \
   less \
   lua5.3 \
   m4 \
+  mariadb-client \
   patch \
   pkg-config \
+  postgresql \
   rsync \
   subversion \
   sudo \
@@ -59,10 +63,13 @@ RUN apt-get -y install \
   unoconv \
   txt2man \
   valgrind \
-  wine32 \
   ;
+
+# install wine32
+RUN dpkg --add-architecture i386
+RUN apt-get -y update
 RUN apt-get -y install \
-  libpq-dev \
+  wine32 \
   ;
 
 # install Inno Setup

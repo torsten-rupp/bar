@@ -670,31 +670,15 @@ LOCAL void dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
     // drop FTS indizes
     if (error == ERROR_NONE)
     {
-      error = Database_execute(databaseHandle,
-                               NULL,  // changedRowCount
-                               DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES
-                               (
-                               ),
-                               "DROP TABLE IF EXISTS FTS_storages",
-                               DATABASE_PARAMETERS
-                               (
-                               )
-                              );
+      error = Database_dropTable(databaseHandle,
+                                 "FTS_storages"
+                                );
     }
     if (error == ERROR_NONE)
     {
-      error = Database_execute(databaseHandle,
-                               NULL,  // changedRowCount
-                               DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES
-                               (
-                               ),
-                               "DROP TABLE IF EXISTS FTS_entries",
-                               DATABASE_PARAMETERS
-                               (
-                               )
-                              );
+      error = Database_dropTable(databaseHandle,
+                                 "FTS_entries"
+                                );
     }
 
     if (error != ERROR_NONE)
@@ -1782,18 +1766,9 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   error = ERROR_NONE;
   INDEX_DEFINITIONS_ITERATE(INDEX_DEFINITION_TRIGGER_NAMES[Database_getType(databaseHandle)], triggerName)
   {
-    error = Database_execute(databaseHandle,
-                             NULL,  // changedRowCount
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES
-                             (
-                             ),
-                             "DROP TRIGGER ?",
-                             DATABASE_PARAMETERS
-                             (
-                               DATABASE_PARAMETER_STRING(triggerName)
-                             )
-                            );
+    error = Database_dropTrigger(databaseHandle,
+                                 triggerName
+                                );
   }
   if (error != ERROR_NONE)
   {
@@ -1956,18 +1931,9 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
           error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
           STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
           {
-            error = Database_execute(databaseHandle,
-                                     NULL,  // changedRowCount
-                                     DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES
-                                     (
-                                     ),
-                                     "DROP INDEX IF EXISTS ?",
-                                     DATABASE_PARAMETERS
-                                     (
-                                       DATABASE_PARAMETER_STRING(indexName)
-                                     )
-                                    );
+            error = Database_dropIndex(databaseHandle,
+                                       String_cString(indexName)
+                                      );
           }
           StringList_done(&indexNameList);
         }
@@ -2068,18 +2034,9 @@ LOCAL void createFTSIndizes(DatabaseHandle *databaseHandle)
 
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLE_NAMES[Database_getType(databaseHandle)], name, error == ERROR_NONE)
           {
-            error = Database_execute(databaseHandle,
-                                     NULL,  // changedRowCount
-                                     DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES
-                                     (
-                                     ),
-                                     "DROP TABLE IF EXISTS ?",
-                                     DATABASE_PARAMETERS
-                                     (
-                                       DATABASE_PARAMETER_STRING(name)
-                                     )
-                                    );
+            error = Database_dropTable(databaseHandle,
+                                       name
+                                      );
           }
         }
         break;
@@ -3108,7 +3065,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=fileEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOTNULL",
+                             "entries.id NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3123,7 +3080,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOTNULL",
+                             "entries.id NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3138,7 +3095,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOTNULL",
+                             "entries.id NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3153,7 +3110,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOTNULL",
+                             "entries.id NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3168,7 +3125,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id IS NOTNULL",
+                             "entries.id NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3181,7 +3138,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              &entityCount,
                              "entities",
                              "COUNT(id)",
-                             "id IS NOTNULL",
+                             "id NOTNULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3297,8 +3254,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entries.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size"),
                          ),
-                         "    entries.id IS NOTNULL \
-                          AND entryFragments.storageId IS NOTNULL \
+                         "    entries.id NOTNULL \
+                          AND entryFragments.storageId NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3378,8 +3335,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entriesNewest.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entriesNewest.id IS NOTNULL \
-                          AND entryFragments.storageId IS NOTNULL \
+                         "    entriesNewest.id NOTNULL \
+                          AND entryFragments.storageId NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3466,7 +3423,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id IS NOTNULL",
+                         "entries.id NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3540,7 +3497,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id IS NOTNULL",
+                         "entriesNewest.id NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3627,7 +3584,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id IS NOTNULL",
+                         "entries.id NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3701,7 +3658,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id IS NOTNULL",
+                         "entriesNewest.id NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3792,8 +3749,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entries.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entries.id IS NOTNULL \
-                          AND entryFragments.storageId IS NOTNULL \
+                         "    entries.id NOTNULL \
+                          AND entryFragments.storageId NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3873,8 +3830,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entriesNewest.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entriesNewest.id IS NOTNULL \
-                          AND entryFragments.storageId IS NOTNULL \
+                         "    entriesNewest.id NOTNULL \
+                          AND entryFragments.storageId NOTNULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3961,7 +3918,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id IS NOTNULL",
+                         "entries.id NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -4035,7 +3992,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id IS NOTNULL",
+                         "entriesNewest.id NOTNULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -4222,7 +4179,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                       DATABASE_FILTERS
                                                       (
                                                         DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),
-                                                       DATABASE_FILTER_KEY(entityId)
+                                                        DATABASE_FILTER_KEY(entityId)
                                                       ),
                                                       NULL
                                                      );
@@ -4236,8 +4193,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                       "entries.type=? AND entries.entityId=?",
                                                       DATABASE_FILTERS
                                                       (
-                                                      DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),
-                                                      DATABASE_FILTER_KEY(entityId)
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),
+                                                        DATABASE_FILTER_KEY(entityId)
                                                       ),
                                                       NULL
                                                      );
@@ -4411,7 +4368,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                       DATABASE_FILTERS
                                                       (
                                                         DATABASE_FILTER_KEY(INDEX_CONST_TYPE_HARDLINK ),
-                                                       DATABASE_FILTER_KEY(entityId)
+                                                        DATABASE_FILTER_KEY(entityId)
                                                       ),
                                                       NULL
                                                      );
@@ -4425,8 +4382,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                       "entriesNewest.type=? AND entriesNewest.entityId=?",
                                                       DATABASE_FILTERS
                                                       (
-                                                      DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),
-                                                      DATABASE_FILTER_KEY(entityId)
+                                                        DATABASE_FILTER_KEY(INDEX_CONST_TYPE_SPECIAL  ),
+                                                        DATABASE_FILTER_KEY(entityId)
                                                       ),
                                                       NULL
                                                      );
@@ -6302,7 +6259,7 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
                        (
                        ),
                        NULL,  // groupBy
-                       "ORDER BY name",
+                       "name",
                        0LL,
                        DATABASE_UNLIMITED
                       );

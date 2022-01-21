@@ -9,14 +9,14 @@ RUN yum -y install centos-release-scl;
 RUN curl https://www.getpagespeed.com/files/centos6-scl-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl.repo;
 RUN curl https://www.getpagespeed.com/files/centos6-scl-rh-eol.repo --output /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo;
 
-RUN yum -y update;
-RUN yum -y upgrade;
+# update
+RUN yum -y update
+RUN yum -y upgrade
 #RUN yum list all | grep devtoolset;
 
 # add user for build process
 RUN groupadd -g 1000 build
 RUN useradd -g 1000 -u 1000 build
-
 
 # install packages
 RUN yum -y install \
@@ -26,12 +26,15 @@ RUN yum -y install \
   curl \
   e2fsprogs \
   gettext \
+  git \
   initscripts \
   lua \
   m4 \
+  mariadb-client \
   openssl \
   patch \
   pkg-config \
+  postgresql \
   psmisc \
   rpm-build \
   rsync \
@@ -55,9 +58,6 @@ RUN yum -y install \
   bison \
   flex \
   rpm-build \
-  ;
-RUN yum -y install \
-  postgresql-devel \
   ;
 
 # required for gcc 7

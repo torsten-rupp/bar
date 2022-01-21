@@ -5,6 +5,10 @@ ENV container docker
 RUN groupadd -g 1000 build
 RUN useradd -g 1000 -u 1000 build
 
+# update
+RUN yum -y update
+RUN yum -y upgrade
+
 # install packages
 RUN yum -y install \
   bc \
@@ -13,14 +17,17 @@ RUN yum -y install \
   curl \
   e2fsprogs \
   gettext \
+  git \
   initscripts \
   joe \
   less \
   lua \
   m4 \
+  mariadb-client \
   openssl \
   patch \
   pkg-config \
+  postgresql \
   psmisc \
   rpm-build \
   rsync \
@@ -43,9 +50,6 @@ RUN yum -y install \
   flex \
   rpm-build \
   valgrind \
-  ;
-RUN yum -y install \
-  postgresql-devel \
   ;
 
 # fix systemd
