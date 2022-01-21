@@ -338,7 +338,7 @@ TEST_POSTGRESQL_PASSWORD         = test
 
 # databases
 TEST_INDEX_DATABASE_SQLITE       =  sqlite:intermediate/index.db
-TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MYSQL_SERVER):$(TEST_MYSQL_USER):$(TEST_MYSQL_PASSWORD)
+TEST_INDEX_DATABASE_MARIADB      =  mariadb:$(TEST_MARIADB_SERVER):$(TEST_MARIADB_USER):$(TEST_MARIADB_PASSWORD)
 TEST_INDEX_DATABASE_POSTGRESQL   =  postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)
 TEST_INDEX_DATABASE              =  $(TEST_INDEX_DATABASE_SQLITE)
 
@@ -594,7 +594,7 @@ functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
   $(CHMOD) o+w intermediate 2>/dev/null || true
 functionCleanTestDatabases = \
-  MYSQL_PWD=$(TEST_MYSQL_PASSWORD) \
+  MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
     $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE'" | $(CUT) -f 1 | \
   MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
     $(XARGS) -n 1 -I "{}" \
@@ -1796,19 +1796,23 @@ test13 test_index:
 	@$(call functionInfoEnd,OK)
 
 test13-debug test_index-debug: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index
 
 test13-gcov test_index-gcov: \
-  $(TEST_BAR_GCOV)
+  $(TEST_BAR_GCOV) \
+  $(TEST_BAR_INDEX_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index
 
 test13-gprof test_index-gprof: \
-  $(TEST_BAR_GPROF)
+  $(TEST_BAR_GPROF) \
+  $(TEST_BAR_INDEX_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index
 
 test13-valgrind test_index-valgrind: \
-  $(TEST_BAR_VALGRIND)
+  $(TEST_BAR_VALGRIND) \
+  $(TEST_BAR_INDEX_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)"  test_index
 
 test14 test_server:
@@ -4702,22 +4706,26 @@ test_index_operations_server: \
 
 .PHONY: test_index_operations-debug
 test_index_operations-debug: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index_operations
 
 .PHONY: test_index_operations-gcov
 test_index_operations-gcov: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index_operations
 
 .PHONY: test_index_operations-gprof
 test_index_operations-gprof: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index_operations
 
 .PHONY: test_index_operations-valgrind
 test_index_operations-valgrind: \
-  $(TEST_BAR_DEBUG)
+  $(TEST_BAR_DEBUG) \
+  $(TEST_BAR_INDEX_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index_operations
 
 # send command to server
