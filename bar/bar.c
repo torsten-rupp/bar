@@ -3808,34 +3808,41 @@ LOCAL Errors runDebug(void)
     // create entity
     if (globalOptions.debug.indexEntityId != DATABASE_ID_NONE)
     {
-      while (!Index_findEntity(indexHandle,
-                               INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
-                               NULL,  // findJobUUID
-                               NULL,  // findScheduleUUID
-                               NULL,  // findHostName
-                               ARCHIVE_TYPE_ANY,
-                               0LL,  // findCreatedDateTime
-                               NULL,  // jobUUID
-                               NULL,  // scheduleUUID
-                               NULL,  // uuidId
-                               NULL,  // entityId
-                               NULL,  // archiveType
-                               NULL,  // createdDateTime
-                               NULL,  // lastErrorMessage
-                               NULL,  // totalEntryCount
-                               NULL  // totalEntrySize
-                             )
-             )
+      if (!Index_findEntity(indexHandle,
+                            INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
+                            NULL,  // findJobUUID
+                            NULL,  // findScheduleUUID
+                            NULL,  // findHostName
+                            ARCHIVE_TYPE_ANY,
+                            0LL,  // findCreatedDateTime
+                            NULL,  // jobUUID
+                            NULL,  // scheduleUUID
+                            NULL,  // uuidId
+                            NULL,  // entityId
+                            NULL,  // archiveType
+                            NULL,  // createdDateTime
+                            NULL,  // lastErrorMessage
+                            NULL,  // totalEntryCount
+                            NULL  // totalEntrySize
+                           )
+         )
       {
-        error = Index_newEntity(indexHandle,
-                                MISC_UUID_NONE,
-                                MISC_UUID_NONE,
-                                NULL,  // hostName,
-                                NULL,  // userName,
-                                ARCHIVE_TYPE_NORMAL,
-                                0LL,  // createdDateTime
-                                FALSE,  // locked
-                                &entityId
+        // Note: cannot use Index_newEntity(); specific id is required
+        error = Database_insert(&indexHandle->databaseHandle,
+                                &entityId,
+                                "entities",
+                                DATABASE_FLAG_NONE,
+                                DATABASE_VALUES
+                                (
+                                  DATABASE_VALUE_KEY     ("id",           globalOptions.debug.indexEntityId),
+                                  DATABASE_VALUE_KEY     ("uuidId",       1),
+                                  DATABASE_VALUE_CSTRING ("jobUUID",      MISC_UUID_NONE),
+                                  DATABASE_VALUE_DATETIME("created",      0LL),
+                                  DATABASE_VALUE_UINT    ("type",         ARCHIVE_TYPE_NORMAL),
+                                  DATABASE_VALUE_UINT    ("lockedCount",  FALSE)
+                                ),
+                                DATABASE_COLUMNS_NONE,
+                                DATABASE_FILTERS_NONE
                                );
         if (error != ERROR_NONE)
         {
@@ -4099,6 +4106,7 @@ LOCAL Errors runDebug(void)
 
   // free resources
   Index_done();
+  Database_doneSpecifier(&databaseSpecifier);
   AutoFree_done(&autoFreeList);
 
   return error;

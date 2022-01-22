@@ -1904,7 +1904,8 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                        UNUSED_VARIABLE(valueCount);
 
                        databaseId_ = values[0].id;
-                       String_setBuffer(name,values[1].text.data,values[1].text.length);
+// TODO:remove                       String_setBuffer(name,values[1].text.data,values[1].text.length);
+                       String_set(name,values[1].string);
 
                        return ERROR_NONE;
                      },NULL),
@@ -2077,7 +2078,8 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
                  databaseId = values[0].id;
                  dateTime   = values[1].dateTime;
-                 String_setBuffer(name,values[3].text.data,values[3].text.length);
+// TODO:remove                 String_setBuffer(name,values[3].text.data,values[3].text.length);
+                 String_set(name,values[2].string);
                  storedFlag = values[3].b;
 
                  fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);

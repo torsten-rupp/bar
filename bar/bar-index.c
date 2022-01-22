@@ -66,7 +66,7 @@ const char *ARCHIVE_TYPES[] =
 typedef struct
 {
   bool   showHeaderFlag;
-  bool   headerPrintedFlag;
+  bool   printedHeaderFlag;
   size_t *widths;
 } PrintRowData;
 
@@ -1498,11 +1498,11 @@ LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
-                         if (String_equalsCString(name,values[0].text.data))
+                         if (String_equals(name,values[0].string))
                          {
                            n++;
                          }
-                         String_setCString(name,values[0].text.data);
+                         String_set(name,values[0].string);
 
                          return ERROR_NONE;
                        },NULL),
@@ -2238,26 +2238,25 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
     String_delete(entryNode->name);
   }
 
-  EntryList  entryList;
-  DatabaseId entryId;
-  DatabaseId uuidId;
-  DatabaseId entityId;
-  uint       indexType;
-  String     entryName;
-  uint64     timeLastChanged;
-  uint32     userId;
-  uint32     groupId;
-  uint32     permission;
-  uint64     size;
-  Errors     error;
-  EntryNode  *entryNode;
+  EntryList   entryList;
+  DatabaseId  entryId;
+  DatabaseId  uuidId;
+  DatabaseId  entityId;
+  uint        indexType;
+  ConstString entryName;
+  uint64      timeLastChanged;
+  uint32      userId;
+  uint32      groupId;
+  uint32      permission;
+  uint64      size;
+  Errors      error;
+  EntryNode   *entryNode;
 
   assert(databaseHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
   List_init(&entryList);
-  entryName = String_new();
   error     = ERROR_NONE;
 
   // get entries info to add
@@ -2276,7 +2275,7 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                            uuidId          = values[1].id;
                            entityId        = values[2].id;
                            indexType       = values[3].id;
-                           String_setBuffer(entryName,values[4].text.data,values[4].text.length);
+                           entryName       = values[4].string;
                            timeLastChanged = values[5].dateTime;
                            userId          = values[6].u;
                            groupId         = values[7].u;
@@ -2398,7 +2397,7 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                          ),
                          "    storages.deletedFlag!=TRUE \
                           AND entriesNewest.name=? \
-                          AND entriesNewest.id NOTNULL \
+                          AND entriesNewest.id IS NOT NULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -2476,7 +2475,6 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
   }
 
   // free resources
-  String_delete(entryName);
   List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 
   return error;
@@ -2539,18 +2537,16 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
     String_delete(entryNode->name);
   }
 
-  EntryList  entryList;
-  String     entryName;
-  Errors     error;
-  EntryNode  *entryNode;
+  EntryList entryList;
+  Errors    error;
+  EntryNode *entryNode;
 
   assert(databaseHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
 
   // init variables
   List_init(&entryList);
-  entryName = String_new();
-  error     = ERROR_NONE;
+  error = ERROR_NONE;
 
   // get entries info to remove
   if (error == ERROR_NONE)
@@ -2571,7 +2567,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                            }
 
                            entryNode->entryId        = values[0].id;
-                           String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                           String_set(entryNode->name,values[1].string);
                            entryNode->newest.entryId = DATABASE_ID_NONE;
 
                            List_append(&entryList,entryNode);
@@ -2620,7 +2616,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                            }
 
                            entryNode->entryId        = values[0].id;
-                           String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                           String_set(entryNode->name,values[1].string);
                            entryNode->newest.entryId = DATABASE_ID_NONE;
 
                            List_append(&entryList,entryNode);
@@ -2669,7 +2665,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                            }
 
                            entryNode->entryId        = values[0].id;
-                           String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                           String_set(entryNode->name,values[1].string);
                            entryNode->newest.entryId = DATABASE_ID_NONE;
 
                            List_append(&entryList,entryNode);
@@ -2718,7 +2714,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                            }
 
                            entryNode->entryId        = values[0].id;
-                           String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                           String_set(entryNode->name,values[1].string);
                            entryNode->newest.entryId = DATABASE_ID_NONE;
 
                            List_append(&entryList,entryNode);
@@ -2879,7 +2875,6 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
   }
 
   // free resources
-  String_delete(entryName);
   List_done(&entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 
   return error;
@@ -3065,7 +3060,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=fileEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id NOTNULL",
+                             "entries.id IS NOT NULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3080,7 +3075,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id NOTNULL",
+                             "entries.id IS NOT NULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3095,7 +3090,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=linkEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id NOTNULL",
+                             "entries.id IS NOT NULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3110,7 +3105,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=hardlinkEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id NOTNULL",
+                             "entries.id IS NOT NULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3125,7 +3120,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                 LEFT JOIN entries ON entries.id=specialEntries.entryId \
                              ",
                              "COUNT(entries.id)",
-                             "entries.id NOTNULL",
+                             "entries.id IS NOT NULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3138,7 +3133,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              &entityCount,
                              "entities",
                              "COUNT(id)",
-                             "id NOTNULL",
+                             "id IS NOT NULL",
                              DATABASE_FILTERS
                              (
                              ),
@@ -3167,10 +3162,10 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                             DATABASE_FLAG_NONE,
                             DATABASE_VALUES
                             (
-                              DATABASE_VALUE_UINT  ("totalEntryCount",0),
-                              DATABASE_VALUE_UINT64("totalEntrySize",0LL),
+                              DATABASE_VALUE_UINT  ("totalEntryCount",      0),
+                              DATABASE_VALUE_UINT64("totalEntrySize",       0LL),
                               DATABASE_VALUE_UINT  ("totalEntryCountNewest",0),
-                              DATABASE_VALUE_UINT64("totalEntrySizeNewest",0LL)
+                              DATABASE_VALUE_UINT64("totalEntrySizeNewest", 0LL)
                             ),
                             DATABASE_FILTERS_NONE
                            );
@@ -3189,9 +3184,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
-                           uint64     totalSize;
+                           DatabaseId  storageId;
+                           ConstString name;
+                           uint64      totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3200,7 +3195,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = String_newCString(values[1].string);
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all directories
@@ -3254,8 +3249,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entries.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size"),
                          ),
-                         "    entries.id NOTNULL \
-                          AND entryFragments.storageId NOTNULL \
+                         "    entries.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3270,9 +3265,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
-                           uint64     totalSize;
+                           DatabaseId  storageId;
+                           ConstString name;
+                           uint64      totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3281,7 +3276,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = String_newCString(values[1].string);
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all newest directories
@@ -3335,8 +3330,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entriesNewest.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entriesNewest.id NOTNULL \
-                          AND entryFragments.storageId NOTNULL \
+                         "    entriesNewest.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3363,8 +3358,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
+                           DatabaseId  storageId;
+                           ConstString name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3373,7 +3368,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = String_newCString(values[1].string);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3423,7 +3418,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id NOTNULL",
+                         "entries.id IS NOT NULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3437,8 +3432,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
+                           DatabaseId  storageId;
+                           ConstString name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3447,7 +3442,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = values[1].string;
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3477,8 +3472,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              }
                            }
 
-                           String_delete(name);
-
                            n++;
                            printPercentage(n,totalCount);
 
@@ -3497,7 +3490,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("directoryEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id NOTNULL",
+                         "entriesNewest.id IS NOT NULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3533,7 +3526,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = String_duplicate(values[1].string);
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3584,7 +3577,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id NOTNULL",
+                         "entries.id IS NOT NULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3598,8 +3591,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
+                           DatabaseId  storageId;
+                           ConstString name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3608,7 +3601,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = values[1].string;
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3638,8 +3631,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              }
                            }
 
-                           String_delete(name);
-
                            n++;
                            printPercentage(n,totalCount);
 
@@ -3658,7 +3649,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("linkEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id NOTNULL",
+                         "entriesNewest.id IS NOT NULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3684,9 +3675,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
-                           uint64     totalSize;
+                           DatabaseId  storageId;
+                           ConstString name;
+                           uint64      totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3695,7 +3686,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = values[1].string;
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all directories
@@ -3727,8 +3718,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              }
                            }
 
-                           String_delete(name);
-
                            n++;
                            printPercentage(n,totalCount);
 
@@ -3749,8 +3738,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entries.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entries.id NOTNULL \
-                          AND entryFragments.storageId NOTNULL \
+                         "    entries.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3765,9 +3754,9 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
-                           uint64     totalSize;
+                           DatabaseId  storageId;
+                           ConstString name;
+                           uint64      totalSize;
 
                            assert(values != NULL);
                            assert(valueCount == 3);
@@ -3776,7 +3765,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = values[1].string;
                            totalSize = values[2].u64;
 
                            // update directory content count/size aggregates in all directories
@@ -3808,8 +3797,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              }
                            }
 
-                           String_delete(name);
-
                            n++;
                            printPercentage(n,totalCount);
 
@@ -3830,8 +3817,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_STRING("entriesNewest.name"),
                            DATABASE_COLUMN_UINT64("entryFragments.size")
                          ),
-                         "    entriesNewest.id NOTNULL \
-                          AND entryFragments.storageId NOTNULL \
+                         "    entriesNewest.id IS NOT NULL \
+                          AND entryFragments.storageId IS NOT NULL \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3858,8 +3845,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
+                           DatabaseId  storageId;
+                           ConstString name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3868,7 +3855,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = values[1].string;
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3898,8 +3885,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              }
                            }
 
-                           String_delete(name);
-
                            n++;
                            printPercentage(n,totalCount);
 
@@ -3918,7 +3903,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
                            DATABASE_COLUMN_STRING("entries.name")
                          ),
-                         "entries.id NOTNULL",
+                         "entries.id IS NOT NULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -3932,8 +3917,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
     error = Database_get(databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
-                           DatabaseId storageId;
-                           String     name;
+                           DatabaseId  storageId;
+                           ConstString name;
 
                            assert(values != NULL);
                            assert(valueCount == 2);
@@ -3942,7 +3927,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            UNUSED_VARIABLE(userData);
 
                            storageId = values[0].id;
-                           name      = String_newCString(values[1].text.data);
+                           name      = values[1].string;
 
                            // update directory content count/size aggregates in all directories
                            while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -3972,8 +3957,6 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              }
                            }
 
-                           String_delete(name);
-
                            n++;
                            printPercentage(n,totalCount);
 
@@ -3992,7 +3975,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                            DATABASE_COLUMN_KEY   ("specialEntries.storageId"),
                            DATABASE_COLUMN_STRING("entriesNewest.name")
                          ),
-                         "entriesNewest.id NOTNULL",
+                         "entriesNewest.id IS NOT NULL",
                          DATABASE_FILTERS
                          (
                          ),
@@ -6206,7 +6189,8 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
-                         DatabaseId storageId;
+                         DatabaseId  storageId;
+                         ConstString otherName;
 
                          assert(values != NULL);
                          assert(valueCount == 2);
@@ -6215,8 +6199,9 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
                          UNUSED_VARIABLE(userData);
 
                          storageId = values[0].id;
+                         otherName = values[1].string;
 
-                         if (String_equalsCString(name,values[1].text.data))
+                         if (String_equals(name,otherName))
                          {
                            error = Database_update(databaseHandle,
                                                    NULL,  // changedRowCount
@@ -6237,9 +6222,9 @@ LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
                              return error;
                            }
                            n++;
-                           printInfo("    %s\n",values[1].text.data);
+                           printInfo("    %s\n",String_cString(otherName));
                          }
-                         String_setCString(name,values[1].text.data);
+                         String_setCString(name,otherName);
 
                          return ERROR_NONE;
                        },NULL),
@@ -6715,38 +6700,6 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 }
 
 /***********************************************************************\
-* Name   : getColumnsWidth
-* Purpose: get columns width
-* Input  : values     - database columns
-*          valueCount - value count
-* Output : -
-* Return : widths
-* Notes  : -
-\***********************************************************************/
-
-LOCAL size_t* getColumnsWidth(const DatabaseValue values[], uint valueCount)
-{
-  size_t *widths;
-  uint   i;
-
-  assert(values != NULL);
-
-  widths = (size_t*)malloc(valueCount*sizeof(size_t));
-  assert(widths != NULL);
-
-  for (i = 0; i < valueCount; i++)
-  {
-    widths[i] = 0;
-    if (values[i].text.length > widths[i])
-    {
-      widths[i] = values[i].text.length;
-    }
-  }
-
-  return widths;
-}
-
-/***********************************************************************\
 * Name   : freeColumnsWidth
 * Purpose: get columns width
 * Input  : widths - column widths
@@ -6781,18 +6734,17 @@ LOCAL void printChars(char ch, uint n)
 }
 
 /***********************************************************************\
-* Name   : calculateColumnWidths
-* Purpose: calculate column width call back
-* Input  : columns  - column names
-*          values   - values
+* Name   : getColumnWidths
+* Purpose: get columns width call back
+* Input  : values   - values
 *          count    - number of values
-*          userData - user data
+*          userData - user data (PrintRowData)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors calculateColumnWidths(const DatabaseValue values[], uint valueCount, void *userData)
+LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void *userData)
 {
   PrintRowData *printRowData = (PrintRowData*)userData;
   uint         i;
@@ -6802,13 +6754,42 @@ LOCAL Errors calculateColumnWidths(const DatabaseValue values[], uint valueCount
 
   UNUSED_VARIABLE(userData);
 
-  if (printRowData->widths == NULL) printRowData->widths = getColumnsWidth(values,valueCount);
+  if (printRowData->widths == NULL)
+  {
+    printRowData->widths = (size_t*)calloc(valueCount,sizeof(size_t));
+    assert(printRowData->widths != NULL);
+  }
   assert(printRowData->widths != NULL);
 
   for (i = 0; i < valueCount; i++)
   {
-    printRowData->widths[i] = MAX(stringLength(values[i].name),printRowData->widths[i]);
-    printRowData->widths[i] = MAX(values[i].text.length,printRowData->widths[i]);
+    size_t n;
+    char   buffer[64];
+
+    printRowData->widths[i] = MAX(stringFormatLengthCodepointsUTF8(values[i].name),printRowData->widths[i]);
+    n = 0;
+    switch (values[i].type)
+    {
+      case DATABASE_DATATYPE_NONE:        break;
+      case DATABASE_DATATYPE:             break;
+
+      case DATABASE_DATATYPE_PRIMARY_KEY:
+      case DATABASE_DATATYPE_KEY:         n = stringFormatLengthCodepointsUTF8("%"PRIi64,values[i].id); break;
+
+      case DATABASE_DATATYPE_BOOL:        n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%s",values[i].b ? "TRUE" : "FALSE"); break;
+      case DATABASE_DATATYPE_INT:         n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%d",values[i].i); break;
+      case DATABASE_DATATYPE_INT64:       n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%"PRIi64,values[i].i64); break;
+      case DATABASE_DATATYPE_UINT:        n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%u",values[i].u); break;
+      case DATABASE_DATATYPE_UINT64:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
+      case DATABASE_DATATYPE_DOUBLE:      n = stringFormatLengthCodepointsUTF8(buffer,sizeof(buffer),"%lf",values[i].d); break;
+//      case DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
+      case DATABASE_DATATYPE_DATETIME:    n = stringFormatLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,NULL)); break;
+      case DATABASE_DATATYPE_STRING:      n = String_lengthCodepointsUTF8(values[i].string); break;
+      case DATABASE_DATATYPE_CSTRING:     n = stringLengthCodepointsUTF8(values[i].s); break;
+      case DATABASE_DATATYPE_BLOB:        break;
+      default:                            break;
+    }
+    printRowData->widths[i] = MAX(n,printRowData->widths[i]);
   }
 
   return ERROR_NONE;
@@ -6836,7 +6817,7 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
 
   UNUSED_VARIABLE(userData);
 
-  if (printRowData->showHeaderFlag && !printRowData->headerPrintedFlag)
+  if (printRowData->showHeaderFlag && !printRowData->printedHeaderFlag)
   {
     uint n;
 
@@ -6856,14 +6837,49 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
     printf("\n");
     printChars('-',n); printf("\n");
 
-    printRowData->headerPrintedFlag = TRUE;
+    printRowData->printedHeaderFlag = TRUE;
   }
   for (i = 0; i < valueCount; i++)
   {
-    printf("%s ",values[i].text.data);
-    if (printRowData->showHeaderFlag)
+    char       buffer[64];
+    const char *s;
+    size_t     n;
+
+    s = NULL;
+    switch (values[i].type)
     {
-      printChars(' ',printRowData->widths[i]-values[i].text.length);
+      case DATABASE_DATATYPE_NONE:        break;
+      case DATABASE_DATATYPE:             break;
+
+      case DATABASE_DATATYPE_PRIMARY_KEY:
+      case DATABASE_DATATYPE_KEY:         s = stringFormat(buffer,sizeof(buffer),"%"PRIi64,values[i].id); break;
+
+      case DATABASE_DATATYPE_BOOL:        s = stringFormat(buffer,sizeof(buffer),"%s",values[i].b ? "TRUE" : "FALSE"); break;
+      case DATABASE_DATATYPE_INT:         s = stringFormat(buffer,sizeof(buffer),"%d",values[i].i); break;
+      case DATABASE_DATATYPE_INT64:       s = stringFormat(buffer,sizeof(buffer),"%"PRIi64,values[i].i64); break;
+      case DATABASE_DATATYPE_UINT:        s = stringFormat(buffer,sizeof(buffer),"%u",values[i].u); break;
+      case DATABASE_DATATYPE_UINT64:      s = stringFormat(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
+      case DATABASE_DATATYPE_DOUBLE:      s = stringFormat(buffer,sizeof(buffer),"%lf",values[i].d); break;
+//      case DATABASE_DATATYPE_ENUM = DATABASE_DATATYPE_UINT,
+      case DATABASE_DATATYPE_DATETIME:    s = Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,NULL); break;
+      case DATABASE_DATATYPE_STRING:      s = String_cString(values[i].string); break;
+      case DATABASE_DATATYPE_CSTRING:     s = values[i].s; break;
+      case DATABASE_DATATYPE_BLOB:        break;
+      default:                            break;
+    }
+    if (s != NULL)
+    {
+      n = stringLength(s);
+      (void)fwrite(s,n,1,stdout);
+      if (printRowData->showHeaderFlag)
+      {
+        assert(printRowData->widths[i] >= n);
+        printChars(' ',printRowData->widths[i]-n);
+      }
+      else
+      {
+        putc(' ',stdout);
+      }
     }
   }
   printf("\n");
@@ -6897,8 +6913,8 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          UNUSED_VARIABLE(userData);
 
                          printf("  %-16s: %s\n",
-                                values[0].text.data,
-                                values[1].text.data
+                                String_cString(values[0].string),
+                                String_cString(values[1].string)
                                );
 
                          return ERROR_NONE;
@@ -7827,7 +7843,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                          totalSpecialCount   = values[12].u;
 
                          printf("  Id              : %"PRIi64"\n",uuidId);
-                         printf("    UUID          : %s\n",values[ 1].text.data);
+                         printf("    UUID          : %s\n",values[ 1].s);
                          printf("\n");
                          printf("    Total entries : %u, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
@@ -8057,8 +8073,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 
                          printf("  Id              : %"PRIi64"\n",entityId);
                          printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : "xxx");//TODO values[ 1]);
-                         printf("    Job UUID      : %s\n",values[ 2].text.data);
-                         printf("    Schedule UUID : %s\n",values[ 3].text.data);
+                         printf("    Job UUID      : %s\n",values[ 2].s);
+                         printf("    Schedule UUID : %s\n",values[ 3].s);
                          printf("\n");
                          printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
@@ -8254,15 +8270,15 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                          totalSpecialCount   = values[24].u;
 
                          printf("  Id              : %"PRIi64"\n",values[ 0].id);
-                         printf("    Name          : %s\n",values[ 5].text.data);
+                         printf("    Name          : %s\n",values[ 5].s);
                          printf("    Created       : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[ 6].dateTime,NULL));
-                         printf("    Host name     : %s\n",(values[ 7].text.data != NULL) ? values[ 7].text.data : "");
-                         printf("    User name     : %s\n",(values[ 8].text.data != NULL) ? values[ 8].text.data : "");
-                         printf("    Comment       : %s\n",(values[ 9].text.data != NULL) ? values[ 9].text.data : "");
+                         printf("    Host name     : %s\n",(values[ 7].s != NULL) ? values[ 7].s : "");
+                         printf("    User name     : %s\n",(values[ 8].s != NULL) ? values[ 8].s : "");
+                         printf("    Comment       : %s\n",(values[ 9].s != NULL) ? values[ 9].s : "");
                          printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : "xxx");//TODO values[10].i);
                          printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : "xxx");//TODO values[11].i);
                          printf("    Last checked  : %s\n",Misc_formatDateTimeCString(buffer,sizeof(buffer),values[12].dateTime,NULL));
-                         printf("    Error message : %s\n",(values[13].text.data != NULL) ? values[13].text.data : "");
+                         printf("    Error message : %s\n",(values[13].s != NULL) ? values[13].s : "");
                          printf("\n");
                          printf("    Total entries : %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
@@ -8275,8 +8291,8 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                          printf("\n");
                          printf("    UUID id       : %"PRIi64"\n",values[1].id);
                          printf("    Entity id     : %"PRIi64"\n",values[2].id);
-                         printf("    Job UUID      : %s\n",values[3].text.data);
-                         printf("    Schedule UUID : %s\n",values[4].text.data);
+                         printf("    Job UUID      : %s\n",values[3].s);
+                         printf("    Schedule UUID : %s\n",values[4].s);
 
                          return ERROR_NONE;
                        },NULL),
@@ -8453,7 +8469,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                   entityOutputFlag = TRUE;
                                                 }
                                                 printf("    Id               : %"PRIi64"\n",values[0].id);
-                                                printf("      Name           : %s\n",values[1].text.data);
+                                                printf("      Name           : %s\n",values[1].s);
                                                 printf("      Type           : %s\n",(type <= INDEX_CONST_TYPE_HISTORY) ? TYPE_TEXT[type] : "xxx");//TODO values[2].i);
                                                 switch (type)
                                                 {
@@ -8759,7 +8775,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle, DatabaseId storageId, uint show, 
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,values[1].text.data);
+fprintf(stdout,"storageId=%"PRIi64": %s\n",values[0].id,values[1].s);
 n++;
 
                            return ERROR_NONE;
@@ -8800,7 +8816,7 @@ fprintf(stdout,"%lu storages\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].s,values[3].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -8857,7 +8873,7 @@ fprintf(stdout,"%lu newest entries\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64" entriesNewestId=%"PRIi64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime,values[4].id);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64" entriesNewestId=%"PRIi64"\n",values[0].id,values[1].id,values[2].s,values[3].dateTime,values[4].id);
 n++;
 
                            return ERROR_NONE;
@@ -8901,7 +8917,7 @@ fprintf(stdout,"%lu entries\n",n);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].text.data,values[3].dateTime);
+fprintf(stdout,"storageId=%"PRIi64" entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].id,values[2].s,values[3].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -8947,7 +8963,7 @@ fprintf(stderr,"%s, %d: newest entry to remove\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].text.data,values[2].dateTime);
+fprintf(stdout,"entryId=%"PRIi64"d name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].s,values[2].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -8992,7 +9008,7 @@ fprintf(stderr,"%s, %d: newest entry to add from entries\n",__FILE__,__LINE__);
                            UNUSED_VARIABLE(valueCount);
                            UNUSED_VARIABLE(userData);
 
-fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].text.data,values[2].dateTime);
+fprintf(stdout,"new entryId=%"PRIi64" name=%s timeLastChanged=%"PRIu64"\n",values[0].id,values[1].s,values[2].dateTime);
 n++;
 
                            return ERROR_NONE;
@@ -10030,7 +10046,7 @@ if (xxxId != DATABASE_ID_NONE)
                      if (i == archiveType) s = ARCHIVE_TYPES[i];
                    }
 
-                   printf(format,values[0].id,values[1].text.data,values[2].text.data,s);
+                   printf(format,values[0].id,values[1].s,values[2].s,s);
 
                    return ERROR_NONE;
                  },NULL),
@@ -10139,7 +10155,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,values[1].text.data,values[2].text.data);
+                   printf(format,values[0].id,values[1].s,values[2].s);
 
                    return ERROR_NONE;
                  },NULL),
@@ -10265,7 +10281,7 @@ if (xxxId != DATABASE_ID_NONE)
                    UNUSED_VARIABLE(valueCount);
                    UNUSED_VARIABLE(userData);
 
-                   printf(format,values[0].id,values[1].text.data,values[2].text.data);
+                   printf(format,values[0].id,values[1].s,values[2].s);
 
                    return ERROR_NONE;
                  },NULL),
@@ -10334,7 +10350,7 @@ if (xxxId != DATABASE_ID_NONE)
             break;
           case DATABASE_TYPE_MARIADB:
             #if defined(HAVE_MARIADB)
-              String_insertCString(s,STRING_BEGIN,"EXPLAIN  ");
+              String_insertCString(s,STRING_BEGIN,"EXPLAIN ");
             #else /* HAVE_MARIADB */
             #endif /* HAVE_MARIADB */
             break;
@@ -10350,27 +10366,21 @@ if (xxxId != DATABASE_ID_NONE)
 // TODO: get columns
 
       printRowData.showHeaderFlag    = showHeaderFlag;
-      printRowData.headerPrintedFlag = FALSE;
+      printRowData.printedHeaderFlag = FALSE;
       printRowData.widths            = NULL;
       if (showHeaderFlag)
       {
         if (error == ERROR_NONE)
         {
           error = Database_get(&databaseHandle,
-                               CALLBACK_(calculateColumnWidths,&printRowData),
+                               CALLBACK_(getColumnWidths,&printRowData),
                                NULL,  // changedRowCount
                                DATABASE_TABLES
                                (
                                  String_cString(s)
                                ),
                                DATABASE_FLAG_PLAIN|DATABASE_FLAG_COLUMN_NAMES,
-#if 0
-                               DATABASE_COLUMNS
-                               (
-                               ),
-#else
-NULL,0,
-#endif
+                               DATABASE_COLUMNS_AUTO,
                                DATABASE_FILTERS_NONE,
                                NULL,  // groupBy
                                NULL,  // orderBy
@@ -10384,6 +10394,7 @@ NULL,0,
       if (error == ERROR_NONE)
       {
         t0 = Misc_getTimestamp();
+
         error = Database_get(&databaseHandle,
                              CALLBACK_(printRow,&printRowData),
                              NULL,  // changedRowCount
@@ -10392,13 +10403,7 @@ NULL,0,
                                String_cString(s)
                              ),
                              DATABASE_FLAG_PLAIN|DATABASE_FLAG_COLUMN_NAMES,
-#if 0
-                             DATABASE_COLUMNS
-                             (
-                             ),
-#else
-NULL,0,
-#endif
+                             DATABASE_COLUMNS_AUTO,
                              DATABASE_FILTERS_NONE,
                              NULL,  // groupBy
                              NULL,  // orderBy

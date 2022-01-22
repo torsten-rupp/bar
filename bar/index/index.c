@@ -2803,7 +2803,7 @@ LOCAL void indexThreadCode(void)
 
                                   storageId = values[0].id;
                                   entityId  = values[1].id;
-                                  String_setBuffer(storageName,values[2].text.data,values[2].text.length);
+                                  String_set(storageName,values[2].string);
 
                                   return ERROR_NONE;
                                 },NULL),

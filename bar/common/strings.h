@@ -791,6 +791,25 @@ INLINE Codepoint String_isValidUTF8(ConstString string, ulong index)
 String String_makeValidUTF8(String string, ulong index);
 
 /***********************************************************************\
+* Name   : String_length
+* Purpose: get string length
+* Input  : string - string
+* Output : -
+* Return : length of string [0..n]
+* Notes  : -
+\***********************************************************************/
+
+INLINE ulong String_lengthCodepointsUTF8(ConstString string);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE ulong String_lengthCodepointsUTF8(ConstString string)
+{
+  STRING_CHECK_VALID(string);
+
+  return (string != NULL) ? stringLengthCodepointsUTF8(string->data) : 0L;
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : String_atUTF8
 * Purpose: get codepoint
 * Input  : string - string
