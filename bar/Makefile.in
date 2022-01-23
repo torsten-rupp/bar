@@ -647,6 +647,12 @@ BAR_INDEX_OBJECTS_RELEASE   = $(addprefix release/,$(BAR_INDEX_OBJECTS))
 
 BAR_INDEX_OBJECTS_DEBUG     = $(addprefix debug/,$(BAR_INDEX_OBJECTS))
 
+BAR_INDEX_OBJECTS_GCOV      = $(addprefix gcov/,$(BAR_INDEX_OBJECTS))
+
+BAR_INDEX_OBJECTS_GPROF     = $(addprefix grof/,$(BAR_INDEX_OBJECTS))
+
+BAR_INDEX_OBJECTS_VALGRIND  = $(addprefix valgrind/,$(BAR_INDEX_OBJECTS))
+
 SHOWCHUNKS_SOURCES          = showchunks.c \
 
 SHOWCHUNKS_OBJECTS          = $(addprefix release/,$(foreach z,$(SHOWCHUNKS_SOURCES),$(patsubst %.c,%.o,$z))) \
@@ -877,6 +883,41 @@ bar.tags: \
 
 # ----------------------------------------------------------------------------
 
+# compile SQLite, xdelta C source without warning flags
+release/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+debug/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gcov/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gprof/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+valgrind/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+
+ifeq (@HAVE_XDELTA3@,1)
+release/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+debug/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gcov/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gprof/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+valgrind/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+endif
+
 # create BAR
 bar@EXEEXT@: \
   $(BAR_OBJECTS_RELEASE) \
@@ -963,34 +1004,6 @@ ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) .
 endif
 
-# i18n
-.PHONY: i18n po
-i18n po: \
-  $(SOURCE_DIR)/po/german.po \
-  $(SOURCE_DIR)/po/japanese.po
-
-$(SOURCE_DIR)/po/bar.pot: $(SOURCE_DIR)/*.c
-	$(INSTALL) -d $(@D)
-	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ $(SOURCE_DIR)/*.c
-
-$(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/bar.pot
-	$(INSTALL) -d $(@D)
-	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
-	$(TOUCH) $@
-
-$(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/bar.pot
-	$(INSTALL) -d $(@D)
-	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
-	$(TOUCH) $@
-
-po/de/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/german.po
-	$(INSTALL) -d $(@D)
-	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/german.po
-
-po/jp/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/japanese.po
-	$(INSTALL) -d $(@D)
-	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/japanese.po
-
 # create breakpad symbol files
 ifeq (@HAVE_BREAKPAD@,1)
 release/bar.sym.bz2.o:
@@ -1028,41 +1041,6 @@ debug/bar.sym.bz2.o:
 	$(RMF) debug/bar.sym.bz2
 else
 	@$(ECHO) "Warning: breakpad not configured - cannot build symbol object file."
-endif
-
-# compile SQLite, xdelta C source without warning flags
-release/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-debug/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gcov/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gprof/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-valgrind/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-
-ifeq (@HAVE_XDELTA3@,1)
-release/xdelta3.o: ../xdelta3/xdelta3.c
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-debug/xdelta3.o: ../xdelta3/xdelta3.c
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gcov/xdelta3.o: ../xdelta3/xdelta3.c
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gprof/xdelta3.o: ../xdelta3/xdelta3.c
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-valgrind/xdelta3.o: ../xdelta3/xdelta3.c
-	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 endif
 
 # create bar-keygen script
@@ -1140,6 +1118,9 @@ destroyer@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 # create bar-minidump
 release/bar-minidump.o: bar-minidump.cc
@@ -1163,6 +1144,9 @@ showchunks@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 # create bar-index
 bar-index@EXEEXT@: \
@@ -1172,6 +1156,9 @@ bar-index@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
 
 bar-index-debug@EXEEXT@: \
   $(BAR_INDEX_OBJECTS_DEBUG)
@@ -1180,6 +1167,70 @@ bar-index-debug@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
+
+bar-index-gcov@EXEEXT@: \
+  $(BAR_INDEX_OBJECTS_GCOV)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_GCOV) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
+
+bar-index-gprof@EXEEXT@: \
+  $(BAR_INDEX_OBJECTS_GPROF)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_GPROF) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
+
+bar-index-valgrind@EXEEXT@: \
+  $(BAR_INDEX_OBJECTS_VALGRIND)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_VALGRIND) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z)
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) $(WINDOWS_DLLS) .
+endif
+
+# i18n
+.PHONY: i18n po
+i18n po: \
+  $(SOURCE_DIR)/po/german.po \
+  $(SOURCE_DIR)/po/japanese.po
+
+$(SOURCE_DIR)/po/bar.pot: $(SOURCE_DIR)/*.c
+	$(INSTALL) -d $(@D)
+	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ $(SOURCE_DIR)/*.c
+
+$(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/bar.pot
+	$(INSTALL) -d $(@D)
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
+	$(TOUCH) $@
+
+$(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/bar.pot
+	$(INSTALL) -d $(@D)
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/bar.pot
+	$(TOUCH) $@
+
+po/de/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/german.po
+	$(INSTALL) -d $(@D)
+	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/german.po
+
+po/jp/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/japanese.po
+	$(INSTALL) -d $(@D)
+	$(MSGFMT) -o $@ $(SOURCE_DIR)/po/japanese.po
 
 # ----------------------------------------------------------------------------
 

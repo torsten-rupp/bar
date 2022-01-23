@@ -6856,6 +6856,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         int sqliteResult;
 
         // bind values
+        sqliteResult = SQLITE_OK;
         for (i = 0; i < valueCount; i++)
         {
           assertx(databaseStatementHandle->parameterIndex < databaseStatementHandle->parameterCount,
@@ -7086,7 +7087,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_CSTRING:
                 databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_type   = MYSQL_TYPE_STRING;
-                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = values[i].s;
+                databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer        = (char*)values[i].s;
                 databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].buffer_length = stringLength(values[i].s);
                 databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].is_null       = NULL;
                 databaseStatementHandle->mysql.values.bind[databaseStatementHandle->parameterIndex].length        = 0;
@@ -14008,7 +14009,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
     float  *f;
     double *d;
     char   *ch;
-    char   **s;
+    const char **s;
     String string;
   }       value;
 
@@ -14102,6 +14103,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           value.s = va_arg(arguments,char**);
           if (value.s != NULL)
           {
+// TODO:warning
             (*value.s) = databaseStatementHandle->results[i].s;
           }
           break;

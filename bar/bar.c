@@ -4106,6 +4106,7 @@ LOCAL Errors runDebug(void)
 
   // free resources
   Index_done();
+  String_delete(printableDatabaseURI);
   Database_doneSpecifier(&databaseSpecifier);
   AutoFree_done(&autoFreeList);
 
