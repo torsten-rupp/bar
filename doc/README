@@ -143,8 +143,8 @@ Test BAR with:
 
   make test
 
-Note: for the image tests some commands are executed with sudo.
-Create a file /etc/sudores.d/bar with:
+For the image tests some commands are executed with sudo. Create a file
+/etc/sudores.d/bar with:
 
 --- cut ---
 # allow BAR tests
@@ -184,6 +184,21 @@ ALL ALL=NOPASSWD:\
   BAR_CP, \
   BAR_DIFF
 --- cut ---
+
+For the index database tests with MariaDB and PostgreSQL the
+following user credentials have to exists:
+
+MariaDB:
+
+User: test
+Password: test
+Database: bar
+
+PostgreSQL:
+
+User: test
+Password: test
+Database: bar
 
 --- Compression
 

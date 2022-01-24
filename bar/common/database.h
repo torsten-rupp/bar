@@ -160,7 +160,7 @@ typedef enum
 #define DATABASE_FLAG_PLAIN        (1 <<  2)
 #define DATABASE_FLAG_COLUMN_NAMES (1 <<  3)
 
-#define DATABASE_FLAG_DEBUG        (1 << 31)
+#define DATABASE_FLAG_DEBUG        (1 << 31)  // print SQL statement to console
 
 // special database ids
 #define DATABASE_ID_NONE  0x0000000000000000LL
@@ -210,6 +210,7 @@ typedef enum
 #define DATABASE_COMPARE_FLAG_NONE          0
 #define DATABASE_COMPARE_FLAG_INCLUDE_VIEWS (1 << 0)
 
+// database check types
 typedef enum
 {
   DATABASE_CHECK_QUICK,
@@ -519,29 +520,23 @@ typedef struct
   DatabaseDataTypes type;
   union
   {
-    intptr_t p;
+    intptr_t   p;
 
-    uint64   id;
-    bool     b;
-    int      i;
-    int64    i64;
-    uint32   u;
-    uint64   u64;
-    double   d;
-    uint64   dateTime;
-    String   string;
-    char     *s;
-// TODO: use String?
-    struct
-    {
-      char  *data;
-      ulong length;
-    } text;
+    uint64     id;
+    bool       b;
+    int        i;
+    int64      i64;
+    uint32     u;
+    uint64     u64;
+    double     d;
+    uint64     dateTime;
+    String     string;
+    const char *s;
     struct
     {
       void  *data;
       ulong length;
-    } blob;
+    }          blob;
 // TODO: remove
     struct
     {
@@ -645,6 +640,7 @@ DatabaseDataTypes *dataTypes;
       {
         MYSQL_BIND      *bind;
         MYSQL_TIME      *time;
+        unsigned long   *lengths;
       }                 results;
     }
     mysql;
@@ -870,6 +866,7 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
   }
 
 #define DATABASE_COLUMNS_NONE (DatabaseColumn*)NULL,0
+#define DATABASE_COLUMNS_AUTO (DatabaseColumn*)NULL,0
 
 // parameter macros
 #define DATABASE_PARAMETERS(...) \

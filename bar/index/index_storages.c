@@ -728,8 +728,8 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                           UNUSED_VARIABLE(userData);
                           UNUSED_VARIABLE(valueCount);
 
-                          String_setBuffer(uuid,values[0].text.data,values[0].text.length);
-                          String_setBuffer(name1,values[1].text.data,values[1].text.length);
+                          String_set(uuid,values[0].string);
+                          String_set(name1,values[1].string);
                           createdDateTime = values[2].dateTime;
 
                           // find matching entity/create default entity
@@ -743,7 +743,7 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                                                  UNUSED_VARIABLE(valueCount);
 
                                                  storageId = values[0].id;
-                                                 String_setBuffer(name2,values[0].text.data,values[0].text.length);
+                                                 String_set(name2,values[0].string);
 
                                                  // compare names (equals except digits)
                                                  equalsFlag = String_length(name1) == String_length(name2);
@@ -899,7 +899,7 @@ LOCAL Errors getStorageState(IndexHandle *indexHandle,
 
                         if (indexState          != NULL) (*indexState)          = (IndexStates)values[0].u;
                         if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[1].u64;
-                        if (errorMessage        != NULL) String_setBuffer(errorMessage,values[2].text.data,values[2].text.length);
+                        if (errorMessage        != NULL) String_set(errorMessage,values[2].string);
 
                         return ERROR_NONE;
                       },NULL),
@@ -2315,7 +2315,7 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         String_setBuffer(name, values[0].text.data,values[0].text.length);
+                         String_set(name, values[0].string);
                          createdDateTime = values[1].dateTime;
 
                          return ERROR_NONE;
@@ -2525,7 +2525,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                             entryNode->uuidId                 = values[1].id;
                             entryNode->entityId               = values[2].id;
                             entryNode->indexType              = (IndexTypes)values[3].i;
-                            entryNode->name                   = String_newBuffer(values[4].text.data,values[4].text.length);
+                            entryNode->name                   = String_duplicate(values[4].string);
                             entryNode->timeLastChanged        = values[5].dateTime;
                             entryNode->userId                 = (uint32)values[6].u;
                             entryNode->groupId                = (uint32)values[7].u;
@@ -2637,7 +2637,7 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                           ),
                           "    storages.deletedFlag!=TRUE \
                            AND entriesNewest.name=? \
-                           AND entriesNewest.id NOTNULL \
+                           AND entriesNewest.id IS NOT NULL \
                           ",
                           DATABASE_FILTERS
                           (
@@ -2824,7 +2824,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                }
 
                                entryNode->entryId        = values[0].id;
-                               entryNode->name           = String_newBuffer(values[1].text.data,values[1].text.length);
+                               entryNode->name           = String_duplicate(values[1].string);
                                entryNode->newest.entryId = DATABASE_ID_NONE;
                                assert(entryNode->entryId != DATABASE_ID_NONE);
 
@@ -2874,7 +2874,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                }
 
                                entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->name           = String_duplicate(values[1].string);
                                entryNode->newest.entryId = DATABASE_ID_NONE;
 
                                List_append(&entryList,entryNode);
@@ -2923,7 +2923,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                }
 
                                entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->name           = String_duplicate(values[1].string);
                                entryNode->newest.entryId = DATABASE_ID_NONE;
 
                                List_append(&entryList,entryNode);
@@ -2972,7 +2972,7 @@ Errors IndexStorage_removeFromNewest(IndexHandle  *indexHandle,
                                }
 
                                entryNode->entryId        = values[0].id;
-                               String_setBuffer(entryNode->name,values[1].text.data,values[1].text.length);
+                               entryNode->name           = String_duplicate(values[1].string);
                                entryNode->newest.entryId = DATABASE_ID_NONE;
 
                                List_append(&entryList,entryNode);
@@ -3915,17 +3915,17 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                           UNUSED_VARIABLE(userData);
                           UNUSED_VARIABLE(valueCount);
 
-                          if (jobUUID             != NULL) String_setBuffer(jobUUID,values[0].text.data,values[0].text.length);
-                          if (scheduleUUID        != NULL) String_setBuffer(scheduleUUID,values[1].text.data,values[1].text.length);
+                          if (jobUUID             != NULL) String_set(jobUUID,values[0].string);
+                          if (scheduleUUID        != NULL) String_set(scheduleUUID,values[1].string);
                           if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID  (values[2].id);
                           if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[3].id);
-                          if (storageName         != NULL) String_setBuffer(storageName,values[4].text.data,values[4].text.length);
+                          if (storageName         != NULL) String_set(storageName,values[4].string);
                           if (dateTime            != NULL) (*dateTime)            = values[5].u64;
                           if (size                != NULL) (*size)                = values[6].u64;
                           if (indexState          != NULL) (*indexState)          = values[7].u;
                           if (indexMode           != NULL) (*indexMode)           = values[8].u;
                           if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[9].u64;
-                          if (errorMessage        != NULL) String_setBuffer(errorMessage,values[10].text.data,values[10].text.length);
+                          if (errorMessage        != NULL) String_set(errorMessage,values[10].string);
                           if (totalEntryCount     != NULL) (*totalEntryCount)     = values[11].u;
                           if (totalEntrySize      != NULL) (*totalEntrySize)      = values[12].u64;
 
@@ -4028,7 +4028,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 
                           if (!foundFlag)
                           {
-                            String_setBuffer(storageName,values[5].text.data,values[5].text.length);
+                            String_set(storageName,values[5].string);
 
                             if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
                             {
@@ -4039,15 +4039,15 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                               {
                                 if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID  (values[0].id);
                                 if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[1].id);
-                                if (jobUUID             != NULL) String_setBuffer(jobUUID,values[2].text.data,values[2].text.length);
-                                if (scheduleUUID        != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
+                                if (jobUUID             != NULL) String_set(jobUUID,values[2].string);
+                                if (scheduleUUID        != NULL) String_set(scheduleUUID,values[3].string);
                                 if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
                                 if (dateTime            != NULL) (*dateTime)            = values[6].u64;
                                 if (size                != NULL) (*size)                = values[7].u64;
                                 if (indexState          != NULL) (*indexState)          = values[8].u;
                                 if (indexMode           != NULL) (*indexMode)           = values[9].u;
                                 if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[10].u64;
-                                if (errorMessage        != NULL) String_setBuffer(errorMessage,values[11].text.data,values[11].text.length);
+                                if (errorMessage        != NULL) String_set(errorMessage,values[11].string);
                                 if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
                                 if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
                               }
@@ -4157,17 +4157,17 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                           UNUSED_VARIABLE(valueCount);
 
                           if (uuidId              != NULL) (*uuidId)              = INDEX_ID_UUID  (values[0].id);
-                          if (jobUUID             != NULL) String_setBuffer(jobUUID,values[1].text.data,values[1].text.length);
+                          if (jobUUID             != NULL) String_set(jobUUID,values[1].string);
                           if (entityId            != NULL) (*entityId)            = INDEX_ID_ENTITY(values[2].id);
-                          if (scheduleUUID        != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
+                          if (scheduleUUID        != NULL) String_set(scheduleUUID,values[3].string);
                           if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
-                          if (storageName         != NULL) String_setBuffer(storageName,values[5].text.data,values[5].text.length);
+                          if (storageName         != NULL) String_set(storageName,values[5].string);
                           if (dateTime            != NULL) (*dateTime)            = values[6].u64;
                           if (size                != NULL) (*size)                = values[7].u64;
 //                          if (indexState          != NULL) (*indexState)          = values[8].u;
                           if (indexMode           != NULL) (*indexMode)           = values[8].u;
                           if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[9].u64;
-                          if (errorMessage        != NULL) String_setBuffer(errorMessage,values[10].text.data,values[10].text.length);
+                          if (errorMessage        != NULL) String_set(errorMessage,values[10].string);
                           if (totalEntryCount     != NULL) (*totalEntryCount)     = values[11].u;
                           if (totalEntrySize      != NULL) (*totalEntrySize)      = values[12].u64;
 
@@ -6144,17 +6144,17 @@ Errors Index_getStorage(IndexHandle *indexHandle,
                            UNUSED_VARIABLE(valueCount);
 
                            if (uuidId              != NULL) (*uuidId)              = INDEX_ID_(INDEX_TYPE_UUID, values[0].id);
-                           if (jobUUID             != NULL) String_setBuffer(jobUUID, values[1].text.data,values[1].text.length);
+                           if (jobUUID             != NULL) String_set(jobUUID, values[1].string);
                            if (entityId            != NULL) (*entityId)            = INDEX_ID_(INDEX_TYPE_ENTITY,values[2].id);
-                           if (scheduleUUID        != NULL) String_setBuffer(scheduleUUID, values[3].text.data,values[3].text.length);
+                           if (scheduleUUID        != NULL) String_set(scheduleUUID, values[3].string);
                            if (archiveType         != NULL) (*archiveType)         = values[ 4].u;
-                           if (storageName         != NULL) String_setBuffer(storageName, values[5].text.data,values[5].text.length);
+                           if (storageName         != NULL) String_set(storageName, values[5].string);
                            if (dateTime            != NULL) (*dateTime)            = values[ 6].u64;
                            if (size                != NULL) (*size)                = values[ 7].u64;
                            if (indexState          != NULL) (*indexState)          = values[ 8].u;
                            if (indexMode           != NULL) (*indexMode)           = values[ 9].u;
                            if (lastCheckedDateTime != NULL) (*lastCheckedDateTime) = values[10].u64;
-                           if (errorMessage        != NULL) String_setBuffer(errorMessage, values[11].text.data,values[11].text.length);
+                           if (errorMessage        != NULL) String_set(errorMessage, values[11].string);
                            if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
                            if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
 

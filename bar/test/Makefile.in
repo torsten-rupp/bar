@@ -62,6 +62,7 @@ CHATTR         = chattr
 CHMOD          = chmod
 CP             = cp
 CUT            = cut
+CREATEDB       = @CREATEDB@
 DD             = dd
 DDD            = ddd
 DIFF           = diff
@@ -83,6 +84,7 @@ MYSQL          = @MYSQL@
 NETCAT         = netcat
 PERL           = @PERL@
 PGREP          = pgrep
+PSQL           = @PSQL@
 READLINK       = readlink
 RMDIR          = rmdir
 RMF            = rm -f
@@ -328,12 +330,12 @@ TEST_SCHEDULE_UUID               =  00000000-0000-0000-0000-000000000000
 
 # MariaDB test database
 TEST_MARIADB_SERVER              = localhost
-TEST_MARIADB_USER                = bar
+TEST_MARIADB_USER                = test
 TEST_MARIADB_PASSWORD            = test
 
 # PostgreSQL test database
 TEST_POSTGRESQL_SERVER           = localhost
-TEST_POSTGRESQL_USER             = bar
+TEST_POSTGRESQL_USER             = test
 TEST_POSTGRESQL_PASSWORD         = test
 
 # databases
@@ -595,15 +597,13 @@ functionCleanTestFiles = \
   $(CHMOD) o+w intermediate 2>/dev/null || true
 functionCleanTestDatabases = \
   MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-    $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'BASE TABLE'" | $(CUT) -f 1 | \
+    $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "DROP DATABASE bar" 2>/dev/null || true; \
   MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-    $(XARGS) -n 1 -I "{}" \
-      $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" bar --batch --silent -e "SET foreign_key_checks = 0; DROP TABLE {}"; \
-  MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-    $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" bar --batch --silent -e "SHOW FULL TABLES WHERE TABLE_TYPE LIKE 'VIEW'" | $(CUT) -f 1 | \
-  MYSQL_PWD=$(TEST_MARIADB_PASSWORD) \
-    $(XARGS) -n 1 -I "{}" \
-      $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" bar --batch --silent -e "SET foreign_key_checks = 0; DROP VIEW {}"
+    $(MYSQL) -h $(TEST_MARIADB_SERVER) -u "$(TEST_MARIADB_USER)" --batch --silent -e "CREATE DATABASE bar"; \
+  PGPASSWORD=test \
+    $(PSQL) --no-password postgres $(TEST_POSTGRESQL_USER) -c "DROP DATABASE bar" 2>/dev/null || true; \
+  PGPASSWORD=test \
+    $(CREATEDB) --no-password --username $(TEST_POSTGRESQL_USER) -O $(TEST_POSTGRESQL_USER) bar; \
 
 functionDoneTestFiles = \
   $(CHMOD) o-w intermediate

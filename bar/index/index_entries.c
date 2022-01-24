@@ -2123,7 +2123,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                                 "    entities.deletedFlag!=TRUE \
-                                                 AND entriesNewest.id IS NOTNULL \
+                                                 AND entriesNewest.id IS IS NOT NULL \
                                                  AND %s \
                                                 ",
                                                 String_cString(filterString)
@@ -2170,7 +2170,7 @@ fprintf(stderr,"%s:%d: bb_\n",__FILE__,__LINE__);
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                                 "    entities.deletedFlag!=TRUE \
-                                                 AND entries.id IS NOTNULL \
+                                                 AND entries.id IS IS NOT NULL \
                                                  AND %s \
                                                 ",
                                                 String_cString(filterString)
@@ -2521,7 +2521,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                             "     entities.deletedFlag!=TRUE \
-                                             AND entriesNewest.id IS NOTNULL \
+                                             AND entriesNewest.id IS IS NOT NULL \
                                              AND %s \
                                              %s \
                                             ",
@@ -2728,7 +2728,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                ),
                                stringFormat(sqlCommand,sizeof(sqlCommand),
                                             "     entities.deletedFlag!=TRUE \
-                                              AND entriesNewest.id IS NOTNULL \
+                                              AND entriesNewest.id IS IS NOT NULL \
                                               AND %s \
                                               %s \
                                             ",

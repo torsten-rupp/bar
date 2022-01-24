@@ -47,10 +47,10 @@
 */
 
 const UUID_LENGTH     = 36
-// Index limit: utf8mb4 3072/4-1 = 767 characters
+// Index limit: utf8mb4 3072/4-1 = 767 codepoints
 //const MAX_TEXT_LENGTH = 767
-//TODO: >= 762 does not work - why?
-const MAX_TEXT_LENGTH = 761
+//TODO: >= 760 does not work - why?
+const MAX_TEXT_LENGTH = 759
 
 // --- meta ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS meta(
@@ -62,7 +62,7 @@ INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',NOW());
 
 // --- uuids -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uuids(
-  id      INT AUTO_INCREMENT PRIMARY KEY,
+  id      BIGINT AUTO_INCREMENT PRIMARY KEY,
   jobUUID VARCHAR(${UUID_LENGTH}) UNIQUE NOT NULL,
 
   INDEX(jobUUID)
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS uuids(
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
-  id                        INT AUTO_INCREMENT PRIMARY KEY,
+  id                        BIGINT AUTO_INCREMENT PRIMARY KEY,
   jobUUID                   VARCHAR(${UUID_LENGTH}) NOT NULL,
   scheduleUUID              VARCHAR(${UUID_LENGTH}) NOT NULL DEFAULT '',
   hostName                  VARCHAR(${MAX_TEXT_LENGTH}) DEFAULT '',
@@ -134,9 +134,9 @@ CREATE TRIGGER AFTER INSERT ON entities
 
 // --- storages --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storages(
-  id                        INT AUTO_INCREMENT PRIMARY KEY,
+  id                        BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entityId                  INT,
+  entityId                  BIGINT,
   name                      VARCHAR(${MAX_TEXT_LENGTH}),
   created                   DATETIME,
   size                      BIGINT DEFAULT 0,
@@ -202,9 +202,9 @@ CREATE VIEW FTS_storages(
 
 // --- entries ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entries(
-  id              INT AUTO_INCREMENT PRIMARY KEY,
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entityId        INT,
+  entityId        BIGINT,
   type            INT,
   name            VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
   timeLastAccess  DATETIME,
@@ -235,9 +235,9 @@ CREATE TABLE IF NOT EXISTS entries(
 
 // newest entries
 CREATE TABLE IF NOT EXISTS entriesNewest(
-  id              INT AUTO_INCREMENT PRIMARY KEY,
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INT,  // no 'NOT NULL'
+  entryId         BIGINT,  // no 'NOT NULL'
 
   // Note: redundancy for faster access
   uuidId          BIGINT DEFAULT 0,  // no foreign key reference
@@ -308,8 +308,8 @@ CREATE TRIGGER AFTER UPDATE ON entries
 //TODO
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  entityId    INT NOT NULL,
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+  entityId    BIGINT NOT NULL,
   name        VARCHAR(${MAX_TEXT_LENGTH}) NOT NULL,
   type        INT,
 
@@ -324,9 +324,9 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
 
 // --- entry fragments -------------------------------------------------
 CREATE TABLE IF NOT EXISTS entryFragments(
-  id        INT AUTO_INCREMENT PRIMARY KEY,
-  entryId   INT NOT NULL,
-  storageId INT NOT NULL,
+  id        BIGINT AUTO_INCREMENT PRIMARY KEY,
+  entryId   BIGINT NOT NULL,
+  storageId BIGINT NOT NULL,
   offset    BIGINT,
   size      BIGINT,
 
@@ -341,9 +341,9 @@ CREATE TABLE IF NOT EXISTS entryFragments(
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
-  id              INT AUTO_INCREMENT PRIMARY KEY,
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INT NOT NULL,
+  entryId         BIGINT NOT NULL,
   size            BIGINT,
 
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
@@ -355,9 +355,9 @@ CREATE TABLE IF NOT EXISTS fileEntries(
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
-  id             INT AUTO_INCREMENT PRIMARY KEY,
+  id             BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId        INT NOT NULL,
+  entryId        BIGINT NOT NULL,
   size           BIGINT,
   fileSystemType INT,
   blockSize      INT,                 // size of image block
@@ -371,10 +371,10 @@ CREATE TABLE IF NOT EXISTS imageEntries(
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
-  id                    INT AUTO_INCREMENT PRIMARY KEY,
+  id                    BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId               INT NOT NULL,
-  storageId             INT NOT NULL,
+  entryId               BIGINT NOT NULL,
+  storageId             BIGINT NOT NULL,
 
   // updated by updateDirectoryContentAggregates()
   totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
@@ -397,10 +397,10 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
 
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
-  id              INT AUTO_INCREMENT PRIMARY KEY,
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId         INT NOT NULL,
-  storageId       INT NOT NULL,
+  entryId         BIGINT NOT NULL,
+  storageId       BIGINT NOT NULL,
   destinationName TEXT,
 
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
@@ -414,9 +414,9 @@ CREATE TABLE IF NOT EXISTS linkEntries(
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
-  id      INT AUTO_INCREMENT PRIMARY KEY,
+  id      BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId INT NOT NULL,
+  entryId BIGINT NOT NULL,
   size    BIGINT,
 
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
@@ -428,10 +428,10 @@ CREATE TABLE IF NOT EXISTS hardlinkEntries(
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
-  id          INT AUTO_INCREMENT PRIMARY KEY,
+  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
 
-  entryId     INT NOT NULL,
-  storageId   INT NOT NULL,
+  entryId     BIGINT NOT NULL,
+  storageId   BIGINT NOT NULL,
   specialType INT,
   major       INT,
   minor       INT,
@@ -447,7 +447,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
-  id                INT AUTO_INCREMENT PRIMARY KEY,
+  id                BIGINT AUTO_INCREMENT PRIMARY KEY,
   jobUUID           VARCHAR(${UUID_LENGTH}) NOT NULL,
   scheduleUUID      TEXT,
   hostName          TEXT,

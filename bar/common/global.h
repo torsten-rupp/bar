@@ -1267,6 +1267,12 @@ typedef byte* BitSet;
      HALT_INTERNAL_ERROR("Lost resource"); \
   } \
   while (0)
+#define HALT_INTERNAL_ERROR_NOT_SUPPORTED() \
+  do \
+  { \
+     HALT_INTERNAL_ERROR("Not supported"); \
+  } \
+  while (0)
 
 /***********************************************************************\
 * Name   : FAIL
@@ -2440,11 +2446,11 @@ static inline char *stringClear(char *s)
 * Purpose: get string length
 * Input  : s - string
 * Output : -
-* Return : string length or 0
+* Return : string length or 0 [bytes[
 * Notes  : -
 \***********************************************************************/
 
-static inline ulong stringLength(const char *s)
+static inline size_t stringLength(const char *s)
 {
   return (s != NULL) ? strlen(s) : 0;
 }
@@ -2780,6 +2786,50 @@ static inline char* stringFormatAppend(char *string, ulong n, const char *format
 }
 
 /***********************************************************************\
+* Name   : stringVFormatLength, stringFormatLength
+* Purpose: get length of formated string
+* Input  : format    - format string
+*          ...       - optional arguments
+*          arguments - arguments
+* Output : -
+* Return : length [bytes]
+* Notes  : -
+\***********************************************************************/
+
+static inline size_t stringVFormatLength(const char *format, va_list arguments)
+{
+  int  n;
+  char *s;
+
+  assert(format != NULL);
+
+  n = vasprintf(&s,format,arguments);
+  if (n != -1)
+  {
+    free(s);
+  }
+  else
+  {
+    n = 0;
+  }
+
+  return (size_t)n;
+}
+static inline size_t stringFormatLength(const char *format, ...)
+{
+  va_list arguments;
+  size_t  n;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  n = stringVFormatLength(format,arguments);
+  va_end(arguments);
+
+  return n;
+}
+
+/***********************************************************************\
 * Name   : stringAppend
 * Purpose: append string
 * Input  : destination - destination string
@@ -3041,6 +3091,24 @@ static inline void stringDelete(char *string)
 }
 
 /***********************************************************************\
+* Name   : stringAt, stringAtUTF8
+* Purpose: get character in string
+* Input  : s         - string
+*          index     - index (0..n-1)
+*          nextIndex - next index variable or NULL
+* Output : nextIndex - next index
+* Return : character/codepoint
+* Notes  : -
+\***********************************************************************/
+
+static inline char stringAt(const char *s, ulong index)
+{
+  assert(s != NULL);
+
+  return s[index];
+}
+
+/***********************************************************************\
 * Name   : stringIsValidUTF8Codepoint
 * Purpose: check if valid UTF8 codepoint
 * Input  : s         - string
@@ -3180,76 +3248,6 @@ static inline char *stringMakeValidUTF8(char *s, ulong index)
 }
 
 /***********************************************************************\
-* Name   : stringAt, stringAtUTF8
-* Purpose: get character in string
-* Input  : s         - string
-*          index     - index (0..n-1)
-*          nextIndex - next index variable or NULL
-* Output : nextIndex - next index
-* Return : character/codepoint
-* Notes  : -
-\***********************************************************************/
-
-static inline char stringAt(const char *s, ulong index)
-{
-  assert(s != NULL);
-
-  return s[index];
-}
-
-/***********************************************************************\
-* Name   : stringAtUTF8
-* Purpose: get codepoint
-* Input  : s         - string
-*          index     - index (0..n-1)
-*          nextIndex - next index variable (can be NULL)
-* Output : nextIndex - next index [0..n-1]
-* Return : codepoint
-* Notes  : -
-\***********************************************************************/
-
-static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextIndex)
-{
-  Codepoint ch;
-
-  assert(s != NULL);
-  assert(index <= stringLength(s));
-
-  if      ((s[index] & 0xF8) == 0xF0)
-  {
-    // 4 byte UTF8 codepoint
-    ch =   (Codepoint)((s[index+0] & 0x07) << 18)
-         | (Codepoint)((s[index+1] & 0x3F) << 12)
-         | (Codepoint)((s[index+2] & 0x3F) <<  6)
-         | (Codepoint)((s[index+3] & 0x3F) <<  0);
-    if (nextIndex != NULL) (*nextIndex) = index+4;
-  }
-  else if ((s[index] & 0xF0) == 0xE0)
-  {
-    // 3 byte UTF8 codepoint
-    ch =   (Codepoint)((s[index+0] & 0x0F) << 12)
-         | (Codepoint)((s[index+1] & 0x3F) <<  6)
-         | (Codepoint)((s[index+2] & 0x3F) <<  0);
-    if (nextIndex != NULL) (*nextIndex) = index+3;
-  }
-  else if ((s[index] & 0xE0) == 0xC0)
-  {
-    // 2 byte UTF8 codepoint
-    ch =   (Codepoint)((s[index+0] & 0x1F) << 6)
-         | (Codepoint)((s[index+1] & 0x3F) << 0);
-    if (nextIndex != NULL) (*nextIndex) = index+2;
-  }
-  else
-  {
-    // 1 byte UTF8 codepoint
-    ch = (Codepoint)s[index];
-    if (nextIndex != NULL) (*nextIndex) = index+1;
-  }
-
-  return ch;
-}
-
-/***********************************************************************\
 * Name   : stringNextUTF8
 * Purpose: get next UTF8 character index
 * Input  : s     - string
@@ -3259,7 +3257,7 @@ static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextInde
 * Notes  : -
 \***********************************************************************/
 
-static inline ulong stringNextUTF8(const char *s, ulong index)
+static inline size_t stringNextUTF8(const char *s, ulong index)
 {
   assert(s != NULL);
   assert(index <= stringLength(s));
@@ -3370,6 +3368,130 @@ static inline const char *charUTF8(Codepoint codepoint)
   }
 
   return s;
+}
+
+/***********************************************************************\
+* Name   : stringLengthCodepointsUTF8
+* Purpose: get number of UTF8 codepoints in string
+* Input  : s - string
+* Output : -
+* Return : number of codepoints
+* Notes  : -
+\***********************************************************************/
+
+static inline size_t stringLengthCodepointsUTF8(const char *s)
+{
+  size_t n;
+  size_t index;
+
+  n = 0;
+  if (s != NULL)
+  {
+    index = 0;
+    while (s[index] != NUL)
+    {
+      n++;
+      index = stringNextUTF8(s,index);
+    }
+  }
+
+  return n;
+}
+
+/***********************************************************************\
+* Name   : stringAtUTF8
+* Purpose: get codepoint
+* Input  : s         - string
+*          index     - index (0..n-1)
+*          nextIndex - next index variable (can be NULL)
+* Output : nextIndex - next index [0..n-1]
+* Return : codepoint
+* Notes  : -
+\***********************************************************************/
+
+static inline Codepoint stringAtUTF8(const char *s, ulong index, ulong *nextIndex)
+{
+  Codepoint ch;
+
+  assert(s != NULL);
+  assert(index <= stringLength(s));
+
+  if      ((s[index] & 0xF8) == 0xF0)
+  {
+    // 4 byte UTF8 codepoint
+    ch =   (Codepoint)((s[index+0] & 0x07) << 18)
+         | (Codepoint)((s[index+1] & 0x3F) << 12)
+         | (Codepoint)((s[index+2] & 0x3F) <<  6)
+         | (Codepoint)((s[index+3] & 0x3F) <<  0);
+    if (nextIndex != NULL) (*nextIndex) = index+4;
+  }
+  else if ((s[index] & 0xF0) == 0xE0)
+  {
+    // 3 byte UTF8 codepoint
+    ch =   (Codepoint)((s[index+0] & 0x0F) << 12)
+         | (Codepoint)((s[index+1] & 0x3F) <<  6)
+         | (Codepoint)((s[index+2] & 0x3F) <<  0);
+    if (nextIndex != NULL) (*nextIndex) = index+3;
+  }
+  else if ((s[index] & 0xE0) == 0xC0)
+  {
+    // 2 byte UTF8 codepoint
+    ch =   (Codepoint)((s[index+0] & 0x1F) << 6)
+         | (Codepoint)((s[index+1] & 0x3F) << 0);
+    if (nextIndex != NULL) (*nextIndex) = index+2;
+  }
+  else
+  {
+    // 1 byte UTF8 codepoint
+    ch = (Codepoint)s[index];
+    if (nextIndex != NULL) (*nextIndex) = index+1;
+  }
+
+  return ch;
+}
+
+/***********************************************************************\
+* Name   : stringVFormatLengthCodepointsUTF8, stringFormatLengthCodepointsUTF8
+* Purpose: get number of codepoints of formated UTF8 string
+* Input  : format    - format string
+*          ...       - optional arguments
+*          arguments - arguments
+* Output : -
+* Return : length [codepoints]
+* Notes  : -
+\***********************************************************************/
+
+static inline size_t stringVFormatLengthCodepointsUTF8(const char *format, va_list arguments)
+{
+  int  n;
+  char *s;
+
+  assert(format != NULL);
+
+  if (vasprintf(&s,format,arguments) != -1)
+  {
+    n = stringLengthCodepointsUTF8(s);
+    free(s);
+  }
+  else
+  {
+    n = 0;
+  }
+
+  return (size_t)n;
+}
+static inline size_t stringFormatLengthCodepointsUTF8(const char *format, ...)
+{
+  va_list arguments;
+  size_t  n;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  n = stringVFormatLengthCodepointsUTF8(format,arguments);
+  va_end(arguments);
+
+  return n;
 }
 
 /***********************************************************************\

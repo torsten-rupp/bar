@@ -1375,7 +1375,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                              UNUSED_VARIABLE(valueCount);
 
                              uuidId          = values[0].id;
-                             String_setBuffer(jobUUID,values[1].text.data,values[1].text.length);
+                             String_set(jobUUID,values[1].string);
                              createdDateTime = values[2].u64;
                              archiveType     = values[3].u;
 
@@ -2236,12 +2236,12 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                           UNUSED_VARIABLE(valueCount);
 
                           if (uuidId           != NULL) (*uuidId)          = INDEX_ID_UUID(values[0].id);
-                          if (jobUUID          != NULL) String_setBuffer(jobUUID,values[1].text.data,values[1].text.length);
+                          if (jobUUID          != NULL) String_set(jobUUID,values[1].string);
                           if (entityId         != NULL) (*entityId)        = INDEX_ID_ENTITY(values[2].id);
-                          if (scheduleUUID     != NULL) String_setBuffer(scheduleUUID,values[3].text.data,values[3].text.length);
+                          if (scheduleUUID     != NULL) String_set(scheduleUUID,values[3].string);
                           if (createdDateTime  != NULL) (*createdDateTime) = values[4].id;
                           if (archiveType      != NULL) (*archiveType)     = values[5].u;
-                          if (lastErrorMessage != NULL) String_setBuffer(lastErrorMessage,values[6].text.data,values[6].text.length);
+                          if (lastErrorMessage != NULL) String_set(lastErrorMessage,values[6].string);
                           if (totalEntryCount  != NULL) (*totalEntryCount) = values[7].u;
                           if (totalEntrySize   != NULL) (*totalEntrySize)  = values[8].u64;
 
@@ -2601,6 +2601,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 
       // create entity
       if (createdDateTime == 0LL) createdDateTime = Misc_getCurrentDateTime();
+
       error = Database_insert(&indexHandle->databaseHandle,
                               &databaseId,
                               "entities",
@@ -2621,6 +2622,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                              );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
 
@@ -2634,6 +2636,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
+// TODO: CALLBACK_LAMBDA_ -> CALLBACK_INLINE_
                                     CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
