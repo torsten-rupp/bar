@@ -156,6 +156,7 @@ if test -z "$winepath"; then
 fi
 
 # get ISCC
+set +x
 iscc1=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
 iscc2=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
 if   test -f "$iscc1"; then
