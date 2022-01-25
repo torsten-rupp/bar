@@ -15,10 +15,10 @@
 
 #---------------------------------- settings ---------------------------------
 
-ENABLE_DEBUG    = @ENABLE_DEBUG@
-ENABLE_GUI      = @ENABLE_GUI@
+ENABLE_DEBUG           = @ENABLE_DEBUG@
+ENABLE_GUI             = @ENABLE_GUI@
 
-PLATFORM        = @PLATFORM@
+PLATFORM               = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
@@ -53,59 +53,59 @@ INSTALL_TLS_DIR        = @TLS_DIR@
 
 #--------------------------------- tool chain --------------------------------
 
-CERTTOOL         = @CERTTOOL@
-OPENSSL          = @OPENSSL@
-KEYTOOL          = @KEYTOOL@
+CERTTOOL               = @CERTTOOL@
+OPENSSL                = @OPENSSL@
+KEYTOOL                = @KEYTOOL@
 
-DOCKER_RUN_FLAGS = run -i -t
+DOCKER_RUN_FLAGS       = run -i -t
 
-TXT2MAN          = @TXT2MAN@
-UNOCONV          = @UNOCONV@
+TXT2MAN                = @TXT2MAN@
+UNOCONV                = @UNOCONV@
 
-SVNVERSION       = svnversion
-GIT              = git
+SVNVERSION             = svnversion
+GIT                    = git
 
 #---------------------------------- commands----------------------------------
 
-CAT          = cat
-CD           = cd
-CHMOD        = chmod
-CONVERT      = convert
-CP           = cp
-DIFF         = diff
-DOCKER       = @DOCKER@
-ECHO         = echo
-ECHO_NO_LF   = echo -n
-EPM          = @EPM@
-GREP         = grep
-INSTALL      = @INSTALL@
-LN           = ln
-MD5SUM       = @MD5SUM@
-MKDIR        = mkdir
-MV           = mv
-NROFF        = nroff
-PERL         = @PERL@
-PRINTF       = printf
-RMDIR        = rmdir
-RMF          = rm -f
-RMRF         = rm -rf
-SED          = sed
-TAR          = tar
-WINE         = @WINE@
-WINE_C_DRIVE = @WINE_C_DRIVE@
-ZIP          = zip
+CAT                    = cat
+CD                     = cd
+CHMOD                  = chmod
+CONVERT                = convert
+CP                     = cp
+DIFF                   = diff
+DOCKER                 = @DOCKER@
+ECHO                   = echo
+ECHO_NO_LF             = echo -n
+EPM                    = @EPM@
+GREP                   = grep
+INSTALL                = @INSTALL@
+LN                     = ln
+MD5SUM                 = @MD5SUM@
+MKDIR                  = mkdir
+MV                     = mv
+NROFF                  = nroff
+PERL                   = @PERL@
+PRINTF                 = printf
+RMDIR                  = rmdir
+RMF                    = rm -f
+RMRF                   = rm -rf
+SED                    = sed
+TAR                    = tar
+WINE                   = @WINE@
+WINE_C_DRIVE           = @WINE_C_DRIVE@
+ZIP                    = zip
 
 #------------------------ specific variables/settings ------------------------
 
-SHELL = bash
+SHELL                  = bash
 
-VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
-VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
+VERSION_MAJOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_PATCH          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION                := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 
-CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
-COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
+CRYPT_NAMES            = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
+COMPRESS_NAMES         = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
 
 CRYPT    = none
 COMPRESS = none
