@@ -156,12 +156,16 @@ if test -z "$winepath"; then
 fi
 
 # get ISCC
-iscc=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
-if ! test -f "$iscc"; then
-  iscc=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
-fi
-if ! test -f "$iscc"; then
-  echo >&2 ERROR: ISCC.exe not found!
+iscc1=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
+iscc2=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
+if   test -f "$iscc1"; then
+  iscc="$iscc1"
+elif test -f "$iscc2"; then
+  iscc="$iscc2"
+else
+  echo >&2 "ERROR: ISCC.exe not found in:"
+  echo >&2 "         `dirname $iscc1`"
+  echo >&2 "         `dirname $iscc2`"
   exit 1
 fi
 
