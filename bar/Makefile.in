@@ -140,6 +140,7 @@ MSGMERGE                   = @MSGMERGE@
 MSGFMT                     = @MSGFMT@
 
 SVNVERSION                 = @SVNVERSION@
+GIT                        = @GIT@
 
 DUMP_SYMS                  = @DUMP_SYMS@
 
@@ -205,15 +206,25 @@ CALLGRIND_FLAGS = -v
 
 #------------------------ specific variables/settings ------------------------
 
-# major, minor version number
-VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
-VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
-ifneq ($(SVNVERSION),)
-  VERSION_REPOSITORY := $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
-else
-  VERSION_REPOSITORY := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+# major, minor version number, repository hash
+VERSION_MAJOR      := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR      := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_PATCH      := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION            := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
+VERSION_REPOSITORY = $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+ifneq   ($(wildcard ../.git),)
+  ifneq ($(GIT),)
+		VERSION_REPOSITORY = $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(GIT) rev-parse HEAD 2>/dev/null)|$(SED) 's/RELEASE=//g')
+	else
+		VERSION_REPOSITORY = $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+	endif
+endif
+ifneq ($(wildcard ../.svn),)
+  ifneq ($(SVNVERSION),)
+	  VERSION_REPOSITORY = $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
+	else
+		VERSION_REPOSITORY = $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+	endif
 endif
 
 # supported min. compress algorithms
