@@ -15385,17 +15385,31 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
 
     result=1
     if test $result -eq 1; then
-      (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
-        --host=$host \
-        --build=$build \
-        --prefix=$cwd/extern \
-        --with-includes=$cwd/extern/include \
-        --with-libraries=$cwd/extern/lib \
-        --enable-thread-safety \
-        --with-openssl \
-        --without-readline \
-        `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
-      ) 1>$tmpFile 2>&1
+      if test -n "$HAVE_SSL"; then
+        (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --with-includes=$cwd/extern/include \
+          --with-libraries=$cwd/extern/lib \
+          --enable-thread-safety \
+          --with-openssl \
+          --without-readline \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
+        ) 1>$tmpFile 2>&1
+      else
+        (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --with-includes=$cwd/extern/include \
+          --with-libraries=$cwd/extern/lib \
+          --enable-thread-safety \
+          --without-openssl \
+          --without-readline \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
+        ) 1>$tmpFile 2>&1
+      fi
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }

@@ -6075,7 +6075,8 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
         #if defined(HAVE_POSTGRESQL)
           {
             PostgresSQLStatement statement;
-            Oid            *parameterTypes;
+            Oid                  *parameterTypes;
+            uint                 i;
 //            const char     **parameterValues;
 //            int            *parameterLengths;
 //            int            *parameterFormats;

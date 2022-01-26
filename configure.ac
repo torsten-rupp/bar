@@ -3605,7 +3605,7 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
         --with-includes=$cwd/extern/include \
         --with-libraries=$cwd/extern/lib \
         --enable-thread-safety \
-        --with-openssl \
+        `if test "$HAVE_SSL"; then echo -- --with-openssl; else echo -- --without-openssl; fi` \
         --without-readline \
         `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
       ) 1>$tmpFile 2>&1
