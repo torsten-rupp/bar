@@ -20636,7 +20636,7 @@ Errors Server_socket(void)
                          clientNode->clientInfo.io.network.port,
                          Error_getText(error)
                         );
-              deleteClient(&clientNode);
+              deleteClient(clientNode);
               AutoFree_cleanup(&autoFreeList);
               return FALSE;
             #endif /* HAVE_GNU_TLS */
