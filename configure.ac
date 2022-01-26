@@ -960,6 +960,10 @@ AC_SUBST(XGETTEXT)                          dnl xgettext command
 AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
+AC_SUBST(MYSQL)                             dnl mysql command
+AC_SUBST(PSQL)                              dnl psql command
+AC_SUBST(CREATEDB)                          dnl createdb command
+
 AC_SUBST(DOCKER)                            dnl docker
 AC_SUBST(WINE)                              dnl wine
 AC_SUBST(WINE_C_DRIVE)                      dnl wine c:-drive path
@@ -1389,6 +1393,10 @@ if test $ENABLE_POSTGRESQL = "yes"; then
   AC_PATH_PROGS(PSQL,psql)
   if test -z "$PSQL"; then
     AC_MSG_ERROR([Cannot find a 'psql' in PATH. Please check your PATH environment variable.])
+  fi
+  AC_PATH_PROGS(CREATEDB,createdb)
+  if test -z "$CREATEDB"; then
+    AC_MSG_ERROR([Cannot find a 'createdb' in PATH. Please check your PATH environment variable.])
   fi
 fi
 

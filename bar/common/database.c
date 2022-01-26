@@ -10,6 +10,18 @@
 
 #define __DATABASE_IMPLEMENTATION__
 
+/* Note: using the binary interface of PostgreSQL would be more
+         efficient, but it is badly documented. E. g. when is int64
+         returned, when a numeric? How to convert a numeric to an int64?
+         There is a function PGTYPESnumeric_to_long(), but no
+         PGTYPESnumeric_to_int64(). If the binary interface is used
+         "wrong" - guess what may be wrong - an internal protocol error
+         may occur (08P01).  :-((
+         It looks like this "binary interface" operate direct on the
+         protocol data without any checks.
+*/
+#define _POSTGRESQL_BINARY_INTERFACE
+
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -28,7 +40,9 @@
 #else
   #error No regular expression library available!
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
-#include <endian.h>
+#ifdef POSTGRESQL_BINARY_INTERFACE
+  #include <endian.h>
+#endif
 #include <errno.h>
 #include <assert.h>
 
@@ -130,14 +144,7 @@ LOCAL const char *MARIADB_CHARACTER_SETS[] =
 };
 
 // PostgreSQL specific constants
-#ifdef HAVE_POSTGRESQL
-  #define _POSTGRESQL_BINARY_INTERFACE
-            /* Note: using the binary interface of PostgreSQL would be
-                     more efficient, but it is badly documented. If it
-                     used "wrong" - guess what may be wrong - an
-                     internal protocol error may occur (08P01) :-((
-            */
-
+#if defined(HAVE_POSTGRESQL) && defined(POSTGRESQL_BINARY_INTERFACE)
   /* PostgreSQL store timestamp since 2000-01-01 00:00:00 in us
      See: https://www.postgresql.org/docs/9.1/datatype-datetime.html
   */
@@ -6136,51 +6143,107 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                   break;
                 case DATABASE_DATATYPE_PRIMARY_KEY:
                 case DATABASE_DATATYPE_KEY:
-                  statement.bind[i].u64 = htobe64(parameters[i].id);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].u64 = htobe64(parameters[i].id);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIi64,parameters[i].id);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_BOOL:
-                  statement.parameterValues[i]  = (const char*)&parameters[i].b;
-                  statement.parameterLengths[i] = sizeof(parameters[i].b);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.parameterValues[i]  = (const char*)&parameters[i].b;
+                    statement.parameterLengths[i] = sizeof(parameters[i].b);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%s",parameters[i].b ? "YES" : "NO");
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_INT:
-                  statement.bind[i].i = htobe32(parameters[i].i);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].i;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].i);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].i = htobe32(parameters[i].i);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].i;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].i);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%d",parameters[i].i);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_INT64:
-                  statement.bind[i].i64 = htobe64(parameters[i].i64);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].i64;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].i64);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].i64 = htobe64(parameters[i].i64);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].i64;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].i64);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIi64,parameters[i].i64);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_UINT:
-                  statement.bind[i].u = htobe32(parameters[i].u);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].u;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].u);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].u = htobe32(parameters[i].u);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].u);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%u",parameters[i].u);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_UINT64:
-                  statement.bind[i].u64 = htobe64(parameters[i].u64);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].u64 = htobe64(parameters[i].u64);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].u64;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].u64);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%"PRIu64,parameters[i].u64);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_DOUBLE:
-                  statement.bind[i].d = htobe64(parameters[i].d);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].d;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].d);
-                  statement.parameterFormats[i] = 1;
-                  break;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].d = htobe64(parameters[i].d);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].d;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].d);
+                    statement.parameterFormats[i] = 1;
+                    break;
+                  #else
+                    stringFormat(statement.bind[i].data,sizeof(statement.bind[i].data),"%lf",parameters[i].d);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                 case DATABASE_DATATYPE_DATETIME:
-                  statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
-                  statement.parameterValues[i]  = (const char*)&statement.bind[i].dateTime;
-                  statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
-                  statement.parameterFormats[i] = 1;
+                  #ifdef POSTGRESQL_BINARY_INTERFACE
+                    statement.bind[i].dateTime = htobe64(((int64)parameters[i].dateTime-POSTGRES_BASE_TIMESTAMP)*US_PER_SECOND);
+                    statement.parameterValues[i]  = (const char*)&statement.bind[i].dateTime;
+                    statement.parameterLengths[i] = sizeof(statement.bind[i].dateTime);
+                    statement.parameterFormats[i] = 1;
+                  #else
+                    Misc_formatDateTimeCString(statement.bind[i].data,sizeof(statement.bind[i].data),parameters[i].dateTime,NULL);
+                    statement.parameterValues[i]  = statement.bind[i].data;
+                    statement.parameterLengths[i] = stringLength(statement.bind[i].data);
+                    statement.parameterFormats[i] = 0;
+                  #endif
                   break;
                 case DATABASE_DATATYPE_STRING:
                   statement.parameterValues[i]  = parameters[i].s;

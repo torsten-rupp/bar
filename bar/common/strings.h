@@ -791,11 +791,11 @@ INLINE Codepoint String_isValidUTF8(ConstString string, ulong index)
 String String_makeValidUTF8(String string, ulong index);
 
 /***********************************************************************\
-* Name   : String_length
-* Purpose: get string length
+* Name   : String_lengthCodepointsUTF8
+* Purpose: get UTF8 string length
 * Input  : string - string
 * Output : -
-* Return : length of string [0..n]
+* Return : codepoints of UTF8 string [0..n]
 * Notes  : -
 \***********************************************************************/
 
