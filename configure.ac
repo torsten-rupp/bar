@@ -3500,19 +3500,31 @@ if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
     AC_MSG_COMPILE([MariaDB client])
     result=1
     if test $result -eq 1; then
-      (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-        -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-        -DWITH_EXTERNAL_ZLIB=ON \
-        -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-        -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-        -DOPENSSL_FOUND=1 \
-        -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
-        -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
-        -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
-        -DOPENSSL_LIBRARIES=$cwd/extern/lib \
-        -DWITH_CURL=OFF \
-        `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
-      ) 1>$tmpFile 2>&1
+      if test -n "$HAVE_SSL"; then
+        (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+          -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+          -DWITH_EXTERNAL_ZLIB=ON \
+          -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+          -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+          -DOPENSSL_FOUND=1 \
+          -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+          -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
+          -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
+          -DOPENSSL_LIBRARIES=$cwd/extern/lib \
+          -DWITH_CURL=OFF \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+        ) 1>$tmpFile 2>&1
+      else
+        (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+          -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+          -DWITH_EXTERNAL_ZLIB=ON \
+          -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+          -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+          -DWITH_SSL=OFF \
+          -DWITH_CURL=OFF \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+        ) 1>$tmpFile 2>&1
+      fi
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -4673,6 +4685,8 @@ if test $ENABLE_GCRYPT = "yes"; then
                     [#include "openssl/opensslv.h"],
                     [OPENSSL_VERSION_TEXT],
                     ["])
+fi
+if test $ENABLE_SSH = "yes"; then
   AC_CONSTANT_VALUE([ssh2 version],
                     VERSION_LIBSSH2,
                     [#include "libssh2.h"
@@ -4826,7 +4840,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  crypto support     : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support        : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support       : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
-                    echo "  SCP/SFTP support   : `if test "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  SCP/SFTP support   : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server     : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support   : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  PCRE support       : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
