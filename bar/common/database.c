@@ -1842,6 +1842,7 @@ LOCAL Errors sqlite3Step(sqlite3_stmt *statementHandle,
   return error;
 }
 
+#ifdef HAVE_MARIADB
 /***********************************************************************\
 * Name   : mysqlExecute
 * Purpose: do MariaDB query
@@ -2125,7 +2126,9 @@ LOCAL DatabaseId mysqlGetLastInsertId(MYSQL_STMT *statementHandle)
 
   return (DatabaseId)mysql_stmt_insert_id(statementHandle);
 }
+#endif /* HAVE_MARIADB */
 
+#ifdef HAVE_POSTGRESQL
 /***********************************************************************\
 * Name   : postgresqlReceiveMessageHandler
 * Purpose: handle received server messages
@@ -2218,17 +2221,17 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 /***********************************************************************\
 * Name   : postgresqlPrepareStatement
 * Purpose: prepare PostgreSQL statement
-* Input  : handle           - database handle
-*          statementName    - statement name
-*          sqlString        - SQL string
-*          parameterCount   - number of parameters
-* Output : -
+* Input  : statement      - statement variable
+*          handle         - database handle
+*          sqlString      - SQL string
+*          parameterCount - number of parameters
+* Output : statement - statement
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors postgresqlPrepareStatement(DatabaseHandle       *databaseHandle,
-                                        PostgresSQLStatement *statement,
+LOCAL Errors postgresqlPrepareStatement(PostgresSQLStatement *statement,
+                                        DatabaseHandle       *databaseHandle,
                                         const char           *sqlString,
                                         uint                 parameterCount
                                        )
@@ -2323,19 +2326,16 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseHandle       *databaseHandle,
 /***********************************************************************\
 * Name   : postgresqlExecutePreparedStatement
 * Purpose: execute PostgreSQL prepared statement
-* Input  : handle        - database handle
-*          statementName - statement name
-*          parameterValues
-*          parameterLengths
-*          parameterFormats
+* Input  : statement      - prepared statement
+*          handle         - connection handle
 *          parameterCount
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors postgresqlExecutePreparedStatement(PGconn               *handle,
-                                                PostgresSQLStatement *statement,
+LOCAL Errors postgresqlExecutePreparedStatement(PostgresSQLStatement *statement,
+                                                PGconn               *handle,
                                                 uint                 parameterCount
                                                )
 {
@@ -2345,7 +2345,6 @@ LOCAL Errors postgresqlExecutePreparedStatement(PGconn               *handle,
 
   assert(handle != NULL);
   assert(statement != NULL);
-
 
 // TODO:
 #if 1
@@ -2478,6 +2477,7 @@ LOCAL DatabaseId postgresqlGetLastInsertId(PGconn     *handle,
 
   return databaseId;
 }
+#endif /* HAVE_POSTGRESQL */
 
 /***********************************************************************\
 * Name   : openDatabase
@@ -5030,8 +5030,8 @@ LOCAL void formatParameters(String               sqlString,
           // prepare SQL statement
           DATABASE_DEBUG_TIME_START(databaseStatementHandle);
           {
-            error = postgresqlPrepareStatement(databaseHandle,
-                                               &databaseStatementHandle->postgresql,
+            error = postgresqlPrepareStatement(&databaseStatementHandle->postgresql,
+                                               databaseHandle,
                                                sqlString,
                                                parameterCount
                                               );
@@ -6325,8 +6325,8 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
             }
 
             // prepare SQL statement
-            error = postgresqlPrepareStatement(databaseHandle,
-                                               &statement,
+            error = postgresqlPrepareStatement(&statement,
+                                               databaseHandle,
                                                sqlCommand,
                                                parameterCount
                                               );
@@ -7802,8 +7802,8 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
         #if defined(HAVE_POSTGRESQL)
           {
             // do query
-            error = postgresqlExecutePreparedStatement(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                                       &databaseStatementHandle->postgresql,
+            error = postgresqlExecutePreparedStatement(&databaseStatementHandle->postgresql,
+                                                       databaseStatementHandle->databaseHandle->postgresql.handle,
                                                        databaseStatementHandle->parameterCount
                                                       );
             if (error != ERROR_NONE)
@@ -8036,24 +8036,12 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
       case DATABASE_TYPE_POSTGRESQL:
         #if defined(HAVE_POSTGRESQL)
           {
-            error = postgresqlExecutePreparedStatement(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                                       &databaseStatementHandle->postgresql,
+            error = postgresqlExecutePreparedStatement(&databaseStatementHandle->postgresql,
+                                                       databaseStatementHandle->databaseHandle->postgresql.handle,
                                                        databaseStatementHandle->parameterCount
                                                       );
             if (error != ERROR_NONE)
             {
-// TODO: remove/replace
-#ifndef NDEBUG
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
-debugDumpStackTrace(stderr,
-                    0,
-                    DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                    databaseStatementHandle->debug.stackTrace,
-                    databaseStatementHandle->debug.stackTraceSize,
-                    0
-                   );
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
-#endif
               break;
             }
 
