@@ -13,6 +13,12 @@
 
 
 
+/* number of bfd_section_size() arguments */
+#undef BFD_SECTION_SIZE_ARGUMENTS_COUNT
+
+/* number of bfd_section_vma() arguments */
+#undef BFD_SECTION_VMA_ARGUMENTS_COUNT
+
 /* configuration directory */
 #undef CONFIG_DIR
 
@@ -34,11 +40,17 @@
 /* libbfd installed */
 #undef HAVE_BFD
 
+/* bfd_get_section_flags() available */
+#undef HAVE_BFD_GET_SECTION_FLAGS
+
 /* Define to 1 if you have the <bfd.h> header file. */
 #undef HAVE_BFD_H
 
 /* bfd_init() available */
 #undef HAVE_BFD_INIT
+
+/* bfd_section_flags() available */
+#undef HAVE_BFD_SECTION_FLAGS
 
 /* bindtextdomain() available */
 #undef HAVE_BINDTEXTDOMAIN

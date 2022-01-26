@@ -638,7 +638,6 @@ LAUNCH4J
 MD5SUM
 GIT
 SVNVERSION
-CREATEDB
 PSQL
 INSTALL_DATA
 INSTALL_SCRIPT
@@ -4243,54 +4242,6 @@ done
 
   if test -z "$PSQL"; then
     as_fn_error $? "Cannot find a 'psql' in PATH. Please check your PATH environment variable." "$LINENO" 5
-  fi
-  for ac_prog in createdb
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_path_CREATEDB+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $CREATEDB in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_CREATEDB="$CREATEDB" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_path_CREATEDB="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-CREATEDB=$ac_cv_path_CREATEDB
-if test -n "$CREATEDB"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CREATEDB" >&5
-$as_echo "$CREATEDB" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-  test -n "$CREATEDB" && break
-done
-
-  if test -z "$CREATEDB"; then
-    as_fn_error $? "Cannot find a 'createdb' in PATH. Please check your PATH environment variable." "$LINENO" 5
   fi
 fi
 
@@ -12554,14 +12505,16 @@ else
       for ac_headers in openssl/crypto.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void CRYPTO_set_id_callback();"; fi`
                                          #ifdef CRYPTO_set_id_callback
                                          #else
-                                           return (int)CRYPTO_set_id_callback;
+                                           return (intptr_t)CRYPTO_set_id_callback;
                                          #endif
 
 
@@ -12602,14 +12555,16 @@ else
       for ac_headers in openssl/crypto.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void CRYPTO_set_locking_callback();"; fi`
                                          #ifdef CRYPTO_set_locking_callback
                                          #else
-                                           return (int)CRYPTO_set_locking_callback;
+                                           return (intptr_t)CRYPTO_set_locking_callback;
                                          #endif
 
 
@@ -14167,14 +14122,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gpg_strerror();"; fi`
                                          #ifdef gpg_strerror
                                          #else
-                                           return (int)gpg_strerror;
+                                           return (intptr_t)gpg_strerror;
                                          #endif
 
 
@@ -14215,14 +14172,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gcry_control();"; fi`
                                          #ifdef gcry_control
                                          #else
-                                           return (int)gcry_control;
+                                           return (intptr_t)gcry_control;
                                          #endif
 
 
@@ -14263,14 +14222,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gnutls_global_init();"; fi`
                                          #ifdef gnutls_global_init
                                          #else
-                                           return (int)gnutls_global_init;
+                                           return (intptr_t)gnutls_global_init;
                                          #endif
 
 
@@ -14311,14 +14272,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void SSL_new();"; fi`
                                          #ifdef SSL_new
                                          #else
-                                           return (int)SSL_new;
+                                           return (intptr_t)SSL_new;
                                          #endif
 
 
@@ -20094,14 +20057,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void pthread_attr_setname();"; fi`
                                          #ifdef pthread_attr_setname
                                          #else
-                                           return (int)pthread_attr_setname;
+                                           return (intptr_t)pthread_attr_setname;
                                          #endif
 
 
@@ -20144,14 +20109,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void pthread_setname_np();"; fi`
                                          #ifdef pthread_setname_np
                                          #else
-                                           return (int)pthread_setname_np;
+                                           return (intptr_t)pthread_setname_np;
                                          #endif
 
 
@@ -20194,14 +20161,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void pthread_setschedprio();"; fi`
                                          #ifdef pthread_setschedprio
                                          #else
-                                           return (int)pthread_setschedprio;
+                                           return (intptr_t)pthread_setschedprio;
                                          #endif
 
 
@@ -20245,14 +20214,16 @@ else
       for ac_headers in winsock2.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gethostbyaddr();"; fi`
                                          #ifdef gethostbyaddr
                                          #else
-                                           return (int)gethostbyaddr;
+                                           return (intptr_t)gethostbyaddr;
                                          #endif
 
 
@@ -20295,14 +20266,16 @@ else
       for ac_headers in winsock2.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gethostbyaddr_r();"; fi`
                                          #ifdef gethostbyaddr_r
                                          #else
-                                           return (int)gethostbyaddr_r;
+                                           return (intptr_t)gethostbyaddr_r;
                                          #endif
 
 
@@ -20345,14 +20318,16 @@ else
       for ac_headers in winsock2.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gethostbyname();"; fi`
                                          #ifdef gethostbyname
                                          #else
-                                           return (int)gethostbyname;
+                                           return (intptr_t)gethostbyname;
                                          #endif
 
 
@@ -20395,14 +20370,16 @@ else
       for ac_headers in winsock2.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gethostbyname_r();"; fi`
                                          #ifdef gethostbyname_r
                                          #else
-                                           return (int)gethostbyname_r;
+                                           return (intptr_t)gethostbyname_r;
                                          #endif
 
 
@@ -20446,14 +20423,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void getlogin();"; fi`
                                          #ifdef getlogin
                                          #else
-                                           return (int)getlogin;
+                                           return (intptr_t)getlogin;
                                          #endif
 
 
@@ -20496,14 +20475,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void getlogin_r();"; fi`
                                          #ifdef getlogin_r
                                          #else
-                                           return (int)getlogin_r;
+                                           return (intptr_t)getlogin_r;
                                          #endif
 
 
@@ -20547,14 +20528,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void chmod();"; fi`
                                          #ifdef chmod
                                          #else
-                                           return (int)chmod;
+                                           return (intptr_t)chmod;
                                          #endif
 
 
@@ -20597,14 +20580,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void chown();"; fi`
                                          #ifdef chown
                                          #else
-                                           return (int)chown;
+                                           return (intptr_t)chown;
                                          #endif
 
 
@@ -20647,14 +20632,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void lseek64();"; fi`
                                          #ifdef lseek64
                                          #else
-                                           return (int)lseek64;
+                                           return (intptr_t)lseek64;
                                          #endif
 
 
@@ -20697,14 +20684,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void lseek();"; fi`
                                          #ifdef lseek
                                          #else
-                                           return (int)lseek;
+                                           return (intptr_t)lseek;
                                          #endif
 
 
@@ -20747,14 +20736,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void ftruncate64();"; fi`
                                          #ifdef ftruncate64
                                          #else
-                                           return (int)ftruncate64;
+                                           return (intptr_t)ftruncate64;
                                          #endif
 
 
@@ -20797,14 +20788,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void ftruncate();"; fi`
                                          #ifdef ftruncate
                                          #else
-                                           return (int)ftruncate;
+                                           return (intptr_t)ftruncate;
                                          #endif
 
 
@@ -20847,14 +20840,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void fdatasync();"; fi`
                                          #ifdef fdatasync
                                          #else
-                                           return (int)fdatasync;
+                                           return (intptr_t)fdatasync;
                                          #endif
 
 
@@ -20897,14 +20892,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void fopen();"; fi`
                                          #ifdef fopen
                                          #else
-                                           return (int)fopen;
+                                           return (intptr_t)fopen;
                                          #endif
 
 
@@ -20947,14 +20944,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void fopen64();"; fi`
                                          #ifdef fopen64
                                          #else
-                                           return (int)fopen64;
+                                           return (intptr_t)fopen64;
                                          #endif
 
 
@@ -20997,14 +20996,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void fseeko();"; fi`
                                          #ifdef fseeko
                                          #else
-                                           return (int)fseeko;
+                                           return (intptr_t)fseeko;
                                          #endif
 
 
@@ -21047,14 +21048,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void _fseeki64();"; fi`
                                          #ifdef _fseeki64
                                          #else
-                                           return (int)_fseeki64;
+                                           return (intptr_t)_fseeki64;
                                          #endif
 
 
@@ -21097,14 +21100,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void fseeko64();"; fi`
                                          #ifdef fseeko64
                                          #else
-                                           return (int)fseeko64;
+                                           return (intptr_t)fseeko64;
                                          #endif
 
 
@@ -21147,14 +21152,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void ftello();"; fi`
                                          #ifdef ftello
                                          #else
-                                           return (int)ftello;
+                                           return (intptr_t)ftello;
                                          #endif
 
 
@@ -21197,14 +21204,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void _ftelli64();"; fi`
                                          #ifdef _ftelli64
                                          #else
-                                           return (int)_ftelli64;
+                                           return (intptr_t)_ftelli64;
                                          #endif
 
 
@@ -21247,14 +21256,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void ftello64();"; fi`
                                          #ifdef ftello64
                                          #else
-                                           return (int)ftello64;
+                                           return (intptr_t)ftello64;
                                          #endif
 
 
@@ -21297,14 +21308,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void getgrgid_r();"; fi`
                                          #ifdef getgrgid_r
                                          #else
-                                           return (int)getgrgid_r;
+                                           return (intptr_t)getgrgid_r;
                                          #endif
 
 
@@ -21347,14 +21360,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void getgrnam_r();"; fi`
                                          #ifdef getgrnam_r
                                          #else
-                                           return (int)getgrnam_r;
+                                           return (intptr_t)getgrnam_r;
                                          #endif
 
 
@@ -21397,14 +21412,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void getpwnam_r();"; fi`
                                          #ifdef getpwnam_r
                                          #else
-                                           return (int)getpwnam_r;
+                                           return (intptr_t)getpwnam_r;
                                          #endif
 
 
@@ -21447,14 +21464,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void getpwuid_r();"; fi`
                                          #ifdef getpwuid_r
                                          #else
-                                           return (int)getpwuid_r;
+                                           return (intptr_t)getpwuid_r;
                                          #endif
 
 
@@ -21497,14 +21516,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void get_current_dir_name();"; fi`
                                          #ifdef get_current_dir_name
                                          #else
-                                           return (int)get_current_dir_name;
+                                           return (intptr_t)get_current_dir_name;
                                          #endif
 
 
@@ -21547,14 +21568,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void ioctl();"; fi`
                                          #ifdef ioctl
                                          #else
-                                           return (int)ioctl;
+                                           return (intptr_t)ioctl;
                                          #endif
 
 
@@ -21597,14 +21620,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void lchmod();"; fi`
                                          #ifdef lchmod
                                          #else
-                                           return (int)lchmod;
+                                           return (intptr_t)lchmod;
                                          #endif
 
 
@@ -21647,14 +21672,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void link();"; fi`
                                          #ifdef link
                                          #else
-                                           return (int)link;
+                                           return (intptr_t)link;
                                          #endif
 
 
@@ -21697,14 +21724,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void lstat64();"; fi`
                                          #ifdef lstat64
                                          #else
-                                           return (int)lstat64;
+                                           return (intptr_t)lstat64;
                                          #endif
 
 
@@ -21747,14 +21776,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void lstat();"; fi`
                                          #ifdef lstat
                                          #else
-                                           return (int)lstat;
+                                           return (intptr_t)lstat;
                                          #endif
 
 
@@ -21797,14 +21828,16 @@ else
       for ac_headers in sys/sysmacros.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void major();"; fi`
                                          #ifdef major
                                          #else
-                                           return (int)major;
+                                           return (intptr_t)major;
                                          #endif
 
 
@@ -21847,14 +21880,16 @@ else
       for ac_headers in sys/sysmacros.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void makedev();"; fi`
                                          #ifdef makedev
                                          #else
-                                           return (int)makedev;
+                                           return (intptr_t)makedev;
                                          #endif
 
 
@@ -21897,14 +21932,16 @@ else
       for ac_headers in sys/sysmacros.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void minor();"; fi`
                                          #ifdef minor
                                          #else
-                                           return (int)minor;
+                                           return (intptr_t)minor;
                                          #endif
 
 
@@ -21947,14 +21984,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void mknod();"; fi`
                                          #ifdef mknod
                                          #else
-                                           return (int)mknod;
+                                           return (intptr_t)mknod;
                                          #endif
 
 
@@ -21997,14 +22036,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void posix_fadvise();"; fi`
                                          #ifdef posix_fadvise
                                          #else
-                                           return (int)posix_fadvise;
+                                           return (intptr_t)posix_fadvise;
                                          #endif
 
 
@@ -22047,14 +22088,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void readlink();"; fi`
                                          #ifdef readlink
                                          #else
-                                           return (int)readlink;
+                                           return (intptr_t)readlink;
                                          #endif
 
 
@@ -22097,14 +22140,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void sigaction();"; fi`
                                          #ifdef sigaction
                                          #else
-                                           return (int)sigaction;
+                                           return (intptr_t)sigaction;
                                          #endif
 
 
@@ -22147,14 +22192,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void stat64();"; fi`
                                          #ifdef stat64
                                          #else
-                                           return (int)stat64;
+                                           return (intptr_t)stat64;
                                          #endif
 
 
@@ -22197,14 +22244,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void stat();"; fi`
                                          #ifdef stat
                                          #else
-                                           return (int)stat;
+                                           return (intptr_t)stat;
                                          #endif
 
 
@@ -22247,14 +22296,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void _stati64();"; fi`
                                          #ifdef _stati64
                                          #else
-                                           return (int)_stati64;
+                                           return (intptr_t)_stati64;
                                          #endif
 
 
@@ -22297,14 +22348,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void statfs();"; fi`
                                          #ifdef statfs
                                          #else
-                                           return (int)statfs;
+                                           return (intptr_t)statfs;
                                          #endif
 
 
@@ -22347,14 +22400,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void statvfs();"; fi`
                                          #ifdef statvfs
                                          #else
-                                           return (int)statvfs;
+                                           return (intptr_t)statvfs;
                                          #endif
 
 
@@ -22397,14 +22452,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void symlink();"; fi`
                                          #ifdef symlink
                                          #else
-                                           return (int)symlink;
+                                           return (intptr_t)symlink;
                                          #endif
 
 
@@ -22447,14 +22504,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void futimens();"; fi`
                                          #ifdef futimens
                                          #else
-                                           return (int)futimens;
+                                           return (intptr_t)futimens;
                                          #endif
 
 
@@ -22497,14 +22556,16 @@ else
       for ac_headers in sys/types.h dirent.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void fdopendir();"; fi`
                                          #ifdef fdopendir
                                          #else
-                                           return (int)fdopendir;
+                                           return (intptr_t)fdopendir;
                                          #endif
 
 
@@ -22547,14 +22608,16 @@ else
       for ac_headers in io.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void mkdtemp();"; fi`
                                          #ifdef mkdtemp
                                          #else
-                                           return (int)mkdtemp;
+                                           return (intptr_t)mkdtemp;
                                          #endif
 
 
@@ -22597,14 +22660,16 @@ else
       for ac_headers in io.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void mkstemp();"; fi`
                                          #ifdef mkstemp
                                          #else
-                                           return (int)mkstemp;
+                                           return (intptr_t)mkstemp;
                                          #endif
 
 
@@ -22647,14 +22712,16 @@ else
       for ac_headers in io.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void mktemp();"; fi`
                                          #ifdef mktemp
                                          #else
-                                           return (int)mktemp;
+                                           return (intptr_t)mktemp;
                                          #endif
 
 
@@ -22697,14 +22764,16 @@ else
       for ac_headers in sys/xattr.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void llistxattr();"; fi`
                                          #ifdef llistxattr
                                          #else
-                                           return (int)llistxattr;
+                                           return (intptr_t)llistxattr;
                                          #endif
 
 
@@ -22747,14 +22816,16 @@ else
       for ac_headers in sys/xattr.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void lgetxattr();"; fi`
                                          #ifdef lgetxattr
                                          #else
-                                           return (int)lgetxattr;
+                                           return (intptr_t)lgetxattr;
                                          #endif
 
 
@@ -22797,14 +22868,16 @@ else
       for ac_headers in sys/xattr.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void lsetxattr();"; fi`
                                          #ifdef lsetxattr
                                          #else
-                                           return (int)lsetxattr;
+                                           return (intptr_t)lsetxattr;
                                          #endif
 
 
@@ -22847,14 +22920,16 @@ else
       for ac_headers in sys/select.h winsock2.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void select();"; fi`
                                          #ifdef select
                                          #else
-                                           return (int)select;
+                                           return (intptr_t)select;
                                          #endif
 
 
@@ -22897,14 +22972,16 @@ else
       for ac_headers in sys/select.h winsock2.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void pselect();"; fi`
                                          #ifdef pselect
                                          #else
-                                           return (int)pselect;
+                                           return (intptr_t)pselect;
                                          #endif
 
 
@@ -22993,14 +23070,16 @@ else
       for ac_headers in icu.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void u_init();"; fi`
                                          #ifdef u_init
                                          #else
-                                           return (int)u_init;
+                                           return (intptr_t)u_init;
                                          #endif
 
 
@@ -23044,14 +23123,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void inotify_init1();"; fi`
                                          #ifdef inotify_init1
                                          #else
-                                           return (int)inotify_init1;
+                                           return (intptr_t)inotify_init1;
                                          #endif
 
 
@@ -23094,14 +23175,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void inotify_add_watch();"; fi`
                                          #ifdef inotify_add_watch
                                          #else
-                                           return (int)inotify_add_watch;
+                                           return (intptr_t)inotify_add_watch;
                                          #endif
 
 
@@ -23144,14 +23227,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void inotify_rm_watch();"; fi`
                                          #ifdef inotify_rm_watch
                                          #else
-                                           return (int)inotify_rm_watch;
+                                           return (intptr_t)inotify_rm_watch;
                                          #endif
 
 
@@ -23195,14 +23280,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void localtime_r();"; fi`
                                          #ifdef localtime_r
                                          #else
-                                           return (int)localtime_r;
+                                           return (intptr_t)localtime_r;
                                          #endif
 
 
@@ -23245,14 +23332,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void getdate_r();"; fi`
                                          #ifdef getdate_r
                                          #else
-                                           return (int)getdate_r;
+                                           return (intptr_t)getdate_r;
                                          #endif
 
 
@@ -23295,14 +23384,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void usleep();"; fi`
                                          #ifdef usleep
                                          #else
-                                           return (int)usleep;
+                                           return (intptr_t)usleep;
                                          #endif
 
 
@@ -23345,14 +23436,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void nanosleep();"; fi`
                                          #ifdef nanosleep
                                          #else
-                                           return (int)nanosleep;
+                                           return (intptr_t)nanosleep;
                                          #endif
 
 
@@ -23395,14 +23488,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void timegm();"; fi`
                                          #ifdef timegm
                                          #else
-                                           return (int)timegm;
+                                           return (intptr_t)timegm;
                                          #endif
 
 
@@ -23445,14 +23540,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void strptime();"; fi`
                                          #ifdef strptime
                                          #else
-                                           return (int)strptime;
+                                           return (intptr_t)strptime;
                                          #endif
 
 
@@ -23496,14 +23593,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void pipe();"; fi`
                                          #ifdef pipe
                                          #else
-                                           return (int)pipe;
+                                           return (intptr_t)pipe;
                                          #endif
 
 
@@ -23546,14 +23645,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void fork();"; fi`
                                          #ifdef fork
                                          #else
-                                           return (int)fork;
+                                           return (intptr_t)fork;
                                          #endif
 
 
@@ -23596,14 +23697,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void waitpid();"; fi`
                                          #ifdef waitpid
                                          #else
-                                           return (int)waitpid;
+                                           return (intptr_t)waitpid;
                                          #endif
 
 
@@ -23647,14 +23750,16 @@ else
       for ac_headers in zlib.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void zlibVersion();"; fi`
                                          #ifdef zlibVersion
                                          #else
-                                           return (int)zlibVersion;
+                                           return (intptr_t)zlibVersion;
                                          #endif
 
 
@@ -23696,14 +23801,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void libssh2_userauth_publickey_frommemory();"; fi`
                                          #ifdef libssh2_userauth_publickey_frommemory
                                          #else
-                                           return (int)libssh2_userauth_publickey_frommemory;
+                                           return (intptr_t)libssh2_userauth_publickey_frommemory;
                                          #endif
 
 
@@ -23746,14 +23853,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void libssh2_channel_send_keepalive();"; fi`
                                          #ifdef libssh2_channel_send_keepalive
                                          #else
-                                           return (int)libssh2_channel_send_keepalive;
+                                           return (intptr_t)libssh2_channel_send_keepalive;
                                          #endif
 
 
@@ -23796,14 +23905,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void libssh2_keepalive_config();"; fi`
                                          #ifdef libssh2_keepalive_config
                                          #else
-                                           return (int)libssh2_keepalive_config;
+                                           return (intptr_t)libssh2_keepalive_config;
                                          #endif
 
 
@@ -23846,14 +23957,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void libssh2_keepalive_send();"; fi`
                                          #ifdef libssh2_keepalive_send
                                          #else
-                                           return (int)libssh2_keepalive_send;
+                                           return (intptr_t)libssh2_keepalive_send;
                                          #endif
 
 
@@ -23896,14 +24009,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void libssh2_scp_send64();"; fi`
                                          #ifdef libssh2_scp_send64
                                          #else
-                                           return (int)libssh2_scp_send64;
+                                           return (intptr_t)libssh2_scp_send64;
                                          #endif
 
 
@@ -23946,14 +24061,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void libssh2_sftp_seek64();"; fi`
                                          #ifdef libssh2_sftp_seek64
                                          #else
-                                           return (int)libssh2_sftp_seek64;
+                                           return (intptr_t)libssh2_sftp_seek64;
                                          #endif
 
 
@@ -23996,14 +24113,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void libssh2_sftp_seek2();"; fi`
                                          #ifdef libssh2_sftp_seek2
                                          #else
-                                           return (int)libssh2_sftp_seek2;
+                                           return (intptr_t)libssh2_sftp_seek2;
                                          #endif
 
 
@@ -24047,14 +24166,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void iso9660_open();"; fi`
                                          #ifdef iso9660_open
                                          #else
-                                           return (int)iso9660_open;
+                                           return (intptr_t)iso9660_open;
                                          #endif
 
 
@@ -24097,14 +24218,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void iso9660_close();"; fi`
                                          #ifdef iso9660_close
                                          #else
-                                           return (int)iso9660_close;
+                                           return (intptr_t)iso9660_close;
                                          #endif
 
 
@@ -24147,14 +24270,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void iso9660_ifs_stat_translate();"; fi`
                                          #ifdef iso9660_ifs_stat_translate
                                          #else
-                                           return (int)iso9660_ifs_stat_translate;
+                                           return (intptr_t)iso9660_ifs_stat_translate;
                                          #endif
 
 
@@ -24197,14 +24322,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void iso9660_iso_seek_read();"; fi`
                                          #ifdef iso9660_iso_seek_read
                                          #else
-                                           return (int)iso9660_iso_seek_read;
+                                           return (intptr_t)iso9660_iso_seek_read;
                                          #endif
 
 
@@ -24248,14 +24375,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void uuid_generate();"; fi`
                                          #ifdef uuid_generate
                                          #else
-                                           return (int)uuid_generate;
+                                           return (intptr_t)uuid_generate;
                                          #endif
 
 
@@ -24298,14 +24427,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void uuid_parse();"; fi`
                                          #ifdef uuid_parse
                                          #else
-                                           return (int)uuid_parse;
+                                           return (intptr_t)uuid_parse;
                                          #endif
 
 
@@ -24348,14 +24479,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void uuid_unparse_lower();"; fi`
                                          #ifdef uuid_unparse_lower
                                          #else
-                                           return (int)uuid_unparse_lower;
+                                           return (intptr_t)uuid_unparse_lower;
                                          #endif
 
 
@@ -24399,14 +24532,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void sysconf();"; fi`
                                          #ifdef sysconf
                                          #else
-                                           return (int)sysconf;
+                                           return (intptr_t)sysconf;
                                          #endif
 
 
@@ -24449,14 +24584,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void backtrace();"; fi`
                                          #ifdef backtrace
                                          #else
-                                           return (int)backtrace;
+                                           return (intptr_t)backtrace;
                                          #endif
 
 
@@ -24499,14 +24636,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void backtrace_symbols();"; fi`
                                          #ifdef backtrace_symbols
                                          #else
-                                           return (int)backtrace_symbols;
+                                           return (intptr_t)backtrace_symbols;
                                          #endif
 
 
@@ -24550,14 +24689,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void setlocale();"; fi`
                                          #ifdef setlocale
                                          #else
-                                           return (int)setlocale;
+                                           return (intptr_t)setlocale;
                                          #endif
 
 
@@ -24600,14 +24741,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void uselocale();"; fi`
                                          #ifdef uselocale
                                          #else
-                                           return (int)uselocale;
+                                           return (intptr_t)uselocale;
                                          #endif
 
 
@@ -24650,14 +24793,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void newlocale();"; fi`
                                          #ifdef newlocale
                                          #else
-                                           return (int)newlocale;
+                                           return (intptr_t)newlocale;
                                          #endif
 
 
@@ -24700,14 +24845,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void freelocale();"; fi`
                                          #ifdef freelocale
                                          #else
-                                           return (int)freelocale;
+                                           return (intptr_t)freelocale;
                                          #endif
 
 
@@ -24750,14 +24897,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void textdomain();"; fi`
                                          #ifdef textdomain
                                          #else
-                                           return (int)textdomain;
+                                           return (intptr_t)textdomain;
                                          #endif
 
 
@@ -24800,14 +24949,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void bindtextdomain();"; fi`
                                          #ifdef bindtextdomain
                                          #else
-                                           return (int)bindtextdomain;
+                                           return (intptr_t)bindtextdomain;
                                          #endif
 
 
@@ -24850,14 +25001,16 @@ else
       for ac_headers in  ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void gettext();"; fi`
                                          #ifdef gettext
                                          #else
-                                           return (int)gettext;
+                                           return (intptr_t)gettext;
                                          #endif
 
 
@@ -24901,14 +25054,16 @@ else
       for ac_headers in systemd/sd-id128.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void sd_id128_get_machine();"; fi`
                                          #ifdef sd_id128_get_machine
                                          #else
-                                           return (int)sd_id128_get_machine;
+                                           return (intptr_t)sd_id128_get_machine;
                                          #endif
 
 
@@ -24951,14 +25106,16 @@ else
       for ac_headers in systemd/sd-id128.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void sd_id128_get_machine_app_specific();"; fi`
                                          #ifdef sd_id128_get_machine_app_specific
                                          #else
-                                           return (int)sd_id128_get_machine_app_specific;
+                                           return (intptr_t)sd_id128_get_machine_app_specific;
                                          #endif
 
 
@@ -24999,17 +25156,19 @@ else
       ac_cv_func_bfd_init="no"
       echo > conftest.log
 
-      for ac_headers in  ""; do
+      for ac_headers in bfd.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void bfd_init();"; fi`
                                          #ifdef bfd_init
                                          #else
-                                           return (int)bfd_init;
+                                           return (intptr_t)bfd_init;
                                          #endif
 
 
@@ -25039,6 +25198,202 @@ elif :; then :
 fi
 
 
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for bfd_get_section_flags" >&5
+$as_echo_n "checking for bfd_get_section_flags... " >&6; }
+if ${ac_cv_func_bfd_get_section_flags+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_bfd_get_section_flags="no"
+      echo > conftest.log
+
+      for ac_headers in bfd.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void bfd_get_section_flags();"; fi`
+                                         #ifdef bfd_get_section_flags
+                                         #else
+                                           return (intptr_t)bfd_get_section_flags;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_bfd_get_section_flags=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_bfd_get_section_flags" >&5
+$as_echo "$ac_cv_func_bfd_get_section_flags" >&6; }
+  if test "$ac_cv_func_bfd_get_section_flags" != no; then :
+
+$as_echo "#define HAVE_BFD_GET_SECTION_FLAGS 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for bfd_section_flags" >&5
+$as_echo_n "checking for bfd_section_flags... " >&6; }
+if ${ac_cv_func_bfd_section_flags+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_bfd_section_flags="no"
+      echo > conftest.log
+
+      for ac_headers in bfd.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void bfd_section_flags();"; fi`
+                                         #ifdef bfd_section_flags
+                                         #else
+                                           return (intptr_t)bfd_section_flags;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_bfd_section_flags=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_bfd_section_flags" >&5
+$as_echo "$ac_cv_func_bfd_section_flags" >&6; }
+  if test "$ac_cv_func_bfd_section_flags" != no; then :
+
+$as_echo "#define HAVE_BFD_SECTION_FLAGS 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking number of arguments of bfd_section_vma()" >&5
+$as_echo_n "checking number of arguments of bfd_section_vma()... " >&6; }
+if ${ac_cv_bfd_section_vma_arguments_count+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_bfd_section_vma_arguments_count=""
+
+      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { asection *section; bfd_section_vma(section); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_vma_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { bfd *abfd; asection *section; bfd_section_vma(abfd,section); (void)abfd; return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_vma_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_bfd_section_vma_arguments_count" >&5
+$as_echo "$ac_cv_bfd_section_vma_arguments_count" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define BFD_SECTION_VMA_ARGUMENTS_COUNT $ac_cv_bfd_section_vma_arguments_count
+_ACEOF
+
+
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking number of arguments of bfd_section_size()" >&5
+$as_echo_n "checking number of arguments of bfd_section_size()... " >&6; }
+if ${ac_cv_bfd_section_size_arguments_count+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_bfd_section_size_arguments_count=""
+
+      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { asection *section; bfd_section_size(section); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_size_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { bfd *abfd; asection *section; bfd_section_size(abfd,section); (void)abfd; return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_size_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_bfd_section_size_arguments_count" >&5
+$as_echo "$ac_cv_bfd_section_size_arguments_count" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define BFD_SECTION_SIZE_ARGUMENTS_COUNT $ac_cv_bfd_section_size_arguments_count
+_ACEOF
+
+
+
+
 case $host_os in
   linux-*)
     ;;
@@ -25057,14 +25412,16 @@ else
       for ac_headers in winsock2.h ""; do
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
 int
 main ()
 {
 `if test -z "$ac_headers"; then echo "extern void WSAPoll();"; fi`
                                          #ifdef WSAPoll
                                          #else
-                                           return (int)WSAPoll;
+                                           return (intptr_t)WSAPoll;
                                          #endif
 
 

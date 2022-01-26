@@ -277,11 +277,13 @@ AC_DEFUN([AC_CHECK_FUNCTION],
       echo > conftest.log
 
       for ac_headers in $4 ""; do
-        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+                                        ],
                                         [`if test -z "$ac_headers"; then echo "extern void $1();"; fi`
                                          #ifdef $1
                                          #else
-                                           return (int)$1;
+                                           return (intptr_t)$1;
                                          #endif
                                         ]
                                        )
@@ -532,6 +534,92 @@ EOF
   )dnl
 
   AC_DEFINE_UNQUOTED(MKDIR_ARGUMENTS_COUNT,$ac_cv_mkdir_arguments_count,[number of mkdir() arguments])
+
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- check number of arguments of bfd_section_vma
+dnl usage: AC_CHECK_BFD_SECTION_VMA_ARGUMENTS
+AC_DEFUN([AC_CHECK_BFD_SECTION_VMA_ARGUMENTS],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AC_CACHE_CHECK(
+    [number of arguments of bfd_section_vma()],
+    ac_cv_bfd_section_vma_arguments_count,
+    [
+      ac_cv_bfd_section_vma_arguments_count=""
+
+      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { asection *section; bfd_section_vma(section); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_vma_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { bfd *abfd; asection *section; bfd_section_vma(abfd,section); (void)abfd; return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_vma_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+    ]
+  )dnl
+
+  AC_DEFINE_UNQUOTED(BFD_SECTION_VMA_ARGUMENTS_COUNT,$ac_cv_bfd_section_vma_arguments_count,[number of bfd_section_vma() arguments])
+
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- check number of arguments of bfd_section_size
+dnl usage: AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS
+AC_DEFUN([AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS],
+[
+  AC_REQUIRE([AC_PROG_CC])
+  AC_CACHE_CHECK(
+    [number of arguments of bfd_section_size()],
+    ac_cv_bfd_section_size_arguments_count,
+    [
+      ac_cv_bfd_section_size_arguments_count=""
+
+      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { asection *section; bfd_section_size(section); return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_size_arguments_count=1
+        fi
+        rm -f conftest.c conftest.o
+      fi
+      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+        cat << \EOF > conftest.c
+#include <stdlib.h>
+#include <bfd.h>
+int main(void) { bfd *abfd; asection *section; bfd_section_size(abfd,section); (void)abfd; return 0; }
+EOF
+        ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
+        if test $rc -eq 0; then
+          ac_cv_bfd_section_size_arguments_count=2
+        fi
+        rm -f conftest.c conftest.o
+      fi
+    ]
+  )dnl
+
+  AC_DEFINE_UNQUOTED(BFD_SECTION_SIZE_ARGUMENTS_COUNT,$ac_cv_bfd_section_size_arguments_count,[number of bfd_section_size() arguments])
 
   AC_PROVIDE([$0])dnl
 ])
@@ -1301,10 +1389,6 @@ if test $ENABLE_POSTGRESQL = "yes"; then
   AC_PATH_PROGS(PSQL,psql)
   if test -z "$PSQL"; then
     AC_MSG_ERROR([Cannot find a 'psql' in PATH. Please check your PATH environment variable.])
-  fi
-  AC_PATH_PROGS(CREATEDB,createdb)
-  if test -z "$CREATEDB"; then
-    AC_MSG_ERROR([Cannot find a 'createdb' in PATH. Please check your PATH environment variable.])
   fi
 fi
 
@@ -4462,7 +4546,11 @@ AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() avai
 AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
 AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
 
-AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]))
+AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]),,bfd.h)
+AC_CHECK_FUNCTION(bfd_get_section_flags,AC_DEFINE(HAVE_BFD_GET_SECTION_FLAGS,1,[bfd_get_section_flags() available]),,bfd.h)
+AC_CHECK_FUNCTION(bfd_section_flags,AC_DEFINE(HAVE_BFD_SECTION_FLAGS,1,[bfd_section_flags() available]),,bfd.h)
+AC_CHECK_BFD_SECTION_VMA_ARGUMENTS
+AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS
 
 case $host_os in
   linux-*)
