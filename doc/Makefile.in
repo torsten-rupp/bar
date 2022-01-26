@@ -122,7 +122,6 @@ all: \
   $(DOC_IMAGES_LARGE) \
 
 clean:
-	$(RMF) $(DOC)
 	$(RMF) $(DOC_IMAGES)
 	$(RMF) $(DOC_IMAGES_SMALL)
 	$(RMF) $(DOC_IMAGES_LARGE)
