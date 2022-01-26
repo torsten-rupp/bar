@@ -1655,6 +1655,8 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 key = NULL;
 #endif
       #else /* not HAVE_GCRYPT */
+        UNUSED_VARIABLE(NO_SALT);
+
         UNUSED_VARIABLE(cryptKey);
         UNUSED_VARIABLE(cryptKeyDeriveType);
         UNUSED_VARIABLE(cryptSalt);
