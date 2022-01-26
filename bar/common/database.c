@@ -5090,6 +5090,8 @@ LOCAL void formatParameters(String               sqlString,
           databaseStatementHandle->postgresql.result = NULL;
         }
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(parameterCount);
+
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -5975,9 +5977,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 * Input  : databaseHandle      - database handle
 *          changedRowCount     - number of changed rows (can be NULL)
 *          timeout             - timeout [ms]
-*          columnTypes         - result column types; use macro
-*                                DATABASE_COLUMN_TYPES()
-*          columnTypeCount     - number of result columns
+*          flags               - database flags; see DATABASE_FLAG_...
 *          sqlCommand          - SQL command string
 *          parameters          - parameters
 *          parameterCount      - number of parameters
@@ -5990,8 +5990,6 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
                               ulong                   *changedRowCount,
                               long                    timeout,
                               uint                    flags,
-                              const DatabaseDataTypes columnTypes[],
-                              uint                    columnTypeCount,
                               const char              *sqlCommand,
                               const DatabaseParameter parameters[],
                               uint                    parameterCount
@@ -6003,10 +6001,6 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
   Errors                        error;
   uint                          maxRetryCount;
   uint                          retryCount;
-// TODO: remove results
-  DatabaseValue                 *results;
-  uint                          resultCount;
-  uint                          i;
   const DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -6016,6 +6010,8 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
   assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
   assert(databaseHandle->sqlite.handle != NULL);
   assert(sqlCommand != NULL);
+
+  UNUSED_VARIABLE(flags);
 
 // TODO: replace by prepare+execute prepared
   done          = FALSE;
@@ -6040,13 +6036,7 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
       case DATABASE_TYPE_MARIADB:
         #if defined(HAVE_MARIADB)
           {
-            const uint MAX_TEXT_LENGTH = 4096;
-
-            MYSQL_STMT    *statementHandle;
-// TODO: remove, no results used
-            MYSQL_BIND    *bind;
-            MYSQL_TIME    *dateTime;
-            unsigned long *lengths;
+            MYSQL_STMT *statementHandle;
 
             // prepare SQL statement
             statementHandle = mysql_stmt_init(databaseHandle->mysql.handle);
@@ -6060,214 +6050,13 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
               break;
             }
 
-            // get number of result values
-            resultCount = mysql_stmt_field_count(statementHandle);
-            assertx(resultCount >= columnTypeCount,
-                    "resultCount=%d columnTypeCount=%d sqlCommand=%s",
-                    resultCount,
-                    columnTypeCount,
-                    sqlCommand
-                   );
-
-// TODO: remove, no results used
-            // allocate result data
-            bind = (MYSQL_BIND*)malloc(resultCount*sizeof(MYSQL_BIND));
-            if (bind == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            dateTime = (MYSQL_TIME*)malloc(resultCount*sizeof(MYSQL_TIME));
-            if (dateTime == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            lengths = (unsigned long*)malloc(resultCount*sizeof(unsigned long));
-            if (lengths == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-            results = (DatabaseValue*)malloc(resultCount*sizeof(DatabaseValue));
-            if (results == NULL)
-            {
-              HALT_INSUFFICIENT_MEMORY();
-            }
-
-            // bind results (use CSTRING for undefined columns)
-// TODO: use bindResults()?
-            for (i = 0; i < resultCount; i++)
-            {
-              results[i].name = NULL;
-              results[i].type = (i < columnTypeCount) ? columnTypes[i] : DATABASE_DATATYPE_CSTRING;
-              switch (results[i].type)
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].id;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  bind[i].buffer_type   = MYSQL_TYPE_TINY;
-                  bind[i].buffer        = (char *)&results[i].b;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].i;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].i64;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_UINT:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].u;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_UINT64:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].u64;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  bind[i].error         = NULL;
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  bind[i].buffer_type   = MYSQL_TYPE_DOUBLE;
-                  bind[i].buffer        = (char *)&results[i].d;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  bind[i].buffer_type   = MYSQL_TYPE_LONGLONG;
-                  bind[i].buffer        = (char *)&results[i].dateTime;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = NULL;
-                  break;
-                case DATABASE_DATATYPE_STRING:
-                  bind[i].buffer_type   = MYSQL_TYPE_STRING;
-                  bind[i].buffer        = (char*)malloc(MAX_TEXT_LENGTH);
-                  bind[i].buffer_length = MAX_TEXT_LENGTH;
-                  bind[i].is_null       = NULL;
-                  bind[i].length        = &lengths[i];
-                  break;
-                case DATABASE_DATATYPE_CSTRING:
-                  HALT_INTERNAL_ERROR_NOT_SUPPORTED();
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break;
-              }
-            }
-            if (resultCount > 0)
-            {
-              if (mysql_stmt_bind_result(statementHandle, bind) != 0)
-              {
-                free(results);
-                free(lengths);
-                free(dateTime);
-                free(bind);
-                mysql_stmt_close(statementHandle);
-                error = ERRORX_(DATABASE_CONNECTION_LOST,
-                                mysql_stmt_errno(statementHandle),
-                                "%s: %s",
-                                mysql_stmt_error(statementHandle),
-                                sqlCommand
-                               );
-                break;
-              }
-            }
-
-// TODO: remove, no results used
-            // get column names
-            if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
-            {
-              MYSQL_RES *mysqlMetaData;
-
-              mysqlMetaData = mysql_stmt_result_metadata(statementHandle);
-              assert(mysql_num_fields(mysqlMetaData) == resultCount);
-              for (i = 0; i < resultCount; i++)
-              {
-                MYSQL_FIELD *field = mysql_fetch_field(mysqlMetaData);
-                results[i].name = (field != NULL) ? field->name : NULL;
-              }
-              mysql_free_result(mysqlMetaData);
-            }
-
             // step and process rows
             error = mysqlExecutePreparedStatement(statementHandle);
             if (error != ERROR_NONE)
             {
-              free(results);
-              free(lengths);
-              free(dateTime);
-              free(bind);
               mysql_stmt_close(statementHandle);
               break;
             }
-
-// TODO: remove, no results used
-            // free call-back data
-            for (i = 0; i < resultCount; i++)
-            {
-              switch (results[i].type)
-              {
-                case DATABASE_DATATYPE_NONE:
-                  break;
-                case DATABASE_DATATYPE:
-                  break;
-                case DATABASE_DATATYPE_PRIMARY_KEY:
-                case DATABASE_DATATYPE_KEY:
-                  break;
-                case DATABASE_DATATYPE_BOOL:
-                  break;
-                case DATABASE_DATATYPE_INT:
-                  break;
-                case DATABASE_DATATYPE_INT64:
-                  break;
-                case DATABASE_DATATYPE_UINT:
-                  break;
-                case DATABASE_DATATYPE_UINT64:
-                  break;
-                case DATABASE_DATATYPE_DOUBLE:
-                  break;
-                case DATABASE_DATATYPE_DATETIME:
-                  break;
-                case DATABASE_DATATYPE_STRING:
-                case DATABASE_DATATYPE_CSTRING:
-                  free(bind[i].buffer);
-                  break;
-                case DATABASE_DATATYPE_BLOB:
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break;
-              }
-            }
-            free(results);
-            free(lengths);
-            free(dateTime);
-            free(bind);
 
             // get number of changes
             if (changedRowCount != NULL)
@@ -6413,25 +6202,6 @@ LOCAL Errors executeStatement(DatabaseHandle         *databaseHandle,
               }
             }
 
-            // get column names
-            if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
-            {
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-#if 0
-              MYSQL_RES *result;
-
-              mysqlMetaData = mysql_stmt_result_metadata(statementHandle);
-              assert(mysql_num_fields(mysqlMetaData) == resultCount);
-              for (i = 0; i < resultCount; i++)
-              {
-                MYSQL_FIELD *field = mysql_fetch_field(result);
-                results[i].name = (field != NULL) ? field->name : NULL;
-              }
-              mysql_free_result(mysqlMetaData);
-#endif
-            }
-
             // execute SQL statement
             error = postgresqlExecute(&postgresqlResult,
                                       databaseHandle->postgresql.handle,
@@ -6508,6 +6278,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             }
           }
         #else /* HAVE_POSTGRESQL */
+          UNUSED_VARIABLE(parameters);
+          UNUSED_VARIABLE(parameterCount);
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_POSTGRESQL */
         break;
@@ -7509,15 +7281,18 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
+        error = sqlite3Exec(databaseHandle->sqlite.handle,
+                            sqlCommand
+                           );
+        if (error != ERROR_NONE)
         {
-//fprintf(stderr,"%s, %d: sqlCommands='%s'\n",__FILE__,__LINE__,String_cString(sqlCommand));
-          error = sqlite3Exec(databaseHandle->sqlite.handle,
-                              sqlCommand
-                             );
-          if (error != ERROR_NONE)
-          {
-            break;
-          }
+          break;
+        }
+
+        // get number of changes
+        if (changedRowCount != NULL)
+        {
+          (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->sqlite.handle);
         }
         break;
       case DATABASE_TYPE_MARIADB:
@@ -7525,14 +7300,11 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           {
             MYSQL_RES *result;
 
-//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
             error = mysqlExecute(databaseHandle->mysql.handle,sqlCommand);
             if (error != ERROR_NONE)
             {
               break;
             }
-
-//fprintf(stderr,"%s:%d: mysql_stmt_num_rows(statementHandle)=%d\n",__FILE__,__LINE__,mysql_stmt_num_rows(statementHandle));
 
             // get number of changes
             if (changedRowCount != NULL)
@@ -7570,7 +7342,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
+//// TODO:              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mysql.handle);
             }
 
             // discard results
@@ -8758,7 +8530,7 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
       Password_setBuffer(&databaseSpecifier->mysql.password,s3,n3);
       databaseSpecifier->mysql.databaseName = String_newCString(defaultDatabaseName);
     #else /* HAVE_MARIADB */
-// TODO:
+      UNUSED_VARIABLE(defaultDatabaseName);
     #endif /* HAVE_MARIADB */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
@@ -8776,16 +8548,16 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
           )
   {
     // postgresql:<server>:<user>:<password>:<database>
-    #if defined(HAVE_MARIADB)
-      databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
+    databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
+    #if defined(HAVE_POSGRESQL)
       databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->postgresql.password);
       Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
       databaseSpecifier->postgresql.databaseName = String_setBuffer(String_new(),s4,n4);
-    #else /* HAVE_MARIADB */
-// TODO:
-    #endif /* HAVE_MARIADB */
+    #else /* HAVE_POSGRESQL */
+      UNUSED_VARIABLE(defaultDatabaseName);
+    #endif /* HAVE_POSGRESQL */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else if (   (databaseURI != NULL)
@@ -8801,16 +8573,16 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
           )
   {
     // postgresql:<server>:<user>:<password>
-    #if defined(HAVE_MARIADB)
-      databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
+    databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
+    #if defined(HAVE_POSGRESQL)
       databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->postgresql.password);
       Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
       databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
-    #else /* HAVE_MARIADB */
-// TODO:
-    #endif /* HAVE_MARIADB */
+    #else /* HAVE_POSGRESQL */
+      UNUSED_VARIABLE(defaultDatabaseName);
+    #endif /* HAVE_POSGRESQL */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else
@@ -9096,7 +8868,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
             error = Database_execute(&databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "RENAME TABLE ? TO ?.?",
                                      DATABASE_PARAMETERS
                                      (
@@ -9179,7 +8950,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
             error = Database_execute(&databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "RENAME TABLE ? TO ?.?",
                                      DATABASE_PARAMETERS
                                      (
@@ -9209,6 +8979,7 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return ERROR_NONE;
 }
@@ -9308,7 +9079,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
                            "COMMIT"
                           );
 #endif
@@ -9943,6 +9713,7 @@ DATABASE_PLAIN("xxx"),
                                 );
           }
         #else /* HAVE_MARIADB */
+          UNUSED_VARIABLE(tableName);
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_MARIADB */
         break;
@@ -10726,7 +10497,6 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "PRAGMA synchronous=%d",
                                                 enabled ? 1 : 0
@@ -10741,7 +10511,6 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "PRAGMA journal_mode=%d",
                                                 enabled ? 1 : 0
@@ -10793,7 +10562,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "PRAGMA foreign_keys=%d",
                                               enabled ? 1 : 0
@@ -10812,7 +10580,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "SET FOREIGN_KEY_CHECKS=%s",
                                                 enabled ? "ON" : "OFF"
@@ -10843,7 +10610,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "ALTER TABLE %s %s ALL",
                                                 String_cString(tableName),
@@ -10885,7 +10651,6 @@ Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
       error = Database_execute(databaseHandle,
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
                                "PRAGMA temp_store_directory=?",
                                DATABASE_PARAMETERS
                                (
@@ -10919,6 +10684,7 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(tableName != NULL);
 
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -10928,9 +10694,6 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP TABLE %s",
                                               tableName
@@ -10949,9 +10712,6 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES
-                                   (
-                                   ),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "DROP TABLE %s",
                                                 tableName
@@ -10973,9 +10733,6 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES
-                                   (
-                                   ),
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "DROP TABLE %s CASCADE",
                                                 tableName
@@ -10990,6 +10747,7 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -11035,7 +10793,6 @@ Errors Database_createTemporaryTable(DatabaseHandle            *databaseHandle,
   return Database_execute(databaseHandle,
                           NULL,  // changedRowCount
                           DATABASE_FLAG_NONE,
-                          DATABASE_COLUMN_TYPES(),
                           "CREATE TABLE ?.? \
                            ( \
                              id INT PRIMARY KEY, \
@@ -11058,7 +10815,6 @@ Errors Database_dropTemporaryTable(DatabaseHandle            *databaseHandle,
   return Database_execute(databaseHandle,
                           NULL,  // changedRowCount
                           DATABASE_FLAG_NONE,
-                          DATABASE_COLUMN_TYPES(),
                           "DROP TABLE ?.?",
                           DATABASE_PARAMETERS
                           (
@@ -11079,15 +10835,13 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(viewName != NULL);
 
+  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
       error = Database_execute(databaseHandle,
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES
-                               (
-                               ),
                                stringFormat(sqlString,sizeof(sqlString),
                                             "DROP VIEW %s",
                                             viewName
@@ -11102,9 +10856,6 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP VIEW %s",
                                               viewName
@@ -11122,9 +10873,6 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP VIEW %s CASCADE",
                                               viewName
@@ -11138,6 +10886,7 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -11168,7 +10917,6 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
                          )
 {
   Errors error;
-  char   sqlCommand[256];
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -11183,7 +10931,6 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
         error = Database_execute(databaseHandle,
                                  NULL,  // changedRowCount
                                  DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES(),
                                  stringFormat(sqlString,sizeof(sqlString),
                                               "DROP INDEX %s",
                                               indexName
@@ -11208,7 +10955,6 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "DROP INDEXES ? FROM ?",
                                      DATABASE_PARAMETERS
                                      (
@@ -11225,20 +10971,21 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
       break;
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 DATABASE_COLUMN_TYPES
-                                 (
-                                 ),
-                                 stringFormat(sqlCommand,sizeof(sqlCommand),
-                                              "DROP INDEX \"%s\"",
-                                              indexName
-                                             ),
-                                 DATABASE_PARAMETERS
-                                 (
-                                 )
-                                );
+        {
+          char sqlString[256];
+
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "DROP INDEX \"%s\"",
+                                                indexName
+                                               ),
+                                   DATABASE_PARAMETERS
+                                   (
+                                   )
+                                  );
+        }
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
@@ -11271,7 +11018,6 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
           error = Database_execute(databaseHandle,
                                    NULL,  // changedRowCount
                                    DATABASE_FLAG_NONE,
-                                   DATABASE_COLUMN_TYPES(),
                                    "DROP INDEX ?",
                                    DATABASE_PARAMETERS
                                    (
@@ -11300,7 +11046,6 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
               error = Database_execute(databaseHandle,
                                        NULL,  // changedRowCount
                                        DATABASE_FLAG_NONE,
-                                       DATABASE_COLUMN_TYPES(),
                                        "DROP INDEXES ? FROM ?",
                                        DATABASE_PARAMETERS
                                        (
@@ -11331,7 +11076,6 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
                                      DATABASE_FLAG_NONE,
-                                     DATABASE_COLUMN_TYPES(),
                                      "DROP INDEX ? CASCADE",
                                      DATABASE_PARAMETERS
                                      (
@@ -11364,7 +11108,6 @@ Errors Database_dropTrigger(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
                            stringFormat(sqlString,sizeof(sqlString),
                                         "DROP TRIGGER %s",
                                         triggerName
@@ -11934,6 +11677,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
           switch (parameterValues[i].type)
           {
             case DATABASE_DATATYPE_CSTRING:
+// TODO: make copy, s is const
               stringMakeValidUTF8(parameterValues[i].s,0);
               assert(stringIsValidUTF8(parameterValues[i].s,0));
               break;
@@ -12638,7 +12382,6 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES(),
                            "ALTER TABLE ? ADD COLUMN ? ?",
                            DATABASE_PARAMETERS
                            (
@@ -12734,7 +12477,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       (void)Database_execute(databaseHandle,
                              NULL,  // changedRowCount
                              DATABASE_FLAG_NONE,
-                             DATABASE_COLUMN_TYPES(),
                              "DROP TABLE __new__",
                              DATABASE_PARAMETERS_NONE
                             );
@@ -12752,9 +12494,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "ALTER TABLE %s RENAME TO __old__",
                            DATABASE_PARAMETERS
                            (
@@ -12766,9 +12505,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "DROP TABLE __new__",
                            DATABASE_PARAMETERS_NONE
                           );
@@ -12777,9 +12513,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "ALTER TABLE __new__ RENAME TO ?",
                            DATABASE_PARAMETERS
                            (
@@ -12791,9 +12524,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "ALTER TABLE __old__ RENAME TO ?",
                            DATABASE_PARAMETERS
                            (
@@ -12803,9 +12533,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     (void)Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "DROP TABLE __new__",
                            DATABASE_PARAMETERS_NONE
                           );
@@ -12814,9 +12541,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-                           DATABASE_COLUMN_TYPES
-                           (
-                           ),
                            "DROP TABLE __old__",
                            DATABASE_PARAMETERS_NONE
                           );
@@ -13442,8 +13166,6 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 Errors Database_execute(DatabaseHandle          *databaseHandle,
                         ulong                   *changedRowCount,
                         uint                    flags,
-                        const DatabaseDataTypes columnTypes[],
-                        uint                    columnTypeCount,
                         const char              *sqlCommand,
                         const DatabaseParameter parameters[],
                         uint                    parameterCount
@@ -13466,8 +13188,6 @@ Errors Database_execute(DatabaseHandle          *databaseHandle,
                             changedRowCount,
                             databaseHandle->timeout,
                             flags,
-                            columnTypes,
-                            columnTypeCount,
                             sqlCommand,
                             parameters,
                             parameterCount
@@ -13826,6 +13546,9 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
           formatParameters(sqlString,databaseHandle,filter,&parameterCount);
         }
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(conflictColumns);
+        UNUSED_VARIABLE(conflictColumnCount);
+        UNUSED_VARIABLE(filter);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -13901,6 +13624,8 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
           }
         }
       #else /* HAVE_POSTGRESQL */
+        UNUSED_VARIABLE(filters);
+        UNUSED_VARIABLE(filterCount);
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_POSTGRESQL */
       break;
@@ -14722,6 +14447,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   }
 
   // get statement columns if not defined
+  statementColumnCount = 0;
   if (columns == NULL)
   {
     getStatementColumns(statementColumns,
@@ -15573,6 +15299,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
     return error;
   });
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -15591,7 +15318,6 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
       error = Database_execute(databaseHandle,
                                NULL,  // changedRowCount
                                DATABASE_FLAG_NONE,
-                               DATABASE_COLUMN_TYPES(),
                                "REINDEX",
                                DATABASE_PARAMETERS_NONE
                               );
@@ -15607,6 +15333,7 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
 fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -15629,7 +15356,7 @@ void Database_debugPrintSimpleLockInfo(void)
         #if defined(HAVE_MARIADB)
           printf("Database: 'mariadb:%s:%s'\n",String_cString(databaseNode->databaseSpecifier.mysql.serverName),String_cString(databaseNode->databaseSpecifier.mysql.userName));
         #else /* HAVE_MARIADB */
-          return ERROR_FUNCTION_NOT_SUPPORTED;
+          return;
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:

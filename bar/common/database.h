@@ -2104,9 +2104,7 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 * Purpose: execute SQL statement
 * Input  : databaseHandle  - database handle
 *          changedRowCount - number of changd rows (can be NULL)
-*          columnTypes     - result column types; use macro
-*                            DATABASE_COLUMN_TYPES()
-*          columnTypeCount - number of result columns
+*          flagsflags      - execute flags; see DATABASE_FLAG_...
 *          sqlCommand      - SQL command string
 *          values          - values for SQL command string
 *          valueCount      - value count
@@ -2118,8 +2116,6 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
 Errors Database_execute(DatabaseHandle          *databaseHandle,
                         ulong                   *changedRowCount,
                         uint                    flags,
-                        const DatabaseDataTypes columnTypes[],
-                        uint                    columnTypeCount,
                         const char              *sqlCommand,
                         const DatabaseParameter parameters[],
                         uint                    parameterCount

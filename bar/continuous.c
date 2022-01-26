@@ -338,7 +338,6 @@ LOCAL void printNotifies(void)
   error = Database_execute(databaseHandle,
                            NULL,  // changedRowCount
                            DATABASE_FLAG_NONE,
-DATABASE_COLUMN_TYPES(),
                            CONTINUOUS_TABLE_DEFINITION,
                            DATABASE_PARAMETERS_NONE
                           );
