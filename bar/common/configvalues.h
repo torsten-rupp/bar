@@ -659,50 +659,6 @@ typedef struct
   CONFIG_VALUE_BOOLEAN(name,NULL,offsetof(type,member),templateText)
 
 /***********************************************************************\
-* Name   : CONFIG_VALUE_ENUM, CONFIG_STRUCT_VALUE_ENUM
-* Purpose: define a single enum-value
-* Input  : name            - name
-*          variablePointer - pointer to variable or NULL
-*          offset          - offset in structure or -1
-*          type            - structure type
-*          member          - structure memory name
-*          value           - enum value
-*          templateText    - template text for write
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#ifndef WERROR
-#warning obsolete
-#endif
-#define xxxCONFIG_VALUE_ENUM(name,variablePointer,offset,value,templateText) \
-  { \
-    CONFIG_VALUE_TYPE_ENUM,\
-    name,\
-    {variablePointer},\
-    offset,\
-    {0,0,NULL},\
-    {0LL,0LL,NULL},\
-    {0.0,0.0,NULL},\
-    {},\
-    {value},\
-    {NULL},\
-    {NULL}, \
-    {},\
-    {},\
-    {NULL,NULL,NULL},\
-    templateText,\
-    {NULL,NULL,NULL,FALSE},\
-    {NULL,FALSE},\
-    {NULL,NULL},\
-    {NULL},\
-    {NULL}\
-  }
-#define xxxCONFIG_STRUCT_VALUE_ENUM(name,type,member,value,templateText) \
-  xxxCONFIG_VALUE_ENUM(name,NULL,offsetof(type,member),value,templateText)
-
-/***********************************************************************\
 * Name   : CONFIG_VALUE_SELECT, CONFIG_STRUCT_VALUE_SELECT
 * Purpose: define a selection from a set of enum-values
 * Input  : name            - name
