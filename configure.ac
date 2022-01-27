@@ -3603,7 +3603,7 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
 
     cwd=`pwd`
 
-    AC_MSG_COMPILE([PostgreSQL client])
+    AC_MSG_COMPILE([PostgreSQL])
     result=1
     if test $result -eq 1; then
       (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
@@ -3613,9 +3613,9 @@ if test -d postgresql -o -d "`readlink postgresql`"; then
         --with-includes=$cwd/extern/include \
         --with-libraries=$cwd/extern/lib \
         --enable-thread-safety \
-        `if test "$HAVE_SSL"; then echo -- --with-openssl; else echo -- --without-openssl; fi` \
+        `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
         --without-readline \
-        `if test "$ENABLE_DEBUG" = "yes"; then echo -- --enable-debug; fi` \
+        `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
