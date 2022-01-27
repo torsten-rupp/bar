@@ -180,6 +180,7 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
 (
   cd $tmpDir
 set -x
+  set -e
 
 # TODO: out-of-source build, build from source instead of extrac distribution file
   # get sources
@@ -219,6 +220,8 @@ set -x
 
   # get MD5 hash
   md5sum $sourcePath/${setupName}.exe
+
+  set +e
 
   # debug
   if test $debugFlag -eq 1; then
