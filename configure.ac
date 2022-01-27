@@ -4569,8 +4569,10 @@ AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_
 AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]),,bfd.h)
 AC_CHECK_FUNCTION(bfd_get_section_flags,AC_DEFINE(HAVE_BFD_GET_SECTION_FLAGS,1,[bfd_get_section_flags() available]),,bfd.h)
 AC_CHECK_FUNCTION(bfd_section_flags,AC_DEFINE(HAVE_BFD_SECTION_FLAGS,1,[bfd_section_flags() available]),,bfd.h)
-AC_CHECK_BFD_SECTION_VMA_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_vma()]))
-AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_size()]))
+if test $HAVE_BFD; then
+  AC_CHECK_BFD_SECTION_VMA_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_vma()]))
+  AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_size()]))
+endif
 
 case $host_os in
   linux-*)

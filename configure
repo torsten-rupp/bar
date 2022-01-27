@@ -25368,6 +25368,7 @@ elif :; then :
 
 fi
 
+if test $HAVE_BFD; then
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking number of arguments of bfd_section_vma()" >&5
@@ -25470,6 +25471,7 @@ _ACEOF
 
 
 
+endif
 
 case $host_os in
   linux-*)
