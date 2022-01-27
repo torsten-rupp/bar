@@ -23080,9 +23080,9 @@ if ${ac_cv_mkdir_arguments_count+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_cv_mkdir_arguments_count=""
+      ac_cv_mkdir_arguments_count="unknown"
 
-      if test -z "$ac_cv_mkdir_arguments_count"; then
+      if test "$ac_cv_mkdir_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <io.h>
 int main(void) { mkdir("."); return 0; }
@@ -23093,7 +23093,7 @@ EOF
         fi
         rm -f conftest.c conftest.o
       fi
-      if test -z "$ac_cv_mkdir_arguments_count"; then
+      if test "$ac_cv_mkdir_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -23110,6 +23110,11 @@ EOF
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_mkdir_arguments_count" >&5
 $as_echo "$ac_cv_mkdir_arguments_count" >&6; }
+  if test "$ac_cv_mkdir_arguments_count" != "unknown"; then :
+
+elif :; then :
+  as_fn_error $? "cannot detect number of arguments of mkdir()" "$LINENO" 5
+fi
 
 cat >>confdefs.h <<_ACEOF
 #define MKDIR_ARGUMENTS_COUNT $ac_cv_mkdir_arguments_count
@@ -25371,13 +25376,13 @@ if ${ac_cv_bfd_section_vma_arguments_count+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_cv_bfd_section_vma_arguments_count=""
+      ac_cv_bfd_section_vma_arguments_count="unknown"
 
-      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+      if test "$ac_cv_bfd_section_vma_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { asection *section; bfd_section_vma(section); return 0; }
+int main(void) { asection *section = NULL; bfd_section_vma(section); return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -25385,11 +25390,11 @@ EOF
         fi
         rm -f conftest.c conftest.o
       fi
-      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+      if test "$ac_cv_bfd_section_vma_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { bfd *abfd; asection *section; bfd_section_vma(abfd,section); (void)abfd; return 0; }
+int main(void) { bfd *abfd = NULL; asection *section = NULL; bfd_section_vma(abfd,section); (void)abfd; return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -25402,6 +25407,11 @@ EOF
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_bfd_section_vma_arguments_count" >&5
 $as_echo "$ac_cv_bfd_section_vma_arguments_count" >&6; }
+  if test "$ac_cv_bfd_section_vma_arguments_count" != "unknown"; then :
+
+elif :; then :
+  as_fn_error $? "cannot detect number of arguments of bfd_section_vma()" "$LINENO" 5
+fi
 
 cat >>confdefs.h <<_ACEOF
 #define BFD_SECTION_VMA_ARGUMENTS_COUNT $ac_cv_bfd_section_vma_arguments_count
@@ -25417,13 +25427,13 @@ if ${ac_cv_bfd_section_size_arguments_count+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_cv_bfd_section_size_arguments_count=""
+      ac_cv_bfd_section_size_arguments_count="unknown"
 
-      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+      if test "$ac_cv_bfd_section_size_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { asection *section; bfd_section_size(section); return 0; }
+int main(void) { asection *section = NULL; bfd_section_size(section); return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -25431,11 +25441,11 @@ EOF
         fi
         rm -f conftest.c conftest.o
       fi
-      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+      if test "$ac_cv_bfd_section_size_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { bfd *abfd; asection *section; bfd_section_size(abfd,section); (void)abfd; return 0; }
+int main(void) { bfd *abfd = NULL; asection *section = NULL; bfd_section_size(abfd,section); (void)abfd; return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -25448,6 +25458,11 @@ EOF
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_bfd_section_size_arguments_count" >&5
 $as_echo "$ac_cv_bfd_section_size_arguments_count" >&6; }
+  if test "$ac_cv_bfd_section_size_arguments_count" != "unknown"; then :
+
+elif :; then :
+  as_fn_error $? "cannot detect number of arguments of bfd_section_size()" "$LINENO" 5
+fi
 
 cat >>confdefs.h <<_ACEOF
 #define BFD_SECTION_SIZE_ARGUMENTS_COUNT $ac_cv_bfd_section_size_arguments_count

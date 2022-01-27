@@ -505,9 +505,9 @@ AC_DEFUN([AC_CHECK_MKDIR_ARGUMENTS],
     [number of arguments of mkdir()],
     ac_cv_mkdir_arguments_count,
     [
-      ac_cv_mkdir_arguments_count=""
+      ac_cv_mkdir_arguments_count="unknown"
 
-      if test -z "$ac_cv_mkdir_arguments_count"; then
+      if test "$ac_cv_mkdir_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <io.h>
 int main(void) { mkdir("."); return 0; }
@@ -518,7 +518,7 @@ EOF
         fi
         rm -f conftest.c conftest.o
       fi
-      if test -z "$ac_cv_mkdir_arguments_count"; then
+      if test "$ac_cv_mkdir_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -531,8 +531,8 @@ EOF
         rm -f conftest.c conftest.o
       fi
     ]
-  )dnl
-
+  )
+  AS_IF([test "$ac_cv_mkdir_arguments_count" != "unknown"],[$1],:,[$2])
   AC_DEFINE_UNQUOTED(MKDIR_ARGUMENTS_COUNT,$ac_cv_mkdir_arguments_count,[number of mkdir() arguments])
 
   AC_PROVIDE([$0])dnl
@@ -547,13 +547,13 @@ AC_DEFUN([AC_CHECK_BFD_SECTION_VMA_ARGUMENTS],
     [number of arguments of bfd_section_vma()],
     ac_cv_bfd_section_vma_arguments_count,
     [
-      ac_cv_bfd_section_vma_arguments_count=""
+      ac_cv_bfd_section_vma_arguments_count="unknown"
 
-      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+      if test "$ac_cv_bfd_section_vma_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { asection *section; bfd_section_vma(section); return 0; }
+int main(void) { asection *section = NULL; bfd_section_vma(section); return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -561,11 +561,11 @@ EOF
         fi
         rm -f conftest.c conftest.o
       fi
-      if test -z "$ac_cv_bfd_section_vma_arguments_count"; then
+      if test "$ac_cv_bfd_section_vma_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { bfd *abfd; asection *section; bfd_section_vma(abfd,section); (void)abfd; return 0; }
+int main(void) { bfd *abfd = NULL; asection *section = NULL; bfd_section_vma(abfd,section); (void)abfd; return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -574,8 +574,8 @@ EOF
         rm -f conftest.c conftest.o
       fi
     ]
-  )dnl
-
+  )
+  AS_IF([test "$ac_cv_bfd_section_vma_arguments_count" != "unknown"],[$1],:,[$2])
   AC_DEFINE_UNQUOTED(BFD_SECTION_VMA_ARGUMENTS_COUNT,$ac_cv_bfd_section_vma_arguments_count,[number of bfd_section_vma() arguments])
 
   AC_PROVIDE([$0])dnl
@@ -590,13 +590,13 @@ AC_DEFUN([AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS],
     [number of arguments of bfd_section_size()],
     ac_cv_bfd_section_size_arguments_count,
     [
-      ac_cv_bfd_section_size_arguments_count=""
+      ac_cv_bfd_section_size_arguments_count="unknown"
 
-      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+      if test "$ac_cv_bfd_section_size_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { asection *section; bfd_section_size(section); return 0; }
+int main(void) { asection *section = NULL; bfd_section_size(section); return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -604,11 +604,11 @@ EOF
         fi
         rm -f conftest.c conftest.o
       fi
-      if test -z "$ac_cv_bfd_section_size_arguments_count"; then
+      if test "$ac_cv_bfd_section_size_arguments_count" = "unknown"; then
         cat << \EOF > conftest.c
 #include <stdlib.h>
 #include <bfd.h>
-int main(void) { bfd *abfd; asection *section; bfd_section_size(abfd,section); (void)abfd; return 0; }
+int main(void) { bfd *abfd = NULL; asection *section = NULL; bfd_section_size(abfd,section); (void)abfd; return 0; }
 EOF
         ${CC} ${CFLAGS} -Wall -Werror -c conftest.c -o conftest.o 1>/dev/null 2>/dev/null; rc=$?
         if test $rc -eq 0; then
@@ -617,8 +617,8 @@ EOF
         rm -f conftest.c conftest.o
       fi
     ]
-  )dnl
-
+  )
+  AS_IF([test "$ac_cv_bfd_section_size_arguments_count" != "unknown"],[$1],:,[$2])
   AC_DEFINE_UNQUOTED(BFD_SECTION_SIZE_ARGUMENTS_COUNT,$ac_cv_bfd_section_size_arguments_count,[number of bfd_section_size() arguments])
 
   AC_PROVIDE([$0])dnl
@@ -4341,7 +4341,7 @@ AC_CHECK_HEADERS(\
 AC_CHECK_TYPE(uint,AC_DEFINE(HAVE_UINT,1,[defined if uint is available]))
 AC_CHECK_TYPE(ulong,AC_DEFINE(HAVE_ULONG,1,[defined if ulong is available]))
 AC_CHECK_TYPE(long long int,AC_DEFINE(HAVE_LONG_LONG,1,[defined if ulong is available]))
-dnl AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR(long long data type not available))
+dnl AC_C_LONG_LONG(AC_DEFINE(HAVE_LONG_LONG,1,[defined if long long data type available]),AC_MSG_ERROR([long long data type not available]))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MIN;],AC_DEFINE(HAVE_LLONG_MIN,1,[defined if LLONG_MIN is available]))
 AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE_LLONG_MAX,1,[defined if LLONG_MAX is available]))
 AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
@@ -4513,7 +4513,7 @@ AC_CHECK_FUNCTION(lgetxattr,           AC_DEFINE(HAVE_LGETXATTR,           1,[lg
 AC_CHECK_FUNCTION(lsetxattr,           AC_DEFINE(HAVE_LSETXATTR,           1,[lsetxattr() available]) ,,sys/xattr.h)
 AC_CHECK_FUNCTION(select,              AC_DEFINE(HAVE_SELECT,              1,[select() available]) ,,sys/select.h winsock2.h)
 AC_CHECK_FUNCTION(pselect,             AC_DEFINE(HAVE_PSELECT,             1,[pselect() available]) ,,sys/select.h winsock2.h)
-AC_CHECK_MKDIR_ARGUMENTS
+AC_CHECK_MKDIR_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of mkdir()]))
 
 AC_CHECK_FUNCTION(u_init,       AC_DEFINE(HAVE_U_INIT,1,[u_init() available])  ,,icu.h)
 
@@ -4569,8 +4569,8 @@ AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_
 AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]),,bfd.h)
 AC_CHECK_FUNCTION(bfd_get_section_flags,AC_DEFINE(HAVE_BFD_GET_SECTION_FLAGS,1,[bfd_get_section_flags() available]),,bfd.h)
 AC_CHECK_FUNCTION(bfd_section_flags,AC_DEFINE(HAVE_BFD_SECTION_FLAGS,1,[bfd_section_flags() available]),,bfd.h)
-AC_CHECK_BFD_SECTION_VMA_ARGUMENTS
-AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS
+AC_CHECK_BFD_SECTION_VMA_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_vma()]))
+AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_size()]))
 
 case $host_os in
   linux-*)
