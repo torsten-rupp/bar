@@ -4572,7 +4572,7 @@ AC_CHECK_FUNCTION(bfd_section_flags,AC_DEFINE(HAVE_BFD_SECTION_FLAGS,1,[bfd_sect
 if test $HAVE_BFD; then
   AC_CHECK_BFD_SECTION_VMA_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_vma()]))
   AC_CHECK_BFD_SECTION_SIZE_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of bfd_section_size()]))
-endif
+fi
 
 case $host_os in
   linux-*)
