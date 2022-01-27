@@ -179,6 +179,7 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
 
 (
   cd $tmpDir
+set -x
 
 # TODO: out-of-source build, build from source instead of extrac distribution file
   # get sources
@@ -202,8 +203,7 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
     --disable-link-static \
     --enable-link-dynamic \
     --disable-bfd \
---disable-epm \
-    ;
+    --disable-epm
   make
   make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
