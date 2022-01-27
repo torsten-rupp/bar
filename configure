@@ -25471,7 +25471,7 @@ _ACEOF
 
 
 
-endif
+fi
 
 case $host_os in
   linux-*)
