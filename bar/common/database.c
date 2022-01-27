@@ -11534,14 +11534,6 @@ fprintf(stderr,"%s:%d: mapping %d %s -> %s: ",__FILE__,__LINE__, toColumnMapCoun
 fprintf(stderr,"%s:%d: parameter %d %s -> %s: ",__FILE__,__LINE__,parameterMapCount,fromTableName,toTableName); for (uint i = 0; i < parameterMapCount;i++) { fprintf(stderr,"%d->%d: %s %d, ",parameterMap[i],i,toColumns[parameterMap[i]].name,toColumns[parameterMap[i]].type); } fprintf(stderr,"\n");
 
   // init from/to values
-// TODO:`remove
-#if 0
-  for (i = 0; i < fromColumnCount; i++)
-  {
-    fromColumns[i].name = fromColumnNames[i];
-    fromColumns[i].type = fromColumnTypes[i];
-  }
-#endif
   for (i = 0; i < toColumnCount; i++)
   {
     toValues[i].type = toColumns[i].type;
@@ -11611,11 +11603,10 @@ fprintf(stderr,"%s:%d: sqlInsertString=%s\n",__FILE__,__LINE__,String_cString(sq
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-//  fromColumnInfo.names  = fromColumnNames;
   fromColumnInfo.values = fromDatabaseStatementHandle.results;
   fromColumnInfo.count  = fromColumnCount;
 
-fprintf(stderr,"%s:%d: toColumnMapCount=%d\n",__FILE__,__LINE__,toColumnMapCount);
+//fprintf(stderr,"%s:%d: toColumnMapCount=%d\n",__FILE__,__LINE__,toColumnMapCount);
   error = prepareStatement(&toDatabaseStatementHandle,
                            toDatabaseHandle,
                            String_cString(sqlInsertString),
@@ -11627,7 +11618,6 @@ fprintf(stderr,"%s:%d: toColumnMapCount=%d\n",__FILE__,__LINE__,toColumnMapCount
     finalizeStatement(&fromDatabaseStatementHandle);
     return error;
   }
-//  toColumnInfo.names  = toColumnMapNames;
   toColumnInfo.values = toValues;
   toColumnInfo.count  = toValueCount;
 
@@ -11740,14 +11730,12 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
           // fix broken UTF8 encodings
           switch (parameterValues[i].type)
           {
-            case DATABASE_DATATYPE_CSTRING:
-// TODO: make copy, s is const
-              stringMakeValidUTF8(parameterValues[i].s,0);
-              assert(stringIsValidUTF8(parameterValues[i].s,0));
-              break;
             case DATABASE_DATATYPE_STRING:
               String_makeValidUTF8(parameterValues[i].string,STRING_BEGIN);
               assert(String_isValidUTF8(parameterValues[i].string,STRING_BEGIN));
+              break;
+            case DATABASE_DATATYPE_CSTRING:
+              HALT_INTERNAL_ERROR_NOT_SUPPORTED();
               break;
             default:
               break;
