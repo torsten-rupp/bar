@@ -263,12 +263,12 @@ LOCAL void findAddressInSection(bfd *abfd, asection *section, void *data)
       return;
     }
   #endif
-  #if BFD_SECTION_SIZE_ARGUMENTS_COUNT==2
+  #if (BFD_SECTION_SIZE_ARGUMENTS_COUNT == 2)
     vma  = bfd_section_vma(abfd,section);
   #else
     vma  = bfd_section_vma(section);
   #endif
-  #if BFD_SECTION_VMA_ARGUMENTS_COUNT==2
+  #if (BFD_SECTION_VMA_ARGUMENTS_COUNT == 2)
     size = bfd_section_size(abfd,section);
   #else
     size = bfd_section_size(section);
