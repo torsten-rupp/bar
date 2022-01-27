@@ -15129,105 +15129,106 @@ $as_echo "done" >&6; }
 fi
 
 # compile MariaDB client
-if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+if test $ENABLE_MARIADB = "yes"; then
+  if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
-    cwd=`pwd`
+      cwd=`pwd`
 
 
   $as_echo_n "compile MariaDB client... " >&6
 
-    result=1
-    if test $result -eq 1; then
-      if test -n "$HAVE_SSL"; then
-        (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-          -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-          -DWITH_EXTERNAL_ZLIB=ON \
-          -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-          -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-          -DOPENSSL_FOUND=1 \
-          -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
-          -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
-          -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
-          -DOPENSSL_LIBRARIES=$cwd/extern/lib \
-          -DWITH_CURL=OFF \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
-        ) 1>$tmpFile 2>&1
-      else
-        (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-          -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-          -DWITH_EXTERNAL_ZLIB=ON \
-          -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-          -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-          -DWITH_SSL=OFF \
-          -DWITH_CURL=OFF \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
-        ) 1>$tmpFile 2>&1
-      fi
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+      result=1
+      if test $result -eq 1; then
+        if test -n "$HAVE_SSL"; then
+          (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DWITH_EXTERNAL_ZLIB=ON \
+            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+            -DOPENSSL_FOUND=1 \
+            -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+            -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
+            -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
+            -DOPENSSL_LIBRARIES=$cwd/extern/lib \
+            -DWITH_CURL=OFF \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+          ) 1>$tmpFile 2>&1
+        else
+          (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DWITH_EXTERNAL_ZLIB=ON \
+            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+            -DWITH_SSL=OFF \
+            -DWITH_CURL=OFF \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+          ) 1>$tmpFile 2>&1
+        fi
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
 
   $as_echo "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do $as_echo "  $s"; done
   $as_echo "---------------------------------------------------------------------------------------"
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; \
-       make clean; \
-       make -C libmariadb mariadbclient -j$CPU_CORES; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+      if test $result -eq 1; then
+        (cd mariadb-connector-c; \
+         make clean; \
+         make -C libmariadb mariadbclient -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
 
   $as_echo "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do $as_echo "  $s"; done
   $as_echo "---------------------------------------------------------------------------------------"
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; \
-       make -C include install PREFIX=$cwd/extern; \
-       install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+      if test $result -eq 1; then
+        (cd mariadb-connector-c; \
+         make -C include install PREFIX=$cwd/extern; \
+         install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
 
   $as_echo "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do $as_echo "  $s"; done
   $as_echo "---------------------------------------------------------------------------------------"
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES mariadb-connector-c"
+      fi
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+      result=1
     fi
-    HAVE_MARIADB=1
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES mariadb-connector-c"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+      fi
+      HAVE_MARIADB=1
 
 $as_echo "#define HAVE_MARIADB 1" >>confdefs.h
 
-  fi
-else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    fi
+  else
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -15288,8 +15289,8 @@ $as_echo "#define HAVE_MARIADB 1" >>confdefs.h
 
 fi
 
-  else
-    if test -z "$HAVE_MARIADB"; then
+    else
+      if test -z "$HAVE_MARIADB"; then
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing mysql_init" >&5
@@ -15352,8 +15353,8 @@ $as_echo "#define HAVE_MARIADB 1" >>confdefs.h
 
 fi
 
-    fi
-    if test -z "$HAVE_MARIADB"; then
+      fi
+      if test -z "$HAVE_MARIADB"; then
 
 
     ac_result=""
@@ -15414,102 +15415,104 @@ $as_echo "#define HAVE_MARIADB 1" >>confdefs.h
 
 fi
 
+      fi
     fi
   fi
-fi
-if test -z "$HAVE_MARIADB"; then
-  if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: MariaDB client package missing" >&5
+  if test -z "$HAVE_MARIADB"; then
+    if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: MariaDB client package missing" >&5
 $as_echo "$as_me: WARNING: MariaDB client not compiled: MariaDB client package missing" >&2;}
+    fi
   fi
 fi
 
 # compile PostgreSQL client
-if test -d postgresql -o -d "`readlink postgresql`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+if test $ENABLE_POSTGRESQL = "yes"; then
+  if test -d postgresql -o -d "`readlink postgresql`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
-    cwd=`pwd`
+      cwd=`pwd`
 
 
   $as_echo_n "compile PostgreSQL... " >&6
 
-    result=1
-    if test $result -eq 1; then
-      (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
-        --host=$host \
-        --build=$build \
-        --prefix=$cwd/extern \
-        --with-includes=$cwd/extern/include \
-        --with-libraries=$cwd/extern/lib \
-        --enable-thread-safety \
-        `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
-        --without-readline \
-        `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+      result=1
+      if test $result -eq 1; then
+        (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --with-includes=$cwd/extern/include \
+          --with-libraries=$cwd/extern/lib \
+          --enable-thread-safety \
+          `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+          --without-readline \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
 
   $as_echo "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do $as_echo "  $s"; done
   $as_echo "---------------------------------------------------------------------------------------"
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd postgresql; \
-       make clean; \
-       make -C src/interfaces -j$CPU_CORES; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+      if test $result -eq 1; then
+        (cd postgresql; \
+         make clean; \
+         make -C src/interfaces -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
 
   $as_echo "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do $as_echo "  $s"; done
   $as_echo "---------------------------------------------------------------------------------------"
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd postgresql; \
-       make -C src/include install PREFIX=$cwd/extern; \
-       make -C src/interfaces install PREFIX=$cwd/extern; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+      if test $result -eq 1; then
+        (cd postgresql; \
+         make -C src/include install PREFIX=$cwd/extern; \
+         make -C src/interfaces install PREFIX=$cwd/extern; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
 
   $as_echo "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do $as_echo "  $s"; done
   $as_echo "---------------------------------------------------------------------------------------"
 
-        result=0
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
+      if test $result -eq 1; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
 $as_echo "done" >&6; }
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES pq pgtypes"
+      fi
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+      result=1
     fi
-    HAVE_POSTGRESQL=1
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES pq pgtypes"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+      fi
+      HAVE_POSTGRESQL=1
 
 $as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
-  fi
-else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    fi
+  else
+        if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -15630,8 +15633,8 @@ $as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
 
-  else
-    if test -z "$HAVE_POSTGRESQL"; then
+    else
+      if test -z "$HAVE_POSTGRESQL"; then
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing pq_init" >&5
@@ -15756,8 +15759,8 @@ $as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
 
-    fi
-    if test -z "$HAVE_POSTGRESQL"; then
+      fi
+      if test -z "$HAVE_POSTGRESQL"; then
 
 
     ac_result=""
@@ -15878,13 +15881,14 @@ $as_echo "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
 
+      fi
     fi
   fi
-fi
-if test -z "$HAVE_POSTGRESQL"; then
-  if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: PostgreSQL not compiled: PostgreSQL package missing" >&5
+  if test -z "$HAVE_POSTGRESQL"; then
+    if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: PostgreSQL not compiled: PostgreSQL package missing" >&5
 $as_echo "$as_me: WARNING: PostgreSQL not compiled: PostgreSQL package missing" >&2;}
+    fi
   fi
 fi
 
@@ -28479,6 +28483,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
                             -o ! "$HAVE_MARIDDB" \
+                            -o ! "$HAVE_POSTGRESQL" \
                             -o ! "$HAVE_PCRE"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"

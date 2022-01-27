@@ -3499,187 +3499,191 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
 fi
 
 # compile MariaDB client
-if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl compile MariaDB client library
+if test $ENABLE_MARIADB = "yes"; then
+  if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile MariaDB client library
 
-    cwd=`pwd`
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([MariaDB client])
-    result=1
-    if test $result -eq 1; then
-      if test -n "$HAVE_SSL"; then
-        (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-          -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-          -DWITH_EXTERNAL_ZLIB=ON \
-          -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-          -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-          -DOPENSSL_FOUND=1 \
-          -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
-          -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
-          -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
-          -DOPENSSL_LIBRARIES=$cwd/extern/lib \
-          -DWITH_CURL=OFF \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+      AC_MSG_COMPILE([MariaDB client])
+      result=1
+      if test $result -eq 1; then
+        if test -n "$HAVE_SSL"; then
+          (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DWITH_EXTERNAL_ZLIB=ON \
+            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+            -DOPENSSL_FOUND=1 \
+            -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+            -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
+            -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
+            -DOPENSSL_LIBRARIES=$cwd/extern/lib \
+            -DWITH_CURL=OFF \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+          ) 1>$tmpFile 2>&1
+        else
+          (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DWITH_EXTERNAL_ZLIB=ON \
+            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+            -DWITH_SSL=OFF \
+            -DWITH_CURL=OFF \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+          ) 1>$tmpFile 2>&1
+        fi
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mariadb-connector-c; \
+         make clean; \
+         make -C libmariadb mariadbclient -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
-      else
-        (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-          -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-          -DWITH_EXTERNAL_ZLIB=ON \
-          -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-          -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-          -DWITH_SSL=OFF \
-          -DWITH_CURL=OFF \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd mariadb-connector-c; \
+         make -C include install PREFIX=$cwd/extern; \
+         install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
         ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
       fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; \
-       make clean; \
-       make -C libmariadb mariadbclient -j$CPU_CORES; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      (cd mariadb-connector-c; \
-       make -C include install PREFIX=$cwd/extern; \
-       install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES mariadb-connector-c"
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+      result=1
     fi
-    HAVE_MARIADB=1
-    AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
-  fi
-else
-  dnl search for installed MariaDB client library
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES mariadb-connector-c"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
+      fi
+      HAVE_MARIADB=1
+      AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
+    fi
   else
-    if test -z "$HAVE_MARIADB"; then
-      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
-    fi
-    if test -z "$HAVE_MARIADB"; then
+    dnl search for installed MariaDB client library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+    else
+      if test -z "$HAVE_MARIADB"; then
+        AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+      fi
+      if test -z "$HAVE_MARIADB"; then
+        AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+      fi
     fi
   fi
-fi
-if test -z "$HAVE_MARIADB"; then
-  if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
-    AC_MSG_WARN([MariaDB client not compiled: MariaDB client package missing])
+  if test -z "$HAVE_MARIADB"; then
+    if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
+      AC_MSG_WARN([MariaDB client not compiled: MariaDB client package missing])
+    fi
   fi
 fi
 
 # compile PostgreSQL client
-if test -d postgresql -o -d "`readlink postgresql`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl compile PostgreSQL client library
+if test $ENABLE_POSTGRESQL = "yes"; then
+  if test -d postgresql -o -d "`readlink postgresql`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile PostgreSQL client library
 
-    cwd=`pwd`
+      cwd=`pwd`
 
-    AC_MSG_COMPILE([PostgreSQL])
-    result=1
-    if test $result -eq 1; then
-      (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
-        --host=$host \
-        --build=$build \
-        --prefix=$cwd/extern \
-        --with-includes=$cwd/extern/include \
-        --with-libraries=$cwd/extern/lib \
-        --enable-thread-safety \
-        `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
-        --without-readline \
-        `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      AC_MSG_COMPILE([PostgreSQL])
+      result=1
+      if test $result -eq 1; then
+        (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --with-includes=$cwd/extern/include \
+          --with-libraries=$cwd/extern/lib \
+          --enable-thread-safety \
+          `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+          --without-readline \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd postgresql; \
-       make clean; \
-       make -C src/interfaces -j$CPU_CORES; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      if test $result -eq 1; then
+        (cd postgresql; \
+         make clean; \
+         make -C src/interfaces -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      (cd postgresql; \
-       make -C src/include install PREFIX=$cwd/extern; \
-       make -C src/interfaces install PREFIX=$cwd/extern; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
+      if test $result -eq 1; then
+        (cd postgresql; \
+         make -C src/include install PREFIX=$cwd/extern; \
+         make -C src/interfaces install PREFIX=$cwd/extern; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-    fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
-  fi
-
-  if test $result -eq 1; then
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      LIBRARIES="$LIBRARIES pq pgtypes"
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
     else
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+      result=1
     fi
-    HAVE_POSTGRESQL=1
-    AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
-  fi
-else
-  dnl search for installed PostgreSQL client library
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-    AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES pq pgtypes"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+      fi
+      HAVE_POSTGRESQL=1
+      AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
+    fi
   else
-    if test -z "$HAVE_POSTGRESQL"; then
-      AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-      AC_SEARCH_STATIC_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-    fi
-    if test -z "$HAVE_POSTGRESQL"; then
+    dnl search for installed PostgreSQL client library
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
       AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+    else
+      if test -z "$HAVE_POSTGRESQL"; then
+        AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+        AC_SEARCH_STATIC_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      fi
+      if test -z "$HAVE_POSTGRESQL"; then
+        AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+        AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      fi
     fi
   fi
-fi
-if test -z "$HAVE_POSTGRESQL"; then
-  if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
-    AC_MSG_WARN([PostgreSQL not compiled: PostgreSQL package missing])
+  if test -z "$HAVE_POSTGRESQL"; then
+    if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
+      AC_MSG_WARN([PostgreSQL not compiled: PostgreSQL package missing])
+    fi
   fi
 fi
 
@@ -4889,6 +4893,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
                             -o ! "$HAVE_MARIDDB" \
+                            -o ! "$HAVE_POSTGRESQL" \
                             -o ! "$HAVE_PCRE"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
