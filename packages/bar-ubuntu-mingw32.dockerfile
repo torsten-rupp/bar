@@ -76,6 +76,8 @@ RUN apt-get -y install \
 RUN wget -q -O /tmp/innosetup-5.6.1.exe https://files.jrsoftware.org/is/5/innosetup-5.6.1.exe
 RUN wineboot --update
 RUN DISPLAY=:0.0 xvfb-run -n 0 -s "-screen 0 1024x768x16" wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
+RUN wineboot --end-session
+RUN rm -rf /tmp/wine*
 RUN rm -f /tmp/innosetup-5.6.1.exe
 
 # create wine setup archive
