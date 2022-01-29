@@ -4691,6 +4691,7 @@ AC_CONSTANT_VALUE([zlib version],
                   [ "])
 if test $ENABLE_BZ2 = "yes"; then
   # Note: bz2 does not have a define for version
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
   AC_TRY_LINK([#include <stdio.h>
                #include "bzlib.h"
               ],
@@ -4798,17 +4799,9 @@ if test $ENABLE_ISO9660 = "yes"; then
     AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
   fi
 fi
-if test $ENABLE_PCRE = "yes"; then
-  # Note: PCRE does not have a define for version
-  AC_TRY_LINK([#include <stdio.h>
-               #include "pcre.h"
-              ],
-              [printf("%s",pcre_version());],
-              VERSION_PCRE=`./conftest$ac_exeext`,
-              VERSION_PCRE=unknown
-             )
-fi
 if test $ENABLE_MARIADB = "yes"; then
+  # Note: MariaDB does not have a define for version
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
   AC_TRY_LINK([#include <stdio.h>
                #include "mariadb/mariadb_version.h"
               ],
@@ -4819,6 +4812,7 @@ if test $ENABLE_MARIADB = "yes"; then
              )
 fi
 if test $ENABLE_POSTGRESQL = "yes"; then
+  # Note: PostgreSQL does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
                #include "libpq-fe.h"
               ],
@@ -4826,6 +4820,17 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               ],
               VERSION_POSTGRESQL=`./conftest$ac_exeext`,
               VERSION_POSTGRESQL=unknown
+             )
+fi
+if test $ENABLE_PCRE = "yes"; then
+  # Note: PCRE does not have a define for version
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
+  AC_TRY_LINK([#include <stdio.h>
+               #include "pcre.h"
+              ],
+              [printf("%s",pcre_version());],
+              VERSION_PCRE=`./conftest$ac_exeext`,
+              VERSION_PCRE=unknown
              )
 fi
 

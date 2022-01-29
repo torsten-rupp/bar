@@ -26666,6 +26666,7 @@ fi
 
 if test $ENABLE_BZ2 = "yes"; then
   # Note: bz2 does not have a define for version
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -27735,31 +27736,9 @@ fi
     as_fn_error $? "Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO" "$LINENO" 5
   fi
 fi
-if test $ENABLE_PCRE = "yes"; then
-  # Note: PCRE does not have a define for version
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdio.h>
-               #include "pcre.h"
-
-int
-main ()
-{
-printf("%s",pcre_version());
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  VERSION_PCRE=`./conftest$ac_exeext`
-else
-  VERSION_PCRE=unknown
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
 if test $ENABLE_MARIADB = "yes"; then
+  # Note: MariaDB does not have a define for version
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -27784,6 +27763,7 @@ rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 fi
 if test $ENABLE_POSTGRESQL = "yes"; then
+  # Note: PostgreSQL does not have a define for version
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -27802,6 +27782,31 @@ if ac_fn_c_try_link "$LINENO"; then :
   VERSION_POSTGRESQL=`./conftest$ac_exeext`
 else
   VERSION_POSTGRESQL=unknown
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+if test $ENABLE_PCRE = "yes"; then
+  # Note: PCRE does not have a define for version
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+               #include "pcre.h"
+
+int
+main ()
+{
+printf("%s",pcre_version());
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_PCRE=`./conftest$ac_exeext`
+else
+  VERSION_PCRE=unknown
 
 fi
 rm -f core conftest.err conftest.$ac_objext \

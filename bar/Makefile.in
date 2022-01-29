@@ -100,8 +100,8 @@ endif
 LD_STATIC_PREFIX           = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 
-WINDOWS_DLLS               = /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libgcc_s_sjlj-1.dll \
-                             /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libstdc++-6.dll \
+WINDOWS_DLLS               = /usr/lib/gcc/i686-w64-mingw32/*-win32/libgcc_s_sjlj-1.dll \
+                             /usr/lib/gcc/i686-w64-mingw32/*-win32/libstdc++-6.dll \
                              /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
 
 ifneq ($(SANITIZER),)
@@ -707,6 +707,7 @@ TARGETS                     = $(TARGETS_INSTALL) \
                               bar-gcov@EXEEXT@ \
                               bar-gprof@EXEEXT@ \
                               bar-valgrind@EXEEXT@ \
+                              bar-index-debug@EXEEXT@ \
                               destroyer@EXEEXT@ \
 
 #------------------------------ dependencies ---------------------------------
