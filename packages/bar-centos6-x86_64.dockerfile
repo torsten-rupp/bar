@@ -30,7 +30,6 @@ RUN yum -y install \
   initscripts \
   lua \
   m4 \
-  mariadb-client \
   mysql \
   openssl \
   patch \

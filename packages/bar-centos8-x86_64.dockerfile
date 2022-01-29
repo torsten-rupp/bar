@@ -23,7 +23,6 @@ RUN yum -y install \
   less \
   lua \
   m4 \
-  mariadb-client \
   mysql \
   openssl \
   patch \
