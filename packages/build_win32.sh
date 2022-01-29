@@ -178,9 +178,10 @@ fi
 tmpDir=`mktemp -d /tmp/win32-XXXXXX`
 
 (
-  cd $tmpDir
 set -x
   set -e
+
+  cd $tmpDir
 
 # TODO: out-of-source build, build from source instead of extrac distribution file
   # get sources
@@ -198,11 +199,13 @@ set -x
     --local-directory /media/extern \
     --no-verbose \
     $ADDITIONAL_DOWNLOAD_FLAGS
+#TODO: enable postgres
   $projectRoot/configure \
+--disable-postgresql \
     --host=i686-w64-mingw32 \
     --build=x86_64-linux \
-    --disable-link-static \
-    --enable-link-dynamic \
+    --enable-link-static \
+    --disable-link-dynamic \
     --disable-bfd \
     --disable-epm
   make
@@ -222,14 +225,17 @@ set -x
   md5sum $sourcePath/${setupName}.exe
 
   set +e
-
-  # debug
-  if test $debugFlag -eq 1; then
-    /bin/bash
-  fi
 )
+rc=$?
+
+# debug
+if test $debugFlag -eq 1; then
+  (cd $tmpDir;
+   /bin/bash
+  )
+fi
 
 # clean-up
 rm -rf $tmpDir
 
-exit 0
+exit $rc

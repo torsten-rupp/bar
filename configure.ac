@@ -1054,6 +1054,7 @@ dnl AC_WARN([build: $build cpu=$build_cpu os=$build_os])
 case "$host_os" in
   linux-*)
     PLATFORM=LINUX
+    SYSTEM_NAME=Linux
     CPU=$host_cpu
     FILE_SEPARATOR_CHAR="/"
     JAVA_PATH_SEPARATOR=":"
@@ -1065,8 +1066,27 @@ case "$host_os" in
       CPU_CORES=1
     fi
     ;;
+  sunos | solaris*)
+    PLATFORM=SOLARIS
+    SYSTEM_NAME=Solaris
+    CPU=$host_cpu
+    FILE_SEPARATOR_CHAR="/"
+    JAVA_PATH_SEPARATOR=":"
+    SHELLEXT=""
+    CPU_CORES=1
+    ;;
+  darwin*)
+    PLATFORM=MAC_OSX
+    SYSTEM_NAME=MacOSX
+    CPU=$host_cpu
+    FILE_SEPARATOR_CHAR="/"
+    JAVA_PATH_SEPARATOR=":"
+    SHELLEXT=""
+    CPU_CORES=1
+    ;;
   windows*|mingw*)
     PLATFORM=WINDOWS
+    SYSTEM_NAME=Windows
     CPU=$host_cpu
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
@@ -1077,22 +1097,6 @@ case "$host_os" in
     else
       CPU_CORES=1
     fi
-    ;;
-  sunos | solaris*)
-    PLATFORM=SOLARIS
-    CPU=$host_cpu
-    FILE_SEPARATOR_CHAR="/"
-    JAVA_PATH_SEPARATOR=":"
-    SHELLEXT=""
-    CPU_CORES=1
-    ;;
-  darwin*)
-    PLATFORM=MAC_OSX
-    CPU=$host_cpu
-    FILE_SEPARATOR_CHAR="/"
-    JAVA_PATH_SEPARATOR=":"
-    SHELLEXT=""
-    CPU_CORES=1
     ;;
   *)
     AC_MSG_ERROR([unknown host operation system '$host_os'. Please specify host as (cpu-vendor-os or cpu-os). Supported host operating systems: $host_supported_os])
@@ -1222,11 +1226,6 @@ AC_ARG_ENABLE(
   [ENABLE_ISO9660=$enableval]
 )
 AC_ARG_ENABLE(
-  pcre,
-  AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
-  [ENABLE_PCRE=$enableval]
-)
-AC_ARG_ENABLE(
   mariadb,
   AC_HELP_STRING([--disable-mariadb],[disable MariaDB support]),
   [ENABLE_MARIADB=$enableval]
@@ -1235,6 +1234,11 @@ AC_ARG_ENABLE(
   postgresql,
   AC_HELP_STRING([--disable-postgresql],[disable PostgreSQL support]),
   [ENABLE_POSTGRESQL=$enableval]
+)
+AC_ARG_ENABLE(
+  pcre,
+  AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
+  [ENABLE_PCRE=$enableval]
 )
 AC_ARG_ENABLE(
   crashdump,
@@ -1593,13 +1597,13 @@ AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
 case "$host_os" in
   linux-*)
     ;;
-  windows*|mingw*)
-    # Note: __mingw_printf, __mingw_fprintf are not recognized as format functions by mingw gcc version 7.3?
-    AC_CC_OPTION(-Wno-format,CC_WARN_FLAGS CXX_WARN_FLAGS)
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
+    # Note: __mingw_printf, __mingw_fprintf are not recognized as format functions by mingw gcc version 7.3?
+    AC_CC_OPTION(-Wno-format,CC_WARN_FLAGS CXX_WARN_FLAGS)
     ;;
 esac
 
@@ -1620,12 +1624,12 @@ CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
 case $host_os in
   linux-*)
     ;;
-  windows*|mingw*)
-    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600"
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
+    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600"
     ;;
 esac
 
@@ -1633,11 +1637,11 @@ CC_INCLUDES="$CC_INCLUDES"
 case "$host_os" in
   linux-*)
     ;;
-  windows*|mingw*)
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
     ;;
 esac
 
@@ -1653,11 +1657,11 @@ case "$host_os" in
       AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
     fi
     ;;
-  windows*|mingw*)
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
     ;;
 esac
 
@@ -1687,6 +1691,10 @@ case $host_os in
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
     ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
+    ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
     AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
@@ -1695,10 +1703,7 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(SHGetFolderPath,shell32,[STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"],,shlobj.h)
     AC_SEARCH_STATIC_LIBRARIES(CoTaskMemFree,ole32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"],,combaseapi.h)
     AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
-    ;;
-  sunos | solaris*)
-    ;;
-  darwin*)
+    AC_SEARCH_STATIC_LIBRARIES(PathRemoveFileSpec,shlwapi,[STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"],,shlwapi.h)
     ;;
 esac
 
@@ -1744,12 +1749,12 @@ if test -d icu -o -d "`readlink icu`"; then
       case $host_os in
         linux-*)
           ;;
-        windows*|mingw*)
-          # patch to disable usage of lib-command when RANLIB is set
-          ;;
         sunos | solaris*)
           ;;
         darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
           ;;
       esac
     fi
@@ -1820,6 +1825,10 @@ if test -d icu -o -d "`readlink icu`"; then
       case $host_os in
         linux-*)
           ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
         windows*|mingw*)
           # Note: bug in library names of older ICU versions?
           #       https://unicode-org.atlassian.net/browse/ICU-13138
@@ -1829,10 +1838,6 @@ if test -d icu -o -d "`readlink icu`"; then
           (cd extern/lib; ln -s libsicuio.a libicuio.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicutu.a libicutu.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
-          ;;
-        sunos | solaris*)
-          ;;
-        darwin*)
           ;;
       esac
     fi
@@ -2051,6 +2056,10 @@ if test $ENABLE_LZMA = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
@@ -2060,10 +2069,6 @@ if test $ENABLE_LZMA = "yes"; then
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2148,14 +2153,14 @@ if test $ENABLE_LZO = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            # patch to fix missing --tag=CC for in libtool call
-            #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
-              (cd extern/lzo-2.10; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            # patch to fix missing --tag=CC for in libtool call
+            #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
+            (cd lzo; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -2440,6 +2445,10 @@ if test $ENABLE_GCRYPT = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
@@ -2451,10 +2460,6 @@ if test $ENABLE_GCRYPT = "yes"; then
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2510,12 +2515,12 @@ if test $ENABLE_GCRYPT = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -2619,6 +2624,10 @@ if test $ENABLE_SSH = "yes"; then
               fi
             fi
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             if test "$host_cpu" = "x86_64"; then
               (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
@@ -2640,10 +2649,6 @@ if test $ENABLE_SSH = "yes"; then
               AC_MSG_OUTPUT_LOG($tmpFile)
               result=0
             fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2699,6 +2704,10 @@ if test $ENABLE_SSH = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
@@ -2710,10 +2719,6 @@ if test $ENABLE_SSH = "yes"; then
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -2752,12 +2757,12 @@ if test $ENABLE_SSH = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -2860,6 +2865,10 @@ if test $ENABLE_TLS = "yes"; then
                   ;;
               esac
               ;;
+            sunos | solaris*)
+              ;;
+            darwin*)
+              ;;
             windows*|mingw*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
@@ -2870,10 +2879,6 @@ if test $ENABLE_TLS = "yes"; then
                 --enable-pic \
                 --enable-fat \
               ) 1>$tmpFile 2>&1
-              ;;
-            sunos | solaris*)
-              ;;
-            darwin*)
               ;;
           esac
         else
@@ -3108,6 +3113,10 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
@@ -3120,10 +3129,6 @@ if test $ENABLE_CURL = "yes"; then
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3162,12 +3167,12 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -3181,6 +3186,10 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
@@ -3193,10 +3202,6 @@ if test $ENABLE_CURL = "yes"; then
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3268,12 +3273,12 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
             ;;
         esac
       fi
@@ -3287,6 +3292,10 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
@@ -3299,10 +3308,6 @@ if test $ENABLE_CURL = "yes"; then
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3343,12 +3348,12 @@ if test $ENABLE_CURL = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -3463,6 +3468,7 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
     AC_MSG_CREATE([sqlite3.c])
     result=1
     if test $result -eq 1; then
+      # Note: no cross-compile; create source only
       (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
         --build=$build \
         --disable-tcl \
@@ -3509,31 +3515,40 @@ if test $ENABLE_MARIADB = "yes"; then
       AC_MSG_COMPILE([MariaDB client])
       result=1
       if test $result -eq 1; then
-        if test -n "$HAVE_SSL"; then
-          (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-            -DWITH_EXTERNAL_ZLIB=ON \
-            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-            -DOPENSSL_FOUND=1 \
-            -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
-            -DOPENSSL_CRYPTO_LIBRARY=$cwd/extern/lib/libcrypto.a \
-            -DOPENSSL_SSL_LIBRARY=$cwd/extern/lib/libssl.a \
-            -DOPENSSL_LIBRARIES=$cwd/extern/lib \
-            -DWITH_CURL=OFF \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
-          ) 1>$tmpFile 2>&1
-        else
-          (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-            -DWITH_EXTERNAL_ZLIB=ON \
-            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-            -DWITH_SSL=OFF \
-            -DWITH_CURL=OFF \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo -- -DCMAKE_BUILD_TYPE=Debug; fi` \
-          ) 1>$tmpFile 2>&1
-        fi
+        case $host_os in
+          windows*|mingw*)
+            # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
+            #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
+            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>/dev/null 2>/dev/null
+
+            (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+              -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+              -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITH_SSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          *)
+            (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+        esac
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3571,7 +3586,7 @@ if test $ENABLE_MARIADB = "yes"; then
 
     if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES mariadb-connector-c"
+        LIBRARIES="$LIBRARIES mariadbclient"
       else
         STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient"
       fi
@@ -3609,7 +3624,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       AC_MSG_COMPILE([PostgreSQL])
       result=1
       if test $result -eq 1; then
-        (cd postgresql; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
+        (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
@@ -3746,11 +3761,11 @@ if test $ENABLE_ISO9660 = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
             ;;
         esac
       fi
@@ -3859,6 +3874,10 @@ if test $ENABLE_PCRE = "yes"; then
         case $host_os in
           linux-*)
             ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
           windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
@@ -3871,10 +3890,6 @@ if test $ENABLE_PCRE = "yes"; then
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
         esac
       fi
@@ -3911,13 +3926,13 @@ if test $ENABLE_PCRE = "yes"; then
         case $host_os in
           linux-*)
             ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
-            (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
-            ;;
           sunos | solaris*)
             ;;
           darwin*)
+            ;;
+          windows*|mingw*)
+            (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -3961,6 +3976,10 @@ fi
 
 case "$host_os" in
   linux-*)
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
     ;;
   windows*|mingw*)
     if test $ENABLE_PTHREADS_W32 = "yes"; then
@@ -4011,10 +4030,6 @@ case "$host_os" in
         fi
       fi
     fi
-    ;;
-  sunos | solaris*)
-    ;;
-  darwin*)
     ;;
 esac
 
@@ -4370,11 +4385,11 @@ case $host_os in
       AC_SEARCH_STATIC_LIBRARIES(idn_free,idn,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn"],,idn-free.h)
     fi
     ;;
-  windows*|mingw*)
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
     ;;
 esac
 
@@ -4581,12 +4596,12 @@ fi
 case $host_os in
   linux-*)
     ;;
-  windows*|mingw*)
-    AC_CHECK_FUNCTION(WSAPoll,AC_DEFINE(HAVE_WSAPOLL,1,[WSAPoll() available]),,winsock2.h)
-    ;;
   sunos | solaris*)
     ;;
   darwin*)
+    ;;
+  windows*|mingw*)
+    AC_CHECK_FUNCTION(WSAPoll,AC_DEFINE(HAVE_WSAPOLL,1,[WSAPoll() available]),,winsock2.h)
     ;;
 esac
 
