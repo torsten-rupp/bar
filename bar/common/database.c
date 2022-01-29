@@ -8630,15 +8630,15 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
   {
     // postgresql:<server>:<user>:<password>:<database>
     databaseSpecifier->type                   = DATABASE_TYPE_POSTGRESQL;
-    #if defined(HAVE_POSGRESQL)
+    #if defined(HAVE_POSTGRESQL)
       databaseSpecifier->postgresql.serverName  = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->postgresql.userName    = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->postgresql.password);
       Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
       databaseSpecifier->postgresql.databaseName = String_setBuffer(String_new(),s4,n4);
-    #else /* HAVE_POSGRESQL */
+    #else /* HAVE_POSTGRESQL */
       UNUSED_VARIABLE(defaultDatabaseName);
-    #endif /* HAVE_POSGRESQL */
+    #endif /* HAVE_POSTGRESQL */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else if (   (databaseURI != NULL)
@@ -8655,15 +8655,15 @@ void Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
   {
     // postgresql:<server>:<user>:<password>
     databaseSpecifier->type                    = DATABASE_TYPE_POSTGRESQL;
-    #if defined(HAVE_POSGRESQL)
+    #if defined(HAVE_POSTGRESQL)
       databaseSpecifier->postgresql.serverName   = String_setBuffer(String_new(),s1,n1);
       databaseSpecifier->postgresql.userName     = String_setBuffer(String_new(),s2,n2);
       Password_init(&databaseSpecifier->postgresql.password);
       Password_setBuffer(&databaseSpecifier->postgresql.password,s3,n3);
       databaseSpecifier->postgresql.databaseName = String_newCString(defaultDatabaseName);
-    #else /* HAVE_POSGRESQL */
+    #else /* HAVE_POSTGRESQL */
       UNUSED_VARIABLE(defaultDatabaseName);
-    #endif /* HAVE_POSGRESQL */
+    #endif /* HAVE_POSTGRESQL */
     if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = TRUE;
   }
   else
@@ -9594,7 +9594,7 @@ Errors Database_getViewList(StringList     *viewList,
         #endif /* HAVE_MARIADB */
         break;
       case DATABASE_TYPE_POSTGRESQL:
-        #if defined(HAVE_POSGRESQL)
+        #if defined(HAVE_POSTGRESQL)
           error = Database_get(databaseHandle,
                                CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                {
@@ -9620,9 +9620,9 @@ Errors Database_getViewList(StringList     *viewList,
                                0LL,
                                DATABASE_UNLIMITED
                               );
-        #else /* HAVE_POSGRESQL */
+        #else /* HAVE_POSTGRESQL */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_POSGRESQL */
+        #endif /* HAVE_POSTGRESQL */
         break;
     }
 
