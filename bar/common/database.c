@@ -15928,13 +15928,15 @@ void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, 
 // TODO:
       break;
   }
-  debugDumpStackTrace(stderr,
-                      0,
-                      DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                      databaseStatementHandle->debug.stackTrace,
-                      databaseStatementHandle->debug.stackTraceSize,
-                      0
-                     );
+  #ifdef HAVE_BACKTRACE
+    debugDumpStackTrace(stderr,
+                        0,
+                        DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
+                        databaseStatementHandle->debug.stackTrace,
+                        databaseStatementHandle->debug.stackTraceSize,
+                        0
+                       );
+  #endif
 }
 
 /***********************************************************************\
