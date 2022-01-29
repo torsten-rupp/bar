@@ -5075,22 +5075,38 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
 
 String File_castToString(String string, const FileCast *fileCast)
 {
-  char s[64];
-  struct tm tm;
+  char      s[64];
+  #ifdef HAVE_LOCALTIME_R
+    struct tm tm;
+  #else
+    struct tm *tm;
+  #endif
 
   assert(s != NULL);
   assert(fileCast != NULL);
 
   String_clear(string);
 
-  localtime_r(&fileCast->mtime,&tm);
-  strftime(s,sizeof(s),"%F %T",&tm);
+  #ifdef HAVE_LOCALTIME_R
+    localtime_r(&fileCast->mtime,&tm);
+    strftime(s,sizeof(s),"%F %T",&tm);
+  #else
+    tm = localtime(&fileCast->mtime);
+    assert(tm != NULL);
+    strftime(s,sizeof(s),"%F %T",tm);
+  #endif
   String_appendFormat(string,"mtime=%s",s);
 
   String_appendChar(string,' ');
 
-  localtime_r(&fileCast->ctime,&tm);
-  strftime(s,sizeof(s),"%F %T",&tm);
+  #ifdef HAVE_LOCALTIME_R
+    localtime_r(&fileCast->ctime,&tm);
+    strftime(s,sizeof(s),"%F %T",&tm);
+  #else
+    tm = localtime(&fileCast->ctime);
+    assert(tm != NULL);
+    strftime(s,sizeof(s),"%F %T",tm);
+  #endif
   String_appendFormat(string,"ctime=%s",s);
 
   return string;
