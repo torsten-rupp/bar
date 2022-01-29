@@ -1780,7 +1780,6 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       if (mkdir(name) != 0)
       {
         error = getLastError(ERROR_CODE_IO,name);
-        free(name);
         return error;
       }
     #elif (MKDIR_ARGUMENTS_COUNT == 2)
@@ -1792,7 +1791,6 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
       if (mkdir(name,0777 & ~currentCreationMask) != 0)
       {
         error = getLastError(ERROR_CODE_IO,name);
-        free(name);
         return error;
       }
     #else
