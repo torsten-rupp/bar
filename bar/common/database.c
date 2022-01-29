@@ -5790,6 +5790,10 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 mysqlFields   = mysql_fetch_fields(mysqlMetaData);
                 assert(mysqlFields != NULL);
               }
+              else
+              {
+                mysqlFields = NULL;
+              }
               for (i = 0; i < databaseStatementHandle->resultCount; i++)
               {
                 // get name

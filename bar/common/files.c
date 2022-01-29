@@ -1343,6 +1343,7 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
         break; /* not reached */
     }
   #elif defined(PLATFORM_WINDOWS)
+    bufferLength = 0;
     switch (fileSystemPathType)
     {
       case FILE_SYSTEM_PATH_ROOT:
@@ -1763,6 +1764,8 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     free(name);
     String_delete(templateName);
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(directory);
+
     // Note: there is no Win32 function to create a temporary directory? Poor Windows...
     do
     {
@@ -3845,6 +3848,7 @@ bool File_isNetworkFileSystemCString(const char *fileName)
                             || (fileSystemStat.f_type == SMB_SUPER_MAGIC);
     }
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(fileName);
   #endif /* PLATFORM_... */
 
   return isNetworkFileSystem;
@@ -4523,6 +4527,7 @@ Errors File_setOwner(ConstString fileName,
     #endif /* HAVE_CHOWN */
   #elif defined(PLATFORM_WINDOWS)
 //TODO: implement
+UNUSED_VARIABLE(fileName);
 UNUSED_VARIABLE(userId);
 UNUSED_VARIABLE(groupId);
 

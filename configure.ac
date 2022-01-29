@@ -1632,7 +1632,7 @@ case $host_os in
   darwin*)
     ;;
   windows*|mingw*)
-    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600"
+    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600 _POSIX_C_SOURCE"
     ;;
 esac
 
