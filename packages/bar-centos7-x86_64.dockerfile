@@ -24,6 +24,7 @@ RUN yum -y install \
   lua \
   m4 \
   mariadb-client \
+  mysql \
   openssl \
   patch \
   pkg-config \

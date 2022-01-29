@@ -23,6 +23,7 @@ RUN yum -y install \
   lua \
   m4 \
   mariadb-client \
+  mysql \
   patch \
   pkg-config \
   postgresql \
