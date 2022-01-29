@@ -10027,6 +10027,9 @@ LIBRARY_PATHS="$cwd/extern/lib $cwd/extern/lib/mariadb $LIBRARY_PATHS"
     fi
   done
 
+  # some host tests need dynamic libraries
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
+
 
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
@@ -14887,6 +14890,9 @@ $as_echo "#define HAVE_MXML 1" >>confdefs.h
     fi
   done
 
+  # some host tests need dynamic libraries
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
+
     fi
 
     # required functions for curl
@@ -18348,6 +18354,9 @@ fi
     fi
   done
 
+  # some host tests need dynamic libraries
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
+
 
 # headers
 ac_ext=c
@@ -19382,6 +19391,9 @@ esac
       LIBS="$LIBS -l$z"
     fi
   done
+
+  # some host tests need dynamic libraries
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
 
 
 # check required defines
@@ -26666,7 +26678,6 @@ fi
 
 if test $ENABLE_BZ2 = "yes"; then
   # Note: bz2 does not have a define for version
-  export LD_LIBRARY_PATH=`pwd`/extern/lib
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -27738,7 +27749,6 @@ fi
 fi
 if test $ENABLE_MARIADB = "yes"; then
   # Note: MariaDB does not have a define for version
-  export LD_LIBRARY_PATH=`pwd`/extern/lib
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -27789,7 +27799,6 @@ rm -f core conftest.err conftest.$ac_objext \
 fi
 if test $ENABLE_PCRE = "yes"; then
   # Note: PCRE does not have a define for version
-  export LD_LIBRARY_PATH=`pwd`/extern/lib
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>

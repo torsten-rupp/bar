@@ -72,6 +72,9 @@ AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
       LIBS="$LIBS -l$z"
     fi
   done
+
+  # some host tests need dynamic libraries
+  export LD_LIBRARY_PATH=`pwd`/extern/lib
 ])
 
 dnl --- check if C compiler support option
@@ -4691,7 +4694,6 @@ AC_CONSTANT_VALUE([zlib version],
                   [ "])
 if test $ENABLE_BZ2 = "yes"; then
   # Note: bz2 does not have a define for version
-  export LD_LIBRARY_PATH=`pwd`/extern/lib
   AC_TRY_LINK([#include <stdio.h>
                #include "bzlib.h"
               ],
@@ -4801,7 +4803,6 @@ if test $ENABLE_ISO9660 = "yes"; then
 fi
 if test $ENABLE_MARIADB = "yes"; then
   # Note: MariaDB does not have a define for version
-  export LD_LIBRARY_PATH=`pwd`/extern/lib
   AC_TRY_LINK([#include <stdio.h>
                #include "mariadb/mariadb_version.h"
               ],
@@ -4824,7 +4825,6 @@ if test $ENABLE_POSTGRESQL = "yes"; then
 fi
 if test $ENABLE_PCRE = "yes"; then
   # Note: PCRE does not have a define for version
-  export LD_LIBRARY_PATH=`pwd`/extern/lib
   AC_TRY_LINK([#include <stdio.h>
                #include "pcre.h"
               ],
