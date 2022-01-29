@@ -2757,7 +2757,7 @@ tmpFile=`mktemp configure-XXXXXX`
 SOURCE_DIR=`(cd $srcdir; pwd)`
 
 # get platform specific settings
-case "$host_os" in
+case $host_os in
   linux-*)
     PLATFORM=LINUX
     SYSTEM_NAME=Linux
@@ -7489,7 +7489,7 @@ fi
 eval ac_res=\$ac_cv_c_option_`echo -Wno-unknown-pragmas|tr -c -d a-zA-Z0-9_`
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
-case "$host_os" in
+case $host_os in
   linux-*)
     ;;
   sunos | solaris*)
@@ -7892,7 +7892,7 @@ case $host_os in
 esac
 
 CC_INCLUDES="$CC_INCLUDES"
-case "$host_os" in
+case $host_os in
   linux-*)
     ;;
   sunos | solaris*)
@@ -7908,7 +7908,7 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
-case "$host_os" in
+case $host_os in
   linux-*)
     if test "$ENABLE_DEBUG" = "yes"; then
       # required for printing stacktraces
@@ -7952,8 +7952,88 @@ $as_echo "$ac_res" >&6; }
     fi
     ;;
   sunos | solaris*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -rdynamic" >&5
+$as_echo_n "checking if $CC support option -rdynamic... " >&6; }
+if { as_var=ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`; eval \${$as_var+:} false; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -rdynamic test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+        for s in CC_FLAGS CXX_FLAGS LD_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-rdynamic\""
+        done
+      else
+        ac_supported=no
+      fi
+      eval "ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+    fi
     ;;
   darwin*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -rdynamic" >&5
+$as_echo_n "checking if $CC support option -rdynamic... " >&6; }
+if { as_var=ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`; eval \${$as_var+:} false; }; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -rdynamic test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+        for s in CC_FLAGS CXX_FLAGS LD_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-rdynamic\""
+        done
+      else
+        ac_supported=no
+      fi
+      eval "ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+    fi
     ;;
   windows*|mingw*)
     ;;
@@ -8809,8 +8889,600 @@ fi
 
     ;;
   sunos | solaris*)
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing round" >&5
+$as_echo_n "checking for library containing round... " >&6; }
+if ${ac_cv_search_libraries_round+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in m ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void round();"; fi`
+                                         return (int)round;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_round=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_round+:} false; then :
+
+else
+  ac_cv_search_libraries_round=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_round" >&5
+$as_echo "$ac_cv_search_libraries_round" >&6; }
+  ac_result=$ac_cv_search_libraries_round
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES m"
+else
+  as_fn_error $? "m library not found" "$LINENO" 5
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
+$as_echo_n "checking for library containing dlopen... " >&6; }
+if ${ac_cv_search_libraries_dlopen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in dl ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void dlopen();"; fi`
+                                         return (int)dlopen;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_dlopen=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_dlopen+:} false; then :
+
+else
+  ac_cv_search_libraries_dlopen=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_dlopen" >&5
+$as_echo "$ac_cv_search_libraries_dlopen" >&6; }
+  ac_result=$ac_cv_search_libraries_dlopen
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES dl"
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
+$as_echo_n "checking for library containing clock_gettime... " >&6; }
+if ${ac_cv_search_libraries_clock_gettime+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in rt ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void clock_gettime();"; fi`
+                                         return (int)clock_gettime;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_clock_gettime=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_clock_gettime+:} false; then :
+
+else
+  ac_cv_search_libraries_clock_gettime=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_clock_gettime" >&5
+$as_echo "$ac_cv_search_libraries_clock_gettime" >&6; }
+  ac_result=$ac_cv_search_libraries_clock_gettime
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES rt"
+else
+  as_fn_error $? "rt library not found" "$LINENO" 5
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
+$as_echo_n "checking for library containing pthread_create... " >&6; }
+if ${ac_cv_search_libraries_pthread_create+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pthread ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pthread_create();"; fi`
+                                         return (int)pthread_create;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_pthread_create=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_pthread_create+:} false; then :
+
+else
+  ac_cv_search_libraries_pthread_create=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pthread_create" >&5
+$as_echo "$ac_cv_search_libraries_pthread_create" >&6; }
+  ac_result=$ac_cv_search_libraries_pthread_create
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES pthread"
+else
+  as_fn_error $? "pthread library not found" "$LINENO" 5
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sd_id128_get_machine" >&5
+$as_echo_n "checking for library containing sd_id128_get_machine... " >&6; }
+if ${ac_cv_search_libraries_sd_id128_get_machine+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in systemd ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
+                                         return (int)sd_id128_get_machine;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_sd_id128_get_machine=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_sd_id128_get_machine+:} false; then :
+
+else
+  ac_cv_search_libraries_sd_id128_get_machine=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_sd_id128_get_machine" >&5
+$as_echo "$ac_cv_search_libraries_sd_id128_get_machine" >&6; }
+  ac_result=$ac_cv_search_libraries_sd_id128_get_machine
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES systemd"
+fi
+
     ;;
   darwin*)
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing round" >&5
+$as_echo_n "checking for library containing round... " >&6; }
+if ${ac_cv_search_libraries_round+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in m ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void round();"; fi`
+                                         return (int)round;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_round=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_round+:} false; then :
+
+else
+  ac_cv_search_libraries_round=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_round" >&5
+$as_echo "$ac_cv_search_libraries_round" >&6; }
+  ac_result=$ac_cv_search_libraries_round
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES m"
+else
+  as_fn_error $? "m library not found" "$LINENO" 5
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
+$as_echo_n "checking for library containing dlopen... " >&6; }
+if ${ac_cv_search_libraries_dlopen+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in dl ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void dlopen();"; fi`
+                                         return (int)dlopen;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_dlopen=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_dlopen+:} false; then :
+
+else
+  ac_cv_search_libraries_dlopen=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_dlopen" >&5
+$as_echo "$ac_cv_search_libraries_dlopen" >&6; }
+  ac_result=$ac_cv_search_libraries_dlopen
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES dl"
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing clock_gettime" >&5
+$as_echo_n "checking for library containing clock_gettime... " >&6; }
+if ${ac_cv_search_libraries_clock_gettime+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in rt ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void clock_gettime();"; fi`
+                                         return (int)clock_gettime;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_clock_gettime=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_clock_gettime+:} false; then :
+
+else
+  ac_cv_search_libraries_clock_gettime=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_clock_gettime" >&5
+$as_echo "$ac_cv_search_libraries_clock_gettime" >&6; }
+  ac_result=$ac_cv_search_libraries_clock_gettime
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES rt"
+else
+  as_fn_error $? "rt library not found" "$LINENO" 5
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
+$as_echo_n "checking for library containing pthread_create... " >&6; }
+if ${ac_cv_search_libraries_pthread_create+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pthread ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void pthread_create();"; fi`
+                                         return (int)pthread_create;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_pthread_create=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_pthread_create+:} false; then :
+
+else
+  ac_cv_search_libraries_pthread_create=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pthread_create" >&5
+$as_echo "$ac_cv_search_libraries_pthread_create" >&6; }
+  ac_result=$ac_cv_search_libraries_pthread_create
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES pthread"
+else
+  as_fn_error $? "pthread library not found" "$LINENO" 5
+fi
+
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing sd_id128_get_machine" >&5
+$as_echo_n "checking for library containing sd_id128_get_machine... " >&6; }
+if ${ac_cv_search_libraries_sd_id128_get_machine+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in systemd ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
+                                         return (int)sd_id128_get_machine;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_sd_id128_get_machine=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_sd_id128_get_machine+:} false; then :
+
+else
+  ac_cv_search_libraries_sd_id128_get_machine=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_sd_id128_get_machine" >&5
+$as_echo "$ac_cv_search_libraries_sd_id128_get_machine" >&6; }
+  ac_result=$ac_cv_search_libraries_sd_id128_get_machine
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES systemd"
+fi
+
     ;;
   windows*|mingw*)
 
@@ -12370,7 +13042,7 @@ if test $ENABLE_SSH = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        case "$host_os" in
+        case $host_os in
           linux-*)
             if test "$host_cpu" = "x86_64"; then
               (cd openssl; ./Configure \
@@ -12407,10 +13079,6 @@ $as_echo "fail (configure)" >&6; }
                 result=0
               fi
             fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
           windows*|mingw*)
             if test "$host_cpu" = "x86_64"; then
@@ -13115,7 +13783,7 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
         # Note: clean is obviously not enough, try distclean
         (cd gmp; make distclean) 1>/dev/null 2>&1
         if test "$host_cpu" = "x86_64"; then
-          case "$host_os" in
+          case $host_os in
             linux-*)
               case $host_cpu in
                 *86*)
@@ -15206,12 +15874,51 @@ if test $ENABLE_MARIADB = "yes"; then
       result=1
       if test $result -eq 1; then
         case $host_os in
+          linux-*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          sunos | solaris*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          darwin*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
           windows*|mingw*)
             # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
             #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
             (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>/dev/null 2>/dev/null
 
-            (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
               -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
@@ -15226,18 +15933,6 @@ if test $ENABLE_MARIADB = "yes"; then
               `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
             ) 1>$tmpFile 2>&1
             ;;
-          *)
-            (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
-              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              -DWITH_EXTERNAL_ZLIB=ON \
-              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
-              -DWITH_CURL=OFF \
-              -DWITH_UNIT_TESTS=OFF \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
-            ) 1>$tmpFile 2>&1
         esac
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
@@ -16663,7 +17358,7 @@ $as_echo "$as_me: WARNING: pcre not compiled: pcre package missing" >&2;}
   fi
 fi
 
-case "$host_os" in
+case $host_os in
   linux-*)
     ;;
   sunos | solaris*)

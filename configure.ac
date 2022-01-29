@@ -1051,7 +1051,7 @@ dnl $build_cpu
 dnl $build_os
 dnl AC_WARN([host: $host cpu=$host_cpu os=$host_os])
 dnl AC_WARN([build: $build cpu=$build_cpu os=$build_os])
-case "$host_os" in
+case $host_os in
   linux-*)
     PLATFORM=LINUX
     SYSTEM_NAME=Linux
@@ -1594,7 +1594,7 @@ AC_CC_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
 AC_CC_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
 AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
-case "$host_os" in
+case $host_os in
   linux-*)
     ;;
   sunos | solaris*)
@@ -1634,7 +1634,7 @@ case $host_os in
 esac
 
 CC_INCLUDES="$CC_INCLUDES"
-case "$host_os" in
+case $host_os in
   linux-*)
     ;;
   sunos | solaris*)
@@ -1650,7 +1650,7 @@ if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
   LD_FLAGS="-static-libgcc"
 fi
 LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
-case "$host_os" in
+case $host_os in
   linux-*)
     if test "$ENABLE_DEBUG" = "yes"; then
       # required for printing stacktraces
@@ -1658,8 +1658,16 @@ case "$host_os" in
     fi
     ;;
   sunos | solaris*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+      AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+    fi
     ;;
   darwin*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+      AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+    fi
     ;;
   windows*|mingw*)
     ;;
@@ -1692,8 +1700,18 @@ case $host_os in
     AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
     ;;
   sunos | solaris*)
+    AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
+    AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+    AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
+    AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
     ;;
   darwin*)
+    AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
+    AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
+    AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
+    AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
+    AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
     ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
@@ -2596,7 +2614,7 @@ if test $ENABLE_SSH = "yes"; then
       AC_MSG_COMPILE([openssl])
       result=1
       if test $result -eq 1; then
-        case "$host_os" in
+        case $host_os in
           linux-*)
             if test "$host_cpu" = "x86_64"; then
               (cd openssl; ./Configure \
@@ -2623,10 +2641,6 @@ if test $ENABLE_SSH = "yes"; then
                 result=0
               fi
             fi
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
             ;;
           windows*|mingw*)
             if test "$host_cpu" = "x86_64"; then
@@ -2837,7 +2851,7 @@ if test $ENABLE_TLS = "yes"; then
         # Note: clean is obviously not enough, try distclean
         (cd gmp; make distclean) 1>/dev/null 2>&1
         if test "$host_cpu" = "x86_64"; then
-          case "$host_os" in
+          case $host_os in
             linux-*)
               case $host_cpu in
                 *86*)
@@ -3516,12 +3530,51 @@ if test $ENABLE_MARIADB = "yes"; then
       result=1
       if test $result -eq 1; then
         case $host_os in
+          linux-*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          sunos | solaris*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          darwin*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              -DWITH_EXTERNAL_ZLIB=ON \
+              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              -DWITH_CURL=OFF \
+              -DWITH_UNIT_TESTS=OFF \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
           windows*|mingw*)
             # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
             #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
             (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>/dev/null 2>/dev/null
 
-            (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
               -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
@@ -3536,18 +3589,6 @@ if test $ENABLE_MARIADB = "yes"; then
               `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
             ) 1>$tmpFile 2>&1
             ;;
-          *)
-            (cd mariadb-connector-c; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
-              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              -DWITH_EXTERNAL_ZLIB=ON \
-              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
-              -DWITH_CURL=OFF \
-              -DWITH_UNIT_TESTS=OFF \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
-            ) 1>$tmpFile 2>&1
         esac
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
@@ -3974,7 +4015,7 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
-case "$host_os" in
+case $host_os in
   linux-*)
     ;;
   sunos | solaris*)
