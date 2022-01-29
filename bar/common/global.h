@@ -1638,8 +1638,6 @@ typedef byte* BitSet;
   #define BACKTRACE(stackTrace,stackTraceSize) \
     do \
     { \
-      UNUSED_VARIABLE(stackTrace); \
-      (stackTraceSize) = 0; \
     } \
     while (0)
 #endif /* HAVE_BACKTRACE */
